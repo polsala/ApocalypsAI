@@ -64,7 +64,7 @@ def _post_json(
         raise LLMError(f"Failed to decode JSON response: {exc}") from exc
 
 
-def call_openrouter(prompt: str, model: str = "google/gemini-1.5-flash-8b") -> str:
+def call_openrouter(prompt: str, model: str = "google/gemini-2.5-flash-8b") -> str:
     api_key = _require_env("OPENROUTER_API_KEY")
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -128,7 +128,7 @@ def call_groq(prompt: str, model: str = "llama-3.1-70b-versatile") -> str:
     raise LLMError(f"Groq call failed: {last_error}")
 
 
-def call_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str:
+def call_gemini(prompt: str, model: str = "gemini-2.5-flash") -> str:
     api_key = _require_env("GOOGLE_API_KEY")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     params = {"key": api_key}
