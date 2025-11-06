@@ -1,0 +1,34 @@
+name: Issue Guardian
+on:
+  issues:
+    types:
+      - opened
+      - edited
+permissions:
+  contents: read
+  issues: write
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+  guardian:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+      - name: Run guardian agent
+        run: |
+          set -euo pipefail
+          python agents/agent_guardian.py --repo "${{ github.repository }}" --issue-number "${{ github.event.issue.number }}"

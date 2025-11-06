@@ -1,0 +1,227 @@
+name: Test and Evaluate
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+  checks: write
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+      - name: Run Python pack tests
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pack in packs/*; do
+            [ -d "$pack" ] || continue
+            if [ -f "$pack/pyproject.toml" ]; then
+              echo "::group::Testing $pack (Python)"
+              python -m venv "$pack/.venv"
+              source "$pack/.venv/bin/activate"
+              python -m pip install -U pip
+              python -m pip install -e "$pack" pytest
+              mkdir -p "$pack/.tmp"
+              PACK_PATH="$pack" TMPDIR="$pack/.tmp" python - <<'PY'
+import os, pathlib, sys, socket, pytest
+pack = pathlib.Path(os.environ["PACK_PATH"]).resolve()
+tests_dir = pack / "tests"
+if not tests_dir.exists():
+    print(f"ERROR: {tests_dir} missing", file=sys.stderr)
+    sys.exit(1)
+def _block(*args, **kwargs):
+    raise RuntimeError("Network access disabled in CI")
+socket.socket = _block  # type: ignore
+socket.create_connection = _block  # type: ignore
+socket.getaddrinfo = _block  # type: ignore
+result = pytest.main(["-q", str(tests_dir)])
+if result != 0:
+    sys.exit(result)
+PY
+              deactivate
+              find "$pack" -maxdepth 1 -type d -name '*.egg-info' -exec rm -rf {} +
+              find "$pack" -type d -name '__pycache__' -exec rm -rf {} +
+              rm -rf "$pack/.venv" "$pack/.tmp" "$pack/.pytest_cache"
+              echo "::endgroup::"
+            fi
+          done
+      - uses: actions/setup-node@v4
+        if: ${{ hashFiles('packs/**/package.json') != '' }}
+        with:
+          node-version: '20'
+      - name: Run Node pack tests
+        if: ${{ hashFiles('packs/**/package.json') != '' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pack in packs/*; do
+            [ -d "$pack" ] || continue
+            if [ -f "$pack/package.json" ]; then
+              echo "::group::Testing $pack (Node)"
+              pushd "$pack" > /dev/null
+              node - <<'JS'
+const fs = require('fs');
+const path = require('path');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+if (!pkg.scripts || !pkg.scripts.test) {
+  console.error('ERROR: package.json missing test script');
+  process.exit(1);
+}
+const candidates = ['tests', '__tests__', 'test'];
+if (!candidates.some((dir) => {
+  const target = path.join(process.cwd(), dir);
+  return fs.existsSync(target) && fs.statSync(target).isDirectory();
+})) {
+  console.error('ERROR: No test directory found (expected one of tests/, __tests__/, test/).');
+  process.exit(1);
+}
+JS
+              if [ -f package-lock.json ]; then
+                cp package-lock.json package-lock.json.ci
+              fi
+              mkdir -p .tmp
+              npm install --no-audit --no-fund
+              cat <<'JS' > .ci-no-network.js
+const block = () => {
+  throw new Error('Network access disabled in CI');
+};
+const net = require('net');
+const http = require('http');
+const https = require('https');
+const dns = require('dns');
+['connect', 'createConnection'].forEach((fn) => {
+  net[fn] = block;
+});
+if (net.Socket && net.Socket.prototype) {
+  net.Socket.prototype.connect = block;
+}
+['request', 'get'].forEach((fn) => {
+  http[fn] = () => block();
+  https[fn] = () => block();
+});
+['lookup', 'resolve', 'resolveAny', 'resolve4', 'resolve6', 'resolveCname', 'reverse'].forEach((fn) => {
+  dns[fn] = () => block();
+});
+JS
+              NODE_OPTIONS="--require $(pwd)/.ci-no-network.js" TMPDIR="$(pwd)/.tmp" npm test
+              rm -f .ci-no-network.js
+              rm -rf node_modules .tmp
+              if [ -f package-lock.json.ci ]; then
+                mv package-lock.json.ci package-lock.json
+              else
+                rm -f package-lock.json
+              fi
+              popd > /dev/null
+              echo "::endgroup::"
+            fi
+          done
+      - uses: actions/setup-go@v5
+        if: ${{ hashFiles('packs/**/go.mod') != '' }}
+        with:
+          go-version: '1.22'
+      - name: Run Go pack tests
+        if: ${{ hashFiles('packs/**/go.mod') != '' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pack in packs/*; do
+            [ -d "$pack" ] || continue
+            if [ -f "$pack/go.mod" ]; then
+              echo "::group::Testing $pack (Go)"
+              pushd "$pack" > /dev/null
+              if [ -z "$(find . -name '*_test.go' -print -quit)" ]; then
+                echo "ERROR: $pack missing Go tests" >&2
+                exit 1
+              fi
+              if [ -f go.sum ]; then
+                cp go.sum go.sum.ci
+              fi
+              mkdir -p .tmp .gomodcache .gopath .gocache
+              GOMODCACHE="$(pwd)/.gomodcache" GOPATH="$(pwd)/.gopath" GOCACHE="$(pwd)/.gocache" go mod download
+              GOFLAGS="-mod=readonly" GOMODCACHE="$(pwd)/.gomodcache" GOPATH="$(pwd)/.gopath" GOCACHE="$(pwd)/.gocache" TMPDIR="$(pwd)/.tmp" strace -f -e trace=network -o .trace.log go test ./...
+              if grep -Eq 'AF_INET|AF_INET6' .trace.log; then
+                echo "ERROR: Network access detected in $pack Go tests" >&2
+                cat .trace.log
+                exit 1
+              fi
+              rm -rf .tmp .trace.log .gomodcache .gopath .gocache
+              if [ -f go.sum.ci ]; then
+                mv go.sum.ci go.sum
+              else
+                rm -f go.sum
+              fi
+              rm -f go.sum.ci
+              popd > /dev/null
+              echo "::endgroup::"
+            fi
+          done
+      - uses: dtolnay/rust-toolchain@stable
+        if: ${{ hashFiles('packs/**/Cargo.toml') != '' }}
+      - name: Run Rust pack tests
+        if: ${{ hashFiles('packs/**/Cargo.toml') != '' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for pack in packs/*; do
+            [ -d "$pack" ] || continue
+            if [ -f "$pack/Cargo.toml" ]; then
+              echo "::group::Testing $pack (Rust)"
+              pushd "$pack" > /dev/null
+              if [ -z "$(find . \( -path './tests/*' -o -name '*_test.rs' \) -print -quit)" ]; then
+                echo "ERROR: $pack missing Rust tests" >&2
+                exit 1
+              fi
+              if [ -f Cargo.lock ]; then
+                cp Cargo.lock Cargo.lock.ci
+              fi
+              mkdir -p .cargo-home .tmp
+              CARGO_HOME="$(pwd)/.cargo-home" cargo fetch --locked
+              CARGO_HOME="$(pwd)/.cargo-home" CARGO_TARGET_DIR="$(pwd)/target" CARGO_NET_OFFLINE=true TMPDIR="$(pwd)/.tmp" strace -f -e trace=network -o .trace.log cargo test --locked
+              if grep -Eq 'AF_INET|AF_INET6' .trace.log; then
+                echo "ERROR: Network access detected in $pack Rust tests" >&2
+                cat .trace.log
+                exit 1
+              fi
+              rm -rf .cargo-home .tmp .trace.log target
+              if [ -f Cargo.lock.ci ]; then
+                mv Cargo.lock.ci Cargo.lock
+              else
+                rm -f Cargo.lock
+              fi
+              rm -f Cargo.lock.ci
+              popd > /dev/null
+              echo "::endgroup::"
+            fi
+          done
+      - name: Ensure workspace clean
+        run: |
+          set -euo pipefail
+          if git status --porcelain | grep -q .; then
+            echo "ERROR: Tests produced unexpected workspace changes"
+            git status --porcelain
+            exit 1
+          fi
