@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
+from pathlib import Path
 from typing import Optional, Tuple
 
-from . import agent_utils
-from .base import AgentBase, AgentContext
-from .llm_clients import LLMError, cheap_mix
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from agents import agent_utils
+from agents.base import AgentBase, AgentContext
+from agents.llm_clients import LLMError, cheap_mix
 
 
 class GuardianAgent(AgentBase):
