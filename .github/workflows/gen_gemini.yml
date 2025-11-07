@@ -83,34 +83,34 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-import subprocess, sys
-result = subprocess.run(["git", "status", "--porcelain", "-z"], capture_output=True, check=True)
-data = result.stdout
-if not data:
-    print("ERROR: No unstaged changes detected.", file=sys.stderr)
-    sys.exit(1)
-paths = []
-i = 0
-while i < len(data):
-    j = data.find(b"\0", i)
-    if j == -1:
-        break
-    entry = data[i:j].decode()
-    i = j + 1
-    status = entry[:2]
-    if status and status[0] in {"R", "C"}:
-        path = entry.split(" -> ", 1)[1]
-    else:
-        path = entry[3:]
-    if path == ".apocalypsai/last.diff":
-        continue
-    paths.append(path)
-paths = list(dict.fromkeys(paths))
-if not paths:
-    print("ERROR: No eligible changes to stage after excluding .apocalypsai/last.diff", file=sys.stderr)
-    sys.exit(1)
-subprocess.run(["git", "add", "--"] + paths, check=True)
-PY
+          import subprocess, sys
+          result = subprocess.run(["git", "status", "--porcelain", "-z"], capture_output=True, check=True)
+          data = result.stdout
+          if not data:
+              print("ERROR: No unstaged changes detected.", file=sys.stderr)
+              sys.exit(1)
+          paths = []
+          i = 0
+          while i < len(data):
+              j = data.find(b"\0", i)
+              if j == -1:
+                  break
+              entry = data[i:j].decode()
+              i = j + 1
+              status = entry[:2]
+              if status and status[0] in {"R", "C"}:
+                  path = entry.split(" -> ", 1)[1]
+              else:
+                  path = entry[3:]
+              if path == ".apocalypsai/last.diff":
+                  continue
+              paths.append(path)
+          paths = list(dict.fromkeys(paths))
+          if not paths:
+              print("ERROR: No eligible changes to stage after excluding .apocalypsai/last.diff", file=sys.stderr)
+              sys.exit(1)
+          subprocess.run(["git", "add", "--"] + paths, check=True)
+          PY
           if git diff --cached --quiet; then
             echo "ERROR: No staged changes after diff application"
             exit 1
@@ -131,24 +131,24 @@ PY
         run: |
           set -euo pipefail
           body=$(cat <<'EOF'
-## Rationale
-- Automated proposal from the Gemini generator targeting a small, reviewable change.
-
-## Why safe to merge
-- Diff remains minimal and isolated.
-- Tests and docs accompany the change.
-- No secrets or credentials touched.
-
-## Test Plan
-- `pytest -q`
-
-## Links
-- Generated docs and examples committed alongside this change.
-
-## Mock Justification
-- Not applicable; generator did not introduce new mocks.
-EOF
-)
+          ## Rationale
+          - Automated proposal from the Gemini generator targeting a small, reviewable change.
+          
+          ## Why safe to merge
+          - Diff remains minimal and isolated.
+          - Tests and docs accompany the change.
+          - No secrets or credentials touched.
+          
+          ## Test Plan
+          - `pytest -q`
+          
+          ## Links
+          - Generated docs and examples committed alongside this change.
+          
+          ## Mock Justification
+          - Not applicable; generator did not introduce new mocks.
+          EOF
+          )
           gh pr create \
             --base main \
             --head "$BRANCH" \
