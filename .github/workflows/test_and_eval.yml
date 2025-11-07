@@ -46,7 +46,8 @@ jobs:
               python -m pip install -U pip
               python -m pip install -e "$pack" pytest
               mkdir -p "$pack/.tmp"
-              PACK_PATH="$pack" TMPDIR="$pack/.tmp" python - <<'PY'
+              PACK_PATH="$pack" TMPDIR="$pack/.tmp"
+              python - <<'PY'
               import os, pathlib, sys, socket, pytest
               pack = pathlib.Path(os.environ["PACK_PATH"]).resolve()
               tests_dir = pack / "tests"
