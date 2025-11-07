@@ -2,6 +2,7 @@ name: Gemini Generator
 on:
   schedule:
     - cron: '20,50 * * * *'
+  workflow_dispatch:
 permissions:
   contents: write
   pull-requests: write

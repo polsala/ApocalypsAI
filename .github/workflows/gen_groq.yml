@@ -2,6 +2,7 @@ name: Groq Generator
 on:
   schedule:
     - cron: '10,40 * * * *'
+  workflow_dispatch:
 permissions:
   contents: write
   pull-requests: write
