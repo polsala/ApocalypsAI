@@ -47,21 +47,21 @@ jobs:
               python -m pip install -e "$pack" pytest
               mkdir -p "$pack/.tmp"
               PACK_PATH="$pack" TMPDIR="$pack/.tmp" python - <<'PY'
-import os, pathlib, sys, socket, pytest
-pack = pathlib.Path(os.environ["PACK_PATH"]).resolve()
-tests_dir = pack / "tests"
-if not tests_dir.exists():
-    print(f"ERROR: {tests_dir} missing", file=sys.stderr)
-    sys.exit(1)
-def _block(*args, **kwargs):
-    raise RuntimeError("Network access disabled in CI")
-socket.socket = _block  # type: ignore
-socket.create_connection = _block  # type: ignore
-socket.getaddrinfo = _block  # type: ignore
-result = pytest.main(["-q", str(tests_dir)])
-if result != 0:
-    sys.exit(result)
-PY
+              import os, pathlib, sys, socket, pytest
+              pack = pathlib.Path(os.environ["PACK_PATH"]).resolve()
+              tests_dir = pack / "tests"
+              if not tests_dir.exists():
+                  print(f"ERROR: {tests_dir} missing", file=sys.stderr)
+                  sys.exit(1)
+              def _block(*args, **kwargs):
+                  raise RuntimeError("Network access disabled in CI")
+              socket.socket = _block  # type: ignore
+              socket.create_connection = _block  # type: ignore
+              socket.getaddrinfo = _block  # type: ignore
+              result = pytest.main(["-q", str(tests_dir)])
+              if result != 0:
+                  sys.exit(result)
+              PY
               deactivate
               find "$pack" -maxdepth 1 -type d -name '*.egg-info' -exec rm -rf {} +
               find "$pack" -type d -name '__pycache__' -exec rm -rf {} +
@@ -84,49 +84,49 @@ PY
               echo "::group::Testing $pack (Node)"
               pushd "$pack" > /dev/null
               node - <<'JS'
-const fs = require('fs');
-const path = require('path');
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-if (!pkg.scripts || !pkg.scripts.test) {
-  console.error('ERROR: package.json missing test script');
-  process.exit(1);
-}
-const candidates = ['tests', '__tests__', 'test'];
-if (!candidates.some((dir) => {
-  const target = path.join(process.cwd(), dir);
-  return fs.existsSync(target) && fs.statSync(target).isDirectory();
-})) {
-  console.error('ERROR: No test directory found (expected one of tests/, __tests__/, test/).');
-  process.exit(1);
-}
-JS
+              const fs = require('fs');
+              const path = require('path');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              if (!pkg.scripts || !pkg.scripts.test) {
+                console.error('ERROR: package.json missing test script');
+                process.exit(1);
+              }
+              const candidates = ['tests', '__tests__', 'test'];
+              if (!candidates.some((dir) => {
+                const target = path.join(process.cwd(), dir);
+                return fs.existsSync(target) && fs.statSync(target).isDirectory();
+              })) {
+                console.error('ERROR: No test directory found (expected one of tests/, __tests__/, test/).');
+                process.exit(1);
+              }
+              JS
               if [ -f package-lock.json ]; then
                 cp package-lock.json package-lock.json.ci
               fi
               mkdir -p .tmp
               npm install --no-audit --no-fund
               cat <<'JS' > .ci-no-network.js
-const block = () => {
-  throw new Error('Network access disabled in CI');
-};
-const net = require('net');
-const http = require('http');
-const https = require('https');
-const dns = require('dns');
-['connect', 'createConnection'].forEach((fn) => {
-  net[fn] = block;
-});
-if (net.Socket && net.Socket.prototype) {
-  net.Socket.prototype.connect = block;
-}
-['request', 'get'].forEach((fn) => {
-  http[fn] = () => block();
-  https[fn] = () => block();
-});
-['lookup', 'resolve', 'resolveAny', 'resolve4', 'resolve6', 'resolveCname', 'reverse'].forEach((fn) => {
-  dns[fn] = () => block();
-});
-JS
+              const block = () => {
+                throw new Error('Network access disabled in CI');
+              };
+              const net = require('net');
+              const http = require('http');
+              const https = require('https');
+              const dns = require('dns');
+              ['connect', 'createConnection'].forEach((fn) => {
+                net[fn] = block;
+              });
+              if (net.Socket && net.Socket.prototype) {
+                net.Socket.prototype.connect = block;
+              }
+              ['request', 'get'].forEach((fn) => {
+                http[fn] = () => block();
+                https[fn] = () => block();
+              });
+              ['lookup', 'resolve', 'resolveAny', 'resolve4', 'resolve6', 'resolveCname', 'reverse'].forEach((fn) => {
+                dns[fn] = () => block();
+              });
+              JS
               NODE_OPTIONS="--require $(pwd)/.ci-no-network.js" TMPDIR="$(pwd)/.tmp" npm test
               rm -f .ci-no-network.js
               rm -rf node_modules .tmp
