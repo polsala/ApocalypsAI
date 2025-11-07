@@ -8,4 +8,5 @@ __all__ = [
     "agent_integrator",
     "base",
     "llm_clients",
+    "util_generation",
 ]

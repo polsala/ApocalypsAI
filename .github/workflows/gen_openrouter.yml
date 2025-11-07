@@ -46,25 +46,43 @@ jobs:
       - name: No-op detected
         if: ${{ steps.run_agent.outputs.status == '2' }}
         run: echo "Agent reported no-op; skipping PR."
-      - name: Validate diff
+      - name: Stage utility files
         if: ${{ steps.run_agent.outputs.status == '0' }}
         run: |
           set -euo pipefail
-          if [ ! -s .apocalypsai/last.diff ]; then
-            echo "ERROR: .apocalypsai/last.diff missing or empty"
-            exit 1
-          fi
-      - name: Print diff
-        if: ${{ steps.run_agent.outputs.status == '0' }}
-        run: |
-          set -euo pipefail
-          echo "--- .apocalypsai/last.diff ---"
-          cat .apocalypsai/last.diff
-      - name: Apply diff
-        if: ${{ steps.run_agent.outputs.status == '0' }}
-        run: |
-          set -euo pipefail
-          python tools/apply_diff.py .apocalypsai/last.diff
+          python - <<'PY'
+          import subprocess, sys
+          result = subprocess.run(
+              ["git", "status", "--porcelain", "-z"],
+              capture_output=True,
+              check=True,
+          )
+          data = result.stdout
+          if not data:
+              print("ERROR: Agent reported success but workspace has no changes.", file=sys.stderr)
+              sys.exit(1)
+          paths = []
+          i = 0
+          while i < len(data):
+              j = data.find(b"\0", i)
+              if j == -1:
+                  break
+              entry = data[i:j].decode()
+              i = j + 1
+              status = entry[:2]
+              if status and status[0] in {"R", "C"}:
+                  path = entry.split(" -> ", 1)[1]
+              else:
+                  path = entry[3:]
+              if not path.startswith("utils/"):
+                  print(f"ERROR: Agent touched path outside utils/: {path}", file=sys.stderr)
+                  sys.exit(1)
+              paths.append(path)
+          if not paths:
+              print("ERROR: No eligible paths detected under utils/.", file=sys.stderr)
+              sys.exit(1)
+          subprocess.run(["git", "add", "--"] + paths, check=True)
+          PY
       - name: Configure git
         if: ${{ steps.run_agent.outputs.status == '0' }}
         run: |
@@ -89,37 +107,13 @@ jobs:
         if: ${{ steps.run_agent.outputs.status == '0' }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import subprocess, sys
-          result = subprocess.run(["git", "status", "--porcelain", "-z"], capture_output=True, check=True)
-          data = result.stdout
-          if not data:
-              print("ERROR: No unstaged changes detected.", file=sys.stderr)
-              sys.exit(1)
-          paths = []
-          i = 0
-          while i < len(data):
-              j = data.find(b"\0", i)
-              if j == -1:
-                  break
-              entry = data[i:j].decode()
-              i = j + 1
-              status = entry[:2]
-              if status and status[0] in {"R", "C"}:
-                  path = entry.split(" -> ", 1)[1]
-              else:
-                  path = entry[3:]
-              if path == ".apocalypsai/last.diff":
-                  continue
-              paths.append(path)
-          paths = list(dict.fromkeys(paths))
-          if not paths:
-              print("ERROR: No eligible changes to stage after excluding .apocalypsai/last.diff", file=sys.stderr)
-              sys.exit(1)
-          subprocess.run(["git", "add", "--"] + paths, check=True)
-          PY
           if git diff --cached --quiet; then
-            echo "ERROR: No staged changes after diff application"
+            echo "ERROR: No staged changes under utils/"
+            exit 1
+          fi
+          if git diff --cached --name-only | grep -v '^utils/' >/dev/null; then
+            echo "ERROR: Non-utils files accidentally staged"
+            git diff --cached --name-only
             exit 1
           fi
           git commit -m "feat(openrouter): ${{ steps.meta.outputs.summary }}"
@@ -139,15 +133,15 @@ jobs:
           set -euo pipefail
           body=$(cat <<'EOF'
           ## Rationale
-          - Automated proposal from the OpenRouter generator targeting a small, reviewable change.
+          - Automated proposal from the OpenRouter generator delivering a fresh community utility.
           
           ## Why safe to merge
-          - Diff remains minimal and isolated.
-          - Tests and docs accompany the change.
+          - Utility is isolated to `utils/<util_name>`.
+          - README + tests ship together (see folder contents).
           - No secrets or credentials touched.
           
           ## Test Plan
-          - `pytest -q`
+          - Follow the instructions in the generated README
           
           ## Links
           - Generated docs and examples committed alongside this change.

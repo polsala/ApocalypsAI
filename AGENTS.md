@@ -11,7 +11,7 @@ This document is the **single source of truth** for implementing the autonomous 
 * **Anarchy with discipline**: use any language/tech *inside* a pack, but agents themselves are **Python 3.11**, minimal deps.
 * **Always via PR**: no direct pushes to `main`. Human merges.
 * **Isolation & tests**: every new feature brings tests, docs, and a clear test plan.
-* **Tiny, reversible diffs**: prefer additive, atomic changes.
+* **Self-contained utilities**: every change is additive, isolated, and easy to revert.
 * **No secrets in logs**. Ever.
 
 ---
@@ -28,10 +28,11 @@ agents/
   agent_guardian.py
   agent_integrator.py
   agent_utils.py
-.apocalypsai/
-  last.diff            # output artifact (unified diff)
-tools/
-  apply_diff.py        # already provided by the repo
+utils/
+  <util_name>/
+    README.md
+    src/...            # language/tooling chosen per utility
+    tests/...          # self-contained tests/mock fixtures
 ```
 
 * **Language**: Python 3.11
@@ -71,10 +72,9 @@ tools/
 
 ### Output artifacts
 
-* If generating changes, write a **unified diff** to:
-
-  * `.apocalypsai/last.diff` (UTF-8)
-* No other side effects on the FS beyond `.apocalypsai/`
+* Successful runs **must** create a brand-new directory under `utils/<util_name>/`.
+* All generated source, docs, fixtures, and tests live inside that folder (self-contained).
+* No `.apocalypsai` artifacts or repo edits outside `utils/<util_name>/`.
 
 ### Logging
 
@@ -143,28 +143,48 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 ### A) Builder — `agents/agent_builder.py`
 
 **Trigger**: issue labeled `idea`
-**Goal**: produce a **small, safe, atomic** diff implementing or improving one pack/module.
+**Goal**: ship a brand-new community utility inside `utils/<util_name>/` based on the issue prompt.
 
 **Input**
 
 * `--repo`, `--issue-number`
-* Fetch issue title/body via GitHub API.
+* Fetch issue title/body via GitHub API plus existing `utils/*` folder names.
 
 **Prompt shape (internal)**
 
-* Include repo context: `git ls-files`, critical README snippets, `packs/*/README.md` headings
+* Provide issue context, repository snippets, and the current `utils/` inventory.
+* Instruct the LLM to answer with pure JSON shaped as:
+
+  ```json
+  {
+    "util_name": "kebab-case-identifier",
+    "summary": "one sentence overview",
+    "files": [
+      {
+        "path": "README.md",
+        "description": "docs + usage",
+        "content": "<full file contents>"
+      },
+      {
+        "path": "tests/test_smoke.py",
+        "description": "unit tests",
+        "content": "<code>"
+      }
+    ]
+  }
+  ```
+
 * Constraints:
 
-  * Produce **unified diff** only (no prose)
-  * Create/modify files under `packs/<name>/...` and/or docs/tests
-  * Include tests + README updates
-  * No network code in tests; use mocks/fakes where relevant
-  * Keep changes ≤ ~200 lines if possible
+  * `util_name` must be unique (no collisions with existing folders) and ≤ 32 chars.
+  * All file paths are relative to the new util root; include README + at least one `tests/` file.
+  * Tests must avoid network access (use mocks; include `# Mock rationale:`).
+  * Output can use any language/tooling as long as it stays self-contained, well documented, and fully tested.
 
 **Output**
 
-* Write diff to `.apocalypsai/last.diff`
-* Exit `0` if non-empty; `2` if LLM returns “no change”; `1` on error
+* Materialize the described folder/files directly under `utils/<util_name>/`.
+* Exit `0` when files were created; `2` if the LLM reports “NO_CHANGES” or invalid payload; `1` on hard error.
 
 ### B) Reviewer — `agents/agent_reviewer.py`
 
@@ -215,7 +235,7 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 ### D) Integrator — `agents/agent_integrator.py`
 
 **Trigger**: nightly cron
-**Goal**: propose tiny housekeeping diffs (typos, docstring, micro-refactors, missing tests/examples)
+**Goal**: dream up a tiny-yet-useful standalone utility (any language) and drop it in `utils/<nightly-*>/`.
 
 **Input**
 
@@ -223,13 +243,13 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
 **Prompt shape**
 
-* Only **tiny** diffs
-* Avoid churn; never wide renames or sweeping reformat
-* Prefer docs/tests increments
+* Summarize repository/README context and list existing `utils/*` to avoid repeats.
+* Reinforce the same JSON schema as the builder, but bias toward whimsical, fully documented tools with solid tests.
+* Encourage fresh ideas only; respond `NO_CHANGES` if nothing safe emerges.
 
 **Output**
 
-* `.apocalypsai/last.diff` + exit `0` or `2` if nothing to do
+* Create the utility folder/files directly; exit `0` on success, `2` on no-op.
 
 ---
 
@@ -245,25 +265,15 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
 ---
 
-## 7) Diff Requirements
+## 7) Utility Requirements
 
-* **Unified diff** compatible with `git apply`:
-
-  * Must include file headers:
-    `--- a/path/to/file`
-    `+++ b/path/to/file`
-  * Use `\n` newlines; UTF-8
-  * No surrounding prose unless wrapped in fenced block:
-
-    ````
-    ```diff
-    <the diff here>
-    ````
-
-    ```
-    ```
-  * If LLM returns prose + diff, code MUST strip prose and persist only the diff file.
-* If diff is empty or unparsable → exit `2` with a clear message.
+* Every run that returns `0` must leave the workspace with exactly one new folder under `utils/<util_name>/`.
+* Folder constraints:
+  * Contains a README (usage, install, test instructions).
+  * Contains at least one automated test under `tests/`.
+  * Never touches files outside the folder (except Git metadata handled by workflows).
+  * Uses relative paths only; no symlinks or filesystem escapes.
+* If the LLM output is empty/invalid or violates the folder contract → exit `2` with a clear message.
 
 ---
 
@@ -338,12 +348,12 @@ if __name__ == "__main__":
 
 * [ ] Agent respects CLI & exit codes
 * [ ] Uses `llm_clients.cheap_mix` only (or a subset), with retries
-* [ ] Writes valid unified diff to `.apocalypsai/last.diff` (Builder/Integrator)
+* [ ] Creates a brand-new folder under `utils/<util_name>` with README + tests (Builder/Integrator)
 * [ ] Reviewer posts **one** consolidated Markdown comment
 * [ ] Guardian labels `triage/blocked` when needed
 * [ ] No secrets in logs
 * [ ] Added/updated tests + README for any generated pack
-* [ ] Changes ≤ ~200 LOC and reversible
+* [ ] Utility is self-contained, well tested, and easy to revert
 
 ---
 
@@ -359,8 +369,6 @@ If tests mock external systems, include a brief comment near the mock:
 
 ## 15) Example Prompts (internal to agents)
 
-* **Builder**: “Implement a minimal CSV→JSON converter as `packs/csv2json` with CLI, README, and tests. Keep diff ≤ 200 LOC. No network calls. Provide pytest tests for CLI args and error handling. Output unified diff only.”
+* **Builder**: “Design a CLI that converts CSV→JSON and ship it inside `utils/csv2json/` with README, CLI code, and pytest coverage. Respond with the required JSON payload describing each file (README, src module, tests) and ensure tests avoid network calls.”
 * **Reviewer**: “Review the provided diff. Produce a concise Markdown comment with ✅, 🧪, 🔒, 🧩 sections and concrete code suggestions.”
-* **Integrator (nightly)**: “Scan for missing docstrings, typos, or trivial refactors. Propose a tiny diff only if safe. Output unified diff only.”
-
-
+* **Integrator (nightly)**: “Dream up a `utils/nightly-checksum-tool` folder containing README, Python/Rust code, and tests. Keep everything self-contained, explain how to run it in the README, and answer with the JSON payload schema.”

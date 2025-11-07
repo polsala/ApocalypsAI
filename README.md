@@ -13,15 +13,14 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 ├── README.md
 ├── agents/                  # Python 3.11 agent implementations
 │   ├── __init__.py
-│   ├── agent_builder.py     # Issue-driven generator (packs/docs/tests diffs)
+│   ├── agent_builder.py     # Issue-driven generator (creates new utils/)
 │   ├── agent_guardian.py    # Issue content safety triage
-│   ├── agent_integrator.py  # Nightly micro-refactors and doc/test touch-ups
+│   ├── agent_integrator.py  # Nightly drops of fresh utilities
 │   ├── agent_reviewer.py    # Cross-provider PR reviewer
 │   ├── agent_utils.py       # GitHub REST helpers (issues/PRs/comments/diffs)
 │   ├── base.py              # AgentContext + AgentBase contract
 │   └── llm_clients.py       # OpenRouter/Groq/Gemini adapters + cheap_mix fallback
-├── tools/
-│   └── apply_diff.py        # Utility invoked inside workflows to apply .apocalypsai/last.diff
+├── utils/                   # Generated utilities (each run adds utils/<util_name>)
 └── .github/workflows/       # Automation surface; see below
 ```
 
@@ -29,10 +28,10 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 
 | Workflow | Purpose | Trigger |
 | --- | --- | --- |
-| `gen_openrouter.yml` | Runs the generator agent (OpenRouter provider) to propose a pack/doc/test diff, commits to `ai/openrouter-<timestamp>`, and opens a PR. | Cron `0,30 * * * *` |
-| `gen_groq.yml` | Same generator flow but pinned to Groq. | Cron `10,40 * * * *` |
-| `gen_gemini.yml` | Same generator flow but pinned to Gemini. | Cron `20,50 * * * *` |
-| `nightly_self_heal.yml` | Runs the integrator agent via `cheap_mix` to ship tiny self-healing PRs (`ai/nightly-<date>`). | Daily cron `42 2 * * *` |
+| `gen_openrouter.yml` | Runs the generator agent (OpenRouter provider) to mint a brand-new `utils/<util_name>` folder (code + README + tests) and open a PR. | Cron `0,30 * * * *` & manual |
+| `gen_groq.yml` | Same generator flow but pinned to Groq. | Cron `10,40 * * * *` & manual |
+| `gen_gemini.yml` | Same generator flow but pinned to Gemini. | Cron `20,50 * * * *` & manual |
+| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. | Daily cron `42 2 * * *` |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
 | `test_and_eval.yml` | Enforces isolation: per-pack Python venvs, Node/Go/Rust toolchains, socket blocking, and workspace cleanliness. | PR activity + push to `main` |
 | `issue_guardian.yml` | Runs the guardian agent to classify issue content and optionally label `triage/blocked`. | Issue opened/edited |
@@ -44,7 +43,16 @@ All workflows share:
 - Python 3.11 via `actions/setup-python@v5`
 - Minimal deps installed (`requests`, `rich`, `pyyaml`, `pytest`)
 - Secrets: `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GOOGLE_API_KEY`, `GITHUB_TOKEN`
-- Generator/integrator jobs write unified diff artifacts to `.apocalypsai/last.diff`
+- Generator/integrator jobs write code directly beneath `utils/` (no diff artifacts)
+
+## Utils Directory
+
+Every autonomous run must add a fully self-contained utility to `utils/<util_name>/`. Requirements:
+
+- Pick a unique slug (kebab-case is preferred) per run; never mutate existing folders.
+- Ship everything inside that folder: README/usage docs, source, tests/fixtures, config, etc.
+- Tests must run without network access (use mocks/fakes with `# Mock rationale:` comments).
+- Prefer lightweight tooling and document how to execute the util (CLI usage, API example, etc.)
 
 ## Agents
 
@@ -52,10 +60,10 @@ Each agent follows the API defined in `AGENTS.md`:
 
 - **Builder (`agents/agent_builder.py`)**  
   CLI: `python agents/agent_builder.py --repo owner/name --issue-number <id> [--models provider=model]`  
-  Fetches issue context, prompts LLM (via `llm_clients.cheap_mix`), writes `.apocalypsai/last.diff`, exits with code `0` (diff), `2` (no change), or `1` (failure).
+  Fetches issue context, prompts LLM (via `llm_clients.cheap_mix`), and materializes a fresh `utils/<slug>` folder. Exit codes: `0` (utility created), `2` (no-op), `1` (failure).
 
 - **Integrator (`agents/agent_integrator.py`)**  
-  CLI requires `--mode nightly`. Produces tiny additive diffs for nightly self-heal workflow.
+  CLI requires `--mode nightly`. Produces a spontaneous `utils/nightly-<slug>` utility with docs/tests or exits `2` when nothing safe emerges.
 
 - **Reviewer (`agents/agent_reviewer.py`)**  
   CLI: `--repo`, `--pr`. Downloads PR metadata, changed files, diff, and prior comments to prompt a cross-provider review. Posts a single Markdown comment via GitHub API.
@@ -90,16 +98,11 @@ Supporting modules:
 3. **Testing**  
    No monolithic test suite yet; follow per-pack instructions enforced by `test_and_eval.yml`. Run pack-specific tests via their native toolchain (Python `pytest`, Node `npm test`, Go `go test`, Rust `cargo test`), ensuring no network calls (mock or stub as required).
 
-4. **Diff application helper**
-   ```bash
-   python tools/apply_diff.py .apocalypsai/last.diff
-   ```
-
 ## Contributing
 
 - All changes must land through Pull Requests; no direct pushes to `main`.
-- Keep diffs tiny (< ~200 LOC) and reversible.
-- Every agent-generated change must include tests + docs updates.
+- Keep commits focused and reversible.
+- Every agent-generated utility must include tests + docs.
 - No secrets in logs, diffs, or artifacts.
 - Prefer mocks/fakes for third-party integrations; include a nearby `# Mock rationale:` comment describing why.
 
