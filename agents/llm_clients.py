@@ -96,7 +96,7 @@ def call_openrouter(prompt: str, model: str = "google/gemini-2.5-flash-8b") -> s
     raise LLMError(f"OpenRouter call failed: {last_error}")
 
 
-def call_groq(prompt: str, model: str = "llama-3.1-70b-versatile") -> str:
+def call_groq(prompt: str, model: str = "openai/gpt-oss-120b") -> str:
     api_key = _require_env("GROQ_API_KEY")
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {

@@ -78,6 +78,7 @@ class IntegratorAgent(AgentBase):
                 "",
                 "If nothing safe or novel comes to mind, respond exactly `NO_CHANGES`.",
                 "Otherwise output pure JSON per AGENTS.md describing util_name/summary/files.",
+                "Utilities without at least one tests/ file will be rejected, so include runnable tests.",
             ]
         )
         return "\n".join(prompt_parts)

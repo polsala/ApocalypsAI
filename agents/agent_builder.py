@@ -92,7 +92,7 @@ class BuilderAgent(AgentBase):
                 "Requirements:",
                 "- Respond with pure JSON following the schema in AGENTS.md.",
                 "- util_name must be unique (≤ 32 chars, kebab-case).",
-                "- Include README + at least one tests/ file.",
+                "- Include README + at least one tests/ file (runs will fail without tests).",
                 "- Document how to run the utility/tests.",
                 "- If nothing valuable can be produced, respond exactly `NO_CHANGES`.",
             ]

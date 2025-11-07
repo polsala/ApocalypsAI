@@ -94,7 +94,7 @@ from typing import Optional, Dict
 
 class LLMError(RuntimeError): ...
 def call_openrouter(prompt: str, model: str = "google/gemini-1.5-flash-8b") -> str: ...
-def call_groq(prompt: str, model: str = "llama-3.1-70b-versatile") -> str: ...
+def call_groq(prompt: str, model: str = "openai/gpt-oss-120b") -> str: ...
 def call_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str: ...
 def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
     """
@@ -178,7 +178,7 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
   * `util_name` must be unique (no collisions with existing folders) and ≤ 32 chars.
   * All file paths are relative to the new util root; include README + at least one `tests/` file.
-  * Tests must avoid network access (use mocks; include `# Mock rationale:`).
+  * Tests must avoid network access (use mocks; include `# Mock rationale:`) — runs without tests must fail fast.
   * Output can use any language/tooling as long as it stays self-contained, well documented, and fully tested.
 
 **Output**
@@ -245,6 +245,7 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
 * Summarize repository/README context and list existing `utils/*` to avoid repeats.
 * Reinforce the same JSON schema as the builder, but bias toward whimsical, fully documented tools with solid tests.
+* Explicitly remind the LLM that at least one `tests/` file is mandatory; no tests → reject.
 * Encourage fresh ideas only; respond `NO_CHANGES` if nothing safe emerges.
 
 **Output**
