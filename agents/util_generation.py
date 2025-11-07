@@ -5,7 +5,7 @@ import re
 import secrets
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import List
+from typing import List, Any
 
 
 class PayloadError(RuntimeError):
@@ -86,6 +86,37 @@ def write_utility(util: GeneratedUtility, *, prefix: str | None = None) -> Path:
     return target
 
 
+def summarize_payload(raw: str, *, file_limit: int = 5) -> str:
+    try:
+        data: Any = json.loads(_extract_json(raw))
+    except Exception:  # noqa: BLE001
+        snippet = raw.strip()
+        if len(snippet) > 2000:
+            snippet = snippet[:2000] + "\n...[truncated]..."
+        return snippet
+    lines = []
+    util_name = data.get("util_name")
+    summary = data.get("summary")
+    if util_name:
+        lines.append(f"util_name: {util_name}")
+    if summary:
+        lines.append(f"summary: {summary}")
+    files = data.get("files")
+    if isinstance(files, list):
+        lines.append("files:")
+        for entry in files[:file_limit]:
+            if isinstance(entry, dict):
+                path = entry.get("path", "<missing>")
+                desc = entry.get("description", "")
+                lines.append(f"  - {path}: {desc}")
+        if len(files) > file_limit:
+            lines.append(f"  ... (+{len(files) - file_limit} more)")
+    preview = "\n".join(lines).strip()
+    if not preview:
+        return "(payload empty)"
+    return preview
+
+
 def list_existing_utils() -> list[str]:
     base = Path("utils")
     if not base.exists():
@@ -144,4 +175,3 @@ def _has_tests(files: list[GeneratedFile]) -> bool:
         if "tests" in parts:
             return True
     return False
-

@@ -15,6 +15,7 @@ from agents.util_generation import (
     PayloadError,
     list_existing_utils,
     parse_payload,
+    summarize_payload,
     write_utility,
 )
 
@@ -36,6 +37,7 @@ class IntegratorAgent(AgentBase):
                 target_dir = write_utility(payload, prefix="nightly")
             except PayloadError as exc:
                 print(f"ERROR: Invalid utility payload: {exc}")
+                self._log_payload_preview(cleaned)
                 return 2
             print(f"Nightly utility created under {target_dir}")
             return 0
@@ -95,6 +97,10 @@ class IntegratorAgent(AgentBase):
         text = file_path.read_text(encoding="utf-8", errors="ignore")
         return text[:max_chars]
 
+    def _log_payload_preview(self, raw: str) -> None:
+        preview = summarize_payload(raw)
+        if preview:
+            print("Payload preview:\n" + preview)
 
 
 def _parse_models(value: Optional[str]) -> Optional[dict]:
