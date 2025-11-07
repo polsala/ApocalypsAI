@@ -53,6 +53,12 @@ jobs:
             echo "ERROR: .apocalypsai/last.diff missing or empty"
             exit 1
           fi
+      - name: Print diff
+        if: ${{ steps.run_agent.outputs.status == '0' }}
+        run: |
+          set -euo pipefail
+          echo "--- .apocalypsai/last.diff ---"
+          cat .apocalypsai/last.diff
       - name: Apply diff
         if: ${{ steps.run_agent.outputs.status == '0' }}
         run: |
