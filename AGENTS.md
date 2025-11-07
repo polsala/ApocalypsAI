@@ -9,6 +9,7 @@ This document is the **single source of truth** for implementing the autonomous 
 ## 0) Philosophy
 
 * **Anarchy with discipline**: use any language/tech *inside* a pack, but agents themselves are **Python 3.11**, minimal deps.
+* **Chaotic creativity**: prompts inject random inspiration to avoid repetitive utilities; embrace unpredictability while keeping outputs tested/docs.
 * **Always via PR**: no direct pushes to `main`. Human merges.
 * **Isolation & tests**: every new feature brings tests, docs, and a clear test plan.
 * **Self-contained utilities**: every change is additive, isolated, and easy to revert.
@@ -174,12 +175,13 @@ All concrete agents must subclass `AgentBase` and implement `run`.
   }
   ```
 
-* Constraints:
+* Constraints (non-negotiable):
 
   * `util_name` must be unique (no collisions with existing folders) and ≤ 32 chars.
-  * All file paths are relative to the new util root; include README + at least one `tests/` file.
+  * All file paths are relative to the new util root; include README + at least one `tests/` file (runs fail without tests).
   * Tests must avoid network access (use mocks; include `# Mock rationale:`) — runs without tests must fail fast.
-  * Output can use any language/tooling as long as it stays self-contained, well documented, and fully tested.
+  * Output can use any language/tooling as long as it stays self-contained, well documented, thoroughly tested, and delightfully unpredictable.
+  * Prompts inject random “inspiration” cues; embrace or subvert them, but avoid repeating recent motifs (especially calendars/date trackers) unless the issue demands it.
 
 **Output**
 
@@ -244,8 +246,9 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 **Prompt shape**
 
 * Summarize repository/README context and list existing `utils/*` to avoid repeats.
-* Reinforce the same JSON schema as the builder, but bias toward whimsical, fully documented tools with solid tests.
+* Reinforce the same JSON schema as the builder, but bias toward wildly original, fully documented tools with solid tests.
 * Explicitly remind the LLM that at least one `tests/` file is mandatory; no tests → reject.
+* Provide a random inspiration seed (agents inject this) and forbid stale motifs (e.g., calendar/date trackers) unless required.
 * Encourage fresh ideas only; respond `NO_CHANGES` if nothing safe emerges.
 
 **Output**

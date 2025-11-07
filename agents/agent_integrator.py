@@ -1,10 +1,64 @@
 from __future__ import annotations
 
 import argparse
+import secrets
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
+
+INSPIRATIONS = [
+    "pan-galactic emoji dialect compiler",
+    "self-healing ascii circuit simulator",
+    "probabilistic haiku refactoring engine",
+    "time-splitting graphql cache visualizer",
+    "ultra-minimalist synthwave sequencer",
+    "holomorphic markdown anomaly detector",
+    "browser-history noir narrative generator",
+    "neural tarot inspired CLI prompt oracle",
+    "chaotic container stress choreographer",
+    "fractal-based log entropy grapher",
+    "tactile keyboard heatmap cartographer",
+    "quantumish git blame storyteller",
+    "meme-driven api contract validator",
+    "sentiment-tuned release note remixer",
+    "procedural emoji city builder",
+    "bio-luminescent cron visualizer",
+    "retro fax art rasterizer",
+    "stochastic dependency rumor mill",
+    "l-system powered test name synthesizer",
+    "anomalous unit test archaeologist",
+    "hypergraph knowledge garden planter",
+    "pseudorandom palette stabilizer",
+    "cryptic error limerick composer",
+    "emoji-first incident command console",
+    "spectral git bisect fortune teller",
+    "command line karaoke scorer",
+    "cascading style spell checker",
+    "subatomic accessibility advocate",
+    "procedural feature flag storybook",
+    "entropy-maximized backlog shuffler",
+    "waxing-waning code coverage oracle",
+    "lunar phase driven ci orchestrator",
+    "spherical cow performance profiler",
+    "theorem prover inspired merge planner",
+    "civic data glitch notebook",
+    "holographic changelog sculptor",
+    "temporal diff hologram projector",
+    "syntax-aware sticker pack generator",
+    "pulsar-tuned config drift detector",
+    "cli-based aroma diffuser simulator",
+    "chaos garden of semantic versions",
+    "hyperdimensional json topologist",
+    "cloud-native origami pattern foundry",
+    "c64 palette live coding sandbox",
+    "oblique strategy code reviewer",
+    "multiverse-ready backlog weaver",
+    "radioactive yaml containment unit",
+    "steampunk ascii blueprint printer",
+    "aurora borealis inspired load tester",
+    "telepathic rubber duck debugger",
+]
 
 if __package__ is None or __package__ == "":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -66,6 +120,9 @@ class IntegratorAgent(AgentBase):
             "Existing utils:",
             "\n".join(utilities) or "(none yet)",
             "",
+            f"Random inspiration (feel free to rebel): {self._random_inspiration()}",
+            "Avoid repeating past motifs (e.g. calendar/date trackers) unless explicitly requested.",
+            "",
             "Repository files (git ls-files):",
             files,
         ]
@@ -79,6 +136,7 @@ class IntegratorAgent(AgentBase):
                 "If nothing safe or novel comes to mind, respond exactly `NO_CHANGES`.",
                 "Otherwise output pure JSON per AGENTS.md describing util_name/summary/files.",
                 "Utilities without at least one tests/ file will be rejected, so include runnable tests.",
+                "Lean into chaos: any language/stack is welcome if the result is self-contained with README/tests.",
             ]
         )
         return "\n".join(prompt_parts)
@@ -102,6 +160,9 @@ class IntegratorAgent(AgentBase):
         preview = summarize_payload(raw)
         if preview:
             print("Payload preview:\n" + preview)
+
+    def _random_inspiration(self) -> str:
+        return secrets.choice(INSPIRATIONS)
 
 
 def _parse_models(value: Optional[str]) -> Optional[dict]:
