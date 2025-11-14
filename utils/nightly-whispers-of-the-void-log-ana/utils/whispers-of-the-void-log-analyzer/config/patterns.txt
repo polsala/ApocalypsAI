@@ -1,0 +1,16 @@
+# Default anomaly patterns for Whispers of the Void Log Analyzer
+# Each line is treated as a case-insensitive regular expression.
+# Lines starting with '#' are ignored.
+
+ERROR
+CRITICAL
+FAIL(ED)?
+DENIED
+WARNING
+exception
+segfault
+panic
+unauthorized
+timeout
+corrupt
+malformed
