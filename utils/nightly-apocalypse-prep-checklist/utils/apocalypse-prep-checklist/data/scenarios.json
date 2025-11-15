@@ -1,0 +1,132 @@
+{
+  "scenarios": [
+    {
+      "name": "Zombie Outbreak",
+      "keywords": ["zombie", "undead", "infection", "walking dead"],
+      "base_items": [
+        "first aid kit",
+        "water purification tablets",
+        "non-perishable food (3 days)",
+        "sharp melee weapon (e.g., machete)"
+      ],
+      "location_specific": {
+        "urban": [
+          "crowbar",
+          "map of sewers",
+          "bolt cutters"
+        ],
+        "rural": [
+          "hunting rifle (with ammo)",
+          "gardening tools (for defense/farming)",
+          "traps"
+        ]
+      },
+      "people_specific": {
+        "1": [
+          "small backpack",
+          "personal water filter"
+        ],
+        "2-5": [
+          "medium backpack",
+          "walkie-talkies",
+          "shared tent"
+        ],
+        "6+": [
+          "large backpack",
+          "vehicle keys (for escape)",
+          "group communication device",
+          "medical supplies (advanced)"
+        ]
+      }
+    },
+    {
+      "name": "Nuclear Winter",
+      "keywords": ["nuclear", "fallout", "winter", "radiation"],
+      "base_items": [
+        "iodine tablets",
+        "radiation detector",
+        "canned goods (7 days)",
+        "heavy winter clothing"
+      ],
+      "location_specific": {
+        "urban": [
+          "subway map (for shelter)",
+          "gas mask (with filters)",
+          "lead-lined container"
+        ],
+        "rural": [
+          "shovel (for digging shelter)",
+          "wood stove (with fuel)",
+          "geiger counter"
+        ]
+      },
+      "people_specific": {
+        "1": [
+          "thermal blanket",
+          "emergency whistle"
+        ],
+        "2-5": [
+          "sleeping bags (rated for cold)",
+          "hand warmers",
+          "portable heater"
+        ],
+        "6+": [
+          "bunker supplies",
+          "generator (with fuel)",
+          "water purification system",
+          "long-term food storage"
+        ]
+      }
+    },
+    {
+      "name": "AI Uprising",
+      "keywords": ["ai", "robot", "skynet", "machines"],
+      "base_items": [
+        "EMP device (theoretical)",
+        "faraday cage (for electronics)",
+        "analog maps",
+        "non-digital communication methods"
+      ],
+      "location_specific": {
+        "urban": [
+          "disguise kit",
+          "EMP grenades",
+          "knowledge of server farms"
+        ],
+        "rural": [
+          "off-grid power source",
+          "mechanical tools",
+          "EMP-hardened vehicle"
+        ]
+      },
+      "people_specific": {
+        "1": [
+          "burner phone (offline)",
+          "basic survival guide"
+        ],
+        "2-5": [
+          "encrypted walkie-talkies",
+          "decoy electronics",
+          "team communication protocols"
+        ],
+        "6+": [
+          "mobile command center (EMP shielded)",
+          "advanced hacking tools (for defense)",
+          "large supply of analog media"
+        ]
+      }
+    }
+  ],
+  "general_items": [
+    "flashlight",
+    "batteries (various sizes)",
+    "multi-tool",
+    "cash (small denominations)",
+    "important documents (waterproof copies)",
+    "fire starter",
+    "rope",
+    "duct tape",
+    "first aid manual",
+    "whistle"
+  ]
+}
