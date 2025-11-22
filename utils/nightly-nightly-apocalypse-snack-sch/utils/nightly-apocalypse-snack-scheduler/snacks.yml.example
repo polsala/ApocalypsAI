@@ -1,0 +1,19 @@
+# Example configuration for the Apocalypse Snack Scheduler
+# Copy this to 'snacks.yml' and modify it with your actual inventory.
+
+items:
+  - name: 'Canned Beans (Black)'
+    quantity: 10
+    expiry_date: '2025-01-01'
+  - name: 'MRE (Beef Stew)'
+    quantity: 3
+    expiry_date: '2023-11-15' # This item would be expired if run after Nov 15, 2023
+  - name: 'Emergency Water Pouches'
+    quantity: 20
+    expiry_date: '2024-07-30'
+  - name: 'First Aid Kit (Small)'
+    quantity: 1
+    expiry_date: '2026-03-01'
+  - name: 'Protein Bars (Chocolate)'
+    quantity: 15
+    expiry_date: '2024-02-28' # This item would be expiring soon if run in Jan/Feb 2024
