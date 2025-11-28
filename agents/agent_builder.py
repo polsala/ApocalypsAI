@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -11,7 +12,7 @@ if __package__ is None or __package__ == "":
 
 from agents import agent_utils
 from agents.base import AgentBase, AgentContext
-from agents.llm_clients import LLMError, cheap_mix
+from agents.llm_clients import LLMError, call_provider
 from agents.util_generation import (
     PayloadError,
     list_existing_utils,
@@ -33,7 +34,7 @@ class BuilderAgent(AgentBase):
             return 1
         try:
             prompt = self._compose_prompt(ctx, issue)
-            response = cheap_mix(prompt, ctx.models)
+            response, provider = call_provider(prompt, ctx.models)
             cleaned = response.strip()
             if cleaned == "NO_CHANGES":
                 print("LLM returned NO_CHANGES; skipping generation.")
@@ -45,6 +46,16 @@ class BuilderAgent(AgentBase):
                 print(f"ERROR: Invalid utility payload: {exc}")
                 self._log_payload_preview(cleaned)
                 return 2
+            # Output metadata for PR description (JSON format for easy parsing)
+            metadata = {
+                "util_name": payload.name,
+                "summary": payload.summary,
+                "provider": provider,
+                "target_dir": str(target_dir),
+                "file_count": len(payload.files),
+                "issue_number": ctx.issue_number,
+            }
+            print(f"__METADATA_START__{json.dumps(metadata)}__METADATA_END__")
             print(f"Utility created under {target_dir}")
             return 0
         except LLMError as exc:

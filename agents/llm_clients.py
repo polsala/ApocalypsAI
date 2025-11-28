@@ -162,7 +162,39 @@ def call_gemini(prompt: str, model: str = "gemini-2.5-flash") -> str:
     raise LLMError(f"Gemini call failed: {last_error}")
 
 
-def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
+def call_provider(prompt: str, models: Optional[Dict[str, str]] = None) -> tuple[str, str]:
+    """
+    Call the LLM provider specified by APOCALYPSAI_PROVIDER env var.
+    Returns tuple of (response_text, provider_name).
+    Raises LLMError if the specified provider fails.
+    """
+    provider = os.environ.get("APOCALYPSAI_PROVIDER", "").lower()
+    
+    provider_map = {
+        "groq": call_groq,
+        "gemini": call_gemini,
+        "openrouter": call_openrouter,
+    }
+    
+    # If a specific provider is requested, use only that one
+    if provider and provider in provider_map:
+        func = provider_map[provider]
+        model_override = (models or {}).get(provider)
+        try:
+            if model_override:
+                response = func(prompt, model_override)
+            else:
+                response = func(prompt)  # type: ignore[arg-type]
+            return (response, provider)
+        except LLMError as exc:
+            raise LLMError(f"Provider '{provider}' failed: {exc}") from exc
+    
+    # If no provider specified or provider is "cheap_mix", use fallback behavior
+    return _cheap_mix_impl(prompt, models)
+
+
+def _cheap_mix_impl(prompt: str, models: Optional[Dict[str, str]] = None) -> tuple[str, str]:
+    """Internal implementation of cheap_mix with provider fallback."""
     providers = [
         ("groq", call_groq),
         ("gemini", call_gemini),
@@ -173,10 +205,23 @@ def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
         model_override = (models or {}).get(name)
         try:
             if model_override:
-                return func(prompt, model_override)
-            return func(prompt)  # type: ignore[arg-type]
+                response = func(prompt, model_override)
+            else:
+                response = func(prompt)  # type: ignore[arg-type]
+            return (response, name)
         except LLMError as exc:
             errors[name] = str(exc)
             continue
     detail = "; ".join(f"{name}: {message}" for name, message in errors.items())
     raise LLMError(f"All providers failed ({detail})")
+
+
+def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
+    """
+    Legacy function for backward compatibility.
+    Try providers in order: Groq -> Gemini -> OpenRouter.
+    Return first successful text response.
+    Raise LLMError if all fail.
+    """
+    response, _ = _cheap_mix_impl(prompt, models)
+    return response
