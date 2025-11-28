@@ -84,8 +84,7 @@ A PR is eligible for auto-approval and merge when ALL of the following are true:
 
 **Triggers**:
 - `pull_request_review` events: submitted
-- `check_suite` events: completed
-- `workflow_run` events: Test and Evaluate, Auto PR Review workflows completed
+- `workflow_run` events: Test and Evaluate workflow completed
 
 **Process**:
 1. Checks PR eligibility based on criteria above
