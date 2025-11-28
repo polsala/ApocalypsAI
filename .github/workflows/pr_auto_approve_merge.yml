@@ -134,8 +134,8 @@ jobs:
                               return False, f"Check run '{run.get('name')}' failed with {conclusion}"
                   
                   except agent_utils.GitHubError:
-                      # If we can't get status, assume it's okay (might not have checks)
-                      pass
+                      # If we can't get status, fail safe - don't auto-merge
+                      return False, "Unable to verify CI status"
                   
                   return True, "All checks passed"
                   

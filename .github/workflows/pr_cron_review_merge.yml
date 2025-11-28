@@ -157,7 +157,8 @@ jobs:
                       
                       except agent_utils.GitHubError as e:
                           print(f"  Could not check CI status: {e}")
-                          # Assume CI is okay if we can't check
+                          # Fail safe - don't auto-merge if we can't verify CI
+                          ci_passed = False
                       
                       if ci_passed:
                           print(f"  ✅ PR #{pr_number} is eligible for auto-merge")
