@@ -40,7 +40,7 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           # Extract metadata if present
           if echo "$output" | grep -q "__METADATA_START__"; then
-            metadata=$(echo "$output" | grep -oP '__METADATA_START__\K.*?(?=__METADATA_END__)')
+            metadata=$(echo "$output" | sed -n 's/.*__METADATA_START__\(.*\)__METADATA_END__.*/\1/p')
             echo "metadata=$metadata" >> "$GITHUB_OUTPUT"
           else
             echo "metadata={}" >> "$GITHUB_OUTPUT"

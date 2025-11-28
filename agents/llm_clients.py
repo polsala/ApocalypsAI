@@ -167,6 +167,9 @@ def call_provider(prompt: str, models: Optional[Dict[str, str]] = None) -> tuple
     Call the LLM provider specified by APOCALYPSAI_PROVIDER env var.
     Returns tuple of (response_text, provider_name).
     Raises LLMError if the specified provider fails.
+    
+    If APOCALYPSAI_PROVIDER is not set or is set to an unknown value,
+    falls back to cheap_mix behavior (tries providers in order).
     """
     provider = os.environ.get("APOCALYPSAI_PROVIDER", "").lower()
     
@@ -189,7 +192,8 @@ def call_provider(prompt: str, models: Optional[Dict[str, str]] = None) -> tuple
         except LLMError as exc:
             raise LLMError(f"Provider '{provider}' failed: {exc}") from exc
     
-    # If no provider specified or provider is "cheap_mix", use fallback behavior
+    # If no provider specified, provider is unknown, or explicitly set to "cheap_mix",
+    # use fallback behavior
     return _cheap_mix_impl(prompt, models)
 
 
