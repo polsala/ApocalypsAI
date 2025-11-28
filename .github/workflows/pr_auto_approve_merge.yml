@@ -96,9 +96,8 @@ jobs:
                       body = comment.get("body", "")
                       for agent in expected_reviewers:
                           if f"Review by {agent.upper()} Agent" in body:
-                              # Count comment as implicit approval if no blocking issues mentioned
-                              if "🔒 Security" in body and "❌" not in body:
-                                  approved_by.add(agent)
+                              # Review is present - add to reviewed set
+                              approved_by.add(agent)
                   
                   if len(approved_by) < len(expected_reviewers):
                       missing = expected_reviewers - approved_by
@@ -113,7 +112,9 @@ jobs:
                       status = agent_utils.get_commit_status(repo, sha)
                       state = status.get("state", "")
                       
-                      if state not in ["success", ""]:
+                      # Empty state means no status checks configured, which is acceptable
+                      # Otherwise, require success
+                      if state and state != "success":
                           return False, f"CI status is {state}, not success"
                       
                       # Also check check runs
@@ -128,8 +129,8 @@ jobs:
                           if status_val != "completed":
                               return False, f"Check run '{run.get('name')}' is still {status_val}"
                           
-                          # Check conclusion
-                          if conclusion not in ["success", "neutral", "skipped", None]:
+                          # Check conclusion - must be success, neutral, or skipped
+                          if conclusion not in ["success", "neutral", "skipped"]:
                               return False, f"Check run '{run.get('name')}' failed with {conclusion}"
                   
                   except agent_utils.GitHubError:

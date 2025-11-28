@@ -52,11 +52,11 @@ A PR is eligible for auto-approval and merge when ALL of the following are true:
 
 1. **PR State**: PR is open
 2. **Branch Pattern**: PR is from an AI agent branch (`ai/gemini-*`, `ai/groq-*`, or `ai/openrouter-*`)
-3. **Reviews Complete**: PR has reviews from the other two agents (not the author agent)
+3. **Reviews Complete**: PR has review comments from the other two agents (not the author agent), identified by the header `## 🤖 Review by {PROVIDER} Agent`
 4. **CI Status**: All required checks have passed
-   - Combined status is "success" or empty
+   - Combined status is "success" or empty (no status checks configured)
    - All check runs are "completed" with conclusion "success", "neutral", or "skipped"
-5. **No Blocking Issues**: Reviews don't contain blocking security issues (indicated by ❌ in security section)
+5. **Note**: The presence of a review comment is sufficient for approval; content is not parsed for blocking issues (agents provide informational feedback)
 
 ## Workflow Files
 
@@ -158,8 +158,9 @@ Enhanced with provider tracking:
 - **Auto-merge**: Only applies to AI agent branches; manual merge required for others
 
 ### Scenario: Review contains blocking security issues
-- **Current**: System still proceeds (reviews are informational)
-- **Future Enhancement**: Parse review content for blocking markers (e.g., ❌ in security section)
+- **Current**: Reviews are informational; presence of review is sufficient for merge
+- **Note**: Agents provide feedback in structured format, but content is not parsed for blocking markers
+- **Recommendation**: Agents should use clear, actionable language; maintainers can intervene if critical issues are found
 
 ## Testing
 

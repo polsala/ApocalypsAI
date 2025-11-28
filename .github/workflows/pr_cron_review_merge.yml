@@ -130,6 +130,8 @@ jobs:
                           status = agent_utils.get_commit_status(repo, sha)
                           state = status.get("state", "")
                           
+                          # Empty state means no status checks configured, which is acceptable
+                          # Otherwise, require success
                           if state and state != "success":
                               print(f"  CI status is {state}")
                               ci_passed = False
@@ -147,7 +149,8 @@ jobs:
                                   ci_passed = False
                                   break
                               
-                              if conclusion not in ["success", "neutral", "skipped", None]:
+                              # Check conclusion - must be success, neutral, or skipped
+                              if conclusion not in ["success", "neutral", "skipped"]:
                                   print(f"  Check '{run.get('name')}' failed: {conclusion}")
                                   ci_passed = False
                                   break
