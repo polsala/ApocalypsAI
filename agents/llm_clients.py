@@ -64,7 +64,7 @@ def _post_json(
         raise LLMError(f"Failed to decode JSON response: {exc}") from exc
 
 
-def call_openrouter(prompt: str, model: str = "google/gemini-2.5-flash-8b") -> str:
+def call_openrouter(prompt: str, model: str = "kwaipilot/kat-coder-pro:free") -> str:
     api_key = _require_env("OPENROUTER_API_KEY")
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
