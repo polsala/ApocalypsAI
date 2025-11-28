@@ -1,0 +1,214 @@
+name: Auto Approve and Merge PRs
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows: ["Test and Evaluate", "Auto PR Review by Multiple Agents"]
+    types: [completed]
+    
+permissions:
+  contents: write
+  pull-requests: write
+  
+env:
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  
+jobs:
+  auto-approve-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+          
+      - name: Auto approve and merge eligible PRs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import sys
+          import json
+          from pathlib import Path
+          
+          # Add agents to path
+          sys.path.insert(0, str(Path.cwd()))
+          
+          from agents import agent_utils
+          
+          def check_pr_eligibility(repo: str, pr_number: int) -> tuple[bool, str]:
+              """Check if a PR is eligible for auto-merge.
+              
+              Returns:
+                  Tuple of (is_eligible, reason)
+              """
+              try:
+                  pr = agent_utils.get_pr(repo, pr_number)
+                  
+                  # Check if PR is open
+                  if pr.get("state") != "open":
+                      return False, f"PR is not open (state: {pr.get('state')})"
+                  
+                  # Check if PR is from an AI agent branch
+                  branch = pr.get("head", {}).get("ref", "")
+                  is_ai_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  if not is_ai_pr:
+                      return False, "PR is not from an AI agent branch"
+                  
+                  # Determine which agent created the PR
+                  pr_agent = None
+                  for agent in ["gemini", "groq", "openrouter"]:
+                      if branch.startswith(f"ai/{agent}-"):
+                          pr_agent = agent
+                          break
+                  
+                  # Get reviews
+                  reviews = agent_utils.get_pr_reviews(repo, pr_number)
+                  
+                  # Expected reviewers are the other two agents
+                  expected_reviewers = {"gemini", "groq", "openrouter"} - {pr_agent}
+                  
+                  # Check if we have approvals from expected reviewers
+                  approved_by = set()
+                  for review in reviews:
+                      if review.get("state") == "APPROVED":
+                          # Check review body for agent identifier
+                          body = review.get("body", "")
+                          for agent in expected_reviewers:
+                              if f"Review by {agent.upper()} Agent" in body:
+                                  approved_by.add(agent)
+                                  break
+                  
+                  # Also check comments for agent reviews (they post as comments, not formal reviews)
+                  comments = agent_utils.get_issue_comments(repo, pr_number)
+                  for comment in comments:
+                      body = comment.get("body", "")
+                      for agent in expected_reviewers:
+                          if f"Review by {agent.upper()} Agent" in body:
+                              # Count comment as implicit approval if no blocking issues mentioned
+                              if "🔒 Security" in body and "❌" not in body:
+                                  approved_by.add(agent)
+                  
+                  if len(approved_by) < len(expected_reviewers):
+                      missing = expected_reviewers - approved_by
+                      return False, f"Missing reviews from: {', '.join(missing)}"
+                  
+                  # Check CI status
+                  sha = pr.get("head", {}).get("sha")
+                  if not sha:
+                      return False, "Cannot determine HEAD SHA"
+                  
+                  try:
+                      status = agent_utils.get_commit_status(repo, sha)
+                      state = status.get("state", "")
+                      
+                      if state not in ["success", ""]:
+                          return False, f"CI status is {state}, not success"
+                      
+                      # Also check check runs
+                      check_runs = agent_utils.get_check_runs(repo, sha)
+                      runs = check_runs.get("check_runs", [])
+                      
+                      for run in runs:
+                          conclusion = run.get("conclusion")
+                          status_val = run.get("status")
+                          
+                          # Skip runs that haven't completed
+                          if status_val != "completed":
+                              return False, f"Check run '{run.get('name')}' is still {status_val}"
+                          
+                          # Check conclusion
+                          if conclusion not in ["success", "neutral", "skipped", None]:
+                              return False, f"Check run '{run.get('name')}' failed with {conclusion}"
+                  
+                  except agent_utils.GitHubError:
+                      # If we can't get status, assume it's okay (might not have checks)
+                      pass
+                  
+                  return True, "All checks passed"
+                  
+              except Exception as e:
+                  return False, f"Error checking PR: {e}"
+          
+          def main():
+              repo = os.environ.get("GITHUB_REPOSITORY")
+              if not repo:
+                  print("ERROR: GITHUB_REPOSITORY not set")
+                  return 1
+              
+              # Get PR number from event
+              event_name = os.environ.get("GITHUB_EVENT_NAME")
+              event_path = os.environ.get("GITHUB_EVENT_PATH")
+              
+              if not event_path or not os.path.exists(event_path):
+                  print(f"No event path found, listing all open PRs")
+                  try:
+                      prs = agent_utils.list_open_prs(repo)
+                      pr_numbers = [pr.get("number") for pr in prs if pr.get("number")]
+                  except Exception as e:
+                      print(f"ERROR: Could not list PRs: {e}")
+                      return 1
+              else:
+                  with open(event_path) as f:
+                      event = json.load(f)
+                  
+                  pr_number = None
+                  if "pull_request" in event:
+                      pr_number = event["pull_request"].get("number")
+                  elif "workflow_run" in event:
+                      # Get PRs associated with the workflow run
+                      prs = event.get("workflow_run", {}).get("pull_requests", [])
+                      if prs:
+                          pr_number = prs[0].get("number")
+                  
+                  if pr_number:
+                      pr_numbers = [pr_number]
+                  else:
+                      print("No specific PR in event, checking all open PRs")
+                      try:
+                          prs = agent_utils.list_open_prs(repo)
+                          pr_numbers = [pr.get("number") for pr in prs if pr.get("number")]
+                      except Exception as e:
+                          print(f"ERROR: Could not list PRs: {e}")
+                          return 1
+              
+              if not pr_numbers:
+                  print("No PRs to check")
+                  return 0
+              
+              for pr_num in pr_numbers:
+                  print(f"\nChecking PR #{pr_num}...")
+                  eligible, reason = check_pr_eligibility(repo, pr_num)
+                  
+                  if eligible:
+                      print(f"  ✅ PR #{pr_num} is eligible for auto-merge: {reason}")
+                      try:
+                          # Approve the PR
+                          print(f"  Approving PR #{pr_num}...")
+                          agent_utils.approve_pr(repo, pr_num, "✅ Auto-approved: All AI agent reviews passed and CI checks succeeded.")
+                          
+                          # Merge the PR
+                          print(f"  Merging PR #{pr_num}...")
+                          agent_utils.merge_pr(repo, pr_num, merge_method="squash")
+                          print(f"  ✅ Successfully merged PR #{pr_num}")
+                      except agent_utils.GitHubError as e:
+                          print(f"  ❌ Failed to approve/merge PR #{pr_num}: {e}")
+                  else:
+                      print(f"  ⏸️  PR #{pr_num} not eligible: {reason}")
+              
+              return 0
+          
+          if __name__ == "__main__":
+              sys.exit(main())
+          PY

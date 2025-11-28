@@ -87,3 +87,100 @@ def get_pr_diff(repo: str, number: int) -> str:
     if response.status_code >= 400:
         raise GitHubError(f"GET {path} diff failed: {response.status_code} {response.text}")
     return response.text
+
+
+def create_pr_review(repo: str, number: int, body: str, event: str = "COMMENT") -> None:
+    """Create a PR review with the given body and event type.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        body: Review comment body
+        event: One of 'APPROVE', 'REQUEST_CHANGES', 'COMMENT'
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/pulls/{number}/reviews"
+    _request("POST", path, json={"body": body, "event": event})
+
+
+def approve_pr(repo: str, number: int, body: str = "Auto-approved by AI agent") -> None:
+    """Approve a pull request.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        body: Approval message
+    """
+    create_pr_review(repo, number, body, "APPROVE")
+
+
+def merge_pr(repo: str, number: int, merge_method: str = "squash") -> None:
+    """Merge a pull request.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        merge_method: One of 'merge', 'squash', 'rebase'
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/pulls/{number}/merge"
+    _request("PUT", path, json={"merge_method": merge_method})
+
+
+def get_pr_reviews(repo: str, number: int) -> list[Dict[str, Any]]:
+    """Get all reviews for a pull request.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        
+    Returns:
+        List of review objects
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/pulls/{number}/reviews"
+    return _request("GET", path)
+
+
+def get_commit_status(repo: str, ref: str) -> Dict[str, Any]:
+    """Get combined status for a commit/ref.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        ref: Git commit SHA, branch name, or tag
+        
+    Returns:
+        Combined status object with state and statuses
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/commits/{ref}/status"
+    return _request("GET", path)
+
+
+def get_check_runs(repo: str, ref: str) -> Dict[str, Any]:
+    """Get check runs for a commit/ref.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        ref: Git commit SHA, branch name, or tag
+        
+    Returns:
+        Check runs object with total_count and check_runs list
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/commits/{ref}/check-runs"
+    return _request("GET", path)
+
+
+def list_open_prs(repo: str) -> list[Dict[str, Any]]:
+    """List all open pull requests in a repository.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        
+    Returns:
+        List of PR objects
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/pulls?state=open"
+    return _request("GET", path)
