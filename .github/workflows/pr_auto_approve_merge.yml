@@ -2,10 +2,8 @@ name: Auto Approve and Merge PRs
 on:
   pull_request_review:
     types: [submitted]
-  check_suite:
-    types: [completed]
   workflow_run:
-    workflows: ["Test and Evaluate", "Auto PR Review by Multiple Agents"]
+    workflows: ["Test and Evaluate"]
     types: [completed]
     
 permissions:
