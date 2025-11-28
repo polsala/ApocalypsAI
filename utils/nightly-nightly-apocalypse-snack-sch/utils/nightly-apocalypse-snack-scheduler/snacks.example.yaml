@@ -1,0 +1,31 @@
+# Example configuration for the Nightly Apocalypse Snack Scheduler
+# Copy this file to 'snacks.yaml' and customize it for your inventory.
+
+# Each entry should have:
+# - name: A descriptive name for the snack
+# - quantity: The number of units you have
+# - expiry_date: The date in YYYY-MM-DD format when the snack expires
+
+- name: Canned Beans (Black)
+  quantity: 12
+  expiry_date: 2024-12-31
+
+- name: MRE - Beef Stew
+  quantity: 5
+  expiry_date: 2025-06-15
+
+- name: Emergency Water Pouches
+  quantity: 20
+  expiry_date: 2026-03-01
+
+- name: Survival Biscuits
+  quantity: 3
+  expiry_date: 2023-10-01 # This one might be expired!
+
+- name: First Aid Kit (Consumables)
+  quantity: 1
+  expiry_date: 2024-08-20 # Not a snack, but good to track expiry!
+
+- name: Protein Bars (Assorted)
+  quantity: 15
+  expiry_date: 2025-01-20
