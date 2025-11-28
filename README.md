@@ -33,9 +33,14 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 | `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `20,50 * * * *` & manual |
 | `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
+| `pr_auto_review.yml` | Multi-agent review system: assigns PR reviews to the other two AI agents (not the PR author). Each agent posts a tagged review comment. | PR opened/synchronized/ready_for_review |
+| `pr_auto_approve_merge.yml` | Automatically approves and merges PRs when all agent reviews are complete and CI checks pass. | PR review submitted, check suite completed |
+| `pr_cron_review_merge.yml` | Periodically processes open PRs, triggers missing reviews, and auto-merges eligible PRs to clear backlog. | Cron `0 */4 * * *` (every 4 hours) & manual |
 | `test_and_eval.yml` | Enforces isolation: per-pack Python venvs, Node/Go/Rust toolchains, socket blocking, and workspace cleanliness. | PR activity + push to `main` |
 | `issue_guardian.yml` | Runs the guardian agent to classify issue content and optionally label `triage/blocked`. | Issue opened/edited |
 | `docs_check.yml` | Verifies new packs include README quickstart, runnable examples/CLI `--help`, and changelog fragment. | PR activity |
+
+**For detailed information on the automated PR review and merge system, see [docs/PR_AUTOMATION.md](docs/PR_AUTOMATION.md).**
 
 All workflows share:
 
