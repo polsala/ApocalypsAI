@@ -10,7 +10,7 @@ if __package__ is None or __package__ == "":
 
 from agents import agent_utils
 from agents.base import AgentBase, AgentContext
-from agents.llm_clients import LLMError, cheap_mix
+from agents.llm_clients import LLMError, call_provider
 
 MAX_WORDS = 1500
 
@@ -31,8 +31,8 @@ class ReviewerAgent(AgentBase):
 
         try:
             prompt = self._compose_prompt(pr, files, comments, diff)
-            response = cheap_mix(prompt, ctx.models)
-            comment = self._prepare_comment(response)
+            response, provider = call_provider(prompt, ctx.models)
+            comment = self._prepare_comment(response, provider)
             if not comment:
                 print("ERROR: Reviewer LLM returned empty response.")
                 return 1
@@ -77,7 +77,7 @@ class ReviewerAgent(AgentBase):
             "You are the ApocalypsAI Reviewer agent.",
             "Produce a single consolidated review comment in Markdown (≤1500 words).",
             "Follow this exact structure:",
-            "✅ What’s solid",
+            "✅ What's solid",
             "🧪 Tests",
             "🔒 Security",
             "🧩 Docs/DX",
@@ -107,26 +107,31 @@ class ReviewerAgent(AgentBase):
         tail = diff[-limit // 2 :]
         return f"{head}\n...\n{tail}"
 
-    def _prepare_comment(self, response: str) -> str:
+    def _prepare_comment(self, response: str, provider: str) -> str:
         comment = response.strip()
         if not comment:
             return ""
         words = comment.split()
         if len(words) > MAX_WORDS:
             comment = " ".join(words[:MAX_WORDS])
+        
+        # Add provider header
+        provider_header = f"## 🤖 Review by {provider.upper()} Agent\n\n"
+        
         if "✅" not in comment:
-            comment = f"✅ What’s solid\n- (not provided)\n\n{comment}"
+            comment = f"✅ What's solid\n- (not provided)\n\n{comment}"
         required_sections = ["✅", "🧪", "🔒", "🧩", "🧱"]
         if not all(section in comment for section in required_sections):
             # Encourage structure by inserting headers when missing
             segments = []
-            for label in ["✅ What’s solid", "🧪 Tests", "🔒 Security", "🧩 Docs/DX", "🧱 Mocks/Fakes"]:
+            for label in ["✅ What's solid", "🧪 Tests", "🔒 Security", "🧩 Docs/DX", "🧱 Mocks/Fakes"]:
                 if label.split()[0] in comment:
                     continue
                 segments.append(f"{label}\n- (pending)")
             if segments:
                 comment = "\n\n".join(segments) + "\n\n" + comment
-        return comment.strip()
+        
+        return (provider_header + comment).strip()
 
 
 def _parse_models(value: Optional[str]) -> Optional[dict]:

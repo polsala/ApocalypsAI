@@ -1,0 +1,208 @@
+name: Cron - Review and Merge Open PRs
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    
+permissions:
+  contents: write
+  pull-requests: write
+  
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  
+jobs:
+  process-open-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+          
+      - name: Process open PRs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          
+          # Add agents to path
+          sys.path.insert(0, str(Path.cwd()))
+          
+          from agents import agent_utils
+          from agents.base import AgentContext
+          from agents.agent_reviewer import ReviewerAgent
+          
+          def process_pr(repo: str, pr_number: int):
+              """Process a single PR: review if needed, approve and merge if eligible."""
+              try:
+                  pr = agent_utils.get_pr(repo, pr_number)
+                  
+                  # Only process AI agent PRs
+                  branch = pr.get("head", {}).get("ref", "")
+                  is_ai_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  if not is_ai_pr:
+                      print(f"  Skipping non-AI PR #{pr_number}")
+                      return
+                  
+                  # Determine which agent created the PR
+                  pr_agent = None
+                  for agent in ["gemini", "groq", "openrouter"]:
+                      if branch.startswith(f"ai/{agent}-"):
+                          pr_agent = agent
+                          break
+                  
+                  if not pr_agent:
+                      print(f"  Could not determine PR agent for #{pr_number}")
+                      return
+                  
+                  print(f"  PR #{pr_number} created by {pr_agent}")
+                  
+                  # Check which agents have reviewed
+                  expected_reviewers = {"gemini", "groq", "openrouter"} - {pr_agent}
+                  comments = agent_utils.get_issue_comments(repo, pr_number)
+                  
+                  reviewed_by = set()
+                  for comment in comments:
+                      body = comment.get("body", "")
+                      for agent in expected_reviewers:
+                          if f"Review by {agent.upper()} Agent" in body:
+                              reviewed_by.add(agent)
+                  
+                  # Trigger reviews for agents that haven't reviewed yet
+                  missing_reviews = expected_reviewers - reviewed_by
+                  
+                  if missing_reviews:
+                      print(f"  Missing reviews from: {', '.join(missing_reviews)}")
+                      
+                      for agent in missing_reviews:
+                          print(f"    Triggering {agent} review...")
+                          try:
+                              # Set provider env var and run reviewer
+                              os.environ["APOCALYPSAI_PROVIDER"] = agent
+                              ctx = AgentContext(
+                                  repo=repo,
+                                  pr_number=pr_number,
+                                  issue_number=None,
+                                  mode=None,
+                                  models=None
+                              )
+                              reviewer = ReviewerAgent()
+                              result = reviewer.run(ctx)
+                              
+                              if result == 0:
+                                  print(f"    ✅ {agent} review posted")
+                                  reviewed_by.add(agent)
+                              else:
+                                  print(f"    ⚠️  {agent} review failed with code {result}")
+                          except Exception as e:
+                              print(f"    ❌ {agent} review error: {e}")
+                  else:
+                      print(f"  All expected reviews present")
+                  
+                  # Check if PR is now eligible for merge
+                  if reviewed_by == expected_reviewers:
+                      print(f"  All reviews complete, checking CI status...")
+                      
+                      sha = pr.get("head", {}).get("sha")
+                      if not sha:
+                          print(f"  Cannot determine HEAD SHA")
+                          return
+                      
+                      # Check CI status
+                      ci_passed = True
+                      try:
+                          status = agent_utils.get_commit_status(repo, sha)
+                          state = status.get("state", "")
+                          
+                          if state and state != "success":
+                              print(f"  CI status is {state}")
+                              ci_passed = False
+                          
+                          # Check check runs
+                          check_runs = agent_utils.get_check_runs(repo, sha)
+                          runs = check_runs.get("check_runs", [])
+                          
+                          for run in runs:
+                              conclusion = run.get("conclusion")
+                              status_val = run.get("status")
+                              
+                              if status_val != "completed":
+                                  print(f"  Check '{run.get('name')}' still running")
+                                  ci_passed = False
+                                  break
+                              
+                              if conclusion not in ["success", "neutral", "skipped", None]:
+                                  print(f"  Check '{run.get('name')}' failed: {conclusion}")
+                                  ci_passed = False
+                                  break
+                      
+                      except agent_utils.GitHubError as e:
+                          print(f"  Could not check CI status: {e}")
+                          # Assume CI is okay if we can't check
+                      
+                      if ci_passed:
+                          print(f"  ✅ PR #{pr_number} is eligible for auto-merge")
+                          try:
+                              # Approve the PR
+                              agent_utils.approve_pr(repo, pr_number, "✅ Auto-approved: All AI agent reviews passed and CI checks succeeded.")
+                              print(f"  Approved PR #{pr_number}")
+                              
+                              # Merge the PR
+                              agent_utils.merge_pr(repo, pr_number, merge_method="squash")
+                              print(f"  ✅ Merged PR #{pr_number}")
+                          except agent_utils.GitHubError as e:
+                              print(f"  ❌ Failed to approve/merge: {e}")
+                      else:
+                          print(f"  ⏸️  CI not ready for merge")
+                  
+              except Exception as e:
+                  print(f"  ERROR processing PR #{pr_number}: {e}")
+                  import traceback
+                  traceback.print_exc()
+          
+          def main():
+              repo = os.environ.get("GITHUB_REPOSITORY")
+              if not repo:
+                  print("ERROR: GITHUB_REPOSITORY not set")
+                  return 1
+              
+              print(f"Processing open PRs for {repo}...")
+              
+              try:
+                  prs = agent_utils.list_open_prs(repo)
+                  print(f"Found {len(prs)} open PRs")
+                  
+                  for pr in prs:
+                      pr_number = pr.get("number")
+                      if pr_number:
+                          print(f"\nProcessing PR #{pr_number}...")
+                          process_pr(repo, pr_number)
+                  
+                  print("\n✅ Finished processing all open PRs")
+                  return 0
+                  
+              except Exception as e:
+                  print(f"ERROR: {e}")
+                  import traceback
+                  traceback.print_exc()
+                  return 1
+          
+          if __name__ == "__main__":
+              sys.exit(main())
+          PY

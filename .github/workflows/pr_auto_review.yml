@@ -1,0 +1,119 @@
+name: Auto PR Review by Multiple Agents
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+permissions:
+  contents: read
+  pull-requests: write
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+jobs:
+  detect-author:
+    runs-on: ubuntu-latest
+    outputs:
+      agent_type: ${{ steps.detect.outputs.agent_type }}
+      review_agents: ${{ steps.detect.outputs.review_agents }}
+    steps:
+      - name: Detect PR author agent type
+        id: detect
+        run: |
+          set -euo pipefail
+          branch="${{ github.event.pull_request.head.ref }}"
+          echo "Branch: $branch"
+          
+          # Detect which agent created the PR based on branch name
+          if [[ "$branch" =~ ^ai/gemini- ]]; then
+            agent_type="gemini"
+            review_agents="groq,openrouter"
+          elif [[ "$branch" =~ ^ai/groq- ]]; then
+            agent_type="groq"
+            review_agents="gemini,openrouter"
+          elif [[ "$branch" =~ ^ai/openrouter- ]]; then
+            agent_type="openrouter"
+            review_agents="gemini,groq"
+          else
+            # Not an AI-generated PR, use all agents for review
+            agent_type="other"
+            review_agents="gemini,groq,openrouter"
+          fi
+          
+          echo "agent_type=$agent_type" >> "$GITHUB_OUTPUT"
+          echo "review_agents=$review_agents" >> "$GITHUB_OUTPUT"
+          echo "Detected agent type: $agent_type"
+          echo "Review agents: $review_agents"
+
+  review-gemini:
+    needs: detect-author
+    if: contains(needs.detect-author.outputs.review_agents, 'gemini')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+      - name: Run Gemini review
+        env:
+          APOCALYPSAI_PROVIDER: gemini
+        run: |
+          set -euo pipefail
+          python agents/agent_reviewer.py --repo "${{ github.repository }}" --pr "${{ github.event.pull_request.number }}"
+
+  review-groq:
+    needs: detect-author
+    if: contains(needs.detect-author.outputs.review_agents, 'groq')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+      - name: Run Groq review
+        env:
+          APOCALYPSAI_PROVIDER: groq
+        run: |
+          set -euo pipefail
+          python agents/agent_reviewer.py --repo "${{ github.repository }}" --pr "${{ github.event.pull_request.number }}"
+
+  review-openrouter:
+    needs: detect-author
+    if: contains(needs.detect-author.outputs.review_agents, 'openrouter')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml pytest
+      - name: Run OpenRouter review
+        env:
+          APOCALYPSAI_PROVIDER: openrouter
+        run: |
+          set -euo pipefail
+          python agents/agent_reviewer.py --repo "${{ github.repository }}" --pr "${{ github.event.pull_request.number }}"
