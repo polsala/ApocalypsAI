@@ -28,10 +28,10 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 
 | Workflow | Purpose | Trigger |
 | --- | --- | --- |
-| `gen_openrouter.yml` | Runs the generator agent (OpenRouter provider) to mint a brand-new `utils/<util_name>` folder (code + README + tests) and open a PR. | Cron `0,30 * * * *` & manual |
-| `gen_groq.yml` | Same generator flow but pinned to Groq. | Cron `10,40 * * * *` & manual |
-| `gen_gemini.yml` | Same generator flow but pinned to Gemini. | Cron `20,50 * * * *` & manual |
-| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. | Daily cron `42 2 * * *` |
+| `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new `utils/<util_name>` folder (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0,30 * * * *` & manual |
+| `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `10,40 * * * *` & manual |
+| `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `20,50 * * * *` & manual |
+| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
 | `test_and_eval.yml` | Enforces isolation: per-pack Python venvs, Node/Go/Rust toolchains, socket blocking, and workspace cleanliness. | PR activity + push to `main` |
 | `issue_guardian.yml` | Runs the guardian agent to classify issue content and optionally label `triage/blocked`. | Issue opened/edited |
@@ -60,10 +60,10 @@ Each agent follows the API defined in `AGENTS.md`:
 
 - **Builder (`agents/agent_builder.py`)**  
   CLI: `python agents/agent_builder.py --repo owner/name --issue-number <id> [--models provider=model]`  
-  Fetches issue context, prompts LLM (via `llm_clients.cheap_mix`), and materializes a fresh `utils/<slug>` folder. Exit codes: `0` (utility created), `2` (no-op), `1` (failure).
+  Fetches issue context, prompts LLM (respects `APOCALYPSAI_PROVIDER` env var), and materializes a fresh `utils/<slug>` folder. Exit codes: `0` (utility created), `2` (no-op), `1` (failure). Outputs JSON metadata for PR generation.
 
 - **Integrator (`agents/agent_integrator.py`)**  
-  CLI requires `--mode nightly`. Produces a spontaneous `utils/nightly-<slug>` utility with docs/tests or exits `2` when nothing safe emerges.
+  CLI requires `--mode nightly`. Produces a spontaneous `utils/nightly-<slug>` utility with docs/tests or exits `2` when nothing safe emerges. Respects `APOCALYPSAI_PROVIDER` env var. Outputs JSON metadata for PR generation.
 
 - **Reviewer (`agents/agent_reviewer.py`)**  
   CLI: `--repo`, `--pr`. Downloads PR metadata, changed files, diff, and prior comments to prompt a cross-provider review. Posts a single Markdown comment via GitHub API.
@@ -74,7 +74,7 @@ Each agent follows the API defined in `AGENTS.md`:
 Supporting modules:
 
 - `agents/base.py` — `AgentContext` dataclass & abstract `AgentBase.run`.
-- `agents/llm_clients.py` — `call_openrouter`, `call_groq`, `call_gemini`, and `cheap_mix` with retries/jitter + sanitization.
+- `agents/llm_clients.py` — `call_openrouter`, `call_groq`, `call_gemini`, `call_provider` (respects `APOCALYPSAI_PROVIDER`), and `cheap_mix` with retries/jitter + sanitization.
 - `agents/agent_utils.py` — Minimal GitHub REST helpers (issues, PRs, comments, labels, diffs).
 
 ## Tooling & Local Development
@@ -93,6 +93,7 @@ Supporting modules:
    export GROQ_API_KEY=...
    export GOOGLE_API_KEY=...
    export GITHUB_TOKEN=ghp_xxx
+   export APOCALYPSAI_PROVIDER=gemini  # Optional: specify provider (gemini/groq/openrouter)
    ```
 
 3. **Testing**  
