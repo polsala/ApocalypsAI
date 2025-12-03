@@ -166,8 +166,6 @@ def enable_auto_merge(repo: str, number: int, merge_method: str = "squash") -> N
         number: PR number
         merge_method: One of 'MERGE', 'SQUASH', 'REBASE' (uppercase for GraphQL)
     """
-    owner, name = repo.split("/", 1)
-    
     # First, get the PR node ID (required for GraphQL mutation)
     pr_data = get_pr(repo, number)
     pr_node_id = pr_data.get("node_id")
