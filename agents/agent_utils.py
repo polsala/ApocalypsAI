@@ -256,9 +256,14 @@ def get_required_status_checks(repo: str, branch: str) -> list[str]:
     # Also get checks from the newer checks array
     checks = required_checks.get("checks", [])
     
-    # Combine both formats
+    # Combine both formats, filtering out empty strings
     check_names = set(contexts)
     for check in checks:
-        check_names.add(check.get("context", ""))
+        context = check.get("context", "")
+        if context:  # Only add non-empty contexts
+            check_names.add(context)
+    
+    # Filter out any empty strings from contexts as well
+    check_names.discard("")
     
     return list(check_names)
