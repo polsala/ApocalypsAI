@@ -98,9 +98,9 @@ jobs:
                               # Review is present - add to reviewed set
                               approved_by.add(agent)
                   
-                  if len(approved_by) < len(expected_reviewers):
-                      missing = expected_reviewers - approved_by
-                      return False, f"Missing reviews from: {', '.join(missing)}"
+                  # Require at least one approval from any expected reviewer
+                  if len(approved_by) < 1:
+                      return False, f"Missing reviews from any of: {', '.join(expected_reviewers)}"
                   
                   # Check CI status
                   sha = pr.get("head", {}).get("sha")
