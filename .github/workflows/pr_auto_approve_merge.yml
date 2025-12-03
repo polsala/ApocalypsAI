@@ -99,7 +99,7 @@ jobs:
                               approved_by.add(agent)
                   
                   # Require at least one approval from any expected reviewer
-                  if len(approved_by) < 1:
+                  if not approved_by:
                       return False, f"Missing reviews from any of: {', '.join(expected_reviewers)}"
                   
                   # Check CI status
