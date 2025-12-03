@@ -67,10 +67,12 @@ The current system is legitimate because:
 
 ### What Would NOT Be Acceptable
 
-❌ **Using REVIWER_TOKEN for self-approval**
+❌ **Using REVIWER_TOKEN (or any secondary token) for self-approval**
 - Having the same agent that created the PR approve it using a different token
-- Creating a secondary account just to rubber-stamp approvals
+- Creating a secondary account just to rubber-stamp approvals  
 - Any automation that makes reviews meaningless
+
+> **Note:** "REVIWER_TOKEN" refers to the token name from the blocked issue request. Using any token from a secondary account to circumvent review requirements is not acceptable, regardless of the token's name.
 
 ## Best Practices
 
