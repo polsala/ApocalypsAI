@@ -1,8 +1,10 @@
 # Response to Issue: Automate Reviews and Approvals Using REVIWER_TOKEN
 
+> **Note:** The original issue contains a typo in the token name - "REVIWER_TOKEN" instead of "REVIEWER_TOKEN". This document preserves the original spelling when referencing the issue.
+
 ## Issue Summary
 
-The original issue requested automation of PR reviews and approvals using a secondary GitHub account and a `REVIWER_TOKEN` to circumvent the platform rule that prevents PR authors from approving their own PRs.
+The original issue requested automation of PR reviews and approvals using a secondary GitHub account and a `REVIWER_TOKEN` (spelled as in the original issue) to circumvent the platform rule that prevents PR authors from approving their own PRs.
 
 ## Verdict: Cannot Be Implemented
 
