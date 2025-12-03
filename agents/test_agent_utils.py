@@ -9,6 +9,7 @@ from agents.agent_utils import (
     GitHubError,
     get_branch_protection,
     get_required_status_checks,
+    is_pr_approved,
 )
 
 
@@ -141,3 +142,51 @@ class TestBranchProtection:
             # Should only contain non-empty strings
             assert set(result) == {"ci/test", "ci/build"}
             assert "" not in result
+
+
+class TestPRApproval:
+    """Test PR approval checking functions."""
+
+    def test_is_pr_approved_returns_true_when_approved(self):
+        """Test that is_pr_approved returns True when PR has at least one approval."""
+        mock_reviews = [
+            {"state": "COMMENTED", "user": {"login": "user1"}},
+            {"state": "APPROVED", "user": {"login": "user2"}},
+        ]
+        
+        with patch("agents.agent_utils.get_pr_reviews") as mock_get_reviews:
+            mock_get_reviews.return_value = mock_reviews
+            result = is_pr_approved("owner/repo", 123)
+            assert result is True
+            mock_get_reviews.assert_called_once_with("owner/repo", 123)
+
+    def test_is_pr_approved_returns_false_when_not_approved(self):
+        """Test that is_pr_approved returns False when PR has no approvals."""
+        mock_reviews = [
+            {"state": "COMMENTED", "user": {"login": "user1"}},
+            {"state": "CHANGES_REQUESTED", "user": {"login": "user2"}},
+        ]
+        
+        with patch("agents.agent_utils.get_pr_reviews") as mock_get_reviews:
+            mock_get_reviews.return_value = mock_reviews
+            result = is_pr_approved("owner/repo", 123)
+            assert result is False
+
+    def test_is_pr_approved_returns_false_when_no_reviews(self):
+        """Test that is_pr_approved returns False when PR has no reviews."""
+        with patch("agents.agent_utils.get_pr_reviews") as mock_get_reviews:
+            mock_get_reviews.return_value = []
+            result = is_pr_approved("owner/repo", 123)
+            assert result is False
+
+    def test_is_pr_approved_handles_multiple_approvals(self):
+        """Test that is_pr_approved returns True with multiple approvals."""
+        mock_reviews = [
+            {"state": "APPROVED", "user": {"login": "user1"}},
+            {"state": "APPROVED", "user": {"login": "user2"}},
+        ]
+        
+        with patch("agents.agent_utils.get_pr_reviews") as mock_get_reviews:
+            mock_get_reviews.return_value = mock_reviews
+            result = is_pr_approved("owner/repo", 123)
+            assert result is True

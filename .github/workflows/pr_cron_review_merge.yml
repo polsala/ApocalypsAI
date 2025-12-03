@@ -164,9 +164,13 @@ jobs:
                       if ci_passed:
                           print(f"  ✅ PR #{pr_number} is eligible for auto-merge")
                           try:
-                              # Approve the PR
-                              agent_utils.approve_pr(repo, pr_number, "✅ Auto-approved: All AI agent reviews passed and CI checks succeeded.")
-                              print(f"  Approved PR #{pr_number}")
+                              # Check if PR is already approved before approving again
+                              if agent_utils.is_pr_approved(repo, pr_number):
+                                  print(f"  ℹ️  PR #{pr_number} is already approved, skipping approval")
+                              else:
+                                  # Approve the PR
+                                  agent_utils.approve_pr(repo, pr_number, "✅ Auto-approved: All AI agent reviews passed and CI checks succeeded.")
+                                  print(f"  Approved PR #{pr_number}")
                               
                               # Merge the PR
                               agent_utils.merge_pr(repo, pr_number, merge_method="squash")

@@ -170,6 +170,25 @@ def get_pr_reviews(repo: str, number: int) -> list[Dict[str, Any]]:
     return _request("GET", path)
 
 
+def is_pr_approved(repo: str, number: int) -> bool:
+    """Check if a pull request is already approved.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        
+    Returns:
+        True if the PR has at least one approval, False otherwise
+    """
+    reviews = get_pr_reviews(repo, number)
+    # Check if any review has state "APPROVED"
+    # Note: GitHub tracks the latest review per user, so we just need to check if any is APPROVED
+    for review in reviews:
+        if review.get("state") == "APPROVED":
+            return True
+    return False
+
+
 def get_commit_status(repo: str, ref: str) -> Dict[str, Any]:
     """Get combined status for a commit/ref.
     
