@@ -137,7 +137,8 @@ jobs:
                           runs = check_runs.get("check_runs", [])
                           
                           # Define acceptable conclusions for required checks (stricter than non-required)
-                          # Required checks must not be skipped - only success or neutral
+                          # Required checks must not be skipped - they must actually run and pass
+                          # Only "success" or "neutral" are acceptable (not "skipped" or "failure")
                           required_acceptable_conclusions = ["success", "neutral"]
                           
                           # Build a map of check names to their status
