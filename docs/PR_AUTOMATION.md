@@ -68,6 +68,21 @@ A PR is eligible for auto-approval and merge when ALL of the following are true:
    - All check runs are "completed" with conclusion "success", "neutral", or "skipped"
 5. **Note**: The presence of a review comment is sufficient for approval; content is not parsed for blocking issues (agents provide informational feedback)
 
+## Auto-Approval and Merge Process
+
+When a PR meets all eligibility criteria:
+
+1. **Approval Step**: 
+   - The secondary account (using `REVIWER_TOKEN`) approves the PR
+   - This provides independent approval from a different account than the PR author
+   
+2. **Merge Step**:
+   - The primary account (using `GITHUB_TOKEN`/`GH_TOKEN`) merges the PR
+   - Branch protection rules and required checks are enforced
+   - Merge method: squash (combines all commits into one)
+
+This two-step process ensures compliance with GitHub's rules while maintaining repository owner control over merge operations.
+
 ## Workflow Files
 
 ### 1. pr_auto_review.yml
@@ -127,7 +142,7 @@ For each open AI agent PR:
 Added functions for PR management:
 - `create_pr_review()`: Create a formal PR review (supports `use_reviewer_token` parameter)
 - `approve_pr()`: Approve a PR (uses `REVIWER_TOKEN` by default for secondary account approval)
-- `merge_pr()`: Merge a PR with specified strategy
+- `merge_pr()`: Merge a PR with specified strategy (uses `GITHUB_TOKEN` for merge operations)
 - `get_pr_reviews()`: Get all reviews for a PR
 - `get_commit_status()`: Get combined CI status for a commit
 - `get_check_runs()`: Get check runs for a commit
@@ -135,12 +150,23 @@ Added functions for PR management:
 
 #### REVIWER_TOKEN Support
 
-The `approve_pr()` function now uses the `REVIWER_TOKEN` environment variable by default. This allows a secondary GitHub account to approve PRs, preventing the same account that created the PR from approving it (which violates GitHub's platform rules).
+The approval and merge workflow uses two different tokens for different operations:
+
+**Approval (Secondary Account):**
+- `approve_pr()` uses `REVIWER_TOKEN` by default
+- This ensures the secondary account approves PRs created by the primary account
+- Prevents self-approval, complying with GitHub's platform rules
+
+**Merge (Primary Account):**
+- `merge_pr()` uses `GITHUB_TOKEN` (set to `GH_TOKEN`)
+- The merge is performed by the primary account that owns the repository
+- Respects branch protection rules and required checks
 
 **Key Implementation Details:**
 - `_headers()` function accepts `use_reviewer_token` parameter to switch between tokens
 - `_request()` function passes through the `use_reviewer_token` flag
 - `approve_pr()` defaults to `use_reviewer_token=True` to use the secondary account for approvals
+- `merge_pr()` defaults to `use_reviewer_token=False` to use the primary account for merges
 - The secondary account token must be configured as a repository secret named `REVIWER_TOKEN`
 
 ### agent_reviewer.py
