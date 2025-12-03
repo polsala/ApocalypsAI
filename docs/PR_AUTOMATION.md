@@ -4,6 +4,16 @@
 
 This document describes the automated PR review, approval, and merging workflow for ApocalypsAI. The system ensures that PRs created by AI agents (Gemini, Groq, OpenRouter) are reviewed by the other two agents before being automatically approved and merged.
 
+## Required Secrets
+
+The automation system requires the following repository secrets to be configured:
+
+- **`GH_TOKEN`**: Main GitHub token used for PR creation, reviews, and merging operations
+- **`REVIWER_TOKEN`**: Secondary GitHub account token used specifically for PR approvals. This ensures that PRs are approved by a different account than the one that created them, complying with GitHub's platform rules against self-approval
+- **`OPENROUTER_API_KEY`**: API key for OpenRouter LLM provider
+- **`GROQ_API_KEY`**: API key for Groq LLM provider
+- **`GOOGLE_API_KEY`**: API key for Google's Gemini LLM provider
+
 ## Architecture
 
 ### Key Components
@@ -115,13 +125,23 @@ For each open AI agent PR:
 ### agent_utils.py
 
 Added functions for PR management:
-- `create_pr_review()`: Create a formal PR review
-- `approve_pr()`: Approve a PR
+- `create_pr_review()`: Create a formal PR review (supports `use_reviewer_token` parameter)
+- `approve_pr()`: Approve a PR (uses `REVIWER_TOKEN` by default for secondary account approval)
 - `merge_pr()`: Merge a PR with specified strategy
 - `get_pr_reviews()`: Get all reviews for a PR
 - `get_commit_status()`: Get combined CI status for a commit
 - `get_check_runs()`: Get check runs for a commit
 - `list_open_prs()`: List all open PRs in a repository
+
+#### REVIWER_TOKEN Support
+
+The `approve_pr()` function now uses the `REVIWER_TOKEN` environment variable by default. This allows a secondary GitHub account to approve PRs, preventing the same account that created the PR from approving it (which violates GitHub's platform rules).
+
+**Key Implementation Details:**
+- `_headers()` function accepts `use_reviewer_token` parameter to switch between tokens
+- `_request()` function passes through the `use_reviewer_token` flag
+- `approve_pr()` defaults to `use_reviewer_token=True` to use the secondary account for approvals
+- The secondary account token must be configured as a repository secret named `REVIWER_TOKEN`
 
 ### agent_reviewer.py
 
