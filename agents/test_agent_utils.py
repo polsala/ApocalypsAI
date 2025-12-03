@@ -115,3 +115,23 @@ class TestBranchProtection:
             mock_get_protection.return_value = mock_protection
             result = get_required_status_checks("owner/repo", "main")
             assert result == []
+
+    def test_get_required_status_checks_filters_empty_strings(self):
+        """Test that get_required_status_checks filters out empty strings."""
+        mock_protection = {
+            "required_status_checks": {
+                "contexts": ["ci/test", ""],
+                "checks": [
+                    {"context": "ci/build"},
+                    {"context": ""},
+                    {}  # Missing context key
+                ]
+            }
+        }
+        
+        with patch("agents.agent_utils.get_branch_protection") as mock_get_protection:
+            mock_get_protection.return_value = mock_protection
+            result = get_required_status_checks("owner/repo", "main")
+            # Should only contain non-empty strings
+            assert set(result) == {"ci/test", "ci/build"}
+            assert "" not in result
