@@ -172,9 +172,10 @@ jobs:
                                   agent_utils.approve_pr(repo, pr_number, "✅ Auto-approved: All AI agent reviews passed and CI checks succeeded.")
                                   print(f"  Approved PR #{pr_number}")
                               
-                              # Merge the PR
-                              agent_utils.merge_pr(repo, pr_number, merge_method="squash")
-                              print(f"  ✅ Merged PR #{pr_number}")
+                              # Enable auto-merge for the PR
+                              # This allows the PR to merge automatically once all branch protection requirements are met
+                              agent_utils.enable_auto_merge(repo, pr_number, merge_method="squash")
+                              print(f"  ✅ Auto-merge enabled for PR #{pr_number}")
                           except agent_utils.GitHubError as e:
                               print(f"  ❌ Failed to approve/merge: {e}")
                       else:

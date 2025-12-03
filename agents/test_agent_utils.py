@@ -10,6 +10,7 @@ from agents.agent_utils import (
     get_branch_protection,
     get_required_status_checks,
     is_pr_approved,
+    enable_auto_merge,
 )
 
 
@@ -190,3 +191,73 @@ class TestPRApproval:
             mock_get_reviews.return_value = mock_reviews
             result = is_pr_approved("owner/repo", 123)
             assert result is True
+
+
+class TestAutoMerge:
+    """Test auto-merge enabling functions."""
+
+    def test_enable_auto_merge_success(self):
+        """Test that enable_auto_merge successfully enables auto-merge via GraphQL."""
+        mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
+        mock_graphql_response = {
+            "data": {
+                "enablePullRequestAutoMerge": {
+                    "pullRequest": {
+                        "id": "PR_kwDOABCDEF12345",
+                        "autoMergeRequest": {
+                            "enabledAt": "2024-01-01T00:00:00Z",
+                            "mergeMethod": "SQUASH"
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr, \
+             patch("agents.agent_utils.requests.post") as mock_post, \
+             patch("os.environ.get") as mock_env:
+            mock_get_pr.return_value = mock_pr_data
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = mock_graphql_response
+            mock_env.return_value = "fake_token"
+            
+            # Should not raise an exception
+            enable_auto_merge("owner/repo", 123, merge_method="squash")
+            
+            # Verify GraphQL mutation was called
+            assert mock_post.called
+            call_args = mock_post.call_args
+            assert "query" in call_args[1]["json"]
+            assert "variables" in call_args[1]["json"]
+            assert call_args[1]["json"]["variables"]["pullRequestId"] == "PR_kwDOABCDEF12345"
+            assert call_args[1]["json"]["variables"]["mergeMethod"] == "SQUASH"
+
+    def test_enable_auto_merge_missing_node_id(self):
+        """Test that enable_auto_merge raises error when node_id is missing."""
+        mock_pr_data = {}  # Missing node_id
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr:
+            mock_get_pr.return_value = mock_pr_data
+            
+            with pytest.raises(GitHubError, match="Could not get node_id"):
+                enable_auto_merge("owner/repo", 123)
+
+    def test_enable_auto_merge_graphql_errors(self):
+        """Test that enable_auto_merge raises error on GraphQL errors."""
+        mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
+        mock_graphql_response = {
+            "errors": [
+                {"message": "Auto-merge is not allowed for this repository"}
+            ]
+        }
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr, \
+             patch("agents.agent_utils.requests.post") as mock_post, \
+             patch("os.environ.get") as mock_env:
+            mock_get_pr.return_value = mock_pr_data
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = mock_graphql_response
+            mock_env.return_value = "fake_token"
+            
+            with pytest.raises(GitHubError, match="GraphQL errors"):
+                enable_auto_merge("owner/repo", 123)

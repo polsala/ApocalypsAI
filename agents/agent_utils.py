@@ -155,6 +155,72 @@ def merge_pr(repo: str, number: int, merge_method: str = "squash") -> None:
     _request("PUT", path, json={"merge_method": merge_method})
 
 
+def enable_auto_merge(repo: str, number: int, merge_method: str = "squash") -> None:
+    """Enable auto-merge for a pull request.
+    
+    This allows the PR to be automatically merged once all branch protection
+    requirements are satisfied (approvals, status checks, etc.).
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        merge_method: One of 'MERGE', 'SQUASH', 'REBASE' (uppercase for GraphQL)
+    """
+    owner, name = repo.split("/", 1)
+    
+    # First, get the PR node ID (required for GraphQL mutation)
+    pr_data = get_pr(repo, number)
+    pr_node_id = pr_data.get("node_id")
+    
+    if not pr_node_id:
+        raise GitHubError(f"Could not get node_id for PR #{number}")
+    
+    # GraphQL mutation to enable auto-merge
+    mutation = """
+    mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+      enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+        pullRequest {
+          id
+          autoMergeRequest {
+            enabledAt
+            mergeMethod
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "pullRequestId": pr_node_id,
+        "mergeMethod": merge_method.upper()
+    }
+    
+    # Make GraphQL request
+    graphql_url = "https://api.github.com/graphql"
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise GitHubError("Missing GITHUB_TOKEN environment variable")
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    
+    response = requests.post(
+        graphql_url,
+        headers=headers,
+        json={"query": mutation, "variables": variables},
+        timeout=30.0
+    )
+    
+    if response.status_code >= 400:
+        raise GitHubError(f"GraphQL mutation failed: {response.status_code} {response.text}")
+    
+    result = response.json()
+    if "errors" in result:
+        raise GitHubError(f"GraphQL errors: {result['errors']}")
+
+
 def get_pr_reviews(repo: str, number: int) -> list[Dict[str, Any]]:
     """Get all reviews for a pull request.
     
