@@ -107,30 +107,52 @@ jobs:
                   if not sha:
                       return False, "Cannot determine HEAD SHA"
                   
+                  # Get base branch to determine required checks
+                  base_branch = pr.get("base", {}).get("ref", "main")
+                  
                   try:
-                      status = agent_utils.get_commit_status(repo, sha)
-                      state = status.get("state", "")
+                      # Get required status checks for the base branch
+                      required_checks = agent_utils.get_required_status_checks(repo, base_branch)
                       
-                      # Empty state means no status checks configured, which is acceptable
-                      # Otherwise, require success
-                      if state and state != "success":
-                          return False, f"CI status is {state}, not success"
-                      
-                      # Also check check runs
-                      check_runs = agent_utils.get_check_runs(repo, sha)
-                      runs = check_runs.get("check_runs", [])
-                      
-                      for run in runs:
-                          conclusion = run.get("conclusion")
-                          status_val = run.get("status")
+                      # If no required checks, we still validate that nothing has failed
+                      # but we don't block on pending/skipped checks
+                      if not required_checks:
+                          # Check all runs but allow skipped/pending for non-required
+                          check_runs = agent_utils.get_check_runs(repo, sha)
+                          runs = check_runs.get("check_runs", [])
                           
-                          # Skip runs that haven't completed
-                          if status_val != "completed":
-                              return False, f"Check run '{run.get('name')}' is still {status_val}"
+                          for run in runs:
+                              conclusion = run.get("conclusion")
+                              status_val = run.get("status")
+                              
+                              # Only block on actual failures, not skipped or pending
+                              if status_val == "completed" and conclusion not in ["success", "neutral", "skipped"]:
+                                  return False, f"Check run '{run.get('name')}' failed with {conclusion}"
+                      else:
+                          # Validate only required checks
+                          check_runs = agent_utils.get_check_runs(repo, sha)
+                          runs = check_runs.get("check_runs", [])
                           
-                          # Check conclusion - must be success, neutral, or skipped
-                          if conclusion not in ["success", "neutral", "skipped"]:
-                              return False, f"Check run '{run.get('name')}' failed with {conclusion}"
+                          # Build a map of check names to their status
+                          check_status = {}
+                          for run in runs:
+                              name = run.get("name", "")
+                              check_status[name] = {
+                                  "status": run.get("status"),
+                                  "conclusion": run.get("conclusion")
+                              }
+                          
+                          # Validate each required check
+                          for required in required_checks:
+                              if required not in check_status:
+                                  return False, f"Required check '{required}' not found"
+                              
+                              check = check_status[required]
+                              if check["status"] != "completed":
+                                  return False, f"Required check '{required}' is still {check['status']}"
+                              
+                              if check["conclusion"] not in ["success", "neutral"]:
+                                  return False, f"Required check '{required}' failed with {check['conclusion']}"
                   
                   except agent_utils.GitHubError:
                       # If we can't get status, fail safe - don't auto-merge

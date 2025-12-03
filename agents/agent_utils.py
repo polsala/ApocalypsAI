@@ -212,3 +212,53 @@ def list_open_prs(repo: str) -> list[Dict[str, Any]]:
     owner, name = repo.split("/", 1)
     path = f"/repos/{owner}/{name}/pulls?state=open"
     return _request("GET", path)
+
+
+def get_branch_protection(repo: str, branch: str) -> Dict[str, Any] | None:
+    """Get branch protection rules for a branch.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        branch: Branch name
+        
+    Returns:
+        Branch protection object or None if not protected
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/branches/{branch}/protection"
+    try:
+        return _request("GET", path)
+    except GitHubError:
+        # Branch might not be protected, return None
+        return None
+
+
+def get_required_status_checks(repo: str, branch: str) -> list[str]:
+    """Get list of required status check contexts for a branch.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        branch: Branch name
+        
+    Returns:
+        List of required status check context names
+    """
+    protection = get_branch_protection(repo, branch)
+    if not protection:
+        return []
+    
+    required_checks = protection.get("required_status_checks", {})
+    if not required_checks:
+        return []
+    
+    # Get the contexts (check names)
+    contexts = required_checks.get("contexts", [])
+    # Also get checks from the newer checks array
+    checks = required_checks.get("checks", [])
+    
+    # Combine both formats
+    check_names = set(contexts)
+    for check in checks:
+        check_names.add(check.get("context", ""))
+    
+    return list(check_names)
