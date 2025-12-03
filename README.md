@@ -111,5 +111,8 @@ Supporting modules:
 - Every agent-generated utility must include tests + docs.
 - No secrets in logs, diffs, or artifacts.
 - Prefer mocks/fakes for third-party integrations; include a nearby `# Mock rationale:` comment describing why.
+- Follow security and ethical guidelines when proposing automation features.
 
 For deeper requirements (prompt shapes, acceptance checklist, error-handling rules), refer to [AGENTS.md](AGENTS.md).
+
+For security and ethics guidelines, see [docs/SECURITY_AND_ETHICS.md](docs/SECURITY_AND_ETHICS.md).
