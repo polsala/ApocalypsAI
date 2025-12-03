@@ -219,7 +219,8 @@ class TestAutoMerge:
             mock_get_pr.return_value = mock_pr_data
             mock_post.return_value.status_code = 200
             mock_post.return_value.json.return_value = mock_graphql_response
-            mock_env.return_value = "fake_token"
+            # Return different tokens for REVIWER_TOKEN and GITHUB_TOKEN
+            mock_env.side_effect = lambda key: "reviewer_token" if key == "REVIWER_TOKEN" else "github_token"
             
             # Should not raise an exception
             enable_auto_merge("owner/repo", 123, merge_method="squash")
@@ -257,7 +258,94 @@ class TestAutoMerge:
             mock_get_pr.return_value = mock_pr_data
             mock_post.return_value.status_code = 200
             mock_post.return_value.json.return_value = mock_graphql_response
-            mock_env.return_value = "fake_token"
+            # Return different tokens for REVIWER_TOKEN and GITHUB_TOKEN
+            mock_env.side_effect = lambda key: "reviewer_token" if key == "REVIWER_TOKEN" else "github_token"
             
             with pytest.raises(GitHubError, match="GraphQL errors"):
                 enable_auto_merge("owner/repo", 123)
+
+    def test_enable_auto_merge_fallback_to_github_token(self):
+        """Test that enable_auto_merge falls back to GITHUB_TOKEN when REVIWER_TOKEN fails."""
+        mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
+        mock_error_response = {
+            "errors": [
+                {"message": "Resource not accessible by personal access token"}
+            ]
+        }
+        mock_success_response = {
+            "data": {
+                "enablePullRequestAutoMerge": {
+                    "pullRequest": {
+                        "id": "PR_kwDOABCDEF12345",
+                        "autoMergeRequest": {
+                            "enabledAt": "2024-01-01T00:00:00Z",
+                            "mergeMethod": "SQUASH"
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr, \
+             patch("agents.agent_utils.requests.post") as mock_post, \
+             patch("os.environ.get") as mock_env:
+            mock_get_pr.return_value = mock_pr_data
+            # First call fails with REVIWER_TOKEN, second succeeds with GITHUB_TOKEN
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.side_effect = [mock_error_response, mock_success_response]
+            # Return different tokens for REVIWER_TOKEN and GITHUB_TOKEN
+            mock_env.side_effect = lambda key: "reviewer_token" if key == "REVIWER_TOKEN" else "github_token"
+            
+            # Should not raise an exception - should succeed with fallback
+            enable_auto_merge("owner/repo", 123, merge_method="squash")
+            
+            # Verify GraphQL mutation was called twice (once for each token)
+            assert mock_post.call_count == 2
+
+    def test_enable_auto_merge_no_token_available(self):
+        """Test that enable_auto_merge raises error when no tokens are available."""
+        mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr, \
+             patch("os.environ.get") as mock_env:
+            mock_get_pr.return_value = mock_pr_data
+            # No tokens available
+            mock_env.return_value = None
+            
+            with pytest.raises(GitHubError, match="No authentication token available"):
+                enable_auto_merge("owner/repo", 123)
+
+    def test_enable_auto_merge_use_reviewer_token_false(self):
+        """Test that enable_auto_merge uses only GITHUB_TOKEN when use_reviewer_token is False."""
+        mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
+        mock_graphql_response = {
+            "data": {
+                "enablePullRequestAutoMerge": {
+                    "pullRequest": {
+                        "id": "PR_kwDOABCDEF12345",
+                        "autoMergeRequest": {
+                            "enabledAt": "2024-01-01T00:00:00Z",
+                            "mergeMethod": "SQUASH"
+                        }
+                    }
+                }
+            }
+        }
+        
+        with patch("agents.agent_utils.get_pr") as mock_get_pr, \
+             patch("agents.agent_utils.requests.post") as mock_post, \
+             patch("os.environ.get") as mock_env:
+            mock_get_pr.return_value = mock_pr_data
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = mock_graphql_response
+            # Return different tokens for REVIWER_TOKEN and GITHUB_TOKEN
+            mock_env.side_effect = lambda key: "reviewer_token" if key == "REVIWER_TOKEN" else "github_token"
+            
+            # Should not raise an exception
+            enable_auto_merge("owner/repo", 123, merge_method="squash", use_reviewer_token=False)
+            
+            # Verify GraphQL mutation was called only once (with GITHUB_TOKEN)
+            assert mock_post.call_count == 1
+            # Verify the token used was github_token (not reviewer_token)
+            call_args = mock_post.call_args
+            assert call_args[1]["headers"]["Authorization"] == "Bearer github_token"
