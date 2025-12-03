@@ -121,17 +121,24 @@ jobs:
                           check_runs = agent_utils.get_check_runs(repo, sha)
                           runs = check_runs.get("check_runs", [])
                           
+                          # Define acceptable conclusions for non-required checks
+                          acceptable_conclusions = ["success", "neutral", "skipped"]
+                          
                           for run in runs:
                               conclusion = run.get("conclusion")
                               status_val = run.get("status")
                               
                               # Only block on actual failures, not skipped or pending
-                              if status_val == "completed" and conclusion not in ["success", "neutral", "skipped"]:
+                              if status_val == "completed" and conclusion not in acceptable_conclusions:
                                   return False, f"Check run '{run.get('name')}' failed with {conclusion}"
                       else:
                           # Validate only required checks
                           check_runs = agent_utils.get_check_runs(repo, sha)
                           runs = check_runs.get("check_runs", [])
+                          
+                          # Define acceptable conclusions for required checks (stricter than non-required)
+                          # Required checks must not be skipped - only success or neutral
+                          required_acceptable_conclusions = ["success", "neutral"]
                           
                           # Build a map of check names to their status
                           check_status = {}
@@ -151,7 +158,7 @@ jobs:
                               if check["status"] != "completed":
                                   return False, f"Required check '{required}' is still {check['status']}"
                               
-                              if check["conclusion"] not in ["success", "neutral"]:
+                              if check["conclusion"] not in required_acceptable_conclusions:
                                   return False, f"Required check '{required}' failed with {check['conclusion']}"
                   
                   except agent_utils.GitHubError:

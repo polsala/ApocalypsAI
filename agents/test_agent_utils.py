@@ -117,14 +117,20 @@ class TestBranchProtection:
             assert result == []
 
     def test_get_required_status_checks_filters_empty_strings(self):
-        """Test that get_required_status_checks filters out empty strings."""
+        """Test that get_required_status_checks filters out empty strings and missing context keys.
+        
+        This test verifies that the function handles malformed check data gracefully:
+        - Empty strings in contexts array are filtered out
+        - Empty strings in checks array contexts are filtered out  
+        - Check objects missing the 'context' key are handled without error
+        """
         mock_protection = {
             "required_status_checks": {
                 "contexts": ["ci/test", ""],
                 "checks": [
                     {"context": "ci/build"},
                     {"context": ""},
-                    {}  # Missing context key
+                    {}  # Missing context key entirely
                 ]
             }
         }

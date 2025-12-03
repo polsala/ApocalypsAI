@@ -257,13 +257,10 @@ def get_required_status_checks(repo: str, branch: str) -> list[str]:
     checks = required_checks.get("checks", [])
     
     # Combine both formats, filtering out empty strings
-    check_names = set(contexts)
+    check_names = set(c for c in contexts if c)
     for check in checks:
         context = check.get("context", "")
         if context:  # Only add non-empty contexts
             check_names.add(context)
-    
-    # Filter out any empty strings from contexts as well
-    check_names.discard("")
     
     return list(check_names)
