@@ -13,6 +13,7 @@ permissions:
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  REVIWER_TOKEN: ${{ secrets.REVIWER_TOKEN }}
   
 jobs:
   auto-approve-merge:
