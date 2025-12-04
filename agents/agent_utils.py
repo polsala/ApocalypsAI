@@ -155,7 +155,7 @@ def merge_pr(repo: str, number: int, merge_method: str = "squash") -> None:
     _request("PUT", path, json={"merge_method": merge_method})
 
 
-def enable_auto_merge(repo: str, number: int, merge_method: str = "squash") -> None:
+def enable_auto_merge_old(repo: str, number: int, merge_method: str = "squash") -> None:
     """Enable auto-merge for a pull request.
     
     This allows the PR to be automatically merged once all branch protection
@@ -217,6 +217,78 @@ def enable_auto_merge(repo: str, number: int, merge_method: str = "squash") -> N
     result = response.json()
     if "errors" in result:
         raise GitHubError(f"GraphQL errors: {result['errors']}")
+    
+
+def merge_pr(repo: str, number: int, merge_method: str = "squash") -> None:
+    """Merge a pull request immediately (no auto-merge).
+
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        merge_method: One of 'MERGE', 'SQUASH', 'REBASE' (case-insensitive)
+    """
+    # 1) Get PR node ID for GraphQL
+    pr_data = get_pr(repo, number)  # assuming you already have this helper
+    pr_node_id = pr_data.get("node_id")
+
+    if not pr_node_id:
+        raise GitHubError(f"Could not get node_id for PR #{number}")
+
+    # 2) GraphQL mutation to merge the PR *now*
+    mutation = """
+    mutation MergePullRequest($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+      mergePullRequest(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+        pullRequest {
+          id
+          merged
+          mergedAt
+          mergeCommit {
+            oid
+          }
+        }
+      }
+    }
+    """
+
+    variables = {
+        "pullRequestId": pr_node_id,
+        "mergeMethod": merge_method.upper(),  # MERGE / SQUASH / REBASE
+    }
+
+    graphql_url = "https://api.github.com/graphql"
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise GitHubError("Missing GITHUB_TOKEN environment variable")
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(
+        graphql_url,
+        headers=headers,
+        json={"query": mutation, "variables": variables},
+        timeout=30.0,
+    )
+
+    if response.status_code >= 400:
+        raise GitHubError(f"GraphQL mutation failed: {response.status_code} {response.text}")
+
+    result = response.json()
+    if "errors" in result:
+        raise GitHubError(f"GraphQL errors: {result['errors']}")
+
+    merge_info = (
+        result.get("data", {})
+        .get("mergePullRequest", {})
+        .get("pullRequest", {})
+    )
+
+    if not merge_info or not merge_info.get("merged"):
+        raise GitHubError(f"PR #{number} was not merged: {merge_info}")
+
+enable_auto_merge = merge_pr
 
 
 def get_pr_reviews(repo: str, number: int) -> list[Dict[str, Any]]:
