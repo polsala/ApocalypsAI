@@ -358,15 +358,25 @@ def get_check_runs(repo: str, ref: str) -> Dict[str, Any]:
 def list_open_prs(repo: str) -> list[Dict[str, Any]]:
     """List all open pull requests in a repository.
     
+    Fetches up to 200 open PRs by paginating through 2 pages of 100 PRs each.
+    
     Args:
         repo: Repository in 'owner/name' format
         
     Returns:
-        List of PR objects
+        List of PR objects (up to 200)
     """
     owner, name = repo.split("/", 1)
-    path = f"/repos/{owner}/{name}/pulls?state=open"
-    return _request("GET", path)
+    prs = []
+    for page in range(1, 3):
+        path = f"/repos/{owner}/{name}/pulls?state=open&per_page=100&page={page}"
+        prs_page = _request("GET", path)
+        if not prs_page:
+            break
+        prs += prs_page
+        if len(prs_page) < 100:
+            break
+    return prs
 
 
 def get_branch_protection(repo: str, branch: str) -> Dict[str, Any] | None:
