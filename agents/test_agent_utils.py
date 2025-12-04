@@ -15,6 +15,7 @@ from agents.agent_utils import (
     update_check_run,
     find_check_run,
     create_or_update_check_run,
+    list_open_prs,
 )
 
 
@@ -415,3 +416,80 @@ class TestCheckRuns:
             mock_update.assert_called_once_with(
                 "owner/repo", 12345, "completed", "success", None
             )
+
+
+class TestListOpenPRs:
+    """Test list_open_prs pagination functionality."""
+
+    def test_list_open_prs_single_page_full(self):
+        """Test list_open_prs with exactly 100 PRs (fetches 2 pages)."""
+        # First page has 100 PRs, second page is empty
+        page1_prs = [{"number": i, "title": f"PR {i}"} for i in range(1, 101)]
+        page2_prs = []
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.side_effect = [page1_prs, page2_prs]
+            result = list_open_prs("owner/repo")
+            
+            assert len(result) == 100
+            assert result == page1_prs
+            # Should have called for both pages
+            assert mock_request.call_count == 2
+            mock_request.assert_any_call("GET", "/repos/owner/repo/pulls?state=open&per_page=100&page=1")
+            mock_request.assert_any_call("GET", "/repos/owner/repo/pulls?state=open&per_page=100&page=2")
+
+    def test_list_open_prs_two_full_pages(self):
+        """Test list_open_prs with 200 PRs (2 full pages)."""
+        # Both pages have 100 PRs each
+        page1_prs = [{"number": i, "title": f"PR {i}"} for i in range(1, 101)]
+        page2_prs = [{"number": i, "title": f"PR {i}"} for i in range(101, 201)]
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.side_effect = [page1_prs, page2_prs]
+            result = list_open_prs("owner/repo")
+            
+            assert len(result) == 200
+            assert result == page1_prs + page2_prs
+            # Should have called for both pages
+            assert mock_request.call_count == 2
+
+    def test_list_open_prs_partial_first_page(self):
+        """Test list_open_prs with fewer than 100 PRs (stops after first page)."""
+        # First page has only 50 PRs
+        page1_prs = [{"number": i, "title": f"PR {i}"} for i in range(1, 51)]
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = page1_prs
+            result = list_open_prs("owner/repo")
+            
+            assert len(result) == 50
+            assert result == page1_prs
+            # Should only call first page (stops early since < 100)
+            assert mock_request.call_count == 1
+            mock_request.assert_called_once_with("GET", "/repos/owner/repo/pulls?state=open&per_page=100&page=1")
+
+    def test_list_open_prs_empty_repository(self):
+        """Test list_open_prs with no open PRs."""
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = []
+            result = list_open_prs("owner/repo")
+            
+            assert len(result) == 0
+            assert result == []
+            # Should only call first page (stops early since empty)
+            assert mock_request.call_count == 1
+
+    def test_list_open_prs_full_first_partial_second(self):
+        """Test list_open_prs with 150 PRs (full first page, partial second page)."""
+        page1_prs = [{"number": i, "title": f"PR {i}"} for i in range(1, 101)]
+        page2_prs = [{"number": i, "title": f"PR {i}"} for i in range(101, 151)]
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.side_effect = [page1_prs, page2_prs]
+            result = list_open_prs("owner/repo")
+            
+            assert len(result) == 150
+            assert result == page1_prs + page2_prs
+            # Should have called for both pages
+            assert mock_request.call_count == 2
+
