@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  checks: write
   
 env:
   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -88,6 +89,12 @@ jobs:
                   # Trigger reviews for agents that haven't reviewed yet
                   missing_reviews = expected_reviewers - reviewed_by
                   
+                  # Get PR head SHA for check runs
+                  sha = pr.get("head", {}).get("sha")
+                  if not sha:
+                      print(f"  Cannot determine HEAD SHA")
+                      return
+                  
                   if missing_reviews:
                       print(f"  Missing reviews from: {', '.join(missing_reviews)}")
                       
@@ -109,21 +116,70 @@ jobs:
                               if result == 0:
                                   print(f"    ✅ {agent} review posted")
                                   reviewed_by.add(agent)
+                                  
+                                  # Update the check run to mark it as successful
+                                  check_name = f"review-{agent}"
+                                  try:
+                                      agent_utils.create_or_update_check_run(
+                                          repo=repo,
+                                          name=check_name,
+                                          head_sha=sha,
+                                          status="completed",
+                                          conclusion="success",
+                                          output={
+                                              "title": f"{agent.capitalize()} review completed",
+                                              "summary": f"Review by {agent} agent posted successfully",
+                                          }
+                                      )
+                                      print(f"    ✅ Check run '{check_name}' updated to success")
+                                  except agent_utils.GitHubError as e:
+                                      print(f"    ⚠️  Failed to update check run: {e}")
                               else:
                                   print(f"    ⚠️  {agent} review failed with code {result}")
+                                  
+                                  # Mark the check run as failed
+                                  check_name = f"review-{agent}"
+                                  try:
+                                      agent_utils.create_or_update_check_run(
+                                          repo=repo,
+                                          name=check_name,
+                                          head_sha=sha,
+                                          status="completed",
+                                          conclusion="failure",
+                                          output={
+                                              "title": f"{agent.capitalize()} review failed",
+                                              "summary": f"Review by {agent} agent failed with exit code {result}",
+                                          }
+                                      )
+                                      print(f"    ⚠️  Check run '{check_name}' updated to failure")
+                                  except agent_utils.GitHubError as e:
+                                      print(f"    ⚠️  Failed to update check run: {e}")
                           except Exception as e:
                               print(f"    ❌ {agent} review error: {e}")
+                              
+                              # Mark the check run as failed
+                              check_name = f"review-{agent}"
+                              try:
+                                  agent_utils.create_or_update_check_run(
+                                      repo=repo,
+                                      name=check_name,
+                                      head_sha=sha,
+                                      status="completed",
+                                      conclusion="failure",
+                                      output={
+                                          "title": f"{agent.capitalize()} review error",
+                                          "summary": f"Review by {agent} agent encountered an error: {str(e)}",
+                                      }
+                                  )
+                                  print(f"    ⚠️  Check run '{check_name}' updated to failure")
+                              except agent_utils.GitHubError as check_error:
+                                  print(f"    ⚠️  Failed to update check run: {check_error}")
                   else:
                       print(f"  All expected reviews present")
                   
                   # Check if PR is now eligible for merge
                   if reviewed_by == expected_reviewers:
                       print(f"  All reviews complete, checking CI status...")
-                      
-                      sha = pr.get("head", {}).get("sha")
-                      if not sha:
-                          print(f"  Cannot determine HEAD SHA")
-                          return
                       
                       # Check CI status
                       ci_passed = True

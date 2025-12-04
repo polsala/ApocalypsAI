@@ -419,3 +419,138 @@ def get_required_status_checks(repo: str, branch: str) -> list[str]:
             check_names.add(context)
     
     return list(check_names)
+
+
+def create_check_run(
+    repo: str,
+    name: str,
+    head_sha: str,
+    status: str = "completed",
+    conclusion: str | None = None,
+    output: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Create a check run for a commit.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        name: Name of the check (e.g., 'review-groq')
+        head_sha: The SHA of the commit
+        status: The current status ('queued', 'in_progress', 'completed')
+        conclusion: Required if status is 'completed'. One of:
+                   'action_required', 'cancelled', 'failure', 'neutral',
+                   'success', 'skipped', 'stale', 'timed_out'
+        output: Optional output object with title, summary, text
+        
+    Returns:
+        The created check run object
+    """
+    owner, name_part = repo.split("/", 1)
+    path = f"/repos/{owner}/{name_part}/check-runs"
+    
+    payload: Dict[str, Any] = {
+        "name": name,
+        "head_sha": head_sha,
+        "status": status,
+    }
+    
+    if conclusion is not None:
+        payload["conclusion"] = conclusion
+    
+    if output is not None:
+        payload["output"] = output
+    
+    return _request("POST", path, json=payload)
+
+
+def update_check_run(
+    repo: str,
+    check_run_id: int,
+    status: str = "completed",
+    conclusion: str | None = None,
+    output: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Update an existing check run.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        check_run_id: ID of the check run to update
+        status: The current status ('queued', 'in_progress', 'completed')
+        conclusion: Required if status is 'completed'. One of:
+                   'action_required', 'cancelled', 'failure', 'neutral',
+                   'success', 'skipped', 'stale', 'timed_out'
+        output: Optional output object with title, summary, text
+        
+    Returns:
+        The updated check run object
+    """
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/check-runs/{check_run_id}"
+    
+    payload: Dict[str, Any] = {
+        "status": status,
+    }
+    
+    if conclusion is not None:
+        payload["conclusion"] = conclusion
+    
+    if output is not None:
+        payload["output"] = output
+    
+    return _request("PATCH", path, json=payload)
+
+
+def find_check_run(repo: str, head_sha: str, check_name: str) -> Dict[str, Any] | None:
+    """Find a check run by name for a given commit.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        head_sha: The SHA of the commit
+        check_name: Name of the check to find
+        
+    Returns:
+        The check run object if found, None otherwise
+    """
+    check_runs_data = get_check_runs(repo, head_sha)
+    runs = check_runs_data.get("check_runs", [])
+    
+    for run in runs:
+        if run.get("name") == check_name:
+            return run
+    
+    return None
+
+
+def create_or_update_check_run(
+    repo: str,
+    name: str,
+    head_sha: str,
+    status: str = "completed",
+    conclusion: str | None = "success",
+    output: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Create a new check run or update an existing one.
+    
+    This is a convenience function that checks if a check run exists
+    and either updates it or creates a new one.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        name: Name of the check (e.g., 'review-groq')
+        head_sha: The SHA of the commit
+        status: The current status ('queued', 'in_progress', 'completed')
+        conclusion: Required if status is 'completed'. One of:
+                   'action_required', 'cancelled', 'failure', 'neutral',
+                   'success', 'skipped', 'stale', 'timed_out'
+        output: Optional output object with title, summary, text
+        
+    Returns:
+        The created or updated check run object
+    """
+    existing_run = find_check_run(repo, head_sha, name)
+    
+    if existing_run:
+        check_run_id = existing_run.get("id")
+        if check_run_id:
+            return update_check_run(repo, check_run_id, status, conclusion, output)
+    
+    return create_check_run(repo, name, head_sha, status, conclusion, output)
