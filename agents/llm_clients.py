@@ -152,7 +152,7 @@ def call_groq(
             ]
     
     # Try each model in the pool
-    all_errors: Dict[str, str] = {}
+    all_errors: Dict[str, Exception] = {}
     for model_name in models_to_try:
         payload = {
             "model": model_name,
@@ -177,10 +177,11 @@ def call_groq(
                     break
                 _sleep_with_jitter(attempt)
         # Record the error for this model and try the next one
-        all_errors[model_name] = str(last_error)
+        if last_error is not None:
+            all_errors[model_name] = last_error
     
     # All models failed
-    error_details = "; ".join(f"{model}: {error}" for model, error in all_errors.items())
+    error_details = "; ".join(f"{model}: {str(error)}" for model, error in all_errors.items())
     raise LLMError(f"All Groq models failed ({error_details})")
 
 
