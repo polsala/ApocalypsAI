@@ -62,6 +62,9 @@ utils/
 * `OPENROUTER_API_KEY` (optional)
 * `GROQ_API_KEY` (optional)
 * `GOOGLE_API_KEY` (optional)
+* `GROQ_MODEL_POOL` (optional) — JSON array of Groq model names for fallback sequence
+  * Example: `["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]`
+  * Default: `["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]`
 * `GITHUB_TOKEN` (**required** for GitHub API)
 * Agents MAY choose any available provider via `llm_clients.py`. If none available → fail with code `1`.
 
@@ -94,7 +97,23 @@ from typing import Optional, Dict
 
 class LLMError(RuntimeError): ...
 def call_openrouter(prompt: str, model: str = "google/gemini-1.5-flash-8b") -> str: ...
-def call_groq(prompt: str, model: str = "openai/gpt-oss-120b") -> str: ...
+def call_groq(
+    prompt: str,
+    model: Optional[str] = None,
+    model_pool: Optional[list[str]] = None,
+) -> str:
+    """
+    Call Groq with configurable model fallback.
+    
+    Args:
+        prompt: The prompt to send
+        model: Single model to use (overrides pool)
+        model_pool: List of models to try in sequence
+        
+    If neither model nor model_pool is provided, reads from GROQ_MODEL_POOL
+    env var (JSON array format), or uses default pool:
+    ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]
+    """
 def call_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str: ...
 def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
     """
