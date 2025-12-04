@@ -201,7 +201,12 @@ class TestAutoMerge:
     """Test auto-merge enabling functions."""
 
     def test_enable_auto_merge_success(self):
-        """Test that enable_auto_merge successfully merges the PR via GraphQL."""
+        """Test that enable_auto_merge (alias for merge_pr) successfully merges the PR via GraphQL.
+        
+        Note: enable_auto_merge is now an alias for merge_pr, which merges immediately
+        rather than enabling auto-merge. This maintains backward compatibility while
+        using the immediate merge approach.
+        """
         mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
         mock_graphql_response = {
             "data": {
@@ -229,7 +234,7 @@ class TestAutoMerge:
             # Should not raise an exception
             enable_auto_merge("owner/repo", 123, merge_method="squash")
             
-            # Verify GraphQL mutation was called
+            # Verify GraphQL mutation was called with correct parameters
             assert mock_post.called
             call_args = mock_post.call_args
             assert "query" in call_args[1]["json"]
