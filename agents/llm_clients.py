@@ -96,36 +96,92 @@ def call_openrouter(prompt: str, model: str = "kwaipilot/kat-coder-pro:free") ->
     raise LLMError(f"OpenRouter call failed: {last_error}")
 
 
-def call_groq(prompt: str, model: str = "openai/gpt-oss-120b") -> str:
+def call_groq(
+    prompt: str,
+    model: Optional[str] = None,
+    model_pool: Optional[list[str]] = None,
+) -> str:
+    """
+    Call Groq API with configurable model fallback.
+    
+    Args:
+        prompt: The prompt to send to the model
+        model: Single model to use (overrides pool if provided)
+        model_pool: List of models to try in sequence. If not provided,
+                   reads from GROQ_MODEL_POOL env var (JSON format),
+                   or uses default pool.
+    
+    Default pool: ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]
+    
+    Returns:
+        The model's response text
+        
+    Raises:
+        LLMError: If all models in the pool fail
+    """
     api_key = _require_env("GROQ_API_KEY")
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1,
-    }
-    last_error: Optional[Exception] = None
-    for attempt in range(3):
-        try:
-            data = _post_json(url, headers=headers, payload=payload)
-            choices = data.get("choices")
-            if not choices:
-                raise LLMError("Groq response missing choices")
-            message = choices[0].get("message") or {}
-            content = message.get("content")
-            if not isinstance(content, str):
-                raise LLMError("Groq message missing text content")
-            return _clean_response_text(content)
-        except (LLMError, requests.RequestException) as exc:
-            last_error = exc
-            if attempt == 2:
-                break
-            _sleep_with_jitter(attempt)
-    raise LLMError(f"Groq call failed: {last_error}")
+    
+    # Determine the model pool to use
+    if model is not None:
+        # Single model provided - use it with retries
+        models_to_try = [model]
+    elif model_pool is not None:
+        # Model pool provided as argument
+        models_to_try = model_pool
+    else:
+        # Check environment variable for custom pool
+        pool_env = os.environ.get("GROQ_MODEL_POOL")
+        if pool_env:
+            try:
+                models_to_try = json.loads(pool_env)
+                if not isinstance(models_to_try, list):
+                    raise ValueError("GROQ_MODEL_POOL must be a JSON array")
+            except (json.JSONDecodeError, ValueError) as exc:
+                raise LLMError(f"Invalid GROQ_MODEL_POOL format: {exc}") from exc
+        else:
+            # Use default fallback pool
+            models_to_try = [
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                "qwen/qwen3-32b",
+            ]
+    
+    # Try each model in the pool
+    all_errors: Dict[str, str] = {}
+    for model_name in models_to_try:
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+        }
+        last_error: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                data = _post_json(url, headers=headers, payload=payload)
+                choices = data.get("choices")
+                if not choices:
+                    raise LLMError("Groq response missing choices")
+                message = choices[0].get("message") or {}
+                content = message.get("content")
+                if not isinstance(content, str):
+                    raise LLMError("Groq message missing text content")
+                return _clean_response_text(content)
+            except (LLMError, requests.RequestException) as exc:
+                last_error = exc
+                if attempt == 2:
+                    break
+                _sleep_with_jitter(attempt)
+        # Record the error for this model and try the next one
+        all_errors[model_name] = str(last_error)
+    
+    # All models failed
+    error_details = "; ".join(f"{model}: {error}" for model, error in all_errors.items())
+    raise LLMError(f"All Groq models failed ({error_details})")
 
 
 def call_gemini(prompt: str, model: str = "gemini-2.5-flash") -> str:
