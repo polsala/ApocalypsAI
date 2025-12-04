@@ -11,6 +11,10 @@ from agents.agent_utils import (
     get_required_status_checks,
     is_pr_approved,
     enable_auto_merge,
+    create_check_run,
+    update_check_run,
+    find_check_run,
+    create_or_update_check_run,
 )
 
 
@@ -197,16 +201,22 @@ class TestAutoMerge:
     """Test auto-merge enabling functions."""
 
     def test_enable_auto_merge_success(self):
-        """Test that enable_auto_merge successfully enables auto-merge via GraphQL."""
+        """Test that enable_auto_merge (alias for merge_pr) successfully merges the PR via GraphQL.
+        
+        Note: enable_auto_merge is now an alias for merge_pr, which merges immediately
+        rather than enabling auto-merge. This maintains backward compatibility while
+        using the immediate merge approach.
+        """
         mock_pr_data = {"node_id": "PR_kwDOABCDEF12345"}
         mock_graphql_response = {
             "data": {
-                "enablePullRequestAutoMerge": {
+                "mergePullRequest": {
                     "pullRequest": {
                         "id": "PR_kwDOABCDEF12345",
-                        "autoMergeRequest": {
-                            "enabledAt": "2024-01-01T00:00:00Z",
-                            "mergeMethod": "SQUASH"
+                        "merged": True,
+                        "mergedAt": "2024-01-01T00:00:00Z",
+                        "mergeCommit": {
+                            "oid": "abc123"
                         }
                     }
                 }
@@ -224,7 +234,7 @@ class TestAutoMerge:
             # Should not raise an exception
             enable_auto_merge("owner/repo", 123, merge_method="squash")
             
-            # Verify GraphQL mutation was called
+            # Verify GraphQL mutation was called with correct parameters
             assert mock_post.called
             call_args = mock_post.call_args
             assert "query" in call_args[1]["json"]
@@ -261,3 +271,147 @@ class TestAutoMerge:
             
             with pytest.raises(GitHubError, match="GraphQL errors"):
                 enable_auto_merge("owner/repo", 123)
+
+
+class TestCheckRuns:
+    """Test check run creation and update functions."""
+
+    def test_create_check_run_success(self):
+        """Test that create_check_run creates a check run successfully."""
+        mock_check_run = {
+            "id": 12345,
+            "name": "review-groq",
+            "status": "completed",
+            "conclusion": "success"
+        }
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = mock_check_run
+            result = create_check_run(
+                repo="owner/repo",
+                name="review-groq",
+                head_sha="abc123",
+                status="completed",
+                conclusion="success"
+            )
+            assert result == mock_check_run
+            mock_request.assert_called_once()
+            call_args = mock_request.call_args
+            assert call_args[0] == ("POST", "/repos/owner/repo/check-runs")
+            assert call_args[1]["json"]["name"] == "review-groq"
+            assert call_args[1]["json"]["head_sha"] == "abc123"
+            assert call_args[1]["json"]["status"] == "completed"
+            assert call_args[1]["json"]["conclusion"] == "success"
+
+    def test_create_check_run_with_output(self):
+        """Test that create_check_run includes output when provided."""
+        mock_check_run = {"id": 12345}
+        output = {
+            "title": "Review completed",
+            "summary": "All checks passed"
+        }
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = mock_check_run
+            create_check_run(
+                repo="owner/repo",
+                name="review-groq",
+                head_sha="abc123",
+                output=output
+            )
+            call_args = mock_request.call_args
+            assert call_args[1]["json"]["output"] == output
+
+    def test_update_check_run_success(self):
+        """Test that update_check_run updates a check run successfully."""
+        mock_check_run = {
+            "id": 12345,
+            "status": "completed",
+            "conclusion": "success"
+        }
+        
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = mock_check_run
+            result = update_check_run(
+                repo="owner/repo",
+                check_run_id=12345,
+                status="completed",
+                conclusion="success"
+            )
+            assert result == mock_check_run
+            mock_request.assert_called_once()
+            call_args = mock_request.call_args
+            assert call_args[0] == ("PATCH", "/repos/owner/repo/check-runs/12345")
+            assert call_args[1]["json"]["status"] == "completed"
+            assert call_args[1]["json"]["conclusion"] == "success"
+
+    def test_find_check_run_found(self):
+        """Test that find_check_run returns check run when found."""
+        mock_check_runs = {
+            "check_runs": [
+                {"id": 1, "name": "review-gemini"},
+                {"id": 2, "name": "review-groq"},
+                {"id": 3, "name": "review-openrouter"}
+            ]
+        }
+        
+        with patch("agents.agent_utils.get_check_runs") as mock_get_check_runs:
+            mock_get_check_runs.return_value = mock_check_runs
+            result = find_check_run("owner/repo", "abc123", "review-groq")
+            assert result == {"id": 2, "name": "review-groq"}
+
+    def test_find_check_run_not_found(self):
+        """Test that find_check_run returns None when not found."""
+        mock_check_runs = {
+            "check_runs": [
+                {"id": 1, "name": "review-gemini"}
+            ]
+        }
+        
+        with patch("agents.agent_utils.get_check_runs") as mock_get_check_runs:
+            mock_get_check_runs.return_value = mock_check_runs
+            result = find_check_run("owner/repo", "abc123", "review-groq")
+            assert result is None
+
+    def test_create_or_update_check_run_creates_new(self):
+        """Test that create_or_update_check_run creates new run when none exists."""
+        mock_check_run = {"id": 12345, "name": "review-groq"}
+        
+        with patch("agents.agent_utils.find_check_run") as mock_find, \
+             patch("agents.agent_utils.create_check_run") as mock_create:
+            mock_find.return_value = None
+            mock_create.return_value = mock_check_run
+            
+            result = create_or_update_check_run(
+                repo="owner/repo",
+                name="review-groq",
+                head_sha="abc123",
+                conclusion="success"
+            )
+            
+            assert result == mock_check_run
+            mock_find.assert_called_once_with("owner/repo", "abc123", "review-groq")
+            mock_create.assert_called_once()
+
+    def test_create_or_update_check_run_updates_existing(self):
+        """Test that create_or_update_check_run updates existing run."""
+        existing_run = {"id": 12345, "name": "review-groq"}
+        updated_run = {"id": 12345, "name": "review-groq", "conclusion": "success"}
+        
+        with patch("agents.agent_utils.find_check_run") as mock_find, \
+             patch("agents.agent_utils.update_check_run") as mock_update:
+            mock_find.return_value = existing_run
+            mock_update.return_value = updated_run
+            
+            result = create_or_update_check_run(
+                repo="owner/repo",
+                name="review-groq",
+                head_sha="abc123",
+                conclusion="success"
+            )
+            
+            assert result == updated_run
+            mock_find.assert_called_once_with("owner/repo", "abc123", "review-groq")
+            mock_update.assert_called_once_with(
+                "owner/repo", 12345, "completed", "success", None
+            )
