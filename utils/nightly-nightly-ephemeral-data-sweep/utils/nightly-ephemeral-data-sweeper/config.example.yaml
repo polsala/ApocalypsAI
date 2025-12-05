@@ -1,0 +1,21 @@
+# Example configuration for the Nightly Ephemeral Data Sweeper.
+# Define paths where ephemeral data (logs, caches, temporary files) might accumulate.
+# Files older than 'max_age_days' and matching 'patterns' will be flagged for removal.
+
+ephemeral_paths:
+  - path: /tmp/my_app_logs
+    max_age_days: 7
+    patterns: ["*.log", "*.tmp"]
+
+  - path: ~/.cache/my_app_data
+    max_age_days: 30
+    patterns: ["*"] # Matches all files in this directory
+
+  - path: ./build_artifacts
+    max_age_days: 14
+    patterns: ["*.out", "*.err", "temp_*"]
+
+  # Example of a path that might not exist yet
+  - path: /var/log/old_system_logs
+    max_age_days: 90
+    patterns: ["*.gz"]
