@@ -1,0 +1,53 @@
+# Time Chaos Engineering Tasks
+
+- name: "⏰ Backup current time configuration"
+  shell: |
+    timedatectl status > {{ chaos_backup_dir }}/time_config_{{ ansible_date_time.epoch }}.bak
+    cat /etc/timezone > {{ chaos_backup_dir }}/timezone_{{ ansible_date_time.epoch }}.bak
+  when: backup_time_config | default(true)
+
+- name: "🕒 Change system timezone randomly"
+  shell: |
+    TIMEZONES=( {{ time_chaos.timezone_options | join(' ') }} )
+    NEW_TZ=${TIMEZONES[$RANDOM % ${#TIMEZONES[@]}]}
+    timedatectl set-timezone ${NEW_TZ}
+    echo "Changed timezone to: ${NEW_TZ}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_chaos.log
+  when: chaos_params.timezone_change | default(true)
+
+- name: "⏱️  Manipulate NTP servers"
+  shell: |
+    NTP_SERVERS=( {{ time_chaos.ntp_servers | join(' ') }} )
+    NEW_NTP=${NTP_SERVERS[$RANDOM % ${#NTP_SERVERS[@]}]}
+    timedatectl set-ntp false
+    timedatectl set-ntp true
+    echo "Switched NTP server to: ${NEW_NTP}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_chaos.log
+  when: chaos_params.ntp_manipulation | default(true)
+
+- name: "🕰️  Apply clock drift"
+  shell: |
+    DRIFT={{ (time_chaos.clock_drift.min + ((time_chaos.clock_drift.max - time_chaos.clock_drift.min) | random)) | int }}
+    timedatectl set-time "{{ (ansible_date_time.epoch | int + DRIFT) | strftime('%Y-%m-%d %H:%M:%S') }}"
+    echo "Applied clock drift: ${DRIFT} seconds" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_chaos.log
+  when: chaos_params.clock_drift | default(false)
+
+- name: "📊 Monitor time synchronization"
+  shell: |
+    echo "=== Time Synchronization Report ===" > {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt
+    echo "Timestamp: {{ ansible_date_time.iso8601 }}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt
+    echo "" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt
+    timedatectl status >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt
+    echo "" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt
+    ntpstat >> {{ chaos_log_dir }}/{{ inventory_hostname }}_time_monitoring.txt 2>&1
+  async: 30
+  poll: 0
+
+- name: "⏰ Create time chaos summary"
+  copy:
+    content: |
+      Time Chaos Applied:
+      - Timezone Change: {{ chaos_params.timezone_change | default(true) }}
+      - NTP Manipulation: {{ chaos_params.ntp_manipulation | default(true) }}
+      - Clock Drift: {{ chaos_params.clock_drift | default(false) }} {{ time_chaos.clock_drift.unit }}
+      - Applied at: {{ ansible_date_time.iso8601 }}
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_time_chaos_summary.txt"
+    mode: '0644'

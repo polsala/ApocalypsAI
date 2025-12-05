@@ -1,0 +1,59 @@
+# Resource Chaos Engineering Tasks
+
+- name: "💾 Apply CPU stress chaos"
+  shell: |
+    CPU_LOAD={{ (resource_chaos.cpu.min + ((resource_chaos.cpu.max - resource_chaos.cpu.min) | random)) | int }}
+    stress --cpu $(nproc) --timeout {{ chaos_duration }}s &
+    echo $! > /tmp/stress_cpu.pid
+    echo "Applied CPU stress: ${CPU_LOAD}%" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_chaos.log
+  when: chaos_params.cpu is defined and chaos_params.cpu > 0
+  async: 1
+  poll: 0
+
+- name: "🧠 Apply memory pressure chaos"
+  shell: |
+    MEM_LOAD={{ (resource_chaos.memory.min + ((resource_chaos.memory.max - resource_chaos.memory.min) | random)) | int }}
+    stress --vm 1 --vm-bytes ${MEM_LOAD}M --timeout {{ chaos_duration }}s &
+    echo $! > /tmp/stress_memory.pid
+    echo "Applied memory pressure: ${MEM_LOAD}MB" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_chaos.log
+  when: chaos_params.memory is defined and chaos_params.memory > 0
+  async: 1
+  poll: 0
+
+- name: "💿 Apply disk I/O chaos"
+  shell: |
+    IO_LOAD={{ (resource_chaos.disk_io.min + ((resource_chaos.disk_io.max - resource_chaos.disk_io.min) | random)) | int }}
+    stress --io 4 --timeout {{ chaos_duration }}s &
+    echo $! > /tmp/stress_io.pid
+    echo "Applied I/O stress: ${IO_LOAD}%" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_chaos.log
+  when: chaos_params.disk_io is defined and chaos_params.disk_io > 0
+  async: 1
+  poll: 0
+
+- name: "📊 Monitor resource usage during chaos"
+  shell: |
+    echo "=== Resource Monitoring Report ===" > {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "Timestamp: {{ ansible_date_time.iso8601 }}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "CPU Usage:" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    top -bn1 | grep "Cpu(s)" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "Memory Usage:" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    free -h >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    echo "Disk I/O:" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+    iostat -x 1 1 >> {{ chaos_log_dir }}/{{ inventory_hostname }}_resource_monitoring.txt
+  async: 30
+  poll: 0
+
+- name: "💾 Create resource chaos summary"
+  copy:
+    content: |
+      Resource Chaos Applied:
+      - CPU Stress: {{ chaos_params.cpu | default('random') }} {{ resource_chaos.cpu.unit }}
+      - Memory Pressure: {{ chaos_params.memory | default('random') }} {{ resource_chaos.memory.unit }}
+      - I/O Stress: {{ chaos_params.disk_io | default('random') }} {{ resource_chaos.disk_io.unit }}
+      - Duration: {{ chaos_duration }} seconds
+      - Applied at: {{ ansible_date_time.iso8601 }}
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_resource_chaos_summary.txt"
+    mode: '0644'

@@ -1,0 +1,48 @@
+# Network Chaos Engineering Tasks
+
+- name: "🕸️  Backup current network configuration"
+  shell: |
+    ip route show > {{ chaos_backup_dir }}/network_routes_{{ ansible_date_time.epoch }}.bak
+    tc qdisc show > {{ chaos_backup_dir }}/traffic_control_{{ ansible_date_time.epoch }}.bak
+  when: backup_network_config | default(true)
+
+- name: "🕸️  Apply network latency chaos"
+  shell: |
+    CHAOS_LATENCY={{ network_chaos.latency.min + ((network_chaos.latency.max - network_chaos.latency.min) | random) }}
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem delay ${CHAOS_LATENCY}ms
+    echo "Applied latency: ${CHAOS_LATENCY}ms" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_network_chaos.log
+  when: chaos_params.latency is defined and chaos_params.latency > 0
+
+- name: "🕸️  Apply packet loss chaos"
+  shell: |
+    CHAOS_LOSS={{ (network_chaos.packet_loss.min + ((network_chaos.packet_loss.max - network_chaos.packet_loss.min) | random)) | int }}
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem loss ${CHAOS_LOSS}%
+    echo "Applied packet loss: ${CHAOS_LOSS}%" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_network_chaos.log
+  when: chaos_params.packet_loss is defined and chaos_params.packet_loss > 0
+
+- name: "🕸️  Apply bandwidth throttling"
+  shell: |
+    CHAOS_BANDWIDTH="{{ ['1mbit', '10mbit', '50mbit', '100mbit'] | random }}"
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root tbf rate ${CHAOS_BANDWIDTH} burst 32kbit latency 400ms
+    echo "Applied bandwidth limit: ${CHAOS_BANDWIDTH}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_network_chaos.log
+  when: chaos_params.bandwidth is defined
+
+- name: "🕸️  Block random ports"
+  shell: |
+    BLOCKED_PORT={{ (service_chaos.block_ports | random) }}
+    iptables -A INPUT -p tcp --dport ${BLOCKED_PORT} -j DROP
+    echo "Blocked port: ${BLOCKED_PORT}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_network_chaos.log
+  loop: "{{ range(1, (service_chaos.block_ports | length) // 2 + 1) | list }}"
+  when: chaos_params.block_ports is defined
+
+- name: "🕸️  Create network chaos summary"
+  copy:
+    content: |
+      Network Chaos Applied:
+      - Latency: {{ chaos_params.latency | default('random') }} {{ network_chaos.latency.unit }}
+      - Packet Loss: {{ chaos_params.packet_loss | default('random') }} {{ network_chaos.packet_loss.unit }}
+      - Bandwidth: {{ chaos_params.bandwidth | default('random') }} {{ network_chaos.bandwidth.unit }}
+      - Blocked Ports: {{ chaos_params.block_ports | default(service_chaos.block_ports | random(1)) }}
+      - Applied at: {{ ansible_date_time.iso8601 }}
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_network_chaos_summary.txt"
+    mode: '0644'

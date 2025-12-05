@@ -1,0 +1,45 @@
+# Random Chaos Selector Tasks
+
+- name: "🎲 Select random chaos scenario"
+  set_fact:
+    selected_chaos: "{{ random_chaos.enabled_scenarios | random }}"
+
+- name: "🎲 Set random chaos parameters"
+  set_fact:
+    chaos_params: >
+      {% if selected_chaos == 'network' %}
+        {
+          'latency': {{ (network_chaos.latency.min + ((network_chaos.latency.max - network_chaos.latency.min) | random)) | int }},
+          'packet_loss': {{ (network_chaos.packet_loss.min + ((network_chaos.packet_loss.max - network_chaos.packet_loss.min) | random)) | int }},
+          'bandwidth': "{{ ['1mbit', '10mbit', '50mbit', '100mbit'] | random }}",
+          'block_ports': {{ service_chaos.block_ports | random(2) }}
+        }
+      {% elif selected_chaos == 'resource' %}
+        {
+          'cpu': {{ (resource_chaos.cpu.min + ((resource_chaos.cpu.max - resource_chaos.cpu.min) | random)) | int }},
+          'memory': {{ (resource_chaos.memory.min + ((resource_chaos.memory.max - resource_chaos.memory.min) | random)) | int }},
+          'disk_io': {{ (resource_chaos.disk_io.min + ((resource_chaos.disk_io.max - resource_chaos.disk_io.min) | random)) | int }}
+        }
+      {% elif selected_chaos == 'service' %}
+        {
+          'restart_services': true,
+          'stop_services': {{ [true, false] | random }},
+          'block_ports': true
+        }
+      {% else %}
+        {}
+      {% endif %}
+
+- name: "🎭 Execute selected chaos: {{ selected_chaos }}"
+  include_tasks: "tasks/chaos/{{ selected_chaos }}.yml"
+
+- name: "🎲 Create random chaos summary"
+  copy:
+    content: |
+      Random Chaos Session:
+      - Selected Scenario: {{ selected_chaos }}
+      - Parameters: {{ chaos_params | to_nice_json }}
+      - Applied at: {{ ansible_date_time.iso8601 }}
+      - Duration: {{ chaos_duration }} seconds
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_random_chaos_summary.txt"
+    mode: '0644'

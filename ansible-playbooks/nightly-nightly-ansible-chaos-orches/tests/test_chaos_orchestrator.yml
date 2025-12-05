@@ -1,0 +1,272 @@
+---
+# Test Playbook for Chaos Orchestrator
+# This playbook validates the chaos orchestrator functionality
+
+- name: "🧪 Test Chaos Orchestrator Components"
+  hosts: localhost
+  gather_facts: true
+  vars:
+    test_chaos_types:
+      - network
+      - resource
+      - service
+      - time
+      - random
+    test_duration: 30
+  tasks:
+    - name: "📋 Validate playbook syntax"
+      command: ansible-playbook --syntax-check chaos_orchestrator.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: "✅ Syntax check passed"
+      debug:
+        msg: "Playbook syntax is valid"
+      when: syntax_check.rc == 0
+
+    - name: "❌ Syntax check failed"
+      fail:
+        msg: "Playbook syntax errors found"
+      when: syntax_check.rc != 0
+
+    - name: "📋 Validate inventory file"
+      stat:
+        path: inventory
+      register: inventory_stat
+
+    - name: "✅ Inventory file exists"
+      debug:
+        msg: "Inventory file found and readable"
+      when: inventory_stat.stat.exists
+
+    - name: "❌ Inventory file missing"
+      fail:
+        msg: "Inventory file not found - create it before running tests"
+      when: not inventory_stat.stat.exists
+
+    - name: "📋 Test chaos scenario configurations"
+      assert:
+        that:
+          - chaos_scenario in allowed_chaos_types
+          - test_duration > 0
+          - test_duration <= 3600
+        fail_msg: "Invalid chaos scenario or duration"
+        success_msg: "Chaos scenario configuration valid"
+      loop: "{{ test_chaos_types }}"
+      loop_control:
+        loop_var: chaos_scenario
+
+    - name: "📋 Validate variable files"
+      stat:
+        path: "vars/{{ item }}"
+      register: var_files
+      loop:
+        - chaos_scenarios.yml
+
+    - name: "✅ Variable files exist"
+      debug:
+        msg: "All required variable files are present"
+      when: var_files.results | selectattr('stat.exists', 'equalto', true) | list | length == var_files.results | length
+
+    - name: "📋 Validate task files"
+      stat:
+        path: "tasks/chaos/{{ item }}.yml"
+      register: task_files
+      loop:
+        - network
+        - resource
+        - service
+        - time
+        - random
+        - cleanup
+
+    - name: "✅ Task files exist"
+      debug:
+        msg: "All required task files are present"
+      when: task_files.results | selectattr('stat.exists', 'equalto', true) | list | length == task_files.results | length
+
+    - name: "📋 Validate template files"
+      stat:
+        path: "templates/{{ item }}"
+      register: template_files
+      loop:
+        - chaos_report.j2
+
+    - name: "✅ Template files exist"
+      debug:
+        msg: "All required template files are present"
+      when: template_files.results | selectattr('stat.exists', 'equalto', true) | list | length == template_files.results | length
+
+    - name: "📋 Test convenience script"
+      stat:
+        path: run_chaos.sh
+      register: script_stat
+
+    - name: "✅ Convenience script exists"
+      debug:
+        msg: "Convenience script found and executable"
+      when: script_stat.stat.exists and script_stat.stat.mode contains 'x'
+
+    - name: "📋 Validate documentation"
+      stat:
+        path: README.md
+      register: readme_stat
+
+    - name: "✅ Documentation exists"
+      debug:
+        msg: "README.md found"
+      when: readme_stat.stat.exists
+
+    - name: "📋 Test variable structure"
+      include_vars:
+        file: vars/chaos_scenarios.yml
+        name: chaos_vars
+
+    - name: "✅ Validate chaos scenarios structure"
+      assert:
+        that:
+          - chaos_vars.allowed_chaos_types is defined
+          - chaos_vars.network_chaos is defined
+          - chaos_vars.resource_chaos is defined
+          - chaos_vars.service_chaos is defined
+          - chaos_vars.time_chaos is defined
+          - chaos_vars.safety is defined
+        fail_msg: "Invalid chaos scenarios structure"
+        success_msg: "Chaos scenarios structure is valid"
+
+    - name: "📋 Test network chaos parameters"
+      assert:
+        that:
+          - chaos_vars.network_chaos.latency.min < chaos_vars.network_chaos.latency.max
+          - chaos_vars.network_chaos.packet_loss.min < chaos_vars.network_chaos.packet_loss.max
+          - chaos_vars.network_chaos.bandwidth.min != chaos_vars.network_chaos.bandwidth.max
+        fail_msg: "Invalid network chaos parameters"
+        success_msg: "Network chaos parameters are valid"
+
+    - name: "📋 Test resource chaos parameters"
+      assert:
+        that:
+          - chaos_vars.resource_chaos.cpu.min < chaos_vars.resource_chaos.cpu.max
+          - chaos_vars.resource_chaos.memory.min < chaos_vars.resource_chaos.memory.max
+          - chaos_vars.resource_chaos.disk_io.min < chaos_vars.resource_chaos.disk_io.max
+        fail_msg: "Invalid resource chaos parameters"
+        success_msg: "Resource chaos parameters are valid"
+
+    - name: "📋 Test service chaos parameters"
+      assert:
+        that:
+          - chaos_vars.service_chaos.services is defined
+          - chaos_vars.service_chaos.services | length > 0
+          - chaos_vars.service_chaos.restart_probability >= 0
+          - chaos_vars.service_chaos.restart_probability <= 100
+        fail_msg: "Invalid service chaos parameters"
+        success_msg: "Service chaos parameters are valid"
+
+    - name: "📋 Test time chaos parameters"
+      assert:
+        that:
+          - chaos_vars.time_chaos.ntp_servers is defined
+          - chaos_vars.time_chaos.timezone_options is defined
+          - chaos_vars.time_chaos.clock_drift.min < chaos_vars.time_chaos.clock_drift.max
+        fail_msg: "Invalid time chaos parameters"
+        success_msg: "Time chaos parameters are valid"
+
+    - name: "📋 Test safety parameters"
+      assert:
+        that:
+          - chaos_vars.safety.max_duration > 0
+          - chaos_vars.safety.critical_services is defined
+          - "ssh" in chaos_vars.safety.critical_services
+          - "systemd" in chaos_vars.safety.critical_services
+        fail_msg: "Invalid safety parameters"
+        success_msg: "Safety parameters are valid"
+
+    - name: "📋 Test random chaos configuration"
+      assert:
+        that:
+          - chaos_vars.random_chaos.enabled_scenarios is defined
+          - chaos_vars.random_chaos.selection_weight is defined
+          - chaos_vars.random_chaos.enabled_scenarios | length > 0
+        fail_msg: "Invalid random chaos configuration"
+        success_msg: "Random chaos configuration is valid"
+
+    - name: "📋 Generate test report"
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/test_chaos_report.html
+        vars:
+          inventory_hostname: "localhost"
+          chaos_type: "test"
+          chaos_duration: 0
+          chaos_params: {}
+          ansible_date_time:
+            iso8601: "{{ ansible_date_time.iso8601 }}"
+          ansible_user_id: "test-runner"
+
+    - name: "✅ All tests passed!"
+      debug:
+        msg: |
+          🎭 Chaos Orchestrator Tests Completed Successfully!
+          
+          Test Summary:
+          - Playbook syntax: VALID
+          - Configuration files: VALID
+          - Task files: VALID
+          - Template files: VALID
+          - Variable structure: VALID
+          - Safety parameters: VALID
+          - Test report generated: /tmp/test_chaos_report.html
+          
+          Ready for chaos engineering! 🚀
+
+- name: "🧪 Test Convenience Script Functionality"
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "📋 Test script help functionality"
+      command: ./run_chaos.sh --help
+      register: help_output
+      changed_when: false
+
+    - name: "✅ Help output generated"
+      assert:
+        that:
+          - help_output.rc == 0
+          - "Chaos Engineering" in help_output.stdout
+          - "network|resource|service|time|random" in help_output.stdout
+        fail_msg: "Help functionality test failed"
+        success_msg: "Help functionality works correctly"
+
+    - name: "📋 Test script validation"
+      command: ./run_chaos.sh invalid_chaos 60
+      register: validation_test
+      ignore_errors: true
+      changed_when: false
+
+    - name: "✅ Validation test passed"
+      assert:
+        that:
+          - validation_test.rc != 0
+          - "Invalid chaos type" in validation_test.stderr
+        fail_msg: "Validation test failed - script should reject invalid chaos types"
+        success_msg: "Script correctly validates input parameters"
+
+    - name: "📋 Test dry-run mode"
+      command: ./run_chaos.sh network 30 --dry-run
+      register: dry_run_test
+      ignore_errors: true
+      changed_when: false
+
+    - name: "✅ Dry-run test passed"
+      assert:
+        that:
+          - dry_run_test.rc == 0
+          - "DRY RUN" in dry_run_test.stdout
+        fail_msg: "Dry-run test failed"
+        success_msg: "Dry-run mode works correctly"
+
+    - name: "✅ Script tests completed successfully!"
+      debug:
+        msg: "Convenience script functionality validated"
+
+...

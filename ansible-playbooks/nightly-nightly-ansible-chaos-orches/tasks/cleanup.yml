@@ -1,0 +1,71 @@
+# Chaos Cleanup Tasks
+
+- name: "🧹 Stop stress processes"
+  shell: |
+    if [ -f /tmp/stress_cpu.pid ]; then
+      kill $(cat /tmp/stress_cpu.pid) 2>/dev/null || true
+      rm -f /tmp/stress_cpu.pid
+    fi
+    if [ -f /tmp/stress_memory.pid ]; then
+      kill $(cat /tmp/stress_memory.pid) 2>/dev/null || true
+      rm -f /tmp/stress_memory.pid
+    fi
+    if [ -f /tmp/stress_io.pid ]; then
+      kill $(cat /tmp/stress_io.pid) 2>/dev/null || true
+      rm -f /tmp/stress_io.pid
+    fi
+  when: auto_rollback | default(true)
+
+- name: "🧹 Restore stopped services"
+  shell: |
+    if [ -f /tmp/stopped_services.txt ]; then
+      while read service; do
+        if ! ({{ safety.critical_services | join(' ') }} | grep -q "${service}"); then
+          systemctl start ${service} 2>/dev/null || true
+          echo "Restored service: ${service}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup.log
+        fi
+      done < /tmp/stopped_services.txt
+      rm -f /tmp/stopped_services.txt
+    fi
+  when: auto_rollback | default(true)
+
+- name: "🧹 Remove iptables rules"
+  shell: |
+    if [ -f /tmp/blocked_ports.txt ]; then
+      while read port; do
+        iptables -D INPUT -p tcp --dport ${port} -j DROP 2>/dev/null || true
+        echo "Unblocked port: ${port}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup.log
+      done < /tmp/blocked_ports.txt
+      rm -f /tmp/blocked_ports.txt
+    fi
+  when: auto_rollback | default(true)
+
+- name: "🧹 Clear traffic control rules"
+  shell: |
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root 2>/dev/null || true
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} ingress 2>/dev/null || true
+    echo "Cleared traffic control rules" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup.log
+  when: auto_rollback | default(true)
+
+- name: "🧹 Restore time configuration"
+  shell: |
+    if [ -f {{ chaos_backup_dir }}/timezone_{{ ansible_date_time.epoch }}.bak ]; then
+      OLD_TZ=$(cat {{ chaos_backup_dir }}/timezone_{{ ansible_date_time.epoch }}.bak)
+      timedatectl set-timezone ${OLD_TZ}
+      echo "Restored timezone: ${OLD_TZ}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup.log
+    fi
+    timedatectl set-ntp true
+    echo "Restored NTP synchronization" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup.log
+  when: auto_rollback | default(true)
+
+- name: "🧹 Create cleanup summary"
+  copy:
+    content: |
+      Chaos Cleanup Completed:
+      - Processes stopped: {{ ansible_date_time.iso8601 }}
+      - Services restored: {{ ansible_date_time.iso8601 }}
+      - Network rules cleared: {{ ansible_date_time.iso8601 }}
+      - Time config restored: {{ ansible_date_time.iso8601 }}
+      - Cleanup status: SUCCESS
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_cleanup_summary.txt"
+    mode: '0644'

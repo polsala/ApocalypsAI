@@ -1,0 +1,64 @@
+# Service Chaos Engineering Tasks
+
+- name: "🔧 Backup service configurations"
+  shell: |
+    for service in {{ service_chaos.services | join(' ') }}; do
+      if systemctl list-unit-files | grep -q "^${service}"; then
+        systemctl show ${service} > {{ chaos_backup_dir }}/${service}_config_{{ ansible_date_time.epoch }}.bak
+      fi
+    done
+  when: backup_service_config | default(true)
+
+- name: "🔄 Restart random services"
+  shell: |
+    AVAILABLE_SERVICES=( {{ service_chaos.services | join(' ') }} )
+    RANDOM_SERVICE=${AVAILABLE_SERVICES[$RANDOM % ${#AVAILABLE_SERVICES[@]}]}
+    
+    if systemctl list-unit-files | grep -q "^${RANDOM_SERVICE}"; then
+      echo "Restarting service: ${RANDOM_SERVICE}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+      systemctl restart ${RANDOM_SERVICE}
+      sleep 2
+      if systemctl is-active --quiet ${RANDOM_SERVICE}; then
+        echo "Service ${RANDOM_SERVICE} restarted successfully" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+      else
+        echo "WARNING: Service ${RANDOM_SERVICE} failed to restart" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+      fi
+    else
+      echo "Service ${RANDOM_SERVICE} not found on this system" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+    fi
+  loop: "{{ range(1, (service_chaos.services | length) // 3 + 1) | list }}"
+  when: chaos_params.restart_services | default(true)
+
+- name: "🚫 Stop random services temporarily"
+  shell: |
+    AVAILABLE_SERVICES=( {{ service_chaos.services | join(' ') }} )
+    RANDOM_SERVICE=${AVAILABLE_SERVICES[$RANDOM % ${#AVAILABLE_SERVICES[@]}]}
+    
+    if systemctl list-unit-files | grep -q "^${RANDOM_SERVICE}" && ! ({{ safety.critical_services | join(' ') }} | grep -q "${RANDOM_SERVICE}"); then
+      echo "Stopping service: ${RANDOM_SERVICE} (will restart after chaos)" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+      systemctl stop ${RANDOM_SERVICE}
+      echo "${RANDOM_SERVICE}" >> /tmp/stopped_services.txt
+    fi
+  loop: "{{ range(1, (service_chaos.services | length) // 4 + 1) | list }}"
+  when: chaos_params.stop_services | default(false)
+
+- name: "🔒 Block service ports with iptables"
+  shell: |
+    BLOCKED_PORT={{ (service_chaos.block_ports | random) }}
+    iptables -A INPUT -p tcp --dport ${BLOCKED_PORT} -j DROP
+    echo "Blocked port: ${BLOCKED_PORT}" >> {{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos.log
+    echo "${BLOCKED_PORT}" >> /tmp/blocked_ports.txt
+  loop: "{{ range(1, (service_chaos.block_ports | length) // 2 + 1) | list }}"
+  when: chaos_params.block_ports | default(true)
+
+- name: "📊 Create service chaos summary"
+  copy:
+    content: |
+      Service Chaos Applied:
+      - Restarted Services: {{ chaos_params.restart_services | default(true) }}
+      - Stopped Services: {{ chaos_params.stop_services | default(false) }}
+      - Blocked Ports: {{ chaos_params.block_ports | default(true) }}
+      - Services Affected: {{ service_chaos.services | join(', ') }}
+      - Applied at: {{ ansible_date_time.iso8601 }}
+    dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_service_chaos_summary.txt"
+    mode: '0644'
