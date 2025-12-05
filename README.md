@@ -28,10 +28,11 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 
 | Workflow | Purpose | Trigger |
 | --- | --- | --- |
-| `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new `utils/<util_name>` folder (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0,30 * * * *` & manual |
-| `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `10,40 * * * *` & manual |
-| `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `20,50 * * * *` & manual |
-| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
+
+| `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new utility under V2 classifier paths (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0 * * * *` (hourly at :00) & manual |
+| `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `20 * * * *` (hourly at :20) & manual |
+| `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `40 * * * *` (hourly at :40) & manual |
+| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under V2 classifier paths. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
 | `agent_pr_path_check.yml` | Periodically scans open PRs from provider agents (gemini/groq/openrouter) for path isolation violations. Automatically closes conflicting PRs with a detailed explanation. Does not affect copilot or other PRs. | Cron `0 8,14,20 * * *` (3x daily) & manual |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
 | `pr_auto_review.yml` | Multi-agent review system: assigns PR reviews to the other two AI agents (not the PR author). Each agent posts a tagged review comment. | PR opened/synchronized/ready_for_review |
@@ -53,12 +54,17 @@ All workflows share:
 
 ## Utils Directory
 
-Every autonomous run must add a fully self-contained utility to `utils/<util_name>/`. Requirements:
+**V2 Path Classification System**: Utilities are now organized by classifier-based paths (e.g., `rust-utils/`, `react-webpage/`, `bash-utils/`) instead of a flat `utils/` directory. See [docs/V2_PATH_CLASSIFICATION.md](docs/V2_PATH_CLASSIFICATION.md) for details.
+
+Every autonomous run must add a fully self-contained utility to an appropriate classifier path. Requirements:
 
 - Pick a unique slug (kebab-case is preferred) per run; never mutate existing folders.
+- Choose the BEST language/technology for the task (Rust, Go, Bash, TypeScript, React, Python, etc.)
 - Ship everything inside that folder: README/usage docs, source, tests/fixtures, config, etc.
 - Tests must run without network access (use mocks/fakes with `# Mock rationale:` comments).
 - Prefer lightweight tooling and document how to execute the util (CLI usage, API example, etc.)
+- Utilities are placed in classifier paths like `rust-utils/<name>/`, `python-utils/<name>/`, etc.
+- Legacy `utils/<name>/` paths are supported for backward compatibility but discouraged for new utilities.
 
 ## Agents
 

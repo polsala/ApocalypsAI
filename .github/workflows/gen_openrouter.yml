@@ -1,7 +1,7 @@
 name: OpenRouter Generator
 on:
   schedule:
-    - cron: '0,30 * * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -60,6 +60,18 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import subprocess, sys
+          
+          # V2 classifier paths + legacy utils/
+          VALID_PREFIXES = [
+              "python-utils/", "rust-utils/", "bash-utils/", "react-webpage/",
+              "github-actions/", "devops-tools/", "docker-tools/", "cli-apps/",
+              "web-apis/", "js-utils/", "data-scripts/", "test-suite-tools/",
+              "monitoring-scripts/", "infra-automation/", "go-utils/", "typescript-utils/",
+              "node-utils/", "java-utils/", "cpp-utils/", "ansible-playbooks/",
+              "terraform-modules/", "k8s-resources/", "ci-cd-pipelines/",
+              "database-scripts/", "ml-notebooks/", "api-clients/", "utils/"
+          ]
+          
           result = subprocess.run(
               ["git", "status", "--porcelain", "-z"],
               capture_output=True,
@@ -82,12 +94,14 @@ jobs:
                   path = entry.split(" -> ", 1)[1]
               else:
                   path = entry[3:]
-              if not path.startswith("utils/"):
-                  print(f"ERROR: Agent touched path outside utils/: {path}", file=sys.stderr)
+              
+              # Check if path starts with any valid prefix
+              if not any(path.startswith(prefix) for prefix in VALID_PREFIXES):
+                  print(f"ERROR: Agent touched path outside valid directories: {path}", file=sys.stderr)
                   sys.exit(1)
               paths.append(path)
           if not paths:
-              print("ERROR: No eligible paths detected under utils/.", file=sys.stderr)
+              print("ERROR: No eligible paths detected under valid utility directories.", file=sys.stderr)
               sys.exit(1)
           subprocess.run(["git", "add", "--"] + paths, check=True)
           PY
@@ -128,11 +142,12 @@ jobs:
         run: |
           set -euo pipefail
           if git diff --cached --quiet; then
-            echo "ERROR: No staged changes under utils/"
+            echo "ERROR: No staged changes in utility directories"
             exit 1
           fi
-          if git diff --cached --name-only | grep -v '^utils/' >/dev/null; then
-            echo "ERROR: Non-utils files accidentally staged"
+          # Check that only valid V2 classifier paths or legacy utils/ are staged
+          if git diff --cached --name-only | grep -Ev '^(python-utils|rust-utils|bash-utils|react-webpage|github-actions|devops-tools|docker-tools|cli-apps|web-apis|js-utils|data-scripts|test-suite-tools|monitoring-scripts|infra-automation|go-utils|typescript-utils|node-utils|java-utils|cpp-utils|ansible-playbooks|terraform-modules|k8s-resources|ci-cd-pipelines|database-scripts|ml-notebooks|api-clients|utils)/' >/dev/null; then
+            echo "ERROR: Non-utility files accidentally staged"
             git diff --cached --name-only
             exit 1
           fi
