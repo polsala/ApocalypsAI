@@ -1,0 +1,113 @@
+---
+# Nightly Ansible Chaos Orchestrator
+# A whimsical-yet-useful chaos engineering playbook
+
+- name: "🎭 Chaos Engineering Playbook - May the odds be ever in your favor"
+  hosts: chaos_targets
+  become: true
+  gather_facts: true
+  vars_files:
+    - vars/chaos_scenarios.yml
+  vars:
+    chaos_start_time: "{{ ansible_date_time.epoch | int }}"
+    chaos_log_dir: "/tmp/chaos_logs"
+    chaos_backup_dir: "/tmp/chaos_backup"
+  pre_tasks:
+    - name: "🔒 Safety Check - Ensure we're not on production"
+      assert:
+        that:
+          - inventory_hostname not in production_hosts | default([])
+          - chaos_type in allowed_chaos_types
+        fail_msg: "❌ Safety violation: Cannot run chaos on production or unknown chaos type"
+        success_msg: "✅ Safety check passed - Chaos approved!"
+
+    - name: "📦 Install required packages for chaos"
+      package:
+        name:
+          - stress
+          - iproute
+          - iputils
+        state: present
+
+    - name: "📁 Create chaos log and backup directories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ chaos_log_dir }}"
+        - "{{ chaos_backup_dir }}"
+
+    - name: "📝 Create chaos session log"
+      copy:
+        content: |
+          Chaos Session Started: {{ ansible_date_time.iso8601 }}
+          Target Host: {{ inventory_hostname }}
+          Chaos Type: {{ chaos_type }}
+          Duration: {{ chaos_duration }} seconds
+          Operator: {{ ansible_user_id }}
+          ==================================================
+        dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_chaos_{{ chaos_type }}_{{ ansible_date_time.epoch }}.log"
+        mode: '0644'
+
+  tasks:
+    - name: "🎭 Execute {{ chaos_type }} chaos scenario"
+      include_tasks: "tasks/chaos/{{ chaos_type }}.yml"
+      when: chaos_type in allowed_chaos_types
+
+    - name: "⏳ Wait for chaos duration ({{ chaos_duration }} seconds)"
+      wait_for:
+        timeout: "{{ chaos_duration }}"
+      when: chaos_duration is defined and chaos_duration > 0
+
+    - name: "🧹 Cleanup chaos effects"
+      include_tasks: "tasks/cleanup.yml"
+
+    - name: "📊 Generate chaos report"
+      template:
+        src: templates/chaos_report.j2
+        dest: "{{ chaos_log_dir }}/{{ inventory_hostname }}_chaos_report_{{ ansible_date_time.epoch }}.html"
+        mode: '0644'
+
+  post_tasks:
+    - name: "🎉 Chaos session completed successfully!"
+      debug:
+        msg: |
+          🎭 Chaos Engineering Session Complete!
+          Host: {{ inventory_hostname }}
+          Type: {{ chaos_type }}
+          Duration: {{ chaos_duration }}s
+          Report: {{ chaos_log_dir }}/{{ inventory_hostname }}_chaos_report_{{ ansible_date_time.epoch }}.html
+
+    - name: "📤 Archive chaos logs"
+      archive:
+        path: "{{ chaos_log_dir }}/{{ inventory_hostname }}_*"
+        dest: "{{ chaos_backup_dir }}/{{ inventory_hostname }}_chaos_session_{{ ansible_date_time.epoch }}.tar.gz"
+        format: gz
+
+  environment:
+    CHAOS_SESSION_ID: "{{ ansible_date_time.epoch }}"
+    CHAOS_TARGET_HOST: "{{ inventory_hostname }}"
+    CHAOS_TYPE: "{{ chaos_type }}"
+
+# Localhost tasks for convenience
+- name: "🏠 Localhost - Chaos Orchestrator Controller"
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "🚀 Display chaos execution summary"
+      debug:
+        msg: |
+          Chaos Engineering Summary:
+          - Target: {{ groups.chaos_targets | join(', ') }}
+          - Type: {{ chaos_type }}
+          - Duration: {{ chaos_duration }} seconds
+          - Started: {{ chaos_start_time }}
+          - Completed: {{ ansible_date_time.epoch | int }}
+
+    - name: "📧 Send chaos completion notification (mock)"
+      debug:
+        msg: "📧 Chaos session notification sent to ops team"
+      when: notify_ops | default(false)
+
+...

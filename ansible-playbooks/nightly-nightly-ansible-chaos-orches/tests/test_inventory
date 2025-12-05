@@ -1,0 +1,11 @@
+# Test Inventory for Chaos Orchestrator Tests
+# This inventory is used for testing purposes only
+
+[chaos_targets]
+localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+
+[production_hosts]
+# No production hosts in test inventory - all safe for chaos
+
+[development_hosts]
+localhost

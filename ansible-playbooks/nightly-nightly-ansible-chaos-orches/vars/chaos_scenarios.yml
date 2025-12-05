@@ -1,0 +1,103 @@
+# Chaos Engineering Scenarios Configuration
+
+# Allowed chaos types
+allowed_chaos_types:
+  - network
+  - resource
+  - service
+  - time
+  - random
+
+# Network chaos parameters
+network_chaos:
+  latency:
+    min: 10
+    max: 2000
+    unit: "ms"
+  packet_loss:
+    min: 1
+    max: 50
+    unit: "%"
+  bandwidth:
+    min: "1mbit"
+    max: "100mbit"
+
+# Resource chaos parameters
+resource_chaos:
+  cpu:
+    min: 1
+    max: 100
+    unit: "%"
+  memory:
+    min: 10
+    max: 8192
+    unit: "MB"
+  disk_io:
+    min: 1
+    max: 100
+    unit: "%"
+
+# Service chaos parameters
+service_chaos:
+  services:
+    - ssh
+    - nginx
+    - apache2
+    - docker
+    - mysql
+    - postgresql
+  restart_probability: 50
+  block_ports:
+    - 80
+    - 443
+    - 22
+    - 3306
+    - 5432
+
+# Time chaos parameters
+time_chaos:
+  ntp_servers:
+    - "0.pool.ntp.org"
+    - "1.pool.ntp.org"
+    - "2.pool.ntp.org"
+  timezone_options:
+    - "UTC"
+    - "America/New_York"
+    - "Europe/London"
+    - "Asia/Tokyo"
+    - "Australia/Sydney"
+  clock_drift:
+    min: -30
+    max: 30
+    unit: "seconds"
+
+# Random chaos configuration
+random_chaos:
+  enabled_scenarios:
+    - network
+    - resource
+    - service
+  selection_weight:
+    network: 0.4
+    resource: 0.3
+    service: 0.3
+
+# Safety parameters
+safety:
+  max_duration: 3600
+  dry_run: false
+  auto_rollback: true
+  critical_services:
+    - ssh
+    - systemd
+    - cron
+  backup_network_config: true
+  backup_service_config: true
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  rotate: true
+  max_size: "10MB"
+  max_files: 5
