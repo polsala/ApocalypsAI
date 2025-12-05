@@ -1,0 +1,184 @@
+name: Agent PR Path Conflict Check
+on:
+  schedule:
+    # Run 3 times a day: 8 AM, 2 PM, and 8 PM UTC
+    - cron: '0 8,14,20 * * *'
+  workflow_dispatch:  # Allow manual trigger
+permissions:
+  contents: read
+  pull-requests: write
+env:
+  GITHUB_TOKEN: ${{ secrets.REVIEWER_TOKEN}}
+  GH_TOKEN: ${{ secrets.REVIEWER_TOKEN}}
+jobs:
+  check-agent-pr-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml
+      
+      - name: Check all agent PRs for path conflicts
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          
+          # Add agents to path
+          sys.path.insert(0, str(Path.cwd()))
+          
+          from agents import agent_utils
+          
+          def check_agent_pr_paths(repo: str, pr_number: int) -> tuple[bool, str, list[str]]:
+              """Check if an agent PR violates path isolation rules.
+              
+              Returns:
+                  Tuple of (is_agent_pr, violation_reason, changed_files)
+              """
+              try:
+                  pr = agent_utils.get_pr(repo, pr_number)
+                  
+                  # Check if PR is from one of the 3 provider agents (NOT copilot or other PRs)
+                  branch = pr.get("head", {}).get("ref", "")
+                  is_provider_agent_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  if not is_provider_agent_pr:
+                      return False, "", []
+                  
+                  # This is a provider agent PR, now check paths
+                  files = agent_utils.get_pr_files(repo, pr_number)
+                  changed_files = [f.get("filename", "") for f in files]
+                  
+                  # All agent changes should be in utils/<single_util_name>/
+                  # Find the isolated directory (should be only one)
+                  util_dirs = set()
+                  violations = []
+                  
+                  for filepath in changed_files:
+                      if not filepath.startswith("utils/"):
+                          violations.append(f"File outside utils/: {filepath}")
+                      else:
+                          # Extract the util directory name (utils/<util_name>/...)
+                          parts = filepath.split("/")
+                          if len(parts) >= 2:
+                              util_name = parts[1]
+                              util_dirs.add(util_name)
+                  
+                  # Check if changes span multiple utility directories
+                  if len(util_dirs) > 1:
+                      violations.append(f"Changes affect multiple utility directories: {', '.join(sorted(util_dirs))}")
+                  
+                  if violations:
+                      reason = "Path isolation violation detected:\n" + "\n".join(f"  - {v}" for v in violations)
+                      return True, reason, changed_files
+                  
+                  return True, "", changed_files
+                  
+              except Exception as e:
+                  print(f"ERROR: Failed to check PR #{pr_number}: {e}", file=sys.stderr)
+                  return False, "", []
+          
+          def main():
+              repo = os.environ.get("GITHUB_REPOSITORY")
+              
+              if not repo:
+                  print("ERROR: GITHUB_REPOSITORY not set")
+                  return 1
+              
+              print(f"Checking for conflicting agent PRs in {repo}...")
+              
+              # Get all open PRs
+              try:
+                  prs = agent_utils.list_open_prs(repo)
+              except agent_utils.GitHubError as e:
+                  print(f"ERROR: Failed to list open PRs: {e}", file=sys.stderr)
+                  return 1
+              
+              if not prs:
+                  print("✅ No open PRs found")
+                  return 0
+              
+              print(f"Found {len(prs)} open PR(s), checking for provider agent PRs with path conflicts...")
+              
+              closed_count = 0
+              checked_count = 0
+              
+              for pr in prs:
+                  pr_number = pr.get("number")
+                  if not pr_number:
+                      continue
+                  
+                  is_agent_pr, violation, changed_files = check_agent_pr_paths(repo, pr_number)
+                  
+                  if not is_agent_pr:
+                      # Not a provider agent PR (gemini/groq/openrouter), skip it
+                      continue
+                  
+                  checked_count += 1
+                  
+                  if violation:
+                      print(f"\n❌ PR #{pr_number}: Path violation detected")
+                      print(f"   {violation}")
+                      print("   Changed files:")
+                      for f in changed_files:
+                          print(f"     - {f}")
+                      
+                      # Build comment text
+                      comment_parts = [
+                          "## ❌ Agent PR Path Conflict Detected",
+                          "",
+                          "This pull request has been automatically closed because it violates the agent path isolation requirements.",
+                          "",
+                          "### Violations Found:",
+                          violation,
+                          "",
+                          "### Requirements:",
+                          "- **Agent PRs must only modify files within a single isolated directory**: `utils/<util_name>/`",
+                          "- All changes must be self-contained within that directory",
+                          "- No modifications outside `utils/` are allowed",
+                          "- No modifications spanning multiple utility directories are allowed",
+                          "",
+                          "### Changed Files:"
+                      ]
+                      for f in changed_files:
+                          comment_parts.append(f"- `{f}`")
+                      comment_parts.extend([
+                          "",
+                          "### How to Fix:",
+                          "1. Ensure all changes are isolated to a single directory under `utils/`",
+                          "2. Do not modify files outside your utility's directory",
+                          "3. Do not modify shared files or other agents' directories",
+                          "4. Create a new PR with properly isolated changes",
+                          "",
+                          f"For more information, see [AGENTS.md](https://github.com/{repo}/blob/main/AGENTS.md) section on \"Output artifacts\" and \"Utility Requirements\".",
+                          "",
+                          "---",
+                          "*This is an automated check to prevent merge conflicts and maintain clean separation between agent-generated utilities.*"
+                      ])
+                      comment = "\n".join(comment_parts)
+                      
+                      try:
+                          agent_utils.close_pr(repo, pr_number, comment)
+                          print(f"   ✅ PR #{pr_number} closed with explanation comment")
+                          closed_count += 1
+                      except agent_utils.GitHubError as e:
+                          print(f"   ERROR: Failed to close PR #{pr_number}: {e}", file=sys.stderr)
+                  else:
+                      print(f"✅ PR #{pr_number}: No path violations")
+              
+              print(f"\n📊 Summary: Checked {checked_count} provider agent PR(s), closed {closed_count} conflicting PR(s)")
+              return 0
+          
+          if __name__ == "__main__":
+              sys.exit(main())
+          PY
