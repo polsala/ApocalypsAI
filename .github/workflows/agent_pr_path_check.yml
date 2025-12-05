@@ -111,34 +111,39 @@ jobs:
                   for f in changed_files:
                       print(f"  - {f}")
                   
-                  # Post comment and close PR
-                  comment = f"""## ❌ Agent PR Path Conflict Detected
-
-This pull request has been automatically closed because it violates the agent path isolation requirements.
-
-### Violations Found:
-{violation}
-
-### Requirements:
-- **Agent PRs must only modify files within a single isolated directory**: `utils/<util_name>/`
-- All changes must be self-contained within that directory
-- No modifications outside `utils/` are allowed
-- No modifications spanning multiple utility directories are allowed
-
-### Changed Files:
-{chr(10).join(f"- `{f}`" for f in changed_files)}
-
-### How to Fix:
-1. Ensure all changes are isolated to a single directory under `utils/`
-2. Do not modify files outside your utility's directory
-3. Do not modify shared files or other agents' directories
-4. Create a new PR with properly isolated changes
-
-For more information, see [AGENTS.md](https://github.com/{repo}/blob/main/AGENTS.md) section on "Output artifacts" and "Utility Requirements".
-
----
-*This is an automated check to prevent merge conflicts and maintain clean separation between agent-generated utilities.*
-"""
+                  # Build comment text
+                  comment_parts = [
+                      "## ❌ Agent PR Path Conflict Detected",
+                      "",
+                      "This pull request has been automatically closed because it violates the agent path isolation requirements.",
+                      "",
+                      "### Violations Found:",
+                      violation,
+                      "",
+                      "### Requirements:",
+                      "- **Agent PRs must only modify files within a single isolated directory**: `utils/<util_name>/`",
+                      "- All changes must be self-contained within that directory",
+                      "- No modifications outside `utils/` are allowed",
+                      "- No modifications spanning multiple utility directories are allowed",
+                      "",
+                      "### Changed Files:"
+                  ]
+                  for f in changed_files:
+                      comment_parts.append(f"- `{f}`")
+                  comment_parts.extend([
+                      "",
+                      "### How to Fix:",
+                      "1. Ensure all changes are isolated to a single directory under `utils/`",
+                      "2. Do not modify files outside your utility's directory",
+                      "3. Do not modify shared files or other agents' directories",
+                      "4. Create a new PR with properly isolated changes",
+                      "",
+                      f"For more information, see [AGENTS.md](https://github.com/{repo}/blob/main/AGENTS.md) section on \"Output artifacts\" and \"Utility Requirements\".",
+                      "",
+                      "---",
+                      "*This is an automated check to prevent merge conflicts and maintain clean separation between agent-generated utilities.*"
+                  ])
+                  comment = "\n".join(comment_parts)
                   
                   try:
                       agent_utils.close_pr(repo, pr_number, comment)
