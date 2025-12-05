@@ -28,10 +28,10 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 
 | Workflow | Purpose | Trigger |
 | --- | --- | --- |
-| `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new `utils/<util_name>` folder (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0,30 * * * *` & manual |
-| `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `10,40 * * * *` & manual |
-| `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `20,50 * * * *` & manual |
-| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
+| `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new utility under V2 classifier paths (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0 * * * *` (hourly at :00) & manual |
+| `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `20 * * * *` (hourly at :20) & manual |
+| `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `40 * * * *` (hourly at :40) & manual |
+| `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under V2 classifier paths. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
 | `pr_auto_review.yml` | Multi-agent review system: assigns PR reviews to the other two AI agents (not the PR author). Each agent posts a tagged review comment. | PR opened/synchronized/ready_for_review |
 | `pr_auto_approve_merge.yml` | Automatically approves and merges PRs when all agent reviews are complete and CI checks pass. | PR review submitted, check suite completed |
