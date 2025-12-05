@@ -283,3 +283,45 @@ def test_infer_classifier_monitoring():
     ]
     classifier = _infer_classifier(files, "A monitoring and metrics tool")
     assert classifier == "monitoring-scripts"
+
+
+def test_parse_payload_with_truncated_json():
+    """Test parsing a truncated JSON payload with auto-repair."""
+    # Simulate a truncated JSON (missing closing braces)
+    payload_json = '''{
+        "util_name": "test-util",
+        "summary": "A test utility",
+        "classifier": "python-utils",
+        "files": [
+            {"path": "README.md", "content": "# Test"},
+            {"path": "tests/test.py", "content": "def test(): pass"}
+        '''
+    # The repair function should close the JSON properly
+    util = parse_payload(payload_json)
+    
+    assert util.name == "test-util"
+    assert util.summary == "A test utility"
+    assert util.classifier == "python-utils"
+    assert len(util.files) == 2
+
+
+def test_parse_payload_with_valid_json():
+    """Test that valid JSON still works correctly."""
+    payload_json = {
+        "util_name": "test-util",
+        "summary": "A test utility",
+        "classifier": "python-utils",
+        "files": [
+            {"path": "README.md", "content": "# Test\nWith newlines"},
+            {"path": "tests/test.py", "content": 'def test():\n    print("hello")'},
+        ],
+    }
+    raw = json.dumps(payload_json)
+    util = parse_payload(raw)
+    
+    assert util.name == "test-util"
+    assert util.summary == "A test utility"
+    assert util.classifier == "python-utils"
+    assert len(util.files) == 2
+    assert "newlines" in util.files[0].content
+    assert 'print("hello")' in util.files[1].content
