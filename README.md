@@ -52,12 +52,17 @@ All workflows share:
 
 ## Utils Directory
 
-Every autonomous run must add a fully self-contained utility to `utils/<util_name>/`. Requirements:
+**V2 Path Classification System**: Utilities are now organized by classifier-based paths (e.g., `rust-utils/`, `react-webpage/`, `bash-utils/`) instead of a flat `utils/` directory. See [docs/V2_PATH_CLASSIFICATION.md](docs/V2_PATH_CLASSIFICATION.md) for details.
+
+Every autonomous run must add a fully self-contained utility to an appropriate classifier path. Requirements:
 
 - Pick a unique slug (kebab-case is preferred) per run; never mutate existing folders.
+- Choose the BEST language/technology for the task (Rust, Go, Bash, TypeScript, React, Python, etc.)
 - Ship everything inside that folder: README/usage docs, source, tests/fixtures, config, etc.
 - Tests must run without network access (use mocks/fakes with `# Mock rationale:` comments).
 - Prefer lightweight tooling and document how to execute the util (CLI usage, API example, etc.)
+- Utilities are placed in classifier paths like `rust-utils/<name>/`, `python-utils/<name>/`, etc.
+- Legacy `utils/<name>/` paths are supported for backward compatibility but discouraged for new utilities.
 
 ## Agents
 
