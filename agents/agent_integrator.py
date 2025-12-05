@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import subprocess
 import sys
 from pathlib import Path
@@ -65,7 +66,6 @@ class IntegratorAgent(AgentBase):
         agents_excerpt = self._read_file_excerpt("AGENTS.md")
         
         # Rotate through different language/tech suggestions to encourage diversity
-        import random
         tech_suggestions = [
             ("Rust", "rust-utils", "a high-performance CLI tool, system utility, or performance-critical component"),
             ("Go", "go-utils", "a concurrent service, network tool, or distributed utility"),

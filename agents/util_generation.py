@@ -238,7 +238,7 @@ def get_v2_classifiers() -> list[str]:
 def _infer_classifier(files: list[GeneratedFile], summary: str) -> str:
     """
     Infer the appropriate V2 classifier based on file extensions and summary.
-    Returns a classifier string or None for legacy utils/ path.
+    Returns a classifier string, defaulting to 'python-utils' if no specific match is found.
     """
     # Analyze file extensions
     extensions = set()
@@ -311,8 +311,9 @@ def _infer_classifier(files: list[GeneratedFile], summary: str) -> str:
     if ".ipynb" in extensions or any("ml" in s or "machine learning" in s for s in [summary_lower]):
         return "ml-notebooks"
     
-    # Web APIs
-    if any(term in summary_lower for term in ["api", "rest", "graphql", "endpoint"]) and not any(term in summary_lower for term in ["client"]):
+    # Web APIs (but not API clients)
+    api_keywords = ["api", "rest", "graphql", "endpoint"]
+    if any(term in summary_lower for term in api_keywords) and "client" not in summary_lower:
         return "web-apis"
     
     # API Clients
@@ -332,7 +333,7 @@ def _infer_classifier(files: list[GeneratedFile], summary: str) -> str:
         return "ci-cd-pipelines"
     
     # Test tools
-    if any(term in summary_lower for term in ["test", "testing", "qa"]) and not ".py" in extensions:
+    if any(term in summary_lower for term in ["test", "testing", "qa"]) and ".py" not in extensions:
         return "test-suite-tools"
     
     # Data scripts (if mentions data processing)
