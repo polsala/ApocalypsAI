@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wasteland Waypoint Beacon</title>
+    <style>
+        body { font-family: monospace; background-color: #1a1a1a; color: #00ff00; text-align: center; padding-top: 50px; }
+        h1 { font-size: 3em; text-shadow: 0 0 10px #00ff00; }
+        p { font-size: 1.2em; }
+        .ascii-art { white-space: pre; font-size: 0.8em; margin: 20px auto; max-width: 600px; }
+    </style>
+</head>
+<body>
+    <h1>📡 Wasteland Waypoint Beacon 📡</h1>
+    <p>Signal detected. You are not alone.</p>
+    <div class="ascii-art">
+        <pre>
+  _  _  _
+ | || || |
+ | || || |
+ | || || |
+ |_||_||_|
+ /_______
+ \_______/
+  |     |
+  |_____|
+        </pre>
+    </div>
+    <p>Coordinates: [CLASSIFIED]</p>
+    <p>Status: OPERATIONAL</p>
+    <p>Last Updated: <span id="timestamp"></span></p>
+    <script>
+        document.getElementById('timestamp').innerText = new Date().toLocaleString();
+    </script>
+</body>
+</html>
