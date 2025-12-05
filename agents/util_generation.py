@@ -26,12 +26,49 @@ class GeneratedUtility:
     classifier: str | None = None  # V2: classifier for path organization
 
 
+def _attempt_json_repair(json_str: str) -> str:
+    """
+    Attempt to repair common JSON formatting issues in LLM-generated content.
+    
+    This handles cases where the LLM generates truncated JSON by closing
+    any unclosed brackets or braces.
+    
+    Returns the repaired JSON string.
+    """
+    # Make a copy to work with
+    repaired = json_str
+    
+    # Look for truncated JSON and try to close it properly
+    # Count braces and brackets to see if we need to close the structure
+    open_braces = repaired.count('{')
+    close_braces = repaired.count('}')
+    open_brackets = repaired.count('[')
+    close_brackets = repaired.count(']')
+    
+    # If JSON is truncated, try to close it properly
+    if open_brackets > close_brackets:
+        repaired += ']' * (open_brackets - close_brackets)
+    if open_braces > close_braces:
+        repaired += '}' * (open_braces - close_braces)
+    
+    return repaired
+
+
 def parse_payload(raw: str) -> GeneratedUtility:
     json_blob = _extract_json(raw)
+    
+    # Try standard JSON parsing first
     try:
         data = json.loads(json_blob)
     except json.JSONDecodeError as exc:
-        raise PayloadError(f"Invalid JSON payload: {exc}") from exc
+        # If standard parsing fails, try to repair truncated JSON
+        try:
+            repaired = _attempt_json_repair(json_blob)
+            data = json.loads(repaired)
+        except json.JSONDecodeError:
+            # If repair also fails, raise the original error
+            raise PayloadError(f"Invalid JSON payload: {exc}") from exc
+    
     if not isinstance(data, dict):
         raise PayloadError("Payload root must be an object.")
 
