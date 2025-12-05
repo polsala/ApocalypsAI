@@ -30,25 +30,15 @@ def _attempt_json_repair(json_str: str) -> str:
     """
     Attempt to repair common JSON formatting issues in LLM-generated content.
     
-    This handles cases where the LLM generates content with:
-    - Unescaped backslashes in URLs or paths
-    - Invalid escape sequences
-    - Truncated content
+    This handles cases where the LLM generates truncated JSON by closing
+    any unclosed brackets or braces.
     
     Returns the repaired JSON string.
     """
     # Make a copy to work with
     repaired = json_str
     
-    # Strategy 1: Try to fix invalid escape sequences
-    # Replace common invalid escapes with valid ones
-    # Invalid escapes like \n in URLs should be \\n
-    # But we need to be careful not to break valid escapes like \n for newlines
-    
-    # Find all strings in the JSON and fix escape issues within them
-    # This is a simplified approach that looks for content fields specifically
-    
-    # Strategy 2: Look for truncated JSON and try to close it properly
+    # Look for truncated JSON and try to close it properly
     # Count braces and brackets to see if we need to close the structure
     open_braces = repaired.count('{')
     close_braces = repaired.count('}')
@@ -71,11 +61,11 @@ def parse_payload(raw: str) -> GeneratedUtility:
     try:
         data = json.loads(json_blob)
     except json.JSONDecodeError as exc:
-        # If standard parsing fails, try to repair common issues
+        # If standard parsing fails, try to repair truncated JSON
         try:
             repaired = _attempt_json_repair(json_blob)
             data = json.loads(repaired)
-        except (json.JSONDecodeError, Exception):
+        except json.JSONDecodeError:
             # If repair also fails, raise the original error
             raise PayloadError(f"Invalid JSON payload: {exc}") from exc
     
