@@ -28,6 +28,32 @@ agents/
   agent_guardian.py
   agent_integrator.py
   agent_utils.py
+  util_generation.py
+
+# V2 CLASSIFIER-BASED PATHS (NEW)
+python-utils/
+  <util_name>/
+    README.md
+    src/...
+    tests/...
+rust-utils/
+  <util_name>/
+    README.md
+    src/...
+    tests/...
+bash-utils/
+  <util_name>/
+    README.md
+    src/...
+    tests/...
+react-webpage/
+  <util_name>/
+    README.md
+    src/...
+    tests/...
+# ... and many more classifiers (see V2 Classifiers section below)
+
+# LEGACY PATH (backward compatibility)
 utils/
   <util_name>/
     README.md
@@ -35,9 +61,44 @@ utils/
     tests/...          # self-contained tests/mock fixtures
 ```
 
-* **Language**: Python 3.11
+* **Language**: Python 3.11 (for agents themselves)
 * **Allowed deps**: `requests`, `pyyaml`, `rich` (for pretty logs), `typing` stdlib
 * **Optional**: `tomli` for reading pyproject TOML (no heavy frameworks)
+
+---
+
+## 1.1) V2 Classifiers
+
+Utilities are now organized by classifier-based directories. Available classifiers include:
+
+* **python-utils** — Python scripts, modules, and utilities
+* **rust-utils** — Rust applications, CLI tools, and libraries
+* **bash-utils** — Shell scripts and bash utilities
+* **go-utils** — Go programs and services
+* **js-utils** — JavaScript utilities (browser/generic)
+* **node-utils** — Node.js applications and tools
+* **typescript-utils** — TypeScript libraries and utilities
+* **react-webpage** — React web applications and components
+* **java-utils** — Java applications and utilities
+* **cpp-utils** — C++ programs and libraries
+* **github-actions** — GitHub Actions workflows and reusable actions
+* **devops-tools** — General DevOps utilities and scripts
+* **docker-tools** — Docker containers, compose files, and utilities
+* **cli-apps** — Generic command-line applications (multi-language)
+* **web-apis** — Web API services and endpoints
+* **data-scripts** — Data processing, ETL, and transformation scripts
+* **test-suite-tools** — Testing frameworks and utilities
+* **monitoring-scripts** — Monitoring, metrics, and observability tools
+* **infra-automation** — Infrastructure automation scripts
+* **ansible-playbooks** — Ansible playbooks and roles
+* **terraform-modules** — Terraform modules and configurations
+* **k8s-resources** — Kubernetes manifests and resources
+* **ci-cd-pipelines** — CI/CD pipeline definitions
+* **database-scripts** — Database migrations, queries, and utilities
+* **ml-notebooks** — Machine learning notebooks and experiments
+* **api-clients** — API client libraries and wrappers
+
+Classifiers can be specified explicitly in the JSON payload via the `classifier` field, or will be inferred from file extensions and utility summary.
 
 ---
 
@@ -75,9 +136,13 @@ utils/
 
 ### Output artifacts
 
-* Successful runs **must** create a brand-new directory under `utils/<util_name>/`.
+* Successful runs **must** create a brand-new directory under a V2 classifier path (e.g., `python-utils/<util_name>/`, `rust-utils/<util_name>/`).
+* Legacy `utils/<util_name>/` paths are supported for backward compatibility but discouraged for new utilities.
 * All generated source, docs, fixtures, and tests live inside that folder (self-contained).
-* No `.apocalypsai` artifacts or repo edits outside `utils/<util_name>/`.
+* No `.apocalypsai` artifacts or repo edits outside the utility folder.
+* The classifier is determined either:
+  1. Explicitly via the `classifier` field in the JSON payload, OR
+  2. Automatically inferred from file extensions, filenames, and summary content
 
 ### Logging
 
@@ -162,22 +227,24 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 ### A) Builder — `agents/agent_builder.py`
 
 **Trigger**: issue labeled `idea`
-**Goal**: ship a brand-new community utility inside `utils/<util_name>/` based on the issue prompt.
+**Goal**: ship a brand-new community utility using V2 classifier-based paths based on the issue prompt.
 
 **Input**
 
 * `--repo`, `--issue-number`
-* Fetch issue title/body via GitHub API plus existing `utils/*` folder names.
+* Fetch issue title/body via GitHub API plus existing utilities across all classifiers.
 
 **Prompt shape (internal)**
 
-* Provide issue context, repository snippets, and the current `utils/` inventory.
+* Provide issue context, repository snippets, and the current utilities inventory (across all V2 classifiers).
+* Encourage diverse language/technology choices to avoid repetitive Python utilities.
 * Instruct the LLM to answer with pure JSON shaped as:
 
   ```json
   {
     "util_name": "kebab-case-identifier",
     "summary": "one sentence overview",
+    "classifier": "rust-utils",
     "files": [
       {
         "path": "README.md",
@@ -185,7 +252,12 @@ All concrete agents must subclass `AgentBase` and implement `run`.
         "content": "<full file contents>"
       },
       {
-        "path": "tests/test_smoke.py",
+        "path": "src/main.rs",
+        "description": "main implementation",
+        "content": "<code>"
+      },
+      {
+        "path": "tests/test_main.rs",
         "description": "unit tests",
         "content": "<code>"
       }
@@ -254,7 +326,7 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 ### D) Integrator — `agents/agent_integrator.py`
 
 **Trigger**: nightly cron
-**Goal**: dream up a tiny-yet-useful standalone utility (any language) and drop it in `utils/<nightly-*>/`.
+**Goal**: dream up a tiny-yet-useful standalone utility using diverse languages/technologies and drop it in the appropriate V2 classifier path.
 
 **Input**
 
@@ -262,14 +334,15 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
 **Prompt shape**
 
-* Summarize repository/README context and list existing `utils/*` to avoid repeats.
-* Reinforce the same JSON schema as the builder, but bias toward whimsical, fully documented tools with solid tests.
+* Summarize repository/README context and list existing utilities across all V2 classifiers to avoid repeats.
+* Reinforce the same JSON schema as the builder (including `classifier` field), but bias toward whimsical, fully documented tools with solid tests.
 * Explicitly remind the LLM that at least one `tests/` file is mandatory; no tests → reject.
-* Encourage fresh ideas only; respond `NO_CHANGES` if nothing safe emerges.
+* Encourage fresh ideas AND diverse technologies; respond `NO_CHANGES` if nothing safe emerges.
+* Rotate through technology suggestions (Rust, Go, Bash, TypeScript, React, etc.) to ensure variety.
 
 **Output**
 
-* Create the utility folder/files directly; exit `0` on success, `2` on no-op.
+* Create the utility folder/files under the appropriate V2 classifier path (e.g., `rust-utils/nightly-*`); exit `0` on success, `2` on no-op.
 
 ---
 
@@ -287,12 +360,14 @@ All concrete agents must subclass `AgentBase` and implement `run`.
 
 ## 7) Utility Requirements
 
-* Every run that returns `0` must leave the workspace with exactly one new folder under `utils/<util_name>/`.
+* Every run that returns `0` must leave the workspace with exactly one new folder under a V2 classifier path (e.g., `rust-utils/<util_name>/`).
+* Legacy `utils/<util_name>/` paths are supported for backward compatibility but discouraged for new utilities.
 * Folder constraints:
   * Contains a README (usage, install, test instructions).
   * Contains at least one automated test under `tests/`.
   * Never touches files outside the folder (except Git metadata handled by workflows).
   * Uses relative paths only; no symlinks or filesystem escapes.
+* The classifier is either explicitly specified in the JSON payload or automatically inferred.
 * If the LLM output is empty/invalid or violates the folder contract → exit `2` with a clear message.
 
 ---

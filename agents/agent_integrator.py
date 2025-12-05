@@ -63,18 +63,63 @@ class IntegratorAgent(AgentBase):
         utilities = list_existing_utils()
         readme_excerpt = self._read_file_excerpt("README.md")
         agents_excerpt = self._read_file_excerpt("AGENTS.md")
+        
+        # Rotate through different language/tech suggestions to encourage diversity
+        import random
+        tech_suggestions = [
+            ("Rust", "rust-utils", "a high-performance CLI tool, system utility, or performance-critical component"),
+            ("Go", "go-utils", "a concurrent service, network tool, or distributed utility"),
+            ("Bash", "bash-utils", "a shell script for automation, system administration, or DevOps tasks"),
+            ("TypeScript", "typescript-utils", "a type-safe utility, library, or command-line tool"),
+            ("React", "react-webpage", "an interactive web interface, dashboard, or visualization tool"),
+            ("JavaScript/Node", "node-utils", "a cross-platform utility, API, or automation script"),
+            ("Docker", "docker-tools", "a containerized tool, service, or development environment"),
+            ("GitHub Actions", "github-actions", "a reusable workflow, action, or CI/CD component"),
+            ("Terraform", "terraform-modules", "an infrastructure-as-code module or cloud resource template"),
+            ("Ansible", "ansible-playbooks", "an automation playbook, role, or configuration management tool"),
+        ]
+        suggestion = random.choice(tech_suggestions)
+        
         prompt_parts = [
             "You are the ApocalypsAI Nightly Integrator agent.",
-            "Invent a whimsical-yet-useful standalone utility for the community:",
-            "- Always create a brand-new folder under utils/<util_name>/ (kebab-case).",
+            "Invent a whimsical-yet-useful standalone utility for the community.",
+            "",
+            "=== V2 PATH CLASSIFICATION ===",
+            "Utilities are now organized by classifier-based paths:",
+            "- Choose the MOST APPROPRIATE language and technology for your creative idea",
+            "- Specify a 'classifier' field in your JSON response",
+            "- Available classifiers: python-utils, rust-utils, bash-utils, react-webpage, github-actions,",
+            "  devops-tools, docker-tools, cli-apps, web-apis, js-utils, node-utils, typescript-utils,",
+            "  data-scripts, test-suite-tools, monitoring-scripts, infra-automation, go-utils, java-utils,",
+            "  cpp-utils, ansible-playbooks, terraform-modules, k8s-resources, ci-cd-pipelines,",
+            "  database-scripts, ml-notebooks, api-clients, and more.",
+            "",
+            "=== TECHNOLOGY DIVERSITY CHALLENGE ===",
+            f"TODAY'S SUGGESTION: Try building {suggestion[2]} using {suggestion[0]} (classifier: {suggestion[1]})!",
+            "",
+            "Other great options to explore:",
+            "- Rust for blazing-fast CLI tools and system utilities",
+            "- Go for concurrent services and network tools",
+            "- Bash for quick automation and DevOps scripts",
+            "- TypeScript/React for web UIs and interactive tools",
+            "- Docker for containerized applications",
+            "- GitHub Actions for workflow automation",
+            "- Terraform/Ansible for infrastructure tools",
+            "- SQL for database utilities",
+            "",
+            "BE CREATIVE! Explore different languages and tools. Avoid repetitive Python scripts.",
+            "Consider what would be fun, useful, AND showcase different technologies.",
+            "",
+            "=== CORE REQUIREMENTS ===",
             "- Pack README + runnable code + automated tests inside the folder.",
-            "- Focus on something genuinely useful (any language/tooling) while staying self-contained.",
+            "- Focus on something genuinely useful while staying self-contained.",
             "- Tests must be deterministic and offline (use mocks with '# Mock rationale:').",
             "- Respond with JSON only; no prose outside the payload.",
             "",
             f"Repository: {ctx.repo}",
-            "Existing utils:",
-            "\n".join(utilities) or "(none yet)",
+            "Existing utils (organized by classifier):",
+            "\n".join(utilities[-50:]) if len(utilities) > 50 else "\n".join(utilities) or "(none yet)",
+            "" if len(utilities) <= 50 else f"... and {len(utilities) - 50} more. AVOID duplicating existing utilities!",
             "",
             "Repository files (git ls-files):",
             files,
@@ -86,9 +131,22 @@ class IntegratorAgent(AgentBase):
         prompt_parts.extend(
             [
                 "",
+                "JSON Response Schema:",
+                "{",
+                '  "util_name": "nightly-<creative-name> (kebab-case, ≤ 32 chars)",',
+                '  "summary": "one sentence overview",',
+                '  "classifier": "appropriate-category (e.g., rust-utils, react-webpage, bash-utils)",',
+                '  "files": [',
+                '    {"path": "README.md", "description": "docs + usage", "content": "<full file contents>"},',
+                '    {"path": "src/main.ext", "description": "implementation", "content": "<code>"},',
+                '    {"path": "tests/test_main.ext", "description": "tests", "content": "<tests>"}',
+                "  ]",
+                "}",
+                "",
                 "If nothing safe or novel comes to mind, respond exactly `NO_CHANGES`.",
-                "Otherwise output pure JSON per AGENTS.md describing util_name/summary/files.",
+                "Otherwise output pure JSON describing util_name/summary/classifier/files.",
                 "Utilities without at least one tests/ file will be rejected, so include runnable tests.",
+                "CHALLENGE YOURSELF: Use a different language/technology than you used last time!",
             ]
         )
         return "\n".join(prompt_parts)
