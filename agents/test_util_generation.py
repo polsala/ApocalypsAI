@@ -325,3 +325,46 @@ def test_parse_payload_with_valid_json():
     assert len(util.files) == 2
     assert "newlines" in util.files[0].content
     assert 'print("hello")' in util.files[1].content
+
+
+def test_attempt_json_repair_function():
+    """Test the JSON repair function directly."""
+    from agents.util_generation import _attempt_json_repair
+    
+    # Test truncated JSON - missing closing braces
+    truncated = '{"key": "value", "array": [1, 2, 3'
+    repaired = _attempt_json_repair(truncated)
+    # Should add closing ] and }
+    assert repaired.count('[') == repaired.count(']')
+    assert repaired.count('{') == repaired.count('}')
+    
+    # Test valid JSON - should not change
+    valid = '{"key": "value"}'
+    repaired = _attempt_json_repair(valid)
+    assert repaired == valid
+
+
+def test_parse_payload_markdown_code_blocks():
+    """Test parsing JSON that contains markdown code blocks in content."""
+    # This simulates LLM output with code blocks
+    payload_json = {
+        "util_name": "test-util",
+        "summary": "A test utility",
+        "classifier": "bash-utils",
+        "files": [
+            {
+                "path": "README.md",
+                "content": "# Test\n\n```bash\necho hello\n```\n"
+            },
+            {
+                "path": "tests/test.sh",
+                "content": "#!/bin/bash\necho test"
+            },
+        ],
+    }
+    raw = json.dumps(payload_json)
+    util = parse_payload(raw)
+    
+    assert util.name == "test-util"
+    assert len(util.files) == 2
+    assert "```bash" in util.files[0].content
