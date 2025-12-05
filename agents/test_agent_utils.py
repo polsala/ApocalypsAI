@@ -16,6 +16,7 @@ from agents.agent_utils import (
     find_check_run,
     create_or_update_check_run,
     list_open_prs,
+    close_pr,
 )
 
 
@@ -492,4 +493,43 @@ class TestListOpenPRs:
             assert result == page1_prs + page2_prs
             # Should have called for both pages
             assert mock_request.call_count == 2
+
+
+class TestClosePR:
+    """Test close_pr function."""
+
+    def test_close_pr_without_comment(self):
+        """Test that close_pr closes a PR without posting a comment."""
+        with patch("agents.agent_utils._request") as mock_request:
+            mock_request.return_value = None
+            close_pr("owner/repo", 123)
+            
+            # Should only call PATCH to close the PR
+            mock_request.assert_called_once_with(
+                "PATCH",
+                "/repos/owner/repo/pulls/123",
+                json={"state": "closed"}
+            )
+
+    def test_close_pr_with_comment(self):
+        """Test that close_pr posts a comment before closing."""
+        with patch("agents.agent_utils._request") as mock_request, \
+             patch("agents.agent_utils.post_pr_comment") as mock_post_comment:
+            mock_request.return_value = None
+            close_pr("owner/repo", 123, "This PR has issues")
+            
+            # Should post comment first
+            mock_post_comment.assert_called_once_with(
+                "owner/repo",
+                123,
+                "This PR has issues"
+            )
+            
+            # Then close the PR
+            mock_request.assert_called_once_with(
+                "PATCH",
+                "/repos/owner/repo/pulls/123",
+                json={"state": "closed"}
+            )
+
 

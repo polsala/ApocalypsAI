@@ -564,3 +564,19 @@ def create_or_update_check_run(
             return update_check_run(repo, check_run_id, status, conclusion, output)
     
     return create_check_run(repo, name, head_sha, status, conclusion, output)
+
+
+def close_pr(repo: str, number: int, comment: str | None = None) -> None:
+    """Close a pull request.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        number: PR number
+        comment: Optional comment to post before closing
+    """
+    if comment:
+        post_pr_comment(repo, number, comment)
+    
+    owner, name = repo.split("/", 1)
+    path = f"/repos/{owner}/{name}/pulls/{number}"
+    _request("PATCH", path, json={"state": "closed"})
