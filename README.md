@@ -32,7 +32,7 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 | `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `10,40 * * * *` & manual |
 | `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `20,50 * * * *` & manual |
 | `nightly_self_heal.yml` | Uses the integrator agent to craft a surprise community utility under `utils/nightly-*`. Uses provider fallback (cheap_mix). | Daily cron `42 2 * * *` |
-| `agent_pr_path_check.yml` | Validates that agent-generated PRs only modify files within a single isolated directory under `utils/`. Automatically closes PRs that violate path isolation requirements with a detailed explanation. | PR opened/synchronized/reopened |
+| `agent_pr_path_check.yml` | Periodically scans open PRs from provider agents (gemini/groq/openrouter) for path isolation violations. Automatically closes conflicting PRs with a detailed explanation. Does not affect copilot or other PRs. | Cron `0 8,14,20 * * *` (3x daily) & manual |
 | `pr_review.yml` | Executes the reviewer agent to post a single consolidated Markdown review comment (✅/🧪/🔒/🧩/🧱). | PR opened/synchronized/ready_for_review |
 | `pr_auto_review.yml` | Multi-agent review system: assigns PR reviews to the other two AI agents (not the PR author). Each agent posts a tagged review comment. | PR opened/synchronized/ready_for_review |
 | `pr_auto_approve_merge.yml` | Automatically approves and merges PRs when all agent reviews are complete and CI checks pass. | PR review submitted, check suite completed |

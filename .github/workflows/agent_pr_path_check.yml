@@ -1,10 +1,9 @@
 name: Agent PR Path Conflict Check
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+  schedule:
+    # Run 3 times a day: 8 AM, 2 PM, and 8 PM UTC
+    - cron: '0 8,14,20 * * *'
+  workflow_dispatch:  # Allow manual trigger
 permissions:
   contents: read
   pull-requests: write
@@ -27,7 +26,7 @@ jobs:
           python -m pip install -U pip
           pip install requests rich pyyaml
       
-      - name: Check if agent PR and validate paths
+      - name: Check all agent PRs for path conflicts
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -49,14 +48,14 @@ jobs:
               try:
                   pr = agent_utils.get_pr(repo, pr_number)
                   
-                  # Check if PR is from an AI agent branch
+                  # Check if PR is from one of the 3 provider agents (NOT copilot or other PRs)
                   branch = pr.get("head", {}).get("ref", "")
-                  is_ai_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  is_provider_agent_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
                   
-                  if not is_ai_pr:
+                  if not is_provider_agent_pr:
                       return False, "", []
                   
-                  # This is an agent PR, now check paths
+                  # This is a provider agent PR, now check paths
                   files = agent_utils.get_pr_files(repo, pr_number)
                   changed_files = [f.get("filename", "") for f in files]
                   
@@ -86,79 +85,100 @@ jobs:
                   return True, "", changed_files
                   
               except Exception as e:
-                  print(f"ERROR: Failed to check PR paths: {e}", file=sys.stderr)
+                  print(f"ERROR: Failed to check PR #{pr_number}: {e}", file=sys.stderr)
                   return False, "", []
           
           def main():
               repo = os.environ.get("GITHUB_REPOSITORY")
-              pr_number = int(os.environ.get("PR_NUMBER", "0"))
               
-              if not repo or not pr_number:
-                  print("ERROR: GITHUB_REPOSITORY or PR_NUMBER not set")
+              if not repo:
+                  print("ERROR: GITHUB_REPOSITORY not set")
                   return 1
               
-              print(f"Checking PR #{pr_number} in {repo}...")
+              print(f"Checking for conflicting agent PRs in {repo}...")
               
-              is_agent_pr, violation, changed_files = check_agent_pr_paths(repo, pr_number)
+              # Get all open PRs
+              try:
+                  prs = agent_utils.list_open_prs(repo)
+              except agent_utils.GitHubError as e:
+                  print(f"ERROR: Failed to list open PRs: {e}", file=sys.stderr)
+                  return 1
               
-              if not is_agent_pr:
-                  print("✅ Not an agent PR, skipping path check")
+              if not prs:
+                  print("✅ No open PRs found")
                   return 0
               
-              if violation:
-                  print(f"❌ Path violation detected:\n{violation}")
-                  print("\nChanged files:")
-                  for f in changed_files:
-                      print(f"  - {f}")
+              print(f"Found {len(prs)} open PR(s), checking for provider agent PRs with path conflicts...")
+              
+              closed_count = 0
+              checked_count = 0
+              
+              for pr in prs:
+                  pr_number = pr.get("number")
+                  if not pr_number:
+                      continue
                   
-                  # Build comment text
-                  comment_parts = [
-                      "## ❌ Agent PR Path Conflict Detected",
-                      "",
-                      "This pull request has been automatically closed because it violates the agent path isolation requirements.",
-                      "",
-                      "### Violations Found:",
-                      violation,
-                      "",
-                      "### Requirements:",
-                      "- **Agent PRs must only modify files within a single isolated directory**: `utils/<util_name>/`",
-                      "- All changes must be self-contained within that directory",
-                      "- No modifications outside `utils/` are allowed",
-                      "- No modifications spanning multiple utility directories are allowed",
-                      "",
-                      "### Changed Files:"
-                  ]
-                  for f in changed_files:
-                      comment_parts.append(f"- `{f}`")
-                  comment_parts.extend([
-                      "",
-                      "### How to Fix:",
-                      "1. Ensure all changes are isolated to a single directory under `utils/`",
-                      "2. Do not modify files outside your utility's directory",
-                      "3. Do not modify shared files or other agents' directories",
-                      "4. Create a new PR with properly isolated changes",
-                      "",
-                      f"For more information, see [AGENTS.md](https://github.com/{repo}/blob/main/AGENTS.md) section on \"Output artifacts\" and \"Utility Requirements\".",
-                      "",
-                      "---",
-                      "*This is an automated check to prevent merge conflicts and maintain clean separation between agent-generated utilities.*"
-                  ])
-                  comment = "\n".join(comment_parts)
+                  is_agent_pr, violation, changed_files = check_agent_pr_paths(repo, pr_number)
                   
-                  try:
-                      agent_utils.close_pr(repo, pr_number, comment)
-                      print(f"✅ PR #{pr_number} closed with explanation comment")
-                  except agent_utils.GitHubError as e:
-                      print(f"ERROR: Failed to close PR #{pr_number}: {e}", file=sys.stderr)
-                      return 1
+                  if not is_agent_pr:
+                      # Not a provider agent PR (gemini/groq/openrouter), skip it
+                      continue
                   
-                  return 0
-              else:
-                  print(f"✅ Agent PR #{pr_number} follows path isolation rules")
-                  return 0
+                  checked_count += 1
+                  
+                  if violation:
+                      print(f"\n❌ PR #{pr_number}: Path violation detected")
+                      print(f"   {violation}")
+                      print("   Changed files:")
+                      for f in changed_files:
+                          print(f"     - {f}")
+                      
+                      # Build comment text
+                      comment_parts = [
+                          "## ❌ Agent PR Path Conflict Detected",
+                          "",
+                          "This pull request has been automatically closed because it violates the agent path isolation requirements.",
+                          "",
+                          "### Violations Found:",
+                          violation,
+                          "",
+                          "### Requirements:",
+                          "- **Agent PRs must only modify files within a single isolated directory**: `utils/<util_name>/`",
+                          "- All changes must be self-contained within that directory",
+                          "- No modifications outside `utils/` are allowed",
+                          "- No modifications spanning multiple utility directories are allowed",
+                          "",
+                          "### Changed Files:"
+                      ]
+                      for f in changed_files:
+                          comment_parts.append(f"- `{f}`")
+                      comment_parts.extend([
+                          "",
+                          "### How to Fix:",
+                          "1. Ensure all changes are isolated to a single directory under `utils/`",
+                          "2. Do not modify files outside your utility's directory",
+                          "3. Do not modify shared files or other agents' directories",
+                          "4. Create a new PR with properly isolated changes",
+                          "",
+                          f"For more information, see [AGENTS.md](https://github.com/{repo}/blob/main/AGENTS.md) section on \"Output artifacts\" and \"Utility Requirements\".",
+                          "",
+                          "---",
+                          "*This is an automated check to prevent merge conflicts and maintain clean separation between agent-generated utilities.*"
+                      ])
+                      comment = "\n".join(comment_parts)
+                      
+                      try:
+                          agent_utils.close_pr(repo, pr_number, comment)
+                          print(f"   ✅ PR #{pr_number} closed with explanation comment")
+                          closed_count += 1
+                      except agent_utils.GitHubError as e:
+                          print(f"   ERROR: Failed to close PR #{pr_number}: {e}", file=sys.stderr)
+                  else:
+                      print(f"✅ PR #{pr_number}: No path violations")
+              
+              print(f"\n📊 Summary: Checked {checked_count} provider agent PR(s), closed {closed_count} conflicting PR(s)")
+              return 0
           
           if __name__ == "__main__":
               sys.exit(main())
           PY
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
