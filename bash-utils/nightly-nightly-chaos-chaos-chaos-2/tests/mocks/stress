@@ -1,0 +1,19 @@
+#!/bin/bash
+# Mock stress command for testing
+
+# Log the command invocation
+echo "MOCK: stress called with: $@" >&2
+
+# Simulate stress behavior
+if [[ " $@ " == *" --timeout "* ]]; then
+    # Extract timeout value (simplified)
+    timeout=$(echo "$@" | sed -n 's/.*--timeout \([^ ]*\).*/\1/p')
+    if [[ $timeout == *"s"* ]]; then
+        timeout=${timeout%s}
+        echo "MOCK: Would run stress for ${timeout} seconds" >&2
+        sleep ${timeout}
+    fi
+fi
+
+# Exit successfully
+exit 0

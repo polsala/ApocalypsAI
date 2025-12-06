@@ -1,0 +1,32 @@
+#!/bin/bash
+# Mock systemctl command for testing
+
+# Log the command invocation
+echo "MOCK: systemctl called with: $@" >&2
+
+# Simulate systemctl behavior based on command
+case "$1" in
+    "list-unit-files")
+        # Return mock service list
+        echo "apache2.service enabled"
+        echo "nginx.service enabled"
+        echo "mysql.service enabled"
+        echo "ssh.service enabled"
+        ;;
+    "restart")
+        if [[ -n "${2:-}" ]]; then
+            echo "MOCK: Would restart service: $2" >&2
+        fi
+        ;;
+    "stop")
+        if [[ -n "${2:-}" ]]; then
+            echo "MOCK: Would stop service: $2" >&2
+        fi
+        ;;
+    *)
+        echo "MOCK: systemctl $1 $2" >&2
+        ;;
+esac
+
+# Exit successfully
+exit 0
