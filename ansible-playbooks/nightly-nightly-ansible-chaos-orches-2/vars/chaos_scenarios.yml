@@ -1,0 +1,186 @@
+---
+# Chaos Engineering Scenarios Configuration
+# Customize these scenarios for your chaos experiments
+
+chaos_scenarios:
+  # Network Chaos - Introduce network-level failures
+  network:
+    enabled: true
+    experiments:
+      - name: "latency"
+        probability: 50  # 50% chance to apply latency
+        latency_ms: 100  # Base latency in milliseconds
+        latency_variation: 50  # Random variation in milliseconds
+        interfaces: ["eth0", "ens33", "enp0s3"]  # Target network interfaces
+
+      - name: "packet_loss"
+        probability: 30  # 30% chance to apply packet loss
+        loss_percent: 10  # Percentage of packets to drop
+        burst: 5  # Number of packets to send before dropping
+
+      - name: "bandwidth"
+        probability: 25  # 25% chance to limit bandwidth
+        bandwidth_limit: "1mbit"  # Bandwidth limit
+        burst_size: "32kbit"  # Burst size
+        latency: "400ms"  # Queue latency
+
+  # Service Chaos - Manipulate system services
+  service:
+    enabled: true
+    experiments:
+      - name: "restart"
+        probability: 40  # 40% chance to restart services
+        duration: 30  # Seconds to wait after restart
+
+      - name: "stop"
+        probability: 20  # 20% chance to stop services
+        duration: 60  # Seconds to keep stopped
+
+      - name: "start"
+        probability: 30  # 30% chance to start services
+        duration: 10  # Seconds to wait after start
+
+    services:
+      - name: "nginx"
+        probability: 50  # 50% chance for nginx chaos
+        critical: false  # Whether this is a critical service
+
+      - name: "ssh"
+        probability: 20  # 20% chance for SSH chaos
+        critical: true   # Critical service - extra caution
+
+      - name: "docker"
+        probability: 30  # 30% chance for Docker chaos
+        critical: false
+
+      - name: "systemd-resolved"
+        probability: 25  # 25% chance for DNS chaos
+        critical: false
+
+  # Resource Chaos - Stress system resources
+  resource:
+    enabled: true
+    experiments:
+      - name: "cpu_stress"
+        probability: 60  # 60% chance to stress CPU
+        duration: 300  # 5 minutes default
+        cpu_cores: 2  # Number of CPU cores to stress
+
+      - name: "memory_stress"
+        probability: 40  # 40% chance to stress memory
+        duration: 300  # 5 minutes default
+        memory_gb: 1  # Gigabytes of memory to allocate
+        memory_bytes: "1G"  # Memory allocation size
+
+      - name: "io_stress"
+        probability: 30  # 30% chance to stress I/O
+        duration: 300  # 5 minutes default
+        io_processes: 2  # Number of I/O processes
+
+      - name: "hdd_stress"
+        probability: 25  # 25% chance to stress disk
+        duration: 180  # 3 minutes default
+        hdd_bytes: "1G"  # Amount of data to write
+
+    cpu_cores: 2  # Default CPU cores to stress
+    memory_gb: 1  # Default memory GB to stress
+    memory_bytes: "1G"  # Default memory allocation
+    disk_io: true  # Enable disk I/O stress
+    hdd_stress: false  # Disable HDD stress by default
+    duration: 300  # Default duration in seconds
+
+    # Safety limits
+    max_cpu_cores: 4  # Maximum CPU cores to stress
+    max_memory_gb: 4  # Maximum memory GB to stress
+    max_duration: 1800  # Maximum duration (30 minutes)
+
+  # Time Chaos - Manipulate system time
+  time:
+    enabled: false  # Disabled by default - dangerous!
+    experiments:
+      - name: "time_shift"
+        probability: 10  # 10% chance to shift time
+        time_shift_minutes: 60  # Minutes to shift forward/backward
+        allow_negative: false  # Whether to allow negative time shifts
+
+      - name: "ntp_disable"
+        probability: 20  # 20% chance to disable NTP
+        duration: 600  # 10 minutes to keep NTP disabled
+
+      - name: "time_skew"
+        probability: 5  # 5% chance to introduce time skew
+        skew_ppm: 100  # Parts per million to skew time
+
+    time_shift_minutes: 60  # Default time shift
+    ntp_disable_duration: 600  # Default NTP disable duration
+    max_time_shift: 1440  # Maximum time shift (24 hours in minutes)
+
+  # Random Chaos - Unpredictable experiments
+  random:
+    enabled: true
+    experiments:
+      - name: "disk_fill"
+        probability: 20  # 20% chance to fill disk
+        fill_percent: 80  # Fill disk to 80%
+        max_fill: 95  # Never exceed 95% disk usage
+        target_path: "/tmp"  # Path to fill
+
+      - name: "process_kill"
+        probability: 30  # 30% chance to kill processes
+        target_process: "python"  # Process pattern to kill
+        kill_signal: "SIGTERM"  # Signal to send (SIGTERM, SIGKILL)
+        max_kills: 5  # Maximum processes to kill
+
+      - name: "dns_modify"
+        probability: 25  # 25% chance to modify DNS
+        dns_servers:
+          - "1.1.1.1"
+          - "8.8.8.8"
+          - "208.67.222.222"  # OpenDNS
+        backup_dns: true  # Whether to backup original DNS
+
+      - name: "route_manipulation"
+        probability: 15  # 15% chance to manipulate routes
+        add_route: false  # Whether to add a route
+        delete_route: false  # Whether to delete a route
+        target_network: "10.0.0.0/8"  # Target network for manipulation
+
+      - name: "iptables_chaos"
+        probability: 10  # 10% chance to mess with iptables
+        drop_percent: 5  # Percentage of packets to drop
+        target_port: 22  # Target port for chaos
+        chain: "INPUT"  # iptables chain to modify
+
+    # Global random chaos settings
+    max_experiments: 3  # Maximum number of random experiments per run
+    allow_dangerous: false  # Whether to allow dangerous experiments
+    chaos_level: "medium"  # Chaos level: low, medium, high
+
+# Global chaos settings
+chaos_enabled: true  # Enable/disable all chaos
+chaos_duration: 300  # Default chaos duration in seconds
+max_chaos_duration: 1800  # Maximum allowed chaos duration
+safety_timeout: 3600  # Safety timeout in seconds
+
+# Reporting settings
+generate_report: true  # Generate chaos engineering report
+report_format: "txt"  # Report format: txt, json, html
+report_path: "/tmp"  # Path to save reports
+include_metrics: true  # Include system metrics in report
+include_timeline: true  # Include timeline of events
+
+# Safety features
+auto_cleanup: true  # Automatically cleanup after chaos
+rollback_on_failure: true  # Rollback changes if chaos fails
+require_approval: false  # Require manual approval before chaos
+approval_timeout: 300  # Timeout for approval in seconds
+
+# Monitoring settings
+monitor_system: true  # Monitor system during chaos
+monitor_interval: 30  # Monitoring interval in seconds
+alert_on_failure: true  # Send alerts on system failure
+alert_thresholds:
+  cpu_usage: 90  # CPU usage threshold for alerts
+  memory_usage: 85  # Memory usage threshold for alerts
+  disk_usage: 90  # Disk usage threshold for alerts
+  load_average: 5.0  # Load average threshold for alerts

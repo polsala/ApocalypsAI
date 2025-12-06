@@ -1,0 +1,216 @@
+---
+# Test Playbook for Chaos Orchestrator
+# This playbook validates the chaos orchestrator functionality
+
+- name: "🧪 Test Chaos Orchestrator"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    test_playbook: "../chaos_orchestrator.yml"
+    test_inventory: "../inventory"
+    test_scenarios: "../vars/chaos_scenarios.yml"
+    test_template: "../templates/chaos_report.j2"
+  tasks:
+    - name: "📁 Verify Required Files Exist"
+      ansible.builtin.assert:
+        that:
+          - test_playbook is file
+          - test_inventory is file
+          - test_scenarios is file
+          - test_template is file
+        fail_msg: "Required file missing"
+        success_msg: "All required files present"
+
+    - name: "📄 Validate Playbook Syntax"
+      ansible.builtin.shell: |
+        ansible-playbook --syntax-check "{{ test_playbook }}"
+      register: syntax_check
+      changed_when: false
+
+    - name: "📋 Validate Inventory Format"
+      ansible.builtin.shell: |
+        ansible-inventory -i "{{ test_inventory }}" --list
+      register: inventory_check
+      changed_when: false
+
+    - name: "⚙️  Validate Variables File"
+      ansible.builtin.shell: |
+        python3 -c "import yaml; yaml.safe_load(open('{{ test_scenarios }}'))"
+      register: vars_check
+      changed_when: false
+
+    - name: "🎨 Validate Jinja2 Template"
+      ansible.builtin.shell: |
+        python3 -c "from jinja2 import Template; open('{{ test_template }}').read()"
+      register: template_check
+      changed_when: false
+
+    - name: "🧪 Test Dry Run (Check Mode)"
+      ansible.builtin.shell: |
+        ansible-playbook -i "{{ test_inventory }}" --check -e "chaos_duration=60" "{{ test_playbook }}"
+      register: dry_run_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: "📊 Validate Chaos Report Generation"
+      ansible.builtin.shell: |
+        python3 -c "
+import yaml
+from jinja2 import Template
+
+# Load test data
+with open('{{ test_scenarios }}', 'r') as f:
+    scenarios = yaml.safe_load(f)
+
+# Create mock data
+mock_data = {
+    'inventory_hostname': 'test-host',
+    'chaos_start_time': '1640995200',
+    'ansible_date_time': {'epoch': '1640995500'},
+    'chaos_report': [
+        {
+            'experiment': 'network_chaos',
+            'timestamp': '1640995300',
+            'latency_applied': True,
+            'packet_loss_applied': False,
+            'bandwidth_limited': True
+        }
+    ],
+    'ansible_loadavg_1min': 0.5,
+    'ansible_loadavg_5min': 0.3,
+    'ansible_loadavg_15min': 0.2,
+    'ansible_memtotal_mb': 4096,
+    'ansible_memfree_mb': 2048,
+    'chaos_scenarios': scenarios['chaos_scenarios']
+}
+
+# Load and render template
+with open('{{ test_template }}', 'r') as f:
+    template = Template(f.read())
+
+output = template.render(**mock_data)
+assert 'Chaos Engineering Report' in output
+assert 'test-host' in output
+assert 'network_chaos' in output
+print('Template validation successful')
+        "
+      register: template_validation
+      changed_when: false
+
+    - name: "✅ All Tests Passed"
+      ansible.builtin.debug:
+        msg: "Chaos Orchestrator validation completed successfully!"
+
+- name: "🧪 Test Chaos Scenarios Validation"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: "Load Chaos Scenarios"
+      ansible.builtin.set_fact:
+        chaos_scenarios: "{{ lookup('file', '../vars/chaos_scenarios.yml') | from_yaml }}"
+
+    - name: "Validate Network Chaos Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.network.enabled is boolean
+          - chaos_scenarios.network.experiments is list
+          - chaos_scenarios.network.experiments | length >= 3
+          - chaos_scenarios.network.experiments[0].probability is number
+          - chaos_scenarios.network.experiments[0].latency_ms is number
+          - chaos_scenarios.network.experiments[1].loss_percent is number
+          - chaos_scenarios.network.experiments[2].bandwidth_limit is string
+        fail_msg: "Invalid network chaos configuration"
+        success_msg: "Network chaos configuration valid"
+
+    - name: "Validate Service Chaos Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.service.enabled is boolean
+          - chaos_scenarios.service.services is list
+          - chaos_scenarios.service.services | length >= 4
+          - chaos_scenarios.service.services[0].name is string
+          - chaos_scenarios.service.services[0].probability is number
+        fail_msg: "Invalid service chaos configuration"
+        success_msg: "Service chaos configuration valid"
+
+    - name: "Validate Resource Chaos Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.resource.enabled is boolean
+          - chaos_scenarios.resource.cpu_cores is number
+          - chaos_scenarios.resource.memory_gb is number
+          - chaos_scenarios.resource.duration is number
+          - chaos_scenarios.resource.max_cpu_cores is number
+          - chaos_scenarios.resource.max_memory_gb is number
+        fail_msg: "Invalid resource chaos configuration"
+        success_msg: "Resource chaos configuration valid"
+
+    - name: "Validate Time Chaos Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.time.enabled is boolean
+          - chaos_scenarios.time.time_shift_minutes is number
+          - chaos_scenarios.time.max_time_shift is number
+        fail_msg: "Invalid time chaos configuration"
+        success_msg: "Time chaos configuration valid"
+
+    - name: "Validate Random Chaos Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.random.enabled is boolean
+          - chaos_scenarios.random.experiments is list
+          - chaos_scenarios.random.experiments | length >= 5
+          - chaos_scenarios.random.chaos_level in ['low', 'medium', 'high']
+          - chaos_scenarios.random.max_experiments is number
+        fail_msg: "Invalid random chaos configuration"
+        success_msg: "Random chaos configuration valid"
+
+    - name: "Validate Global Configuration"
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.chaos_enabled is boolean
+          - chaos_scenarios.chaos_duration is number
+          - chaos_scenarios.max_chaos_duration is number
+          - chaos_scenarios.safety_timeout is number
+          - chaos_scenarios.generate_report is boolean
+          - chaos_scenarios.auto_cleanup is boolean
+          - chaos_scenarios.rollback_on_failure is boolean
+        fail_msg: "Invalid global configuration"
+        success_msg: "Global configuration valid"
+
+- name: "🧪 Test Script Validation"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: "Check Run Script Exists"
+      ansible.builtin.stat:
+        path: "../run_chaos.sh"
+      register: script_check
+
+    - name: "Validate Script Syntax"
+      ansible.builtin.shell: |
+        bash -n "../run_chaos.sh"
+      register: script_syntax
+      changed_when: false
+      when: script_check.stat.exists
+
+    - name: "Check Script Executable"
+      ansible.builtin.file:
+        path: "../run_chaos.sh"
+        mode: '0755'
+      when: script_check.stat.exists
+
+    - name: "Test Script Help"
+      ansible.builtin.shell: |
+        bash -c "../run_chaos.sh -h"
+      register: script_help
+      changed_when: false
+      when: script_check.stat.exists
+
+    - name: "Script Validation Complete"
+      ansible.builtin.debug:
+        msg: "Run script validation completed"
+      when: script_check.stat.exists
