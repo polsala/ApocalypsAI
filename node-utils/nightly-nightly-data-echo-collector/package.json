@@ -1,0 +1,19 @@
+{
+  "name": "nightly-data-echo-collector",
+  "version": "1.0.0",
+  "description": "Monitors specified directories for file system changes and generates a concise daily activity report.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node tests/test_main.js"
+  },
+  "keywords": [
+    "node",
+    "cli",
+    "file-monitor",
+    "report",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT"
+}
