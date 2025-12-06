@@ -1,0 +1,37 @@
+---
+- name: Rotate SSH keys on target hosts
+  hosts: "{{ target_hosts | default('all') }}"
+  become: true
+  vars:
+    backup_dir: "~/.ssh/backup_keys"
+    new_key_path: "~/.ssh/id_rsa_apoc"
+  tasks:
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing authorized_keys
+      ansible.builtin.copy:
+        src: "~/.ssh/authorized_keys"
+        dest: "{{ backup_dir }}/authorized_keys_{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: true
+      ignore_errors: true
+
+    - name: Generate new SSH key pair
+      ansible.builtin.command: ssh-keygen -t rsa -b 2048 -f {{ new_key_path }} -N ""
+      args:
+        creates: "{{ new_key_path }}"
+
+    - name: Deploy new public key to authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', new_key_path + '.pub') }}"
+
+    - name: Clean up local private key (optional)
+      ansible.builtin.file:
+        path: "{{ new_key_path }}"
+        state: absent
+      when: cleanup_private_key | default(true)
