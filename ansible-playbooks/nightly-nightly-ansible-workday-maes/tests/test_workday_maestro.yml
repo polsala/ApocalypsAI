@@ -1,0 +1,22 @@
+- name: Test Workday Maestro functionality
+  hosts: localhost
+  tasks:
+    - name: Validate schedule template rendering
+      template:
+        src: templates/daily_schedule.j2
+        dest: /tmp/test_schedule.md
+      args:
+        validate: "^# Daily Schedule for {{ today | date('l, F jS') }}\n" # Mock rationale: Verify header format
+
+    - name: Check focus mode enforcement
+      assert:
+        that:
+          - focus_mode.enabled == true
+          - num_tasks >= 5
+          - num_breaks >= 2
+        fail_msg: "Minimum productivity requirements not met!"
+
+    - name: Verify fun fact inclusion
+      assert:
+        that: fun_facts | length >= 3
+        fail_msg: "Not enough whimsy in the facts!"

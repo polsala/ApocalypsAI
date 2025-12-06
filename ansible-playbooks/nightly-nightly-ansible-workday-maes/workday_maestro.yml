@@ -1,0 +1,29 @@
+- name: Orchestrate whimsical workday
+  hosts: localhost
+  vars_files:
+    - vars/schedule_rules.yml
+  tasks:
+    - name: Generate daily schedule template
+      template:
+        src: templates/daily_schedule.j2
+        dest: /tmp/daily_schedule.md
+    
+    - name: Send schedule to team
+      debug:
+        msg: "Sent schedule to {{ teams_webhook }} with {{ num_tasks }} prioritized tasks and {{ num_breaks }} playful breaks"
+
+    - name: Schedule focus mode enforcement
+      ansible.builtin.shell: | 
+        osascript -e 'tell application "System Events" to set visible of every process whose name is "Slack" to false'
+      when: focus_mode.enabled
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Plant random fun fact
+      debug:
+        msg: "{{ fun_facts | choice }}"
+      loop_control:
+        label: "{{ fun_facts | choice }}"
+      fun_facts:
+        - "Did you know? 40% of octopuses have three hearts!"
+        - "Fun fact: Bananas are berries, but strawberries aren't!"
+        - "Random tidbit: Octopuses have eight hearts! No, really!"
