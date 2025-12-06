@@ -1,0 +1,79 @@
+# Time Manipulation Chaos Tasks
+# Implements time-related chaos scenarios
+
+- name: Display current system time
+  shell: date
+  register: current_time
+  changed_when: false
+
+- name: Display time chaos scenario
+  debug:
+    msg: |
+      🕰️  Time Chaos: {{ selected_scenario.name }}
+      📊 Time Shift: {{ selected_scenario.params.time_shift }}
+      ⏱️  Duration: {{ selected_scenario.duration }} seconds
+
+- name: Create time manipulation script
+  copy:
+    dest: /tmp/time_chaos.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Time Manipulation Chaos Script
+      set -e
+      
+      DURATION={{ selected_scenario.duration }}
+      TIME_SHIFT="{{ selected_scenario.params.time_shift }}"
+      
+      echo "🕰️  Applying time chaos: $TIME_SHIFT"
+      
+      # Store original time
+      ORIGINAL_TIME=$(date)
+      echo "Original time: $ORIGINAL_TIME" > /tmp/time_chaos.log
+      
+      # For safety, we'll just log the time manipulation instead of actually changing system time
+      # In a real scenario, you might use: date -s "new_time"
+      echo "Simulated time shift: $TIME_SHIFT" >> /tmp/time_chaos.log
+      echo "Chaos duration: ${DURATION} seconds" >> /tmp/time_chaos.log
+      
+      # Wait for duration
+      sleep $DURATION
+      
+      # Log completion
+      echo "Current time after chaos: $(date)" >> /tmp/time_chaos.log
+      echo "🧹 Time chaos simulation completed" >> /tmp/time_chaos.log
+
+- name: Execute time manipulation chaos
+  shell: /tmp/time_chaos.sh
+  async: {{ selected_scenario.duration + 5 }}
+  poll: 0
+  register: time_chaos_result
+
+- name: Wait for time chaos to complete
+  async_status:
+    jid: "{{ time_chaos_result.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 30
+  delay: 2
+
+- name: Display time chaos log
+  shell: cat /tmp/time_chaos.log
+  register: time_log
+  changed_when: false
+
+- name: Log time chaos results
+  debug:
+    msg: |
+      Time chaos completed:
+      {{ time_log.stdout }}
+
+- name: Remove time chaos script and log
+  file:
+    path: /tmp/time_chaos.sh
+    state: absent
+
+- name: Remove time chaos log
+  file:
+    path: /tmp/time_chaos.log
+    state: absent

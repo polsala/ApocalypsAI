@@ -1,0 +1,55 @@
+# Network Chaos Tasks
+# Implements network-related chaos scenarios
+
+- name: Install required packages for network chaos
+  package:
+    name:
+      - iproute2
+      - iproute
+    state: present
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+- name: Create network chaos script
+  copy:
+    dest: /tmp/network_chaos.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Network Chaos Script
+      set -e
+      
+      INTERFACE="{{ ansible_default_ipv4.interface | default('eth0') }}"
+      LATENCY="{{ selected_scenario.params.latency }}"
+      LOSS="{{ selected_scenario.params.loss }}"
+      DURATION={{ selected_scenario.duration }}
+      
+      echo "🎭 Applying network chaos: $LATENCY latency, $LOSS packet loss"
+      
+      # Add network latency and packet loss
+      tc qdisc add dev $INTERFACE root netem delay $LATENCY loss $LOSS 2>/dev/null || true
+      
+      # Wait for duration
+      sleep $DURATION
+      
+      # Clean up
+      tc qdisc del dev $INTERFACE root 2>/dev/null || true
+      echo "🧹 Network chaos cleanup completed"
+
+- name: Execute network chaos
+  shell: /tmp/network_chaos.sh
+  async: {{ selected_scenario.duration + 10 }}
+  poll: 0
+  register: network_chaos_result
+
+- name: Wait for network chaos to complete
+  async_status:
+    jid: "{{ network_chaos_result.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 30
+  delay: 2
+
+- name: Remove network chaos script
+  file:
+    path: /tmp/network_chaos.sh
+    state: absent

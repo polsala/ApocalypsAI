@@ -1,0 +1,30 @@
+# Cleanup Tasks
+# Removes all chaos effects from target systems
+
+- name: Remove network traffic control rules
+  shell: tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root 2>/dev/null || true
+  ignore_errors: true
+
+- name: Kill any remaining stress processes
+  shell: pkill -f stress || true
+  ignore_errors: true
+
+- name: Clean up temporary chaos scripts
+  file:
+    path: /tmp/chaos_*.sh
+    state: absent
+
+- name: Clean up chaos logs
+  file:
+    path: /tmp/chaos_*.log
+    state: absent
+
+- name: Verify system services are running
+  systemd:
+    name: ssh
+    state: started
+  ignore_errors: true
+
+- name: Display cleanup completion
+  debug:
+    msg: "🧹 Chaos cleanup completed successfully on {{ inventory_hostname }}"

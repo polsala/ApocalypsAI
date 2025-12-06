@@ -1,0 +1,11 @@
+# Nightly Ansible Chaos Orchestrator Inventory
+# Update this file with your target hosts
+
+[chaos_targets]
+# Example hosts - replace with your actual hosts
+# server1 ansible_host=192.168.1.10
+# server2 ansible_host=192.168.1.11
+# server3 ansible_host=10.0.0.5
+
+# For testing locally, you can use localhost
+localhost ansible_connection=local

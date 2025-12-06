@@ -1,0 +1,47 @@
+# Service Chaos Tasks
+# Implements service restart scenarios
+
+- name: Get list of available services
+  shell: systemctl list-unit-files --type=service --state=enabled | awk '{print $1}' | grep -E "^(ssh|nginx|apache2|mysql|postgresql|redis)\.service$" | head -5
+  register: available_services
+  changed_when: false
+
+- name: Select random service to restart
+  set_fact:
+    target_service: "{{ available_services.stdout_lines | random }}"
+  when: available_services.stdout_lines | length > 0
+
+- name: Display service chaos target
+  debug:
+    msg: "🔄 Chaos target: Restarting service {{ target_service }}"
+  when: available_services.stdout_lines | length > 0
+
+- name: Restart service for chaos
+  systemd:
+    name: "{{ target_service }}"
+    state: restarted
+  when: available_services.stdout_lines | length > 0
+  register: service_restart_result
+
+- name: Wait for service to stabilize
+  wait_for:
+    path: /var/run/{{ target_service | replace('.service', '') }}.pid
+    timeout: 30
+  when: available_services.stdout_lines | length > 0
+  ignore_errors: true
+
+- name: Verify service is running
+  systemd:
+    name: "{{ target_service }}"
+    state: started
+  when: available_services.stdout_lines | length > 0
+  register: service_status
+
+- name: Log service chaos results
+  debug:
+    msg: |
+      Service chaos completed:
+      - Service: {{ target_service }}
+      - Restart result: {{ service_restart_result | to_nice_json }}
+      - Final status: {{ service_status | to_nice_json }}
+  when: available_services.stdout_lines | length > 0

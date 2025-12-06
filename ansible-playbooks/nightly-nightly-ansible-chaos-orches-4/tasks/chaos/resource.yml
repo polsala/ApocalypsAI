@@ -1,0 +1,62 @@
+# Resource Exhaustion Chaos Tasks
+# Implements CPU and memory stress scenarios
+
+- name: Install stress testing tools
+  package:
+    name:
+      - stress
+      - stress-ng
+    state: present
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+- name: Create resource exhaustion script
+  copy:
+    dest: /tmp/resource_chaos.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Resource Exhaustion Chaos Script
+      set -e
+      
+      CPU_STRESS={{ selected_scenario.params.cpu_stress }}
+      MEMORY_STRESS={{ selected_scenario.params.memory_stress }}
+      DURATION={{ selected_scenario.duration }}
+      
+      echo "🔥 Applying resource chaos: $CPU_STRESS CPU cores, ${MEMORY_STRESS}MB memory"
+      
+      # Start stress in background
+      stress --cpu $CPU_STRESS --vm $MEMORY_STRESS --timeout ${DURATION}s &
+      STRESS_PID=$!
+      
+      # Monitor resource usage
+      echo "Monitoring resource usage for ${DURATION} seconds..."
+      for i in $(seq 1 $DURATION); do
+        echo "⏱️  Second $i/$DURATION"
+        sleep 1
+      done
+      
+      # Wait for stress to complete
+      wait $STRESS_PID
+      echo "🧹 Resource chaos cleanup completed"
+
+- name: Execute resource exhaustion chaos
+  shell: /tmp/resource_chaos.sh
+  async: {{ selected_scenario.duration + 10 }}
+  poll: 0
+  register: resource_chaos_result
+
+- name: Wait for resource chaos to complete
+  async_status:
+    jid: "{{ resource_chaos_result.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 30
+  delay: 2
+
+- name: Kill any remaining stress processes
+  shell: pkill -f stress || true
+
+- name: Remove resource chaos script
+  file:
+    path: /tmp/resource_chaos.sh
+    state: absent

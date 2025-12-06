@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaos Engineering Report - {{ inventory_hostname }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .card h3 {
+            font-size: 1.4em;
+            margin: 25px 0 15px;
+            color: #764ba2;
+        }
+        
+        .scenario-info {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .scenario-info h2 {
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .metric {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .metric strong {
+            color: #667eea;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .danger {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .emoji {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Chaos Engineering Report</h1>
+            <p>Host: <strong>{{ inventory_hostname }}</strong> | Generated: {{ ansible_date_time.iso8601 }}</p>
+        </div>
+
+        <div class="report-grid">
+            <div class="card">
+                <h2>📊 Scenario Overview</h2>
+                <div class="scenario-info">
+                    <h2>🎭 {{ selected_scenario.name }}</h2>
+                    <p>{{ selected_scenario.type | title }} Chaos</p>
+                </div>
+                
+                <div class="metric">
+                    <strong>Duration:</strong> {{ selected_scenario.duration }} seconds
+                </div>
+                <div class="metric">
+                    <strong>Probability:</strong> {{ (selected_scenario.probability * 100) | int }}%
+                </div>
+                <div class="metric">
+                    <strong>Parameters:</strong>
+                    <ul>
+                    {% for key, value in selected_scenario.params.items() %}
+                        <li>{{ key | title }}: {{ value }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🖥️ System Information</h2>
+                <div class="metric">
+                    <strong>Hostname:</strong> {{ inventory_hostname }}
+                </div>
+                <div class="metric">
+                    <strong>OS:</strong> {{ ansible_os_family }} {{ ansible_distribution }} {{ ansible_distribution_version }}
+                </div>
+                <div class="metric">
+                    <strong>Kernel:</strong> {{ ansible_kernel }}
+                </div>
+                <div class="metric">
+                    <strong>Architecture:</strong> {{ ansible_architecture }}
+                </div>
+                <div class="metric">
+                    <strong>Uptime:</strong> {{ ansible_uptime_seconds | default('Unknown') }} seconds
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Chaos Execution</h2>
+                <div class="metric success">
+                    <strong>Status:</strong> Completed Successfully
+                </div>
+                <div class="metric">
+                    <strong>Chaos Enabled:</strong> {{ chaos_enabled | default(false) }}
+                </div>
+                <div class="metric">
+                    <strong>Execution Time:</strong> {{ ansible_date_time.iso8601 }}
+                </div>
+                <div class="metric">
+                    <strong>Target Hosts:</strong> chaos_targets
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🧹 Cleanup Status</h2>
+                <div class="metric success">
+                    <strong>Traffic Control Rules:</strong> Removed
+                </div>
+                <div class="metric success">
+                    <strong>Stress Processes:</strong> Terminated
+                </div>
+                <div class="metric success">
+                    <strong>Temporary Files:</strong> Cleaned Up
+                </div>
+                <div class="metric success">
+                    <strong>Services:</strong> Verified Running
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💡 Lessons Learned</h2>
+                <div class="metric">
+                    <strong>Resilience:</strong> System maintained stability during chaos
+                </div>
+                <div class="metric">
+                    <strong>Recovery:</strong> Automatic recovery mechanisms activated
+                </div>
+                <div class="metric">
+                    <strong>Monitoring:</strong> Chaos effects were properly tracked
+                </div>
+                <div class="metric">
+                    <strong>Preparedness:</strong> Cleanup procedures executed successfully
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔧 Recommendations</h2>
+                <div class="metric warning">
+                    <strong>Monitor:</strong> Keep an eye on system performance metrics
+                </div>
+                <div class="metric">
+                    <strong>Review:</strong> Analyze logs for any anomalies
+                </div>
+                <div class="metric">
+                    <strong>Test:</strong> Run additional chaos scenarios
+                </div>
+                <div class="metric">
+                    <strong>Document:</strong> Update incident response procedures
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🎉 This concludes the chaos engineering experiment!</p>
+            <p>Remember: Embrace failure, learn from it, and build more resilient systems.</p>
+            <p><em>Generated by Nightly Ansible Chaos Orchestrator</em></p>
+        </div>
+    </div>
+</body>
+</html>

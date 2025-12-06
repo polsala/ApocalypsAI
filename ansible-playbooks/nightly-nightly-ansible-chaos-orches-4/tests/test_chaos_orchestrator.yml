@@ -1,0 +1,167 @@
+---
+# Test Suite for Nightly Ansible Chaos Orchestrator
+# Validates playbook structure and basic functionality
+
+- name: Test Chaos Orchestrator Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Verify playbook file exists
+      stat:
+        path: "{{ playbook_dir }}/chaos_orchestrator.yml"
+      register: playbook_file
+
+    - name: Assert playbook exists
+      assert:
+        that:
+          - playbook_file.stat.exists
+        msg: "Chaos orchestrator playbook not found"
+
+    - name: Verify inventory file exists
+      stat:
+        path: "{{ playbook_dir }}/inventory"
+      register: inventory_file
+
+    - name: Assert inventory exists
+      assert:
+        that:
+          - inventory_file.stat.exists
+        msg: "Inventory file not found"
+
+    - name: Verify variables file exists
+      stat:
+        path: "{{ playbook_dir }}/vars/chaos_scenarios.yml"
+      register: vars_file
+
+    - name: Assert variables file exists
+      assert:
+        that:
+          - vars_file.stat.exists
+        msg: "Chaos scenarios variables file not found"
+
+    - name: Verify tasks directory exists
+      stat:
+        path: "{{ playbook_dir }}/tasks"
+      register: tasks_dir
+
+    - name: Assert tasks directory exists
+      assert:
+        that:
+          - tasks_dir.stat.exists
+          - tasks_dir.stat.isdir
+        msg: "Tasks directory not found"
+
+    - name: Verify chaos tasks directory exists
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos"
+      register: chaos_tasks_dir
+
+    - name: Assert chaos tasks directory exists
+      assert:
+        that:
+          - chaos_tasks_dir.stat.exists
+          - chaos_tasks_dir.stat.isdir
+        msg: "Chaos tasks directory not found"
+
+    - name: Verify network chaos tasks exist
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos/network.yml"
+      register: network_tasks
+
+    - name: Assert network chaos tasks exist
+      assert:
+        that:
+          - network_tasks.stat.exists
+        msg: "Network chaos tasks not found"
+
+    - name: Verify resource chaos tasks exist
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos/resource.yml"
+      register: resource_tasks
+
+    - name: Assert resource chaos tasks exist
+      assert:
+        that:
+          - resource_tasks.stat.exists
+        msg: "Resource chaos tasks not found"
+
+    - name: Verify service chaos tasks exist
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos/service.yml"
+      register: service_tasks
+
+    - name: Assert service chaos tasks exist
+      assert:
+        that:
+          - service_tasks.stat.exists
+        msg: "Service chaos tasks not found"
+
+    - name: Verify time chaos tasks exist
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos/time.yml"
+      register: time_tasks
+
+    - name: Assert time chaos tasks exist
+      assert:
+        that:
+          - time_tasks.stat.exists
+        msg: "Time chaos tasks not found"
+
+    - name: Verify cleanup tasks exist
+      stat:
+        path: "{{ playbook_dir }}/tasks/cleanup.yml"
+      register: cleanup_tasks
+
+    - name: Assert cleanup tasks exist
+      assert:
+        that:
+          - cleanup_tasks.stat.exists
+        msg: "Cleanup tasks not found"
+
+    - name: Verify templates directory exists
+      stat:
+        path: "{{ playbook_dir }}/templates"
+      register: templates_dir
+
+    - name: Assert templates directory exists
+      assert:
+        that:
+          - templates_dir.stat.exists
+          - templates_dir.stat.isdir
+        msg: "Templates directory not found"
+
+    - name: Verify chaos report template exists
+      stat:
+        path: "{{ playbook_dir }}/templates/chaos_report.j2"
+      register: report_template
+
+    - name: Assert chaos report template exists
+      assert:
+        that:
+          - report_template.stat.exists
+        msg: "Chaos report template not found"
+
+    - name: Verify run script exists
+      stat:
+        path: "{{ playbook_dir }}/run_chaos.sh"
+      register: run_script
+
+    - name: Assert run script exists
+      assert:
+        that:
+          - run_script.stat.exists
+        msg: "Run script not found"
+
+    - name: Display test results
+      debug:
+        msg: |
+          ✅ All chaos orchestrator components verified successfully!
+          📁 Playbook: chaos_orchestrator.yml
+          📁 Inventory: inventory
+          📁 Variables: vars/chaos_scenarios.yml
+          📁 Tasks: tasks/chaos/*.yml + tasks/cleanup.yml
+          📁 Templates: templates/chaos_report.j2
+          📁 Script: run_chaos.sh
+          
+          🎭 Ready to orchestrate chaos across your infrastructure!

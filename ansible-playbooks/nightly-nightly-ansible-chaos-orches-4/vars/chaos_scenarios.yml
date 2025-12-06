@@ -1,0 +1,111 @@
+# Chaos Scenarios Configuration
+# Defines all available chaos engineering scenarios
+
+chaos_scenarios:
+  - name: "The Great Firewall of Wasteland"
+    type: network
+    duration: 30
+    probability: 0.3
+    params:
+      latency: "100ms"
+      loss: "10%"
+    description: "Introduces network latency and packet loss to simulate poor network conditions"
+
+  - name: "The Hungry Hungry Processors"
+    type: resource
+    duration: 60
+    probability: 0.2
+    params:
+      cpu_stress: 4
+      memory_stress: 1024
+    description: "Stresses CPU and memory to simulate high resource utilization"
+
+  - name: "The Service Shuffle"
+    type: service
+    duration: 10
+    probability: 0.4
+    params:
+      services:
+        - ssh
+        - nginx
+        - apache2
+        - mysql
+        - postgresql
+    description: "Randomly restarts services to test service resilience"
+
+  - name: "The Time Warp Tango"
+    type: time
+    duration: 5
+    probability: 0.1
+    params:
+      time_shift: "1 hour"
+    description: "Simulates time-related issues (for testing purposes only)"
+
+  - name: "The Bandwidth Bandit"
+    type: network
+    duration: 45
+    probability: 0.25
+    params:
+      latency: "200ms"
+      loss: "5%"
+      bandwidth: "1mbit"
+    description: "Reduces available bandwidth to simulate congested networks"
+
+  - name: "The Memory Muncher"
+    type: resource
+    duration: 30
+    probability: 0.15
+    params:
+      cpu_stress: 2
+      memory_stress: 2048
+    description: "Focuses on memory exhaustion to test application behavior under pressure"
+
+  - name: "The Disk Destroyer"
+    type: resource
+    duration: 20
+    probability: 0.1
+    params:
+      disk_stress: true
+      disk_size: "1G"
+    description: "Fills disk space to test storage management and cleanup mechanisms"
+
+  - name: "The Network Ninja"
+    type: network
+    duration: 15
+    probability: 0.35
+    params:
+      latency: "50ms"
+      loss: "15%"
+      corruption: "2%"
+    description: "Introduces network corruption to test data integrity"
+
+  - name: "The Process Predator"
+    type: resource
+    duration: 40
+    probability: 0.2
+    params:
+      cpu_stress: 6
+      memory_stress: 512
+      io_stress: true
+    description: "Stresses all system resources simultaneously"
+
+  - name: "The Service Saboteur"
+    type: service
+    duration: 25
+    probability: 0.3
+    params:
+      services:
+        - ssh
+        - nginx
+        - apache2
+        - mysql
+        - postgresql
+        - redis
+        - docker
+    description: "Completely restarts multiple critical services"
+
+# Global chaos configuration
+chaos_enabled: true
+chaos_report_format: "html"
+chaos_cleanup_enabled: true
+chaos_logging_enabled: true

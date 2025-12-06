@@ -1,0 +1,92 @@
+---
+# Nightly Ansible Chaos Orchestrator
+# A whimsical-yet-useful playbook for chaos engineering
+
+- name: Chaos Engineering Orchestrator
+  hosts: chaos_targets
+  become: true
+  vars:
+    chaos_enabled: true
+    chaos_scenarios:
+      - name: "The Great Firewall of Wasteland"
+        type: network
+        duration: 30
+        probability: 0.3
+        params:
+          latency: "100ms"
+          loss: "10%"
+      - name: "The Hungry Hungry Processors"
+        type: resource
+        duration: 60
+        probability: 0.2
+        params:
+          cpu_stress: 4
+          memory_stress: 1024
+      - name: "The Service Shuffle"
+        type: service
+        duration: 10
+        probability: 0.4
+        params:
+          services:
+            - ssh
+            - nginx
+            - apache2
+      - name: "The Time Warp Tango"
+        type: time
+        duration: 5
+        probability: 0.1
+        params:
+          time_shift: "1 hour"
+  tasks:
+    - name: Randomly select chaos scenario
+      set_fact:
+        selected_scenario: "{{ chaos_scenarios | random }}"
+      when: chaos_enabled
+
+    - name: Display selected chaos scenario
+      debug:
+        msg: |
+          🎭 Chaos Scenario Selected: {{ selected_scenario.name }}
+          📊 Type: {{ selected_scenario.type }}
+          ⏱️ Duration: {{ selected_scenario.duration }} seconds
+          🎲 Probability: {{ (selected_scenario.probability * 100) | int }}%
+      when: chaos_enabled
+
+    - name: Include network chaos tasks
+      include_tasks: tasks/chaos/network.yml
+      when: chaos_enabled and selected_scenario.type == 'network'
+
+    - name: Include resource chaos tasks
+      include_tasks: tasks/chaos/resource.yml
+      when: chaos_enabled and selected_scenario.type == 'resource'
+
+    - name: Include service chaos tasks
+      include_tasks: tasks/chaos/service.yml
+      when: chaos_enabled and selected_scenario.type == 'service'
+
+    - name: Include time chaos tasks
+      include_tasks: tasks/chaos/time.yml
+      when: chaos_enabled and selected_scenario.type == 'time'
+
+- name: Cleanup Chaos Effects
+  hosts: chaos_targets
+  become: true
+  tasks:
+    - name: Remove chaos effects
+      include_tasks: tasks/cleanup.yml
+      when: chaos_enabled
+
+- name: Generate Chaos Report
+  hosts: chaos_targets
+  become: false
+  tasks:
+    - name: Generate chaos report
+      template:
+        src: templates/chaos_report.j2
+        dest: "{{ inventory_hostname }}_chaos_report.html"
+      when: chaos_enabled
+
+    - name: Display report location
+      debug:
+        msg: "Chaos report generated at: {{ inventory_hostname }}_chaos_report.html"
+      when: chaos_enabled
