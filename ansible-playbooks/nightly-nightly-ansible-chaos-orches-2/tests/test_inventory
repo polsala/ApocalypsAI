@@ -1,0 +1,50 @@
+# Test Inventory for Chaos Orchestrator
+# This inventory is used for testing purposes only
+
+[chaos_targets]
+# Localhost for testing (use with extreme caution)
+localhost ansible_connection=local ansible_become=true
+
+# Example test hosts (uncomment if needed)
+# test-server-1 ansible_host=192.168.1.100 ansible_user=root
+# test-server-2 ansible_host=192.168.1.101 ansible_user=root
+
+[chaos_targets:vars]
+# Test configuration
+ansible_python_interpreter=/usr/bin/python3
+chaos_enabled=true
+chaos_duration=60  # Short duration for testing
+
+# Safety limits for testing
+max_chaos_duration=300  # 5 minutes max for tests
+allow_dangerous_experiments=false
+
+# Test-specific chaos scenarios
+chaos_scenarios:
+  network:
+    enabled: true
+    experiments:
+      - name: "latency"
+        probability: 100  # Always apply for testing
+        latency_ms: 50
+        latency_variation: 10
+      - name: "packet_loss"
+        probability: 50
+        loss_percent: 5
+      - name: "bandwidth"
+        probability: 30
+        bandwidth_limit: "10mbit"
+  service:
+    enabled: false  # Disable for safety in tests
+  resource:
+    enabled: true
+    cpu_cores: 1
+    memory_gb: 0.5
+    duration: 60
+  time:
+    enabled: false
+  random:
+    enabled: false
+  chaos_enabled: true
+  chaos_duration: 60
+  max_chaos_duration: 300

@@ -1,0 +1,382 @@
+---
+# Nightly Ansible Chaos Orchestrator Playbook
+# Inspired by post-apocalyptic chaos engineering
+
+- name: "Chaos Engineering: Survive the Digital Apocalypse"
+  hosts: chaos_targets
+  become: true
+  vars:
+    chaos_start_time: "{{ ansible_date_time.epoch | int }}"
+    chaos_duration: 300  # Default 5 minutes
+    chaos_report: []
+    chaos_enabled: true
+  vars_files:
+    - vars/chaos_scenarios.yml
+  pre_tasks:
+    - name: "🔒 Initialize Chaos Report"
+      ansible.builtin.set_fact:
+        chaos_report: []
+
+    - name: "⚠️  Verify Chaos Engineering Mode"
+      ansible.builtin.assert:
+        that:
+          - chaos_enabled | bool
+        fail_msg: "Chaos engineering is disabled. Set chaos_enabled: true to proceed."
+        success_msg: "Chaos mode activated! Proceed with caution."
+
+    - name: "🧪 Record Pre-Chaos Baseline"
+      ansible.builtin.shell: |
+        echo "=== PRE-CHAOS BASELINE ===" > /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        echo "Timestamp: $(date)" >> /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        echo "CPU Load: $(cat /proc/loadavg)" >> /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        echo "Memory: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%" >> /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        echo "Disk: $(df -h / | tail -1 | awk '{print $5}')" >> /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        echo "Network Interfaces: $(ip link show | grep 'state UP' | wc -l)" >> /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+      args:
+        warn: false
+
+  tasks:
+    - name: "🌪️  NETWORK CHAOS: Digital Sandstorm"
+      tags: ["network", "chaos"]
+      block:
+        - name: "Check if network chaos is enabled"
+          ansible.builtin.set_fact:
+            run_network_chaos: "{{ chaos_scenarios.network.enabled | default(false) }}"
+
+        - name: "🌪️  Introduce Network Latency (Digital Sandstorm)"
+          ansible.builtin.shell: |
+            INTERFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+            if [ -n "$INTERFACE" ]; then
+              tc qdisc add dev $INTERFACE root netem delay {{ chaos_scenarios.network.experiments[0].latency_ms | default(100) }}ms {{ chaos_scenarios.network.experiments[0].latency_variation | default(50) }}ms 2>/dev/null || \
+              tc qdisc change dev $INTERFACE root netem delay {{ chaos_scenarios.network.experiments[0].latency_ms | default(100) }}ms {{ chaos_scenarios.network.experiments[0].latency_variation | default(50) }}ms
+              echo "Network latency applied to $INTERFACE"
+            else
+              echo "No network interface found"
+            fi
+          when:
+            - run_network_chaos | bool
+            - chaos_scenarios.network.experiments[0].probability | default(0) > (100 | random)
+          register: network_latency_result
+          ignore_errors: true
+
+        - name: "🌧️  Introduce Packet Loss (Acid Rain)"
+          ansible.builtin.shell: |
+            INTERFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+            if [ -n "$INTERFACE" ]; then
+              tc qdisc add dev $INTERFACE root netem loss {{ chaos_scenarios.network.experiments[1].loss_percent | default(10) }}% 2>/dev/null || \
+              tc qdisc change dev $INTERFACE root netem loss {{ chaos_scenarios.network.experiments[1].loss_percent | default(10) }}%
+              echo "Packet loss applied to $INTERFACE"
+            fi
+          when:
+            - run_network_chaos | bool
+            - chaos_scenarios.network.experiments[1].probability | default(0) > (100 | random)
+          register: packet_loss_result
+          ignore_errors: true
+
+        - name: "🐌 Limit Bandwidth (Resource Scarcity)"
+          ansible.builtin.shell: |
+            INTERFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+            if [ -n "$INTERFACE" ]; then
+              tc qdisc add dev $INTERFACE root tbf rate {{ chaos_scenarios.network.experiments[2].bandwidth_limit | default('1mbit') }} burst 32kbit latency 400ms 2>/dev/null || \
+              tc qdisc change dev $INTERFACE root tbf rate {{ chaos_scenarios.network.experiments[2].bandwidth_limit | default('1mbit') }} burst 32kbit latency 400ms
+              echo "Bandwidth limit applied to $INTERFACE"
+            fi
+          when:
+            - run_network_chaos | bool
+            - chaos_scenarios.network.experiments[2].probability | default(0) > (100 | random)
+          register: bandwidth_result
+          ignore_errors: true
+
+        - name: "📊 Record Network Chaos Results"
+          ansible.builtin.set_fact:
+            chaos_report: "{{ chaos_report + [{
+              'experiment': 'network_chaos',
+              'timestamp': ansible_date_time.epoch,
+              'latency_applied': network_latency_result is defined and network_latency_result.rc == 0,
+              'packet_loss_applied': packet_loss_result is defined and packet_loss_result.rc == 0,
+              'bandwidth_limited': bandwidth_result is defined and bandwidth_result.rc == 0
+            }] }}"
+          when: run_network_chaos | bool
+
+    - name: "🔥 SERVICE CHAOS: System Meltdown"
+      tags: ["service", "chaos"]
+      block:
+        - name: "Check if service chaos is enabled"
+          ansible.builtin.set_fact:
+            run_service_chaos: "{{ chaos_scenarios.service.enabled | default(false) }}"
+
+        - name: "🔥 Random Service Restart (System Meltdown)"
+          ansible.builtin.systemd:
+            name: "{{ item.name }}"
+            state: restarted
+            enabled: true
+          loop: "{{ chaos_scenarios.service.services | default([]) }}"
+          when:
+            - run_service_chaos | bool
+            - item.probability > (100 | random)
+          register: service_restart_result
+          ignore_errors: true
+
+        - name: "💀 Random Service Stop (Critical Failure)"
+          ansible.builtin.systemd:
+            name: "{{ item.name }}"
+            state: stopped
+          loop: "{{ chaos_scenarios.service.services | default([]) }}"
+          when:
+            - run_service_chaos | bool
+            - item.probability > (100 | random)
+          register: service_stop_result
+          ignore_errors: true
+
+        - name: "🔄 Random Service Start (System Recovery)"
+          ansible.builtin.systemd:
+            name: "{{ item.name }}"
+            state: started
+          loop: "{{ chaos_scenarios.service.services | default([]) }}"
+          when:
+            - run_service_chaos | bool
+            - item.probability > (100 | random)
+          register: service_start_result
+          ignore_errors: true
+
+        - name: "📊 Record Service Chaos Results"
+          ansible.builtin.set_fact:
+            chaos_report: "{{ chaos_report + [{
+              'experiment': 'service_chaos',
+              'timestamp': ansible_date_time.epoch,
+              'services_restarted': service_restart_result is defined and service_restart_result.results | length,
+              'services_stopped': service_stop_result is defined and service_stop_result.results | length,
+              'services_started': service_start_result is defined and service_start_result.results | length
+            }] }}"
+          when: run_service_chaos | bool
+
+    - name: "⚡ RESOURCE CHAOS: CPU/Memory Storm"
+      tags: ["resource", "chaos"]
+      block:
+        - name: "Check if resource chaos is enabled"
+          ansible.builtin.set_fact:
+            run_resource_chaos: "{{ chaos_scenarios.resource.enabled | default(false) }}"
+
+        - name: "⚡ CPU Stress (Processor Overload)"
+          ansible.builtin.shell: |
+            stress --cpu {{ chaos_scenarios.resource.cpu_cores | default(2) }} --timeout {{ chaos_scenarios.resource.duration | default(300) }}s &
+            echo $! > /tmp/chaos_stress_cpu.pid
+          when:
+            - run_resource_chaos | bool
+            - chaos_scenarios.resource.cpu_cores | default(0) > 0
+          register: cpu_stress_result
+          ignore_errors: true
+
+        - name: "🧠 Memory Stress (RAM Depletion)"
+          ansible.builtin.shell: |
+            stress --vm {{ chaos_scenarios.resource.memory_gb | default(1) }} --vm-bytes 1G --timeout {{ chaos_scenarios.resource.duration | default(300) }}s &
+            echo $! > /tmp/chaos_stress_memory.pid
+          when:
+            - run_resource_chaos | bool
+            - chaos_scenarios.resource.memory_gb | default(0) > 0
+          register: memory_stress_result
+          ignore_errors: true
+
+        - name: "💾 Disk I/O Stress (Storage Overload)"
+          ansible.builtin.shell: |
+            stress --io 2 --timeout {{ chaos_scenarios.resource.duration | default(300) }}s &
+            echo $! > /tmp/chaos_stress_io.pid
+          when:
+            - run_resource_chaos | bool
+            - chaos_scenarios.resource.disk_io | default(false)
+          register: disk_stress_result
+          ignore_errors: true
+
+        - name: "📊 Record Resource Chaos Results"
+          ansible.builtin.set_fact:
+            chaos_report: "{{ chaos_report + [{
+              'experiment': 'resource_chaos',
+              'timestamp': ansible_date_time.epoch,
+              'cpu_stress_started': cpu_stress_result is defined and cpu_stress_result.rc == 0,
+              'memory_stress_started': memory_stress_result is defined and memory_stress_result.rc == 0,
+              'disk_stress_started': disk_stress_result is defined and disk_stress_result.rc == 0
+            }] }}"
+          when: run_resource_chaos | bool
+
+    - name: "⏰ TIME CHAOS: Temporal Rift"
+      tags: ["time", "chaos"]
+      block:
+        - name: "Check if time chaos is enabled"
+          ansible.builtin.set_fact:
+            run_time_chaos: "{{ chaos_scenarios.time.enabled | default(false) }}"
+
+        - name: "⏰ Manipulate System Time (Temporal Rift)"
+          ansible.builtin.shell: |
+            # Backup current time
+            date > /tmp/chaos_original_time.txt
+            # Shift time forward/backward
+            NEW_TIME=$(date -d '{{ chaos_scenarios.time.time_shift_minutes | default(60) }} minutes' '+%Y-%m-%d %H:%M:%S')
+            timedatectl set-time "$NEW_TIME" 2>/dev/null || date -s "$NEW_TIME" 2>/dev/null
+            echo "Time shifted by {{ chaos_scenarios.time.time_shift_minutes | default(60) }} minutes"
+          when: run_time_chaos | bool
+          register: time_shift_result
+          ignore_errors: true
+
+        - name: "📡 Disable NTP Sync (Chrono Disruption)"
+          ansible.builtin.shell: |
+            timedatectl set-ntp false 2>/dev/null || systemctl stop ntp 2>/dev/null || systemctl stop chronyd 2>/dev/null
+            echo "NTP synchronization disabled"
+          when: run_time_chaos | bool
+          register: ntp_disable_result
+          ignore_errors: true
+
+        - name: "📊 Record Time Chaos Results"
+          ansible.builtin.set_fact:
+            chaos_report: "{{ chaos_report + [{
+              'experiment': 'time_chaos',
+              'timestamp': ansible_date_time.epoch,
+              'time_shifted': time_shift_result is defined and time_shift_result.rc == 0,
+              'ntp_disabled': ntp_disable_result is defined and ntp_disable_result.rc == 0
+            }] }}"
+          when: run_time_chaos | bool
+
+    - name: "🎲 RANDOM CHAOS: Chaos Dice Roll"
+      tags: ["random", "chaos"]
+      block:
+        - name: "Check if random chaos is enabled"
+          ansible.builtin.set_fact:
+            run_random_chaos: "{{ chaos_scenarios.random.enabled | default(false) }}"
+
+        - name: "🎲 Fill Disk Space (Storage Apocalypse)"
+          ansible.builtin.shell: |
+            FILL_PERCENT={{ chaos_scenarios.random.experiments[0].fill_percent | default(80) }}
+            df -h / | tail -1 | awk -v fill="$FILL_PERCENT" '{
+              usage = $5
+              gsub("%", "", usage)
+              if (usage < fill) {
+                target_gb = int($2 * fill / 100)
+                system("dd if=/dev/zero of=/tmp/chaos_fill." strftime("%s") " bs=1M count=" target_gb " 2>/dev/null & echo $! > /tmp/chaos_fill.pid")
+                print "Disk fill started to reach " fill "%"
+              } else {
+                print "Disk already at or above " fill "%"
+              }
+            }'
+          when:
+            - run_random_chaos | bool
+            - chaos_scenarios.random.experiments[0].probability | default(0) > (100 | random)
+          register: disk_fill_result
+          ignore_errors: true
+
+        - name: "🗡️  Kill Random Processes (Process Reaper)"
+          ansible.builtin.shell: |
+            TARGET_PROCESS="{{ chaos_scenarios.random.experiments[1].target_process | default('python') }}"
+            pkill -f "$TARGET_PROCESS" 2>/dev/null && echo "Killed processes matching $TARGET_PROCESS" || echo "No processes found"
+          when:
+            - run_random_chaos | bool
+            - chaos_scenarios.random.experiments[1].probability | default(0) > (100 | random)
+          register: process_kill_result
+          ignore_errors: true
+
+        - name: "🌐 Modify DNS (Name Server Chaos)"
+          ansible.builtin.shell: |
+            cp /etc/resolv.conf /etc/resolv.conf.backup 2>/dev/null || true
+            echo "nameserver 1.1.1.1" > /etc/resolv.conf
+            echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+            echo "DNS servers modified"
+          when:
+            - run_random_chaos | bool
+            - chaos_scenarios.random.experiments[2].probability | default(0) > (100 | random)
+          register: dns_modify_result
+          ignore_errors: true
+
+        - name: "📊 Record Random Chaos Results"
+          ansible.builtin.set_fact:
+            chaos_report: "{{ chaos_report + [{
+              'experiment': 'random_chaos',
+              'timestamp': ansible_date_time.epoch,
+              'disk_filled': disk_fill_result is defined and disk_fill_result.rc == 0,
+              'processes_killed': process_kill_result is defined and process_kill_result.rc == 0,
+              'dns_modified': dns_modify_result is defined and dns_modify_result.rc == 0
+            }] }}"
+          when: run_random_chaos | bool
+
+    - name: "😴 Wait for Chaos Duration"
+      tags: ["wait", "chaos"]
+      ansible.builtin.pause:
+        seconds: "{{ chaos_duration }}"
+      when: not ansible_check_mode
+
+  post_tasks:
+    - name: "🧹 NETWORK CHAOS CLEANUP"
+      tags: ["cleanup", "network"]
+      ansible.builtin.shell: |
+        INTERFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+        if [ -n "$INTERFACE" ]; then
+          tc qdisc del dev $INTERFACE root 2>/dev/null || true
+          tc qdisc del dev $INTERFACE ingress 2>/dev/null || true
+          echo "Network chaos cleaned up on $INTERFACE"
+        fi
+      ignore_errors: true
+
+    - name: "🧹 RESOURCE CHAOS CLEANUP"
+      tags: ["cleanup", "resource"]
+      ansible.builtin.shell: |
+        for PID_FILE in /tmp/chaos_stress_*.pid; do
+          if [ -f "$PID_FILE" ]; then
+            kill $(cat $PID_FILE) 2>/dev/null || true
+            rm -f $PID_FILE
+          fi
+        done
+        # Kill any remaining stress processes
+        pkill -f "stress" 2>/dev/null || true
+        echo "Resource chaos cleaned up"
+      ignore_errors: true
+
+    - name: "🧹 DISK FILL CLEANUP"
+      tags: ["cleanup", "random"]
+      ansible.builtin.shell: |
+        if [ -f /tmp/chaos_fill.pid ]; then
+          kill $(cat /tmp/chaos_fill.pid) 2>/dev/null || true
+          rm -f /tmp/chaos_fill.pid
+        fi
+        rm -f /tmp/chaos_fill.*
+        echo "Disk fill cleanup completed"
+      ignore_errors: true
+
+    - name: "🧹 DNS CLEANUP"
+      tags: ["cleanup", "random"]
+      ansible.builtin.shell: |
+        if [ -f /etc/resolv.conf.backup ]; then
+          cp /etc/resolv.conf.backup /etc/resolv.conf
+          rm -f /etc/resolv.conf.backup
+          echo "DNS restored from backup"
+        fi
+      ignore_errors: true
+
+    - name: "⏰ TIME CHAOS CLEANUP"
+      tags: ["cleanup", "time"]
+      ansible.builtin.shell: |
+        if [ -f /tmp/chaos_original_time.txt ]; then
+          ORIGINAL_TIME=$(cat /tmp/chaos_original_time.txt)
+          timedatectl set-time "$ORIGINAL_TIME" 2>/dev/null || date -s "$ORIGINAL_TIME" 2>/dev/null
+          rm -f /tmp/chaos_original_time.txt
+          echo "System time restored"
+        fi
+        timedatectl set-ntp true 2>/dev/null || systemctl start ntp 2>/dev/null || systemctl start chronyd 2>/dev/null
+        echo "NTP synchronization re-enabled"
+      ignore_errors: true
+
+    - name: "📊 Generate Chaos Engineering Report"
+      tags: ["report", "cleanup"]
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_report_{{ ansible_date_time.epoch }}.txt
+        mode: '0644'
+
+    - name: "📈 Display Chaos Report"
+      tags: ["report", "cleanup"]
+      ansible.builtin.shell: cat /tmp/chaos_report_{{ ansible_date_time.epoch }}.txt
+
+    - name: "🧹 Final System Cleanup"
+      tags: ["cleanup", "final"]
+      ansible.builtin.shell: |
+        # Clean up temporary files
+        rm -f /tmp/chaos_baseline_*.txt
+        rm -f /tmp/chaos_*.txt
+        echo "Final cleanup completed"
+      ignore_errors: true

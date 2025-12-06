@@ -1,0 +1,24 @@
+# Ansible Inventory for Chaos Engineering
+# Update with your target hosts
+
+[chaos_targets]
+# Example hosts - replace with your actual hosts
+# server1.example.com
+# server2.example.com
+# server3.example.com
+
+# For testing, you can use localhost (be careful!)
+# localhost ansible_connection=local
+
+[chaos_targets:vars]
+# Default variables for chaos targets
+ansible_user=root
+ansible_become=true
+
+# Chaos engineering specific variables
+chaos_enabled=true
+chaos_duration=300  # 5 minutes default
+
+# Safety limits
+max_chaos_duration=1800  # 30 minutes maximum
+allow_dangerous_experiments=false
