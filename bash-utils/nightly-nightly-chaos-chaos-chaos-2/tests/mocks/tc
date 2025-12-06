@@ -1,0 +1,21 @@
+#!/bin/bash
+# Mock tc (traffic control) command for testing
+
+# Log the command invocation
+echo "MOCK: tc called with: $@" >&2
+
+# Simulate tc behavior based on command
+if [[ " $@ " == *" qdisc add "* ]]; then
+    echo "MOCK: Would add qdisc" >&2
+elif [[ " $@ " == *" qdisc change "* ]]; then
+    echo "MOCK: Would change qdisc" >&2
+elif [[ " $@ " == *" qdisc del "* ]]; then
+    echo "MOCK: Would delete qdisc" >&2
+elif [[ " $@ " == *" netem "* ]]; then
+    echo "MOCK: Would apply netem settings" >&2
+elif [[ " $@ " == *" tbf "* ]]; then
+    echo "MOCK: Would apply TBF settings" >&2
+fi
+
+# Exit successfully
+exit 0
