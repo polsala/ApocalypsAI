@@ -1,0 +1,28 @@
+{
+  "name": "nightly-chrono-cleanse",
+  "version": "1.0.0",
+  "description": "A Node.js CLI utility to cleanse digital temporal residue by archiving or deleting files older than a specified duration.",
+  "main": "src/main.js",
+  "bin": {
+    "chrono-cleanse": "src/main.js"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "cleaner",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
