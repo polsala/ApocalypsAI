@@ -1,0 +1,23 @@
+.explosion-container {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9997;
+}
+
+.explosion-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: explode 1s ease-out forwards;
+  box-shadow: 0 0 10px currentColor;
+}
+
+@keyframes explode {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--vx) * 20), calc(var(--vy) * 20)) scale(0);
+    opacity: 0;
+  }
+}

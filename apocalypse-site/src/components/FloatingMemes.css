@@ -1,0 +1,39 @@
+.floating-memes-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+}
+
+.floating-meme {
+  position: absolute;
+  bottom: 0;
+  background: rgba(255, 0, 255, 0.2);
+  border: 2px solid #ff00ff;
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  white-space: nowrap;
+  box-shadow: 0 0 20px #ff00ff;
+  animation: float-up 5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes float-up {
+  0% {
+    bottom: 0;
+    opacity: 0;
+    transform: translateX(-50%) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    bottom: 100%;
+    opacity: 0;
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
