@@ -1,0 +1,14 @@
+[package]
+name = "nightly-quantum-quip-generator"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical CLI tool that generates quantum-themed programming jokes with a configurable probability engine."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
+test-generator = "0.3"
