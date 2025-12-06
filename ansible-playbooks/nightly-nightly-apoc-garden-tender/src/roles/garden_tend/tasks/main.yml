@@ -1,0 +1,24 @@
+---
+- name: Water the garden if moisture is low
+  ansible.builtin.lineinfile:
+    path: "{{ garden_base_dir }}/garden_log.txt"
+    line: "Timestamp: {{ ansible_date_time.iso8601_micro }} - Action: Watered garden (Moisture: {{ current_moisture }}%)"
+    create: yes
+    insertafter: EOF
+  when: current_moisture < moisture_threshold_low
+
+- name: Fertilize the garden (simulated)
+  ansible.builtin.lineinfile:
+    path: "{{ garden_base_dir }}/garden_log.txt"
+    line: "Timestamp: {{ ansible_date_time.iso8601_micro }} - Action: Fertilized garden"
+    create: yes
+    insertafter: EOF
+  when: current_moisture >= moisture_threshold_low and current_temperature < temp_threshold_high # Simple condition for fertilizing
+
+- name: Issue heat warning if temperature is high
+  ansible.builtin.lineinfile:
+    path: "{{ garden_base_dir }}/garden_log.txt"
+    line: "Timestamp: {{ ansible_date_time.iso8601_micro }} - WARNING: High temperature detected ({{ current_temperature }}C)! Seek shade or provide extra hydration."
+    create: yes
+    insertafter: EOF
+  when: current_temperature > temp_threshold_high

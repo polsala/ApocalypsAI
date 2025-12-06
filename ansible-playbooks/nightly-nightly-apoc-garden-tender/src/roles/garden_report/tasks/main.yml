@@ -1,0 +1,16 @@
+---
+- name: Read sensor data log for report
+  ansible.builtin.slurp:
+    src: "{{ garden_base_dir }}/sensor_data.log"
+  register: sensor_log_content
+
+- name: Read garden action log for report
+  ansible.builtin.slurp:
+    src: "{{ garden_base_dir }}/garden_log.txt"
+  register: action_log_content
+
+- name: Generate garden report
+  ansible.builtin.template:
+    src: report.j2
+    dest: "{{ garden_base_dir }}/garden_report.txt"
+    mode: '0644'
