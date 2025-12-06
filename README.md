@@ -28,7 +28,6 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 
 | Workflow | Purpose | Trigger |
 | --- | --- | --- |
-
 | `gen_openrouter.yml` | Runs the generator agent with OpenRouter provider to mint a brand-new utility under V2 classifier paths (code + README + tests) and open a PR. Uses only OpenRouter API; fails if provider is unavailable. | Cron `0 * * * *` (hourly at :00) & manual |
 | `gen_groq.yml` | Runs the generator agent with Groq provider. Uses only Groq API; fails if provider is unavailable. | Cron `20 * * * *` (hourly at :20) & manual |
 | `gen_gemini.yml` | Runs the generator agent with Gemini provider. Uses only Gemini API; fails if provider is unavailable. | Cron `40 * * * *` (hourly at :40) & manual |
