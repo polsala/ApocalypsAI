@@ -1,0 +1,76 @@
+{% set report_time = ansible_date_time.strftime('%Y-%m-%d %H:%M:%S') %}
+========================================
+          CHAOS EXPERIMENT REPORT
+========================================
+
+Generated: {{ report_time }}
+Target Host: {{ inventory_hostname }}
+Experiment: {{ chaos_scenario.name }}
+Type: {{ chaos_scenario.type }}
+Duration: {{ chaos_scenario.duration }} seconds
+
+ASCII Art: 
+  {% if chaos_scenario.type == 'network_latency' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'network_packet_loss' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'service_restart' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'service_stop' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'cpu_stress' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'memory_stress' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'disk_io_stress' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'time_warp' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'random_kill' %}
+  (╯°□°）╯︵ ┻━┻
+  {% elif chaos_scenario.type == 'random_reboot' %}
+  (╯°□°）╯︵ ┻━┻
+  {% else %}
+  (╯°□°）╯︵ ┻━┻
+  {% endif %}
+
+Commentary: 
+  {% if chaos_scenario.type == 'network_latency' %}
+  Looks like someone spilled coffee on the network cables!
+  {% elif chaos_scenario.type == 'network_packet_loss' %}
+  The network is feeling a bit forgetful today.
+  {% elif chaos_scenario.type == 'service_restart' %}
+  Services needed a quick nap, I suppose.
+  {% elif chaos_scenario.type == 'service_stop' %}
+  Someone pulled the plug on the services!
+  {% elif chaos_scenario.type == 'cpu_stress' %}
+  CPU is working overtime - someone call HR!
+  {% elif chaos_scenario.type == 'memory_stress' %}
+  Memory is feeling a bit cramped in there.
+  {% elif chaos_scenario.type == 'disk_io_stress' %}
+  Disk is moving at a snail's pace.
+  {% elif chaos_scenario.type == 'time_warp' %}
+  Time is all wonky - Back to the Future much?
+  {% elif chaos_scenario.type == 'random_kill' %}
+  Random process met its untimely demise.
+  {% elif chaos_scenario.type == 'random_reboot' %}
+  System decided it needed a fresh start.
+  {% else %}
+  Chaos happened. What did you expect?
+  {% endif %}
+
+Pre-Chaos State:
+{{ pre_chaos_state.stdout }}
+
+Post-Chaos State:
+{{ post_chaos_state.stdout }}
+
+Status: SUCCESS
+
+========================================
+
+Remember: 
+"With great power comes great responsibility!"
+
+Monitor your systems and ensure they recover properly.
+========================================

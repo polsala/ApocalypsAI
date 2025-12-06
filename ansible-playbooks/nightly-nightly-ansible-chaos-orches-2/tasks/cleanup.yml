@@ -1,0 +1,39 @@
+# Cleanup Tasks
+# Restore systems to normal state after chaos experiments
+
+- name: Remove network latency and packet loss
+  shell: |
+    interface=$(ip route | grep default | awk '{print $5}' | head -1)
+    tc qdisc del dev $interface root 2>/dev/null || true
+  args:
+    warn: false
+  when: chaos_scenario.type in ['network_latency', 'network_packet_loss']
+
+- name: Restart services that were stopped
+  service:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ chaos_scenario.params.services | default([]) }}"
+  when: chaos_scenario.type == 'service_stop'
+
+- name: Restore original system time
+  shell: date -s "{{ original_date.stdout }}"
+  when: chaos_scenario.type == 'time_warp'
+
+- name: Kill any remaining stress processes
+  shell: pkill -f stress || true
+  when: chaos_scenario.type in ['cpu_stress', 'memory_stress', 'disk_io_stress']
+
+- name: Display cleanup message
+  debug:
+    msg: |
+      Cleanup Complete!
+      System restored to normal state.
+      (╯°□°）╯︵ ┻━┻ → ┬─┬
+
+- name: Generate final chaos report
+  template:
+    src: templates/chaos_report.j2
+    dest: "{{ playbook_dir }}/reports/chaos_report_{{ ansible_date_time.epoch }}.txt"
+  delegate_to: localhost
+  run_once: true

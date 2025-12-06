@@ -1,0 +1,40 @@
+# Resource Chaos Tasks
+# Stress system resources like CPU, memory, and disk I/O
+
+- name: Install stress tool
+  package:
+    name: stress
+    state: present
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+- name: Stress CPU
+  shell: stress --cpu {{ chaos_params.cores | default(2) }} --timeout {{ chaos_duration }}s
+  async: 3600
+  poll: 0
+  when: chaos_scenario.type == 'cpu_stress'
+
+- name: Stress Memory
+  shell: stress --vm {{ chaos_params.processes | default(1) }} --vm-bytes {{ chaos_params.size | default('256') }}M --timeout {{ chaos_duration }}s
+  async: 3600
+  poll: 0
+  when: chaos_scenario.type == 'memory_stress'
+
+- name: Stress Disk I/O
+  shell: stress --io {{ chaos_params.processes | default(2) }} --timeout {{ chaos_duration }}s
+  async: 3600
+  poll: 0
+  when: chaos_scenario.type == 'disk_io_stress'
+
+- name: Wait for resource stress duration
+  wait_for:
+    timeout: "{{ (chaos_duration | int) + 10 }}"
+  when: chaos_scenario.type in ['cpu_stress', 'memory_stress', 'disk_io_stress']
+
+- name: Display resource stress ASCII art
+  debug:
+    msg: |
+      Resource Stress Applied!
+      (╯°□°）╯︵ ┻━┻
+      Type: {{ chaos_scenario.type }}
+      Duration: {{ chaos_duration }}s
+  when: chaos_scenario.type in ['cpu_stress', 'memory_stress', 'disk_io_stress']

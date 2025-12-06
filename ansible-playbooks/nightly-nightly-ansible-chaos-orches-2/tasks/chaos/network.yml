@@ -1,0 +1,39 @@
+# Network Chaos Tasks
+# Simulate network issues like latency and packet loss
+
+- name: Ensure tc (traffic control) is installed
+  package:
+    name: iproute2
+    state: present
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+- name: Add network latency
+  shell: |
+    interface=$(ip route | grep default | awk '{print $5}' | head -1)
+    tc qdisc add dev $interface root netem delay {{ chaos_params.latency | default(100) }}ms {{ chaos_params.jitter | default(10) }}ms 2>/dev/null || tc qdisc change dev $interface root netem delay {{ chaos_params.latency | default(100) }}ms {{ chaos_params.jitter | default(10) }}ms
+  args:
+    warn: false
+  when: chaos_scenario.type == 'network_latency'
+
+- name: Add network packet loss
+  shell: |
+    interface=$(ip route | grep default | awk '{print $5}' | head -1)
+    tc qdisc add dev $interface root netem loss {{ chaos_params.packet_loss | default(10) }}% 2>/dev/null || tc qdisc change dev $interface root netem loss {{ chaos_params.packet_loss | default(10) }}%
+  args:
+    warn: false
+  when: chaos_scenario.type == 'network_packet_loss'
+
+- name: Wait for network chaos duration
+  wait_for:
+    timeout: "{{ chaos_duration | int }}"
+  when: chaos_scenario.type in ['network_latency', 'network_packet_loss']
+
+- name: Display network chaos ASCII art
+  debug:
+    msg: |
+      Network Chaos Applied! 
+      (╯°□°）╯︵ ┻━┻
+      Latency: {{ chaos_params.latency | default(100) }}ms
+      Jitter: {{ chaos_params.jitter | default(10) }}ms
+      Packet Loss: {{ chaos_params.packet_loss | default(0) }}%
+  when: chaos_scenario.type in ['network_latency', 'network_packet_loss']

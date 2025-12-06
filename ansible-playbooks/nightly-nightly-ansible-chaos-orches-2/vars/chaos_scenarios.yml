@@ -1,0 +1,77 @@
+# Chaos Scenarios Configuration
+# Define different chaos experiments that can be run
+
+chaos_scenarios:
+  network_latency:
+    name: "Network Latency"
+    type: "network_latency"
+    duration: 60
+    params:
+      latency: 100  # milliseconds
+      jitter: 10    # milliseconds
+
+  network_packet_loss:
+    name: "Network Packet Loss"
+    type: "network_packet_loss"
+    duration: 60
+    params:
+      packet_loss: 10  # percentage
+
+  service_restart:
+    name: "Service Restart"
+    type: "service_restart"
+    duration: 30
+    params:
+      services: []  # Empty means random services
+
+  service_stop:
+    name: "Service Stop"
+    type: "service_stop"
+    duration: 30
+    params:
+      services: []  # Empty means random services
+
+  cpu_stress:
+    name: "CPU Stress"
+    type: "cpu_stress"
+    duration: 120
+    params:
+      cores: 2
+
+  memory_stress:
+    name: "Memory Stress"
+    type: "memory_stress"
+    duration: 120
+    params:
+      processes: 1
+      size: 256  # MB
+
+  disk_io_stress:
+    name: "Disk I/O Stress"
+    type: "disk_io_stress"
+    duration: 120
+    params:
+      processes: 2
+
+  time_warp:
+    name: "Time Warp"
+    type: "time_warp"
+    duration: 60
+    params:
+      direction: "forward"  # or "backward"
+      offset: 3600          # seconds
+
+  random_kill:
+    name: "Random Kill"
+    type: "random_kill"
+    duration: 30
+    params: {}
+
+  random_reboot:
+    name: "Random Reboot"
+    type: "random_reboot"
+    duration: 30
+    params: {}
+
+# Default scenario to use if none specified
+chaos_scenario: "{{ chaos_scenarios[chaos_scenario_name | default('network_latency')] }}"

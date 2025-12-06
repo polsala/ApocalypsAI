@@ -1,0 +1,36 @@
+# Random Chaos Tasks
+# Unpredictable chaos for maximum surprise
+
+- name: Select random process to kill
+  shell: ps aux | grep -v PID | awk '{print $2}' | sort -R | head -1
+  register: random_pid
+  when: chaos_scenario.type == 'random_kill'
+
+- name: Kill random process
+  shell: kill -9 {{ random_pid.stdout }}
+  when: chaos_scenario.type == 'random_kill' and random_pid.stdout is defined and random_pid.stdout != ''
+
+- name: Display random kill message
+  debug:
+    msg: |
+      Random Process Killed!
+      PID: {{ random_pid.stdout }}
+      (╯°Д°）╯︵/'
+  when: chaos_scenario.type == 'random_kill'
+
+- name: Schedule random reboot
+  shell: echo 'reboot' | at now + {{ (1..60) | random }} minutes
+  when: chaos_scenario.type == 'random_reboot'
+
+- name: Display random reboot message
+  debug:
+    msg: |
+      Random Reboot Scheduled!
+      (╯°□°）╯︵ ┻━┻
+      System will reboot in a few minutes...
+  when: chaos_scenario.type == 'random_reboot'
+
+- name: Wait for random chaos duration
+  wait_for:
+    timeout: "{{ chaos_duration | int }}"
+  when: chaos_scenario.type in ['random_kill', 'random_reboot']

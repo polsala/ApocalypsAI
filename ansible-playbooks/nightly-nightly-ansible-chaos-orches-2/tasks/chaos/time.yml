@@ -1,0 +1,30 @@
+# Time Manipulation Chaos Tasks
+# Manipulate system time for testing time-sensitive applications
+
+- name: Backup original date
+  shell: date
+  register: original_date
+  when: chaos_scenario.type == 'time_warp'
+
+- name: Set system time forward
+  shell: date -s "{{ (ansible_date_time.epoch | int) + (chaos_params.offset | default(3600) | int) }} seconds"
+  when: chaos_scenario.type == 'time_warp' and chaos_params.direction == 'forward'
+
+- name: Set system time backward
+  shell: date -s "{{ (ansible_date_time.epoch | int) - (chaos_params.offset | default(3600) | int) }} seconds"
+  when: chaos_scenario.type == 'time_warp' and chaos_params.direction == 'backward'
+
+- name: Display time warp message
+  debug:
+    msg: |
+      Time Warp Applied!
+      (╯°□°）╯︵ ┻━┻
+      Original: {{ original_date.stdout }}
+      New Time: {{ ansible_date_time.iso8601 }}
+      Offset: {{ chaos_params.offset | default(3600) }} seconds {{ chaos_params.direction | default('forward') }}
+  when: chaos_scenario.type == 'time_warp'
+
+- name: Wait for time warp duration
+  wait_for:
+    timeout: "{{ chaos_duration | int }}"
+  when: chaos_scenario.type == 'time_warp'

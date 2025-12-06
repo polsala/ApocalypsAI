@@ -1,0 +1,88 @@
+---
+# Nightly Ansible Chaos Orchestrator
+# A whimsical yet practical chaos engineering playbook
+
+- name: Chaos Engineering Experiment Orchestrator
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars/chaos_scenarios.yml
+  vars:
+    chaos_report: []
+    start_time: "{{ ansible_date_time.epoch }}"
+  tasks:
+    - name: Display chaos experiment banner
+      debug:
+        msg: |
+          ========================================
+                    CHAOS ORCHESTRATOR
+          ========================================
+          Experiment: {{ chaos_scenario.name }}
+          Target: {{ inventory_hostname }}
+          Duration: {{ chaos_scenario.duration }}s
+          ========================================
+
+    - name: Record pre-chaos system state
+      shell: |
+        echo "CPU: $(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$3+$4+$5)} END {print usage}')%"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3 '/' $2}')"
+        echo "Load: $(uptime | awk -F'load average:' '{print $2}')"
+      register: pre_chaos_state
+      changed_when: false
+
+    - name: Execute chaos scenario
+      include_tasks: tasks/chaos/{{ chaos_scenario.type }}.yml
+      vars:
+        chaos_duration: "{{ chaos_scenario.duration }}"
+        chaos_params: "{{ chaos_scenario.params | default({}) }}"
+
+    - name: Record post-chaos system state
+      shell: |
+        echo "CPU: $(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$3+$4+$5)} END {print usage}')%"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3 '/' $2}')"
+        echo "Load: $(uptime | awk -F'load average:' '{print $2}')"
+      register: post_chaos_state
+      changed_when: false
+
+    - name: Execute cleanup tasks
+      include_tasks: tasks/cleanup.yml
+
+    - name: Generate chaos report entry
+      set_fact:
+        report_entry: >-
+          {
+            "host": "{{ inventory_hostname }}",
+            "scenario": "{{ chaos_scenario.name }}",
+            "type": "{{ chaos_scenario.type }}",
+            "duration": {{ chaos_scenario.duration }},
+            "status": "SUCCESS",
+            "pre_state": "{{ pre_chaos_state.stdout }}",
+            "post_state": "{{ post_chaos_state.stdout }}",
+            "timestamp": "{{ ansible_date_time.iso8601 }}"
+          }
+
+    - name: Append to chaos report
+      set_fact:
+        chaos_report: "{{ chaos_report + [report_entry | from_json] }}"
+
+    - name: Display chaos experiment results
+      debug:
+        msg: |
+          ========================================
+          CHAOS EXPERIMENT COMPLETE
+          ========================================
+          Host: {{ inventory_hostname }}
+          Scenario: {{ chaos_scenario.name }}
+          Type: {{ chaos_scenario.type }}
+          Duration: {{ chaos_scenario.duration }}s
+          Status: SUCCESS
+          ========================================
+
+  handlers:
+    - name: Ensure services are running after chaos
+      service:
+        name: "{{ item }}"
+        state: started
+      loop: "{{ chaos_scenario.params.services | default([]) }}"
+      when: chaos_scenario.type == 'service' and chaos_scenario.params.services is defined

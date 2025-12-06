@@ -1,0 +1,45 @@
+# Service Chaos Tasks
+# Manipulate services to simulate failures
+
+- name: Get list of running services
+  shell: systemctl list-units --type=service --state=running --no-pager --no-legend | awk '{print $1}' | head -10
+  register: running_services
+  when: chaos_scenario.type == 'service_restart' and chaos_scenario.params.services is not defined
+
+- name: Set services to restart
+  set_fact:
+    target_services: "{{ running_services.stdout_lines | default([]) }}"
+  when: chaos_scenario.type == 'service_restart' and chaos_scenario.params.services is not defined
+
+- name: Set services from params
+  set_fact:
+    target_services: "{{ chaos_scenario.params.services | default([]) }}"
+  when: chaos_scenario.type in ['service_restart', 'service_stop']
+
+- name: Restart services
+  service:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ target_services }}"
+  when: chaos_scenario.type == 'service_restart'
+
+- name: Stop services
+  service:
+    name: "{{ item }}"
+    state: stopped
+  loop: "{{ target_services }}"
+  when: chaos_scenario.type == 'service_stop'
+
+- name: Wait for service chaos duration
+  wait_for:
+    timeout: "{{ chaos_duration | int }}"
+  when: chaos_scenario.type in ['service_restart', 'service_stop']
+
+- name: Display service chaos ASCII art
+  debug:
+    msg: |
+      Service Chaos Applied!
+      (╯°□°）╯︵ ┻━┻
+      Services: {{ target_services | join(', ') }}
+      Action: {{ 'Restarted' if chaos_scenario.type == 'service_restart' else 'Stopped' }}
+  when: chaos_scenario.type in ['service_restart', 'service_stop']

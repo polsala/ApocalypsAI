@@ -1,0 +1,129 @@
+---
+# Test Playbook for Chaos Orchestrator
+# Tests the functionality of the chaos engineering playbook
+
+- name: Test Chaos Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Test inventory file exists
+      stat:
+        path: "{{ playbook_dir }}/inventory"
+      register: inventory_file
+
+    - name: Assert inventory file exists
+      assert:
+        that:
+          - inventory_file.stat.exists
+        msg: "Inventory file should exist"
+
+    - name: Test playbook file exists
+      stat:
+        path: "{{ playbook_dir }}/chaos_orchestrator.yml"
+      register: playbook_file
+
+    - name: Assert playbook file exists
+      assert:
+        that:
+          - playbook_file.stat.exists
+        msg: "Chaos orchestrator playbook should exist"
+
+    - name: Test variables file exists
+      stat:
+        path: "{{ playbook_dir }}/vars/chaos_scenarios.yml"
+      register: vars_file
+
+    - name: Assert variables file exists
+      assert:
+        that:
+          - vars_file.stat.exists
+        msg: "Chaos scenarios variables file should exist"
+
+    - name: Test tasks directory exists
+      stat:
+        path: "{{ playbook_dir }}/tasks"
+      register: tasks_dir
+
+    - name: Assert tasks directory exists
+      assert:
+        that:
+          - tasks_dir.stat.exists
+          - tasks_dir.stat.isdir
+        msg: "Tasks directory should exist"
+
+    - name: Test chaos tasks directory exists
+      stat:
+        path: "{{ playbook_dir }}/tasks/chaos"
+      register: chaos_tasks_dir
+
+    - name: Assert chaos tasks directory exists
+      assert:
+        that:
+          - chaos_tasks_dir.stat.exists
+          - chaos_tasks_dir.stat.isdir
+        msg: "Chaos tasks directory should exist"
+
+    - name: Test cleanup tasks file exists
+      stat:
+        path: "{{ playbook_dir }}/tasks/cleanup.yml"
+      register: cleanup_file
+
+    - name: Assert cleanup tasks file exists
+      assert:
+        that:
+          - cleanup_file.stat.exists
+        msg: "Cleanup tasks file should exist"
+
+    - name: Test templates directory exists
+      stat:
+        path: "{{ playbook_dir }}/templates"
+      register: templates_dir
+
+    - name: Assert templates directory exists
+      assert:
+        that:
+          - templates_dir.stat.exists
+          - templates_dir.stat.isdir
+        msg: "Templates directory should exist"
+
+    - name: Test report template exists
+      stat:
+        path: "{{ playbook_dir }}/templates/chaos_report.j2"
+      register: report_template
+
+    - name: Assert report template exists
+      assert:
+        that:
+          - report_template.stat.exists
+        msg: "Chaos report template should exist"
+
+    - name: Test shell script exists
+      stat:
+        path: "{{ playbook_dir }}/run_chaos.sh"
+      register: script_file
+
+    - name: Assert shell script exists
+      assert:
+        that:
+          - script_file.stat.exists
+        msg: "Chaos runner script should exist"
+
+    - name: Test shell script is executable
+      stat:
+        path: "{{ playbook_dir }}/run_chaos.sh"
+      register: script_permissions
+
+    - name: Assert shell script is executable
+      assert:
+        that:
+          - script_permissions.stat.mode is defined
+          - script_permissions.stat.mode | regex_search('rwx')
+        msg: "Chaos runner script should be executable"
+
+    - name: Display test results
+      debug:
+        msg: |
+          All tests passed!
+          Chaos Orchestrator is ready to deploy chaos!
+          (╯°□°）╯︵ ┻━┻ → ┬─┬
