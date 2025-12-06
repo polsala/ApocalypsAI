@@ -1,0 +1,25 @@
+name: 'Whimsical PR Labeler'
+description: 'Apply whimsical labels based on file count'
+inputs:
+  repo-token:
+    description: 'GitHub token'
+    required: true
+  labels:
+    description: 'Comma-separated label names'
+    required: true
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+  steps:
+    - name: Label PR
+      id: label
+      run: |
+        const labels = ['🌱', '🧑‍🤝‍🧑', '部落', '🌪️']
+        const files = context.payload.pull_request.changed_files
+        const index = Math.min(Math.floor(Math.log2(files || 1)), labels.length - 1)
+        github.issues.addLabels({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: context.payload.pull_request.number,
+          labels: [labels[index]]
+        })
