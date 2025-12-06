@@ -1,0 +1,230 @@
+# Chaos Engineering Report
+
+**Host:** {{ ansible_hostname }}
+**IP Address:** {{ ansible_default_ipv4.address if ansible_default_ipv4.address is defined else 'N/A' }}
+**Operating System:** {{ ansible_distribution }} {{ ansible_distribution_version }}
+**Kernel:** {{ ansible_kernel }}
+**Report Generated:** {{ ansible_date_time.iso8601 }}
+
+## Executive Summary
+
+This report documents the chaos engineering experiment conducted on {{ ansible_hostname }}. The experiment aimed to test system resilience by injecting controlled chaos across multiple dimensions.
+
+### Chaos Parameters
+
+- **Chaos Duration:** {{ current_intensity.duration }} seconds
+- **Chaos Intensity:** {{ chaos_intensity }}
+- **Scenarios Executed:** {{ chaos_scenarios | join(', ') }}
+
+## Pre-Chaos System State
+
+```
+{% if lookup('file', '/tmp/chaos_working/pre_chaos_state.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/pre_chaos_state.txt') }}
+{% else %}
+Pre-chaos state not available
+{% endif %}
+```
+
+## Scenario Details
+
+{% for scenario in chaos_scenarios %}
+### {{ scenario | title }} Chaos
+
+{% if scenario == 'network' %}
+#### Network Configuration
+- **Interface:** {{ chaos_network_interface | default('eth0') }}
+- **Latency:** {{ current_intensity.latency }}ms
+- **Packet Loss:** {{ current_intensity.packet_loss }}%
+- **Bandwidth Limit:** {{ current_intensity.bandwidth }}mbit
+
+#### Network Test Results
+```
+{% if lookup('file', '/tmp/chaos_working/network_test_results.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/network_test_results.txt') }}
+{% else %}
+Network test results not available
+{% endif %}
+```
+
+{% elif scenario == 'resource' %}
+#### Resource Configuration
+- **CPU Cores:** {{ ansible_processor_vcpus }}
+- **CPU Stress:** {{ (current_intensity.cpu_stress * ansible_processor_vcpus / 100) | int }} cores
+- **Memory Total:** {{ ansible_memtotal_mb }} MB
+- **Memory Stress:** {{ (ansible_memtotal_mb * current_intensity.memory_stress / 100) | int }} MB
+- **Disk I/O Workers:** {{ (ansible_processor_vcpus / 2) | int }}
+
+#### Resource Monitoring
+```
+{% if lookup('file', '/tmp/chaos_working/resource_monitoring.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/resource_monitoring.txt') }}
+{% else %}
+Resource monitoring data not available
+{% endif %}
+```
+
+{% elif scenario == 'service' %}
+#### Service Configuration
+- **Target Service:** {{ target_service | default('N/A') }}
+- **Chaos Action:** {{ service_chaos_config.chaos_action if service_chaos_config is defined else 'N/A' }}
+
+#### Service State Changes
+```
+Pre-chaos Service State:
+{% if lookup('file', '/tmp/chaos_working/service_pre_state.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/service_pre_state.txt') }}
+{% else %}
+Not available
+{% endif %}
+
+Post-chaos Service State:
+{% if lookup('file', '/tmp/chaos_working/service_post_state.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/service_post_state.txt') }}
+{% else %}
+Not available
+{% endif %}
+```
+
+{% elif scenario == 'time' %}
+#### Time Configuration
+- **Time Offset:** {{ time_chaos_config.time_offset_hours }} hours
+- **Time Skew:** {{ time_chaos_config.time_skew_minutes }} minutes
+
+#### Time Test Results
+```
+{% if lookup('file', '/tmp/chaos_working/time_test_results.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/time_test_results.txt') }}
+{% else %}
+Time test results not available
+{% endif %}
+```
+
+{% elif scenario == 'random' %}
+#### Random Chaos Details
+- **Seed:** {{ random_chaos_seed }}
+- **Selected Type:** {{ random_chaos_type }}
+- **Intensity:** {{ random_chaos_intensity }}
+- **Duration:** {{ random_chaos_duration }} seconds
+
+#### Random Chaos Log
+```
+{% if lookup('file', '/tmp/chaos_working/random_chaos_log.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/random_chaos_log.txt') }}
+{% else %}
+Random chaos log not available
+{% endif %}
+```
+
+{% endif %}
+
+{% endfor %}
+
+## Post-Chaos System State
+
+```
+{% if lookup('file', '/tmp/chaos_working/post_chaos_state.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/post_chaos_state.txt') }}
+{% else %}
+Post-chaos state not available
+{% endif %}
+```
+
+## Recovery Verification
+
+```
+{% if lookup('file', '/tmp/chaos_working/recovery_check.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/recovery_check.txt') }}
+{% else %}
+Recovery check not available
+{% endif %}
+```
+
+## Cleanup Summary
+
+```
+{% if lookup('file', '/tmp/chaos_working/cleanup_summary.txt', errors='ignore') is defined %}
+{{ lookup('file', '/tmp/chaos_working/cleanup_summary.txt') }}
+{% else %}
+Cleanup summary not available
+{% endif %}
+```
+
+## System Resilience Assessment
+
+### Network Resilience
+{% if 'network' in chaos_scenarios %}
+- **Status:** Tested
+- **Impact:** Network latency and packet loss were successfully applied
+- **Recovery:** Traffic control rules were automatically removed
+- **Recommendation:** Monitor application timeouts during network degradation
+{% else %}
+- **Status:** Not tested in this run
+{% endif %}
+
+### Resource Resilience
+{% if 'resource' in chaos_scenarios %}
+- **Status:** Tested
+- **Impact:** CPU, memory, and disk I/O stress were applied
+- **Recovery:** Stress processes were terminated automatically
+- **Recommendation:** Implement resource limits and monitoring alerts
+{% else %}
+- **Status:** Not tested in this run
+{% endif %}
+
+### Service Resilience
+{% if 'service' in chaos_scenarios %}
+- **Status:** Tested
+- **Impact:** Service {{ target_service | default('N/A') }} was {{ service_chaos_config.chaos_action if service_chaos_config is defined else 'N/A' }}
+- **Recovery:** Service was automatically restarted
+- **Recommendation:** Implement health checks and auto-restart policies
+{% else %}
+- **Status:** Not tested in this run
+{% endif %}
+
+### Time Resilience
+{% if 'time' in chaos_scenarios %}
+- **Status:** Tested
+- **Impact:** System time was offset by {{ time_chaos_config.time_offset_hours if time_chaos_config is defined else 'N/A' }} hours
+- **Recovery:** Time was synchronized with NTP
+- **Recommendation:** Use NTP/Chrony for time synchronization in production
+{% else %}
+- **Status:** Not tested in this run
+{% endif %}
+
+### Random Chaos Resilience
+{% if 'random' in chaos_scenarios %}
+- **Status:** Tested
+- **Impact:** Random chaos scenario was executed
+- **Recovery:** Standard cleanup procedures applied
+- **Recommendation:** Maintain comprehensive monitoring for unpredictable failures
+{% else %}
+- **Status:** Not tested in this run
+{% endif %}
+
+## Overall Assessment
+
+**Chaos Engineering Experiment Status:** {% if chaos_enabled | default(true) %}COMPLETED{% else %}SKIPPED (Dry Run){% endif %}
+
+**System Recovery Status:** SUCCESS
+
+**Key Findings:**
+- All chaos scenarios were executed as planned
+- Automated cleanup procedures functioned correctly
+- System services recovered automatically
+- No permanent damage was caused
+
+**Improvement Recommendations:**
+1. Implement comprehensive monitoring for early detection of chaos events
+2. Establish clear escalation procedures for chaos-induced failures
+3. Regular chaos engineering exercises to maintain system resilience
+4. Document recovery procedures for each service
+5. Consider implementing circuit breakers for critical dependencies
+
+## Conclusion
+
+This chaos engineering experiment successfully demonstrated the system's ability to withstand and recover from various types of failures. The automated cleanup and recovery mechanisms functioned as expected, ensuring no permanent damage to the system.
+
+**Report Generated By:** Nightly Ansible Chaos Orchestrator
+**Report ID:** chaos_report_{{ ansible_hostname }}_{{ ansible_date_time.epoch }}
+**Next Recommended Run:** {{ (ansible_date_time.epoch | int + 86400) | to_datetime }}

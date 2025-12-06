@@ -1,0 +1,73 @@
+# Network Chaos Engineering Tasks
+
+- name: Install traffic control tools if not present
+  package:
+    name: iproute
+    state: present
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+
+- name: Create network chaos configuration
+  set_fact:
+    network_chaos_config:
+      latency: "{{ current_intensity.latency }}"
+      packet_loss: "{{ current_intensity.packet_loss }}"
+      bandwidth: "{{ current_intensity.bandwidth }}"
+      interface: "{{ chaos_network_interface | default('eth0') }}"
+
+- name: Record original network configuration
+  shell: |
+    tc qdisc show dev {{ network_chaos_config.interface }} > /tmp/chaos_working/network_original.txt 2>&1 || echo "No existing qdisc" > /tmp/chaos_working/network_original.txt
+  args:
+    warn: false
+
+- name: Apply network latency chaos
+  shell: |
+    tc qdisc add dev {{ network_chaos_config.interface }} root netem delay {{ network_chaos_config.latency }}ms 2>&1 || \
+    tc qdisc change dev {{ network_chaos_config.interface }} root netem delay {{ network_chaos_config.latency }}ms
+  args:
+    warn: false
+  when: chaos_network_latency | default(true)
+
+- name: Apply packet loss chaos
+  shell: |
+    tc qdisc add dev {{ network_chaos_config.interface }} root netem loss {{ network_chaos_config.packet_loss }}% 2>&1 || \
+    tc qdisc change dev {{ network_chaos_config.interface }} root netem loss {{ network_chaos_config.packet_loss }}%
+  args:
+    warn: false
+  when: chaos_network_packet_loss | default(true)
+
+- name: Apply bandwidth limiting chaos
+  shell: |
+    tc qdisc add dev {{ network_chaos_config.interface }} root tbf rate {{ network_chaos_config.bandwidth }}mbit burst 32kbit latency 400ms 2>&1 || \
+    tc qdisc change dev {{ network_chaos_config.interface }} root tbf rate {{ network_chaos_config.bandwidth }}mbit burst 32kbit latency 400ms
+  args:
+    warn: false
+  when: chaos_network_bandwidth | default(true)
+
+- name: Test network connectivity during chaos
+  shell: |
+    echo "=== NETWORK CHAOS TEST RESULTS ===" > /tmp/chaos_working/network_test_results.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/network_test_results.txt
+    echo "Interface: {{ network_chaos_config.interface }}" >> /tmp/chaos_working/network_test_results.txt
+    echo "Latency: {{ network_chaos_config.latency }}ms" >> /tmp/chaos_working/network_test_results.txt
+    echo "Packet Loss: {{ network_chaos_config.packet_loss }}%" >> /tmp/chaos_working/network_test_results.txt
+    echo "Bandwidth Limit: {{ network_chaos_config.bandwidth }}mbit" >> /tmp/chaos_working/network_test_results.txt
+    echo "" >> /tmp/chaos_working/network_test_results.txt
+    echo "Ping test to 8.8.8.8:" >> /tmp/chaos_working/network_test_results.txt
+    ping -c 5 8.8.8.8 >> /tmp/chaos_working/network_test_results.txt 2>&1
+    echo "" >> /tmp/chaos_working/network_test_results.txt
+    echo "Traffic control status:" >> /tmp/chaos_working/network_test_results.txt
+    tc qdisc show dev {{ network_chaos_config.interface }} >> /tmp/chaos_working/network_test_results.txt
+  args:
+    warn: false
+  when: chaos_network_test | default(true)
+
+- name: Display network chaos applied
+  debug:
+    msg: |
+      Network Chaos Applied:
+      - Interface: {{ network_chaos_config.interface }}
+      - Latency: {{ network_chaos_config.latency }}ms
+      - Packet Loss: {{ network_chaos_config.packet_loss }}%
+      - Bandwidth Limit: {{ network_chaos_config.bandwidth }}mbit
+      - Duration: {{ current_intensity.duration }} seconds

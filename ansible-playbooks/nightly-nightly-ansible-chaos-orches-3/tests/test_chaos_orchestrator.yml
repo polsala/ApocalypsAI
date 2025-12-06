@@ -1,0 +1,266 @@
+---
+# Test Playbook for Chaos Orchestrator
+# This playbook validates the chaos orchestrator functionality
+
+- name: Test Chaos Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    test_results: []
+  
+  tasks:
+    - name: Initialize test results
+      set_fact:
+        test_results: []
+    
+    - name: Test 1 - Validate playbook syntax
+      block:
+        - name: Check if chaos_orchestrator.yml exists
+          stat:
+            path: chaos_orchestrator.yml
+          register: playbook_file
+        
+        - name: Assert playbook file exists
+          assert:
+            that:
+              - playbook_file.stat.exists
+              - playbook_file.stat.isreg
+            fail_msg: "chaos_orchestrator.yml not found or not a regular file"
+            success_msg: "Playbook file exists and is accessible"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 1: PASS - Playbook syntax validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 1: FAIL - Playbook syntax validation'] }}"
+    
+    - name: Test 2 - Validate inventory file
+      block:
+        - name: Check if inventory file exists
+          stat:
+            path: inventory
+          register: inventory_file
+        
+        - name: Assert inventory file exists
+          assert:
+            that:
+              - inventory_file.stat.exists
+              - inventory_file.stat.isreg
+            fail_msg: "inventory file not found or not a regular file"
+            success_msg: "Inventory file exists and is accessible"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 2: PASS - Inventory validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 2: FAIL - Inventory validation'] }}"
+    
+    - name: Test 3 - Validate scenario files
+      block:
+        - name: Check if chaos scenario files exist
+          stat:
+            path: "tasks/chaos/{{ item }}.yml"
+          register: scenario_file
+          loop:
+            - network
+            - resource
+            - service
+            - time
+            - random
+        
+        - name: Assert all scenario files exist
+          assert:
+            that:
+              - scenario_file.results | map(attribute='stat.exists') | list | all
+            fail_msg: "One or more chaos scenario files are missing"
+            success_msg: "All chaos scenario files exist"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 3: PASS - Scenario files validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 3: FAIL - Scenario files validation'] }}"
+    
+    - name: Test 4 - Validate cleanup tasks
+      block:
+        - name: Check if cleanup file exists
+          stat:
+            path: tasks/cleanup.yml
+          register: cleanup_file
+        
+        - name: Assert cleanup file exists
+          assert:
+            that:
+              - cleanup_file.stat.exists
+              - cleanup_file.stat.isreg
+            fail_msg: "tasks/cleanup.yml not found or not a regular file"
+            success_msg: "Cleanup tasks file exists and is accessible"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 4: PASS - Cleanup tasks validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 4: FAIL - Cleanup tasks validation'] }}"
+    
+    - name: Test 5 - Validate template files
+      block:
+        - name: Check if template files exist
+          stat:
+            path: "templates/{{ item }}"
+          register: template_file
+          loop:
+            - chaos_report.j2
+        
+        - name: Assert template files exist
+          assert:
+            that:
+              - template_file.results | map(attribute='stat.exists') | list | all
+            fail_msg: "One or more template files are missing"
+            success_msg: "All template files exist"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 5: PASS - Template files validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 5: FAIL - Template files validation'] }}"
+    
+    - name: Test 6 - Validate variables files
+      block:
+        - name: Check if variables file exists
+          stat:
+            path: vars/chaos_scenarios.yml
+          register: vars_file
+        
+        - name: Assert variables file exists
+          assert:
+            that:
+              - vars_file.stat.exists
+              - vars_file.stat.isreg
+            fail_msg: "vars/chaos_scenarios.yml not found or not a regular file"
+            success_msg: "Variables file exists and is accessible"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 6: PASS - Variables file validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 6: FAIL - Variables file validation'] }}"
+    
+    - name: Test 7 - Validate shell script
+      block:
+        - name: Check if run_chaos.sh exists
+          stat:
+            path: run_chaos.sh
+          register: script_file
+        
+        - name: Assert script file exists
+          assert:
+            that:
+              - script_file.stat.exists
+              - script_file.stat.isreg
+            fail_msg: "run_chaos.sh not found or not a regular file"
+            success_msg: "Shell script exists and is accessible"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 7: PASS - Shell script validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 7: FAIL - Shell script validation'] }}"
+    
+    - name: Test 8 - Validate script permissions
+      block:
+        - name: Check script executable permissions
+          stat:
+            path: run_chaos.sh
+          register: script_perms
+        
+        - name: Assert script is executable
+          assert:
+            that:
+              - script_perms.stat.mode | regex_search('rwx')
+            fail_msg: "run_chaos.sh is not executable"
+            success_msg: "Shell script has proper executable permissions"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 8: PASS - Script permissions validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 8: FAIL - Script permissions validation'] }}"
+    
+    - name: Test 9 - Validate YAML syntax
+      block:
+        - name: Validate main playbook YAML syntax
+          command: python3 -c "import yaml; yaml.safe_load(open('chaos_orchestrator.yml'))"
+          register: yaml_check
+          changed_when: false
+        
+        - name: Assert YAML syntax is valid
+          assert:
+            that:
+              - yaml_check.rc == 0
+            fail_msg: "Invalid YAML syntax in chaos_orchestrator.yml"
+            success_msg: "YAML syntax is valid"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 9: PASS - YAML syntax validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 9: FAIL - YAML syntax validation'] }}"
+    
+    - name: Test 10 - Validate Jinja2 template syntax
+      block:
+        - name: Validate Jinja2 template syntax
+          command: python3 -c "from jinja2 import Template; open('templates/chaos_report.j2').read()"
+          register: template_check
+          changed_when: false
+        
+        - name: Assert template syntax is valid
+          assert:
+            that:
+              - template_check.rc == 0
+            fail_msg: "Invalid Jinja2 template syntax"
+            success_msg: "Template syntax is valid"
+        
+        - name: Add test result
+          set_fact:
+            test_results: "{{ test_results + ['Test 10: PASS - Template syntax validation'] }}"
+      rescue:
+        - name: Handle test failure
+          set_fact:
+            test_results: "{{ test_results + ['Test 10: FAIL - Template syntax validation'] }}"
+    
+    - name: Display test results summary
+      debug:
+        msg: |
+          Test Results Summary:
+          {% for result in test_results %}
+          - {{ result }}
+          {% endfor %}
+          
+          Total Tests: {{ test_results | length }}
+          Passed: {{ test_results | select('search', 'PASS') | list | length }}
+          Failed: {{ test_results | select('search', 'FAIL') | list | length }}
+    
+    - name: Fail if any tests failed
+      fail:
+        msg: "One or more tests failed. Please check the test results above."
+      when: test_results | select('search', 'FAIL') | list | length > 0

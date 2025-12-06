@@ -1,0 +1,141 @@
+# Chaos Engineering Scenarios Configuration
+
+# Define available chaos scenarios
+chaos_scenarios_available:
+  - network
+  - resource
+  - service
+  - time
+  - random
+
+# Scenario descriptions
+chaos_scenario_descriptions:
+  network:
+    name: "Network Chaos"
+    description: "Inject network latency, packet loss, and bandwidth limitations"
+    risks: ["Application timeouts", "Reduced throughput", "Connection failures"]
+    recovery_time: "1-5 minutes"
+  
+  resource:
+    name: "Resource Chaos"
+    description: "Consume CPU, memory, and disk I/O resources"
+    risks: ["System slowdown", "Out of memory errors", "Disk I/O bottlenecks"]
+    recovery_time: "30 seconds - 2 minutes"
+  
+  service:
+    name: "Service Chaos"
+    description: "Restart, stop, or kill system services"
+    risks: ["Service unavailability", "Data loss", "Application crashes"]
+    recovery_time: "1-10 minutes"
+  
+  time:
+    name: "Time Chaos"
+    description: "Manipulate system time and clock synchronization"
+    risks: ["Time-sensitive application failures", "Log corruption", "Authentication issues"]
+    recovery_time: "30 seconds - 5 minutes"
+  
+  random:
+    name: "Random Chaos"
+    description: "Execute unpredictable chaos scenarios"
+    risks: ["Unknown", "Unpredictable system behavior"]
+    recovery_time: "Variable"
+
+# Intensity levels and their parameters
+chaos_intensity_levels:
+  low:
+    name: "Low Intensity"
+    description: "Gentle chaos for initial testing"
+    parameters:
+      cpu_stress: 30
+      memory_stress: 30
+      latency: 50
+      packet_loss: 1
+      bandwidth: 100
+      duration: 10
+  
+  medium:
+    name: "Medium Intensity"
+    description: "Moderate chaos for regular testing"
+    parameters:
+      cpu_stress: 60
+      memory_stress: 60
+      latency: 200
+      packet_loss: 5
+      bandwidth: 50
+      duration: 30
+  
+  high:
+    name: "High Intensity"
+    description: "Aggressive chaos for stress testing"
+    parameters:
+      cpu_stress: 90
+      memory_stress: 90
+      latency: 500
+      packet_loss: 15
+      bandwidth: 10
+      duration: 60
+
+# Safety limits and thresholds
+chaos_safety_limits:
+  max_duration: 300
+  max_cpu_stress: 95
+  max_memory_stress: 95
+  max_latency: 1000
+  max_packet_loss: 50
+  min_bandwidth: 1
+  
+  # System health thresholds
+  health_checks:
+    min_free_memory_mb: 100
+    max_load_average: 10.0
+    max_recovery_time: 300
+
+# Default chaos configuration
+chaos_defaults:
+  enabled: true
+  scenarios: ["network", "resource", "service", "time", "random"]
+  intensity: "medium"
+  duration: 30
+  cleanup_enabled: true
+  report_enabled: true
+  
+  # Scenario-specific defaults
+  network:
+    interface: "eth0"
+    latency: true
+    packet_loss: true
+    bandwidth: true
+    test: true
+  
+  resource:
+    cpu: true
+    memory: true
+    disk: true
+    monitor: true
+  
+  service:
+    action: "random"  # restart, stop, kill, or random
+    list: []  # empty means use discovered services
+  
+  time:
+    offset: true
+    skew: true
+    test: true
+
+# Chaos experiment metadata
+chaos_metadata:
+  version: "1.0.0"
+  author: "Nightly Ansible Chaos Orchestrator"
+  purpose: "Test system resilience through controlled chaos engineering"
+  safety_disclaimer: |
+    WARNING: Use this tool responsibly and only in controlled environments.
+    Chaos engineering can cause system instability and data loss.
+    Always backup critical data before running chaos experiments.
+    Do not run chaos experiments on production systems without proper safeguards.
+  
+  compliance:
+    - Test in isolated environments
+    - Monitor system health during experiments
+    - Have rollback procedures ready
+    - Document all findings and improvements
+    - Get proper approvals before chaos testing

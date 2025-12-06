@@ -1,0 +1,135 @@
+# Cleanup Tasks for Chaos Engineering
+
+- name: Stop any running stress processes
+  shell: |
+    # Kill stress processes if they're still running
+    if [ -f /tmp/chaos_working/cpu_stress.pid ]; then
+      cpu_pid=$(cat /tmp/chaos_working/cpu_stress.pid)
+      kill $cpu_pid 2>/dev/null || true
+      rm -f /tmp/chaos_working/cpu_stress.pid
+    fi
+    
+    if [ -f /tmp/chaos_working/memory_stress.pid ]; then
+      mem_pid=$(cat /tmp/chaos_working/memory_stress.pid)
+      kill $mem_pid 2>/dev/null || true
+      rm -f /tmp/chaos_working/memory_stress.pid
+    fi
+    
+    if [ -f /tmp/chaos_working/disk_stress.pid ]; then
+      disk_pid=$(cat /tmp/chaos_working/disk_stress.pid)
+      kill $disk_pid 2>/dev/null || true
+      rm -f /tmp/chaos_working/disk_stress.pid
+    fi
+    
+    # Kill any remaining stress processes
+    pkill -f "stress" 2>/dev/null || true
+  args:
+    warn: false
+  become: true
+
+- name: Clean up network traffic control rules
+  shell: |
+    # Remove any traffic control rules that were added
+    for interface in eth0 enp0s3 eno1; do
+      if ip link show $interface >/dev/null 2>&1; then
+        tc qdisc del dev $interface root 2>/dev/null || true
+      fi
+    done
+    
+    # Log cleanup results
+    echo "Network cleanup completed at $(date)" > /tmp/chaos_working/network_cleanup.log
+  args:
+    warn: false
+  become: true
+
+- name: Restart failed services
+  shell: |
+    # Get list of failed services
+    failed_services=$(systemctl list-units --failed --no-pager --no-legend | awk '{print $1}')
+    
+    # Attempt to restart failed services
+    for service in $failed_services; do
+      echo "Attempting to restart $service" >> /tmp/chaos_working/service_recovery.log
+      systemctl restart $service 2>&1 >> /tmp/chaos_working/service_recovery.log || true
+      sleep 1
+    done
+    
+    # Log final service status
+    systemctl list-units --failed --no-pager >> /tmp/chaos_working/service_recovery.log
+  args:
+    warn: false
+  become: true
+
+- name: Reset system time if it was modified
+  shell: |
+    # Sync time with NTP if available
+    if command -v ntpdate >/dev/null 2>&1; then
+      ntpdate -s time.nist.gov 2>&1 >> /tmp/chaos_working/time_sync.log || true
+    elif command -v timedatectl >/dev/null 2>&1; then
+      timedatectl set-ntp true 2>&1 >> /tmp/chaos_working/time_sync.log || true
+    fi
+    
+    echo "Time synchronization attempted at $(date)" >> /tmp/chaos_working/time_sync.log
+  args:
+    warn: false
+  become: true
+
+- name: Clean up temporary files
+  file:
+    path: /tmp/chaos_working/{{ item }}
+    state: absent
+  loop:
+    - cpu_stress.pid
+    - memory_stress.pid
+    - disk_stress.pid
+    - network_original.txt
+    - network_test_results.txt
+    - resource_monitoring.txt
+    - service_pre_state.txt
+    - service_post_state.txt
+    - service_kill_result.txt
+    - time_pre_state.txt
+    - time_post_state.txt
+    - time_test_results.txt
+    - time_offset_applied.txt
+    - time_skew_applied.txt
+    - time_restored.txt
+    - time_sync.log
+    - service_recovery.log
+    - network_cleanup.log
+    - random_chaos_log.txt
+
+- name: Generate cleanup summary
+  shell: |
+    echo "=== CHAOS CLEANUP SUMMARY ===" > /tmp/chaos_working/cleanup_summary.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/cleanup_summary.txt
+    echo "" >> /tmp/chaos_working/cleanup_summary.txt
+    
+    echo "Process cleanup status:" >> /tmp/chaos_working/cleanup_summary.txt
+    echo "CPU stress processes: $(pgrep -f stress | wc -l) remaining" >> /tmp/chaos_working/cleanup_summary.txt
+    echo "" >> /tmp/chaos_working/cleanup_summary.txt
+    
+    echo "Network configuration:" >> /tmp/chaos_working/cleanup_summary.txt
+    tc qdisc show 2>&1 | head -10 >> /tmp/chaos_working/cleanup_summary.txt
+    echo "" >> /tmp/chaos_working/cleanup_summary.txt
+    
+    echo "Service status:" >> /tmp/chaos_working/cleanup_summary.txt
+    systemctl list-units --failed --no-pager | head -10 >> /tmp/chaos_working/cleanup_summary.txt
+    echo "" >> /tmp/chaos_working/cleanup_summary.txt
+    
+    echo "System time:" >> /tmp/chaos_working/cleanup_summary.txt
+    echo "Current time: $(date)" >> /tmp/chaos_working/cleanup_summary.txt
+    echo "Time synchronized: $(timedatectl status 2>&1 | grep "NTP synchronized" | awk '{print $3}')" >> /tmp/chaos_working/cleanup_summary.txt
+  args:
+    warn: false
+
+- name: Display cleanup completion
+  debug:
+    msg: |
+      Chaos Engineering Cleanup Completed:
+      - Stress processes terminated
+      - Network rules removed
+      - Failed services restarted
+      - System time synchronized
+      - Temporary files cleaned up
+      - Cleanup summary: /tmp/chaos_working/cleanup_summary.txt

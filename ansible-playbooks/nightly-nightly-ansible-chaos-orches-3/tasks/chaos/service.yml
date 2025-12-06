@@ -1,0 +1,98 @@
+# Service Chaos Engineering Tasks
+
+- name: Get list of running services
+  shell: systemctl list-units --type=service --state=running --no-pager --no-legend | awk '{print $1}' | head -20
+  register: running_services
+  args:
+    warn: false
+
+- name: Create service chaos configuration
+  set_fact:
+    service_chaos_config:
+      target_services: "{{ chaos_service_list | default(running_services.stdout_lines) }}"
+      chaos_actions: ["restart", "stop", "kill"]
+      chaos_action: "{{ chaos_service_action | default(service_chaos_config.chaos_actions | random) }}"
+
+- name: Select random service for chaos
+  set_fact:
+    target_service: "{{ service_chaos_config.target_services | random }}"
+  when: service_chaos_config.target_services | length > 0
+
+- name: Skip service chaos if no services available
+  debug:
+    msg: "No running services found for chaos testing"
+  when: service_chaos_config.target_services | length == 0
+
+- name: Record service state before chaos
+  shell: |
+    echo "=== SERVICE CHAOS PRE-STATE ===" > /tmp/chaos_working/service_pre_state.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/service_pre_state.txt
+    echo "Target Service: {{ target_service | default('none') }}" >> /tmp/chaos_working/service_pre_state.txt
+    echo "Chaos Action: {{ service_chaos_config.chaos_action }}" >> /tmp/chaos_working/service_pre_state.txt
+    echo "" >> /tmp/chaos_working/service_pre_state.txt
+    echo "All running services:" >> /tmp/chaos_working/service_pre_state.txt
+    systemctl list-units --type=service --state=running --no-pager >> /tmp/chaos_working/service_pre_state.txt
+  args:
+    warn: false
+  when: service_chaos_config.target_services | length > 0
+
+- name: Execute service restart chaos
+  service:
+    name: "{{ target_service }}"
+    state: restarted
+  when: service_chaos_config.chaos_action == 'restart' and target_service is defined
+
+- name: Execute service stop chaos
+  service:
+    name: "{{ target_service }}"
+    state: stopped
+  when: service_chaos_config.chaos_action == 'stop' and target_service is defined
+
+- name: Execute service kill chaos
+  shell: |
+    pid=$(systemctl show {{ target_service }} --property=MainPID | cut -d= -f2)
+    if [ ! -z "$pid" ] && [ "$pid" != "0" ]; then
+      kill -9 $pid
+      echo "Killed process $pid for service {{ target_service }}" > /tmp/chaos_working/service_kill_result.txt
+    else
+      echo "No running process found for service {{ target_service }}" > /tmp/chaos_working/service_kill_result.txt
+    fi
+  args:
+    warn: false
+  when: service_chaos_config.chaos_action == 'kill' and target_service is defined
+
+- name: Wait for service chaos effect
+  pause:
+    seconds: 5
+  when: target_service is defined
+
+- name: Record service state after chaos
+  shell: |
+    echo "=== SERVICE CHAOS POST-STATE ===" > /tmp/chaos_working/service_post_state.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/service_post_state.txt
+    echo "Target Service: {{ target_service | default('none') }}" >> /tmp/chaos_working/service_post_state.txt
+    echo "Chaos Action: {{ service_chaos_config.chaos_action }}" >> /tmp/chaos_working/service_post_state.txt
+    echo "" >> /tmp/chaos_working/service_post_state.txt
+    echo "Service status after chaos:" >> /tmp/chaos_working/service_post_state.txt
+    systemctl status {{ target_service | default('nonexistent') }} --no-pager >> /tmp/chaos_working/service_post_state.txt 2>&1
+    echo "" >> /tmp/chaos_working/service_post_state.txt
+    echo "Failed services:" >> /tmp/chaos_working/service_post_state.txt
+    systemctl list-units --failed --no-pager >> /tmp/chaos_working/service_post_state.txt
+  args:
+    warn: false
+  when: service_chaos_config.target_services | length > 0
+
+- name: Attempt service recovery
+  service:
+    name: "{{ target_service }}"
+    state: started
+  when: service_chaos_config.chaos_action in ['stop', 'kill'] and target_service is defined
+
+- name: Display service chaos results
+  debug:
+    msg: |
+      Service Chaos Results:
+      - Target Service: {{ target_service | default('none') }}
+      - Chaos Action: {{ service_chaos_config.chaos_action }}
+      - Chaos Duration: 5 seconds
+      - Recovery Attempted: {{ service_chaos_config.chaos_action in ['stop', 'kill'] }}

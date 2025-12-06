@@ -1,0 +1,19 @@
+[test_hosts]
+localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+
+[staging]
+# Add staging hosts here for testing
+# staging-host ansible_host=192.168.1.101 ansible_user=staging
+
+[production]
+# Add production hosts here (use with caution!)
+# prod-host ansible_host=10.0.0.100 ansible_user=prod
+
+[all:vars]
+# Global variables for testing
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+# Test-specific variables
+chaos_test_mode=true
+chaos_test_duration=10
+chaos_test_intensity=low
