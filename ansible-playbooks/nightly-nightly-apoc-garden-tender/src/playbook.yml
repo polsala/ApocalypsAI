@@ -1,0 +1,20 @@
+---
+- name: Apocalyptic Garden Tender Playbook
+  hosts: garden_hosts
+  gather_facts: no
+  vars:
+    garden_base_dir: "/tmp/apoc_garden"
+    simulated_soil_moisture: 50 # 0-100
+    simulated_temperature: 20  # Celsius
+    moisture_threshold_low: 30
+    temp_threshold_high: 30
+
+  roles:
+    - role: garden_setup
+      tags: [setup]
+    - role: garden_monitor
+      tags: [monitor]
+    - role: garden_tend
+      tags: [tend]
+    - role: garden_report
+      tags: [report]

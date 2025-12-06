@@ -1,0 +1,25 @@
+Apocalyptic Garden Report - {{ ansible_date_time.iso8601 }}
+===================================================
+
+Garden Base Directory: {{ garden_base_dir }}
+
+--- Current Conditions ---
+Simulated Soil Moisture: {{ current_moisture }}%
+Simulated Temperature: {{ current_temperature }}C
+
+--- Actions Taken Today ---
+{% if action_log_content.content is defined %}
+{{ action_log_content.content | b64decode | split('\n') | join('\n') }}
+{% else %}
+No actions recorded.
+{% endif %}
+
+--- Sensor History (Last few entries) ---
+{% if sensor_log_content.content is defined %}
+{{ sensor_log_content.content | b64decode | split('\n')[-5:] | join('\n') }}
+{% else %}
+No sensor data recorded.
+{% endif %}
+
+===================================================
+End of Report

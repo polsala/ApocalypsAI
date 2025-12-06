@@ -1,0 +1,24 @@
+---
+- name: Ensure garden base directory exists
+  ansible.builtin.file:
+    path: "{{ garden_base_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure sensor data log file exists
+  ansible.builtin.file:
+    path: "{{ garden_base_dir }}/sensor_data.log"
+    state: touch
+    mode: '0644'
+
+- name: Ensure garden action log file exists
+  ansible.builtin.file:
+    path: "{{ garden_base_dir }}/garden_log.txt"
+    state: touch
+    mode: '0644'
+
+- name: Simulate installing monitoring tools (create marker file)
+  ansible.builtin.copy:
+    content: "Monitoring tools installed marker\n"
+    dest: "{{ garden_base_dir }}/.monitoring_tools_installed"
+    mode: '0644'

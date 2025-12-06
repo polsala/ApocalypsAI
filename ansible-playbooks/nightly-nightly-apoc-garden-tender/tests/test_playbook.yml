@@ -1,0 +1,160 @@
+---
+- name: Test Apocalyptic Garden Tender Playbook
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_base_dir: "/tmp/apoc_garden_test_{{ lookup('pipe', 'date +%s') }}"
+
+  tasks:
+    - name: Clean up previous test run directory if it exists
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+
+    - name: Test Scenario 1: Low moisture, normal temp -> Watered
+      block:
+        - name: Run garden_setup role for scenario 1
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_setup
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario1"
+
+        - name: Run garden_monitor role for scenario 1
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_monitor
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario1"
+            simulated_soil_moisture: 20
+            simulated_temperature: 20
+
+        - name: Run garden_tend role for scenario 1
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_tend
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario1"
+            simulated_soil_moisture: 20
+            simulated_temperature: 20
+
+        - name: Run garden_report role for scenario 1
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_report
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario1"
+            simulated_soil_moisture: 20
+            simulated_temperature: 20
+
+        - name: Assert watering action in log for scenario 1
+          ansible.builtin.assert:
+            that: "'Action: Watered garden' in lookup('file', '{{ test_base_dir }}/scenario1/garden_log.txt')"
+            fail_msg: "Scenario 1: Watering action not found in log."
+          delegate_to: localhost
+
+        - name: Assert report generated for scenario 1
+          ansible.builtin.assert:
+            that: "lookup('file', '{{ test_base_dir }}/scenario1/garden_report.txt') is search('Current Conditions')"
+            fail_msg: "Scenario 1: Report not generated or incomplete."
+          delegate_to: localhost
+
+    - name: Test Scenario 2: High temperature, normal moisture -> Heat warning, fertilized
+      block:
+        - name: Run garden_setup role for scenario 2
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_setup
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario2"
+
+        - name: Run garden_monitor role for scenario 2
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_monitor
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario2"
+            simulated_soil_moisture: 60
+            simulated_temperature: 35
+
+        - name: Run garden_tend role for scenario 2
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_tend
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario2"
+            simulated_soil_moisture: 60
+            simulated_temperature: 35
+
+        - name: Run garden_report role for scenario 2
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_report
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario2"
+            simulated_soil_moisture: 60
+            simulated_temperature: 35
+
+        - name: Assert heat warning in log for scenario 2
+          ansible.builtin.assert:
+            that: "'WARNING: High temperature detected' in lookup('file', '{{ test_base_dir }}/scenario2/garden_log.txt')"
+            fail_msg: "Scenario 2: Heat warning not found in log."
+          delegate_to: localhost
+
+        - name: Assert fertilizing action in log for scenario 2
+          ansible.builtin.assert:
+            that: "'Action: Fertilized garden' in lookup('file', '{{ test_base_dir }}/scenario2/garden_log.txt')"
+            fail_msg: "Scenario 2: Fertilizing action not found in log."
+          delegate_to: localhost
+
+    - name: Test Scenario 3: Optimal conditions -> Fertilized, no water/warning
+      block:
+        - name: Run garden_setup role for scenario 3
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_setup
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario3"
+
+        - name: Run garden_monitor role for scenario 3
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_monitor
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario3"
+            simulated_soil_moisture: 70
+            simulated_temperature: 25
+
+        - name: Run garden_tend role for scenario 3
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_tend
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario3"
+            simulated_soil_moisture: 70
+            simulated_temperature: 25
+
+        - name: Run garden_report role for scenario 3
+          ansible.builtin.include_role:
+            name: ../src/roles/garden_report
+          vars:
+            garden_base_dir: "{{ test_base_dir }}/scenario3"
+            simulated_soil_moisture: 70
+            simulated_temperature: 25
+
+        - name: Assert no watering action in log for scenario 3
+          ansible.builtin.assert:
+            that: "'Action: Watered garden' not in lookup('file', '{{ test_base_dir }}/scenario3/garden_log.txt')"
+            fail_msg: "Scenario 3: Watering action found unexpectedly."
+          delegate_to: localhost
+
+        - name: Assert no heat warning in log for scenario 3
+          ansible.builtin.assert:
+            that: "'WARNING: High temperature detected' not in lookup('file', '{{ test_base_dir }}/scenario3/garden_log.txt')"
+            fail_msg: "Scenario 3: Heat warning found unexpectedly."
+          delegate_to: localhost
+
+        - name: Assert fertilizing action in log for scenario 3
+          ansible.builtin.assert:
+            that: "'Action: Fertilized garden' in lookup('file', '{{ test_base_dir }}/scenario3/garden_log.txt')"
+            fail_msg: "Scenario 3: Fertilizing action not found."
+          delegate_to: localhost
+
+    - name: Final cleanup of test directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: The tests are deterministic and offline because they do not interact with actual hardware or external services. Instead, they simulate environmental conditions by passing variables (simulated_soil_moisture, simulated_temperature) directly to the playbook. System interactions like 'installing tools' or 'watering' are mocked by creating or appending to local files (.monitoring_tools_installed, garden_log.txt, sensor_data.log) within a temporary, isolated directory (test_base_dir). The lookup('file', ...) module is used to read these mock files and assert tasks verify their content, ensuring the playbook's logic behaves as expected under various simulated conditions without side effects. Cleanup is also included to ensure idempotency for subsequent test runs.

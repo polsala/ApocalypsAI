@@ -1,0 +1,12 @@
+---
+- name: Simulate writing sensor data to log
+  ansible.builtin.lineinfile:
+    path: "{{ garden_base_dir }}/sensor_data.log"
+    line: "Timestamp: {{ ansible_date_time.iso8601_micro }}, Moisture: {{ simulated_soil_moisture }}%, Temp: {{ simulated_temperature }}C"
+    create: yes
+    insertafter: EOF
+
+- name: Set facts from simulated sensor data
+  ansible.builtin.set_fact:
+    current_moisture: "{{ simulated_soil_moisture | int }}"
+    current_temperature: "{{ simulated_temperature | int }}"
