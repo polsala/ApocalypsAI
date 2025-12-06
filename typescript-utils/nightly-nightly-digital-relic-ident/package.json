@@ -1,0 +1,27 @@
+{
+  "name": "nightly-digital-relic-ident",
+  "version": "1.0.0",
+  "description": "Identifies and categorizes digital files as 'relics' based on age, access, and size.",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "npx ts-node src/index.ts",
+    "test": "jest --coverage"
+  },
+  "keywords": [
+    "typescript",
+    "cli",
+    "file-utility",
+    "relic",
+    "cleanup"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
