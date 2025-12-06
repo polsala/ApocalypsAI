@@ -1,0 +1,30 @@
+---
+- name: Dispatch Morale Message
+  hosts: all
+  gather_facts: no
+  vars:
+    target_motd_dir: /etc/motd.d # Default directory for message files
+    target_motd_file: "{{ target_motd_dir }}/apocalypsai_motd" # Default target file path
+  vars_files:
+    - vars/messages.yml
+  tasks:
+    - name: Select a random morale message
+      set_fact:
+        selected_message: "{{ morale_messages | random }}"
+
+    - name: Ensure target directory exists
+      ansible.builtin.file:
+        path: "{{ target_motd_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy the morale message
+      ansible.builtin.copy:
+        content: "{{ selected_message }}\n"
+        dest: "{{ target_motd_file }}"
+        mode: '0644'
+      register: deploy_result
+
+    - name: Report deployment status
+      ansible.builtin.debug:
+        msg: "Morale message deployed: '{{ selected_message }}' to {{ deploy_result.dest }}"
