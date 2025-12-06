@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Mock `df -h /` – prints a single line with a configurable usage percentage.
+# The environment variable DISK_USAGE (default 50) controls the % value.
+
+usage=${DISK_USAGE:-50}
+cat <<EOF
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        20G   10G   10G  ${usage}% /
+EOF
