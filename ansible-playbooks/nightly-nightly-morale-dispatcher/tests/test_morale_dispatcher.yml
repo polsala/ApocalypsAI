@@ -1,0 +1,54 @@
+---
+- name: Setup and Run Morale Dispatcher Test
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/messages.yml # Access messages from the main playbook's vars
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: /tmp/apocalypsai_test_motd_dir
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Mock rationale: Create a temporary directory on the test runner's filesystem.
+
+    - name: Clean up previous test file
+      ansible.builtin.file:
+        path: /tmp/apocalypsai_test_motd
+        state: absent
+      delegate_to: localhost # Mock rationale: Ensure cleanup happens on the test runner's filesystem.
+
+    - name: Run the main morale dispatcher playbook against localhost
+      ansible.builtin.command: >
+        ansible-playbook ../morale_dispatcher.yml
+        -i ../inventory.ini
+        --limit localhost
+        -e "target_motd_dir=/tmp/apocalypsai_test_motd_dir"
+        -e "target_motd_file=/tmp/apocalypsai_test_motd"
+      register: playbook_run_result
+      changed_when: playbook_run_result.rc == 0 # Mock rationale: Assume success if the playbook command exits with status 0.
+      failed_when: playbook_run_result.rc != 0
+      delegate_to: localhost # Mock rationale: Execute the playbook command on the test runner.
+
+    - name: Read the deployed message
+      ansible.builtin.command: cat /tmp/apocalypsai_test_motd
+      register: deployed_content
+      delegate_to: localhost # Mock rationale: Read the file created by the playbook run on the test runner's filesystem.
+
+    - name: Assert that a message was deployed and is valid
+      ansible.builtin.assert:
+        that:
+          - deployed_content.stdout is defined
+          - deployed_content.stdout | length > 0
+          - deployed_content.stdout | trim in morale_messages # Check if it's one of the predefined messages.
+        fail_msg: "No morale message was deployed or content is invalid. Content: '{{ deployed_content.stdout }}'"
+      delegate_to: localhost # Mock rationale: Perform assertion on the test runner.
+
+    - name: Clean up test file and directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/apocalypsai_test_motd
+        - /tmp/apocalypsai_test_motd_dir
+      delegate_to: localhost # Mock rationale: Clean up temporary files after test completion on the test runner's filesystem.
