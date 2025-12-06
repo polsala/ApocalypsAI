@@ -1,0 +1,39 @@
+.ascii-section {
+  padding: 3rem 1rem;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.5);
+  margin: 2rem 0;
+  position: relative;
+  z-index: 10;
+}
+
+.ascii-art {
+  font-size: clamp(0.3rem, 1vw, 0.8rem);
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+  overflow-x: auto;
+  display: inline-block;
+  animation: ascii-flicker 3s infinite;
+  font-family: monospace;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ascii-subtitle {
+  font-size: 1.5rem;
+  color: #ff00ff;
+  margin-top: 1rem;
+  text-shadow: 0 0 20px #ff00ff;
+}
+
+@keyframes ascii-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.9; }
+}
+
+@media (max-width: 768px) {
+  .ascii-art {
+    font-size: 0.4rem;
+  }
+}

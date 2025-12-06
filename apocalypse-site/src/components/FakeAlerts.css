@@ -1,0 +1,78 @@
+.fake-alerts-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 400px;
+}
+
+.fake-alert {
+  background: rgba(255, 0, 0, 0.95);
+  border: 3px solid #ffff00;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+  animation: alert-slide-in 0.5s ease-out, alert-shake 0.5s ease-in-out infinite;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.alert-content {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-shadow: 0 0 10px black;
+  flex: 1;
+}
+
+.alert-close {
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.alert-close:hover {
+  background: white;
+  color: red;
+  transform: rotate(90deg);
+}
+
+@keyframes alert-slide-in {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes alert-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
+}
+
+@media (max-width: 768px) {
+  .fake-alerts-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
