@@ -1,0 +1,48 @@
+# Random Chaos Engineering Tasks
+
+- name: Generate random chaos parameters
+  set_fact:
+    random_chaos_seed: "{{ ansible_date_time.epoch }}"
+    random_chaos_type: "{{ ['network', 'resource', 'service', 'time'] | random }}"
+    random_chaos_intensity: "{{ ['low', 'medium', 'high'] | random }}"
+    random_chaos_duration: "{{ range(5, 61) | random }}"
+
+- name: Display random chaos selection
+  debug:
+    msg: |
+      Random Chaos Selection:
+      - Seed: {{ random_chaos_seed }}
+      - Chaos Type: {{ random_chaos_type }}
+      - Intensity: {{ random_chaos_intensity }}
+      - Duration: {{ random_chaos_duration }} seconds
+
+- name: Execute random network chaos
+  include_tasks: chaos/network.yml
+  when: random_chaos_type == 'network'
+
+- name: Execute random resource chaos
+  include_tasks: chaos/resource.yml
+  when: random_chaos_type == 'resource'
+
+- name: Execute random service chaos
+  include_tasks: chaos/service.yml
+  when: random_chaos_type == 'service'
+
+- name: Execute random time chaos
+  include_tasks: chaos/time.yml
+  when: random_chaos_type == 'time'
+
+- name: Log random chaos execution
+  shell: |
+    echo "=== RANDOM CHAOS EXECUTION LOG ===" > /tmp/chaos_working/random_chaos_log.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "Seed: {{ random_chaos_seed }}" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "Chaos Type: {{ random_chaos_type }}" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "Intensity: {{ random_chaos_intensity }}" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "Duration: {{ random_chaos_duration }} seconds" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "" >> /tmp/chaos_working/random_chaos_log.txt
+    echo "System state during chaos:" >> /tmp/chaos_working/random_chaos_log.txt
+    uptime >> /tmp/chaos_working/random_chaos_log.txt
+    ps aux --sort=-%cpu | head -5 >> /tmp/chaos_working/random_chaos_log.txt
+  args:
+    warn: false

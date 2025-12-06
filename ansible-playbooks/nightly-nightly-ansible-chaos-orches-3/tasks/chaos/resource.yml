@@ -1,0 +1,101 @@
+# Resource Chaos Engineering Tasks
+
+- name: Install stress testing tools if not present
+  package:
+    name: stress
+    state: present
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+
+- name: Create resource chaos configuration
+  set_fact:
+    resource_chaos_config:
+      cpu_cores: "{{ ansible_processor_vcpus | default(1) }}"
+      cpu_stress: "{{ (current_intensity.cpu_stress * ansible_processor_vcpus / 100) | int | default(1) }}"
+      memory_total_mb: "{{ ansible_memtotal_mb | default(1024) }}"
+      memory_stress_mb: "{{ (ansible_memtotal_mb * current_intensity.memory_stress / 100) | int | default(512) }}"
+      disk_stress_workers: "{{ (ansible_processor_vcpus / 2) | int | default(1) }}"
+
+- name: Validate resource availability
+  assert:
+    that:
+      - resource_chaos_config.cpu_stress|int > 0
+      - resource_chaos_config.memory_stress_mb|int > 0
+      - resource_chaos_config.disk_stress_workers|int > 0
+    fail_msg: "Insufficient resources for chaos testing"
+    success_msg: "Resource chaos parameters validated"
+
+- name: Record original resource usage
+  shell: |
+    echo "=== PRE-CHAOS RESOURCE USAGE ===" > /tmp/chaos_working/pre_resource_usage.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "CPU Cores: {{ resource_chaos_config.cpu_cores }}" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "Memory Total: {{ resource_chaos_config.memory_total_mb }} MB" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "Current CPU Usage:" >> /tmp/chaos_working/pre_resource_usage.txt
+    cat /proc/loadavg >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "Current Memory Usage:" >> /tmp/chaos_working/pre_resource_usage.txt
+    free -h >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "" >> /tmp/chaos_working/pre_resource_usage.txt
+    echo "Current Disk I/O:" >> /tmp/chaos_working/pre_resource_usage.txt
+    iostat -x 1 1 >> /tmp/chaos_working/pre_resource_usage.txt 2>&1 || df -h >> /tmp/chaos_working/pre_resource_usage.txt
+  args:
+    warn: false
+
+- name: Apply CPU stress chaos
+  shell: |
+    stress --cpu {{ resource_chaos_config.cpu_stress }} --timeout {{ current_intensity.duration }}s &
+    echo $! > /tmp/chaos_working/cpu_stress.pid
+  args:
+    warn: false
+  when: chaos_resource_cpu | default(true)
+
+- name: Apply memory stress chaos
+  shell: |
+    stress --vm {{ resource_chaos_config.disk_stress_workers }} --vm-bytes {{ resource_chaos_config.memory_stress_mb }}m --timeout {{ current_intensity.duration }}s &
+    echo $! > /tmp/chaos_working/memory_stress.pid
+  args:
+    warn: false
+  when: chaos_resource_memory | default(true)
+
+- name: Apply disk I/O stress chaos
+  shell: |
+    stress --io {{ resource_chaos_config.disk_stress_workers }} --hdd --timeout {{ current_intensity.duration }}s &
+    echo $! > /tmp/chaos_working/disk_stress.pid
+  args:
+    warn: false
+  when: chaos_resource_disk | default(true)
+
+- name: Monitor resource usage during chaos
+  shell: |
+    echo "=== RESOURCE CHAOS MONITORING ===" > /tmp/chaos_working/resource_monitoring.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/resource_monitoring.txt
+    echo "Chaos Duration: {{ current_intensity.duration }} seconds" >> /tmp/chaos_working/resource_monitoring.txt
+    echo "CPU Stress: {{ resource_chaos_config.cpu_stress }} cores" >> /tmp/chaos_working/resource_monitoring.txt
+    echo "Memory Stress: {{ resource_chaos_config.memory_stress_mb }} MB" >> /tmp/chaos_working/resource_monitoring.txt
+    echo "Disk Stress Workers: {{ resource_chaos_config.disk_stress_workers }}" >> /tmp/chaos_working/resource_monitoring.txt
+    echo "" >> /tmp/chaos_working/resource_monitoring.txt
+    
+    # Monitor every 5 seconds during chaos
+    for i in $(seq 1 5); do
+      echo "--- Monitoring Check $i ---" >> /tmp/chaos_working/resource_monitoring.txt
+      echo "Time: $(date)" >> /tmp/chaos_working/resource_monitoring.txt
+      echo "Load Average: $(cat /proc/loadavg)" >> /tmp/chaos_working/resource_monitoring.txt
+      echo "Memory Usage: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%" >> /tmp/chaos_working/resource_monitoring.txt
+      echo "Top CPU Processes:" >> /tmp/chaos_working/resource_monitoring.txt
+      ps aux --sort=-%cpu | head -3 >> /tmp/chaos_working/resource_monitoring.txt
+      echo "" >> /tmp/chaos_working/resource_monitoring.txt
+      sleep {{ (current_intensity.duration / 5) | int }}
+    done
+  args:
+    warn: false
+  when: chaos_resource_monitor | default(true)
+
+- name: Display resource chaos applied
+  debug:
+    msg: |
+      Resource Chaos Applied:
+      - CPU Stress: {{ resource_chaos_config.cpu_stress }} cores
+      - Memory Stress: {{ resource_chaos_config.memory_stress_mb }} MB
+      - Disk I/O Workers: {{ resource_chaos_config.disk_stress_workers }}
+      - Duration: {{ current_intensity.duration }} seconds

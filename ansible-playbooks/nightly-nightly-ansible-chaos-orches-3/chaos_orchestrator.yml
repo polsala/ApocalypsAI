@@ -1,0 +1,135 @@
+---
+- name: Chaos Engineering Orchestrator
+  hosts: all
+  become: true
+  vars:
+    chaos_duration: "{{ chaos_duration | default(30) }}"
+    chaos_intensity: "{{ chaos_intensity | default('medium') }}"
+    chaos_scenarios: "{{ chaos_scenarios | default(['network', 'resource', 'service', 'time', 'random']) }}"
+    chaos_enabled: "{{ chaos_enabled | default(true) }}"
+    cleanup_enabled: "{{ cleanup_enabled | default(true) }}"
+    report_enabled: "{{ report_enabled | default(true) }}"
+    
+    # Intensity-based parameters
+    intensity_params:
+      low:
+        cpu_stress: 30
+        memory_stress: 30
+        latency: 50
+        packet_loss: 1
+        bandwidth: 100
+        duration: 10
+      medium:
+        cpu_stress: 60
+        memory_stress: 60
+        latency: 200
+        packet_loss: 5
+        bandwidth: 50
+        duration: 30
+      high:
+        cpu_stress: 90
+        memory_stress: 90
+        latency: 500
+        packet_loss: 15
+        bandwidth: 10
+        duration: 60
+  
+    current_intensity: "{{ intensity_params[chaos_intensity] | default(intensity_params.medium) }}"
+  
+  pre_tasks:
+    - name: Validate chaos configuration
+      assert:
+        that:
+          - chaos_duration|int > 0
+          - chaos_duration|int <= 300
+          - chaos_intensity in ['low', 'medium', 'high']
+          - chaos_scenarios | length > 0
+        fail_msg: "Invalid chaos configuration"
+        success_msg: "Chaos configuration validated"
+    
+    - name: Gather system information for chaos
+      setup:
+        filter: ansible_distribution*,ansible_kernel,ansible_memtotal_mb,ansible_processor_vcpus
+    
+    - name: Create chaos working directory
+      file:
+        path: /tmp/chaos_working
+        state: directory
+        mode: '0755'
+    
+    - name: Record pre-chaos system state
+      shell: |
+        echo "=== PRE-CHAOS SYSTEM STATE ===" > /tmp/chaos_working/pre_chaos_state.txt
+        echo "Timestamp: $(date)" >> /tmp/chaos_working/pre_chaos_state.txt
+        echo "Uptime: $(uptime)" >> /tmp/chaos_working/pre_chaos_state.txt
+        echo "Load Average: $(cat /proc/loadavg)" >> /tmp/chaos_working/pre_chaos_state.txt
+        echo "Memory Usage: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%" >> /tmp/chaos_working/pre_chaos_state.txt
+        echo "Disk Usage: $(df -h / | tail -1 | awk '{print $5}')" >> /tmp/chaos_working/pre_chaos_state.txt
+        ps aux --sort=-%cpu | head -10 >> /tmp/chaos_working/pre_chaos_state.txt
+      args:
+        warn: false
+  
+  tasks:
+    - name: Include chaos scenarios based on configuration
+      include_tasks: "tasks/chaos/{{ item }}.yml"
+      loop: "{{ chaos_scenarios }}"
+      when: chaos_enabled
+    
+    - name: Wait for chaos duration
+      pause:
+        seconds: "{{ current_intensity.duration }}"
+      when: chaos_enabled
+    
+    - name: Record post-chaos system state
+      shell: |
+        echo "=== POST-CHAOS SYSTEM STATE ===" > /tmp/chaos_working/post_chaos_state.txt
+        echo "Timestamp: $(date)" >> /tmp/chaos_working/post_chaos_state.txt
+        echo "Uptime: $(uptime)" >> /tmp/chaos_working/post_chaos_state.txt
+        echo "Load Average: $(cat /proc/loadavg)" >> /tmp/chaos_working/post_chaos_state.txt
+        echo "Memory Usage: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%" >> /tmp/chaos_working/post_chaos_state.txt
+        echo "Disk Usage: $(df -h / | tail -1 | awk '{print $5}')" >> /tmp/chaos_working/post_chaos_state.txt
+        ps aux --sort=-%cpu | head -10 >> /tmp/chaos_working/post_chaos_state.txt
+      args:
+        warn: false
+      when: chaos_enabled
+    
+    - name: Execute cleanup procedures
+      include_tasks: tasks/cleanup.yml
+      when: cleanup_enabled
+    
+    - name: Generate chaos report
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_working/chaos_report_{{ ansible_hostname }}_{{ ansible_date_time.epoch }}.txt
+        mode: '0644'
+      when: report_enabled
+    
+    - name: Display chaos summary
+      debug:
+        msg: |
+          Chaos Engineering Summary for {{ ansible_hostname }}:
+          - Chaos Duration: {{ current_intensity.duration }} seconds
+          - Chaos Intensity: {{ chaos_intensity }}
+          - Scenarios Executed: {{ chaos_scenarios | join(', ') }}
+          - Report Generated: /tmp/chaos_working/chaos_report_{{ ansible_hostname }}_{{ ansible_date_time.epoch }}.txt
+  
+  post_tasks:
+    - name: Verify system recovery
+      shell: |
+        echo "=== SYSTEM RECOVERY VERIFICATION ===" > /tmp/chaos_working/recovery_check.txt
+        echo "Timestamp: $(date)" >> /tmp/chaos_working/recovery_check.txt
+        echo "Services Status:" >> /tmp/chaos_working/recovery_check.txt
+        systemctl list-units --failed --no-pager >> /tmp/chaos_working/recovery_check.txt
+        echo "Network Connectivity:" >> /tmp/chaos_working/recovery_check.txt
+        ping -c 3 8.8.8.8 >> /tmp/chaos_working/recovery_check.txt 2>&1
+        echo "Disk Space:" >> /tmp/chaos_working/recovery_check.txt
+        df -h >> /tmp/chaos_working/recovery_check.txt
+      args:
+        warn: false
+      when: chaos_enabled
+    
+    - name: Display recovery status
+      shell: cat /tmp/chaos_working/recovery_check.txt
+      args:
+        warn: false
+      when: chaos_enabled

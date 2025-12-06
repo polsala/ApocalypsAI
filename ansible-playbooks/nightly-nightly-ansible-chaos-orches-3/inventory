@@ -1,0 +1,9 @@
+[local]
+localhost ansible_connection=local
+
+[remote]
+# Add your remote hosts here
+# example-host ansible_host=192.168.1.100 ansible_user=root
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3

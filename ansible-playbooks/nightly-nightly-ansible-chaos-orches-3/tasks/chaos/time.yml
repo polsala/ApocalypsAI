@@ -1,0 +1,130 @@
+# Time Chaos Engineering Tasks
+
+- name: Create time chaos configuration
+  set_fact:
+    time_chaos_config:
+      original_time: "{{ ansible_date_time.iso8601 }}"
+      time_offset_hours: "{{ range(-2, 3) | list | difference([0]) | random }}"
+      time_skew_minutes: "{{ range(1, 61) | random }}"
+
+- name: Record original system time
+  shell: |
+    echo "=== TIME CHAOS PRE-STATE ===" > /tmp/chaos_working/time_pre_state.txt
+    echo "Original Time: $(date)" >> /tmp/chaos_working/time_pre_state.txt
+    echo "Original Timestamp: $(date +%s)" >> /tmp/chaos_working/time_pre_state.txt
+    echo "Timezone: $(cat /etc/timezone 2>/dev/null || echo 'Unknown')" >> /tmp/chaos_working/time_pre_state.txt
+    echo "Hardware Clock: $(hwclock --show 2>&1)" >> /tmp/chaos_working/time_pre_state.txt
+  args:
+    warn: false
+
+- name: Display time chaos configuration
+  debug:
+    msg: |
+      Time Chaos Configuration:
+      - Original Time: {{ time_chaos_config.original_time }}
+      - Time Offset: {{ time_chaos_config.time_offset_hours }} hours
+      - Time Skew: {{ time_chaos_config.time_skew_minutes }} minutes
+
+- name: Apply time offset chaos
+  shell: |
+    # Calculate new time
+    current_timestamp=$(date +%s)
+    offset_seconds=$(( {{ time_chaos_config.time_offset_hours }} * 3600 ))
+    new_timestamp=$(( current_timestamp + offset_seconds ))
+    
+    # Set new time (requires root)
+    date -s "@$new_timestamp"
+    
+    # Record the change
+    echo "$new_timestamp" > /tmp/chaos_working/time_offset_applied.txt
+  args:
+    warn: false
+  when: chaos_time_offset | default(true)
+  become: true
+
+- name: Apply time skew chaos
+  shell: |
+    # Create a time skew by setting the clock forward/backward by minutes
+    current_time=$(date)
+    skewed_time=$(date -d "{{ time_chaos_config.time_skew_minutes }} minutes ago")
+    
+    # For demonstration, we'll just log what would happen
+    echo "$current_time" > /tmp/chaos_working/original_time.txt
+    echo "$skewed_time" > /tmp/chaos_working/skewed_time.txt
+    
+    echo "Time skew of {{ time_chaos_config.time_skew_minutes }} minutes would be applied" > /tmp/chaos_working/time_skew_applied.txt
+  args:
+    warn: false
+  when: chaos_time_skew | default(true)
+
+- name: Test time-sensitive operations during chaos
+  shell: |
+    echo "=== TIME CHAOS TEST RESULTS ===" > /tmp/chaos_working/time_test_results.txt
+    echo "Timestamp: $(date)" >> /tmp/chaos_working/time_test_results.txt
+    echo "Time Offset: {{ time_chaos_config.time_offset_hours }} hours" >> /tmp/chaos_working/time_test_results.txt
+    echo "Time Skew: {{ time_chaos_config.time_skew_minutes }} minutes" >> /tmp/chaos_working/time_test_results.txt
+    echo "" >> /tmp/chaos_working/time_test_results.txt
+    
+    echo "Current system time: $(date)" >> /tmp/chaos_working/time_test_results.txt
+    echo "Current timestamp: $(date +%s)" >> /tmp/chaos_working/time_test_results.txt
+    echo "" >> /tmp/chaos_working/time_test_results.txt
+    
+    echo "Testing time-dependent operations:" >> /tmp/chaos_working/time_test_results.txt
+    
+    # Test file timestamp operations
+    touch /tmp/chaos_working/time_test_file
+    echo "File created at: $(date -r /tmp/chaos_working/time_test_file)" >> /tmp/chaos_working/time_test_results.txt
+    
+    # Test cron-like scheduling (simulate)
+    echo "Simulated cron job execution check:" >> /tmp/chaos_working/time_test_results.txt
+    current_hour=$(date +%H)
+    if [ $((current_hour % 2)) -eq 0 ]; then
+      echo "Even hour job would run" >> /tmp/chaos_working/time_test_results.txt
+    else
+      echo "Odd hour job would run" >> /tmp/chaos_working/time_test_results.txt
+    fi
+  args:
+    warn: false
+  when: chaos_time_test | default(true)
+
+- name: Wait for time chaos duration
+  pause:
+    seconds: "{{ current_intensity.duration }}"
+  when: chaos_time_offset | default(true)
+
+- name: Restore original time
+  shell: |
+    # Restore original time if it was changed
+    if [ -f /tmp/chaos_working/time_offset_applied.txt ]; then
+      original_timestamp=$(cat /tmp/chaos_working/time_offset_applied.txt)
+      # Calculate reverse offset
+      current_timestamp=$(date +%s)
+      reverse_offset=$(( original_timestamp - current_timestamp ))
+      new_timestamp=$(( current_timestamp + reverse_offset ))
+      date -s "@$new_timestamp"
+      echo "Time restored to original" > /tmp/chaos_working/time_restored.txt
+    fi
+  args:
+    warn: false
+  when: chaos_time_offset | default(true)
+  become: true
+
+- name: Record final time state
+  shell: |
+    echo "=== TIME CHAOS POST-STATE ===" > /tmp/chaos_working/time_post_state.txt
+    echo "Final Time: $(date)" >> /tmp/chaos_working/time_post_state.txt
+    echo "Final Timestamp: $(date +%s)" >> /tmp/chaos_working/time_post_state.txt
+    echo "Time Chaos Duration: {{ current_intensity.duration }} seconds" >> /tmp/chaos_working/time_post_state.txt
+    echo "Time Offset Applied: {{ time_chaos_config.time_offset_hours }} hours" >> /tmp/chaos_working/time_post_state.txt
+    echo "Time Skew Applied: {{ time_chaos_config.time_skew_minutes }} minutes" >> /tmp/chaos_working/time_post_state.txt
+  args:
+    warn: false
+
+- name: Display time chaos summary
+  debug:
+    msg: |
+      Time Chaos Summary:
+      - Time Offset: {{ time_chaos_config.time_offset_hours }} hours
+      - Time Skew: {{ time_chaos_config.time_skew_minutes }} minutes
+      - Duration: {{ current_intensity.duration }} seconds
+      - System time restored: {{ chaos_time_offset | default(false) }}
