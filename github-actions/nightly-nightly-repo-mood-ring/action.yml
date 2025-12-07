@@ -1,0 +1,21 @@
+name: 'Nightly Repo Mood Ring'
+description: 'Analyzes recent commit messages for sentiment to report the repository''s "mood."'
+inputs:
+  commit-count:
+    description: 'Number of recent commit messages to analyze.'
+    required: false
+    default: '10'
+outputs:
+  repo-mood:
+    description: 'The determined mood of the repository (e.g., Joyful, Stressed, Optimistic, Concerned, Neutral).'
+  mood-summary:
+    description: 'A brief textual summary of the analysis.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Mood Analyzer
+      shell: bash
+      run: |
+        # Ensure the script is executable
+        chmod +x ${{ github.action_path }}/src/mood_analyzer.sh
+        ${{ github.action_path }}/src/mood_analyzer.sh "${{ inputs.commit-count }}"
