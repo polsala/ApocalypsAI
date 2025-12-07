@@ -1,0 +1,28 @@
+- name: Adjust system time forward (low intensity)
+  shell: |
+    timedatectl set-time "$(date -d '+5 minutes' '+%Y-%m-%d %H:%M:%S')" --adjust-system-clock
+    echo "Time chaos: System time adjusted forward by 5 minutes at $(date)" >> /tmp/chaos_log.txt
+  when: chaos_intensity == 'low'
+  ignore_errors: true
+
+- name: Adjust system time forward (medium intensity)
+  shell: |
+    timedatectl set-time "$(date -d '+15 minutes' '+%Y-%m-%d %H:%M:%S')" --adjust-system-clock
+    echo "Time chaos: System time adjusted forward by 15 minutes at $(date)" >> /tmp/chaos_log.txt
+  when: chaos_intensity == 'medium'
+  ignore_errors: true
+
+- name: Adjust system time forward (high intensity)
+  shell: |
+    timedatectl set-time "$(date -d '+30 minutes' '+%Y-%m-%d %H:%M:%S')" --adjust-system-clock
+    echo "Time chaos: System time adjusted forward by 30 minutes at $(date)" >> /tmp/chaos_log.txt
+  when: chaos_intensity == 'high'
+  ignore_errors: true
+
+- name: Simulate time drift with NTP disable (medium/high intensity)
+  shell: |
+    systemctl stop systemd-timesyncd
+    systemctl disable systemd-timesyncd
+    echo "Time chaos: NTP synchronization disabled at $(date)" >> /tmp/chaos_log.txt
+  when: chaos_intensity in ['medium', 'high']
+  ignore_errors: true

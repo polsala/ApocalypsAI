@@ -1,0 +1,54 @@
+- name: Get list of running services (medium/high intensity)
+  shell: systemctl list-units --type=service --state=running --no-pager --no-legend | awk '{print $1}' | head -5
+  args:
+    executable: /bin/bash
+  register: running_services
+  when: chaos_intensity in ['medium', 'high']
+  ignore_errors: true
+
+- name: Randomly restart a service (medium intensity)
+  shell: |
+    SERVICES=("{{ running_services.stdout_lines }}")
+    if [ ${#SERVICES[@]} -gt 0 ]; then
+      RANDOM_SERVICE=${SERVICES[$RANDOM % ${#SERVICES[@]}]}
+      echo "Restarting service: $RANDOM_SERVICE"
+      systemctl restart $RANDOM_SERVICE
+      echo "Service $RANDOM_SERVICE restarted at $(date)" >> /tmp/chaos_log.txt
+    fi
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'medium'
+  ignore_errors: true
+
+- name: Restart multiple services (high intensity)
+  shell: |
+    SERVICES=("{{ running_services.stdout_lines }}")
+    for i in {1..3}; do
+      if [ ${#SERVICES[@]} -gt 0 ]; then
+        RANDOM_SERVICE=${SERVICES[$RANDOM % ${#SERVICES[@]}]}
+        echo "Restarting service: $RANDOM_SERVICE"
+        systemctl restart $RANDOM_SERVICE
+        echo "Service $RANDOM_SERVICE restarted at $(date)" >> /tmp/chaos_log.txt
+        sleep 2
+      fi
+    done
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true
+
+- name: Stop a non-critical service temporarily (high intensity)
+  shell: |
+    # Try to stop common non-critical services
+    for service in "cups" "bluetooth" "avahi-daemon"; do
+      if systemctl is-active --quiet $service 2>/dev/null; then
+        echo "Stopping service: $service"
+        systemctl stop $service
+        echo "Service $service stopped at $(date)" >> /tmp/chaos_log.txt
+        break
+      fi
+    done
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true

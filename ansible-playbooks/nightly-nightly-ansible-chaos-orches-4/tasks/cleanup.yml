@@ -1,0 +1,46 @@
+- name: Remove network latency and packet loss
+  shell: |
+    tc qdisc del dev eth0 root 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+
+- name: Restart stopped services
+  shell: |
+    for service in "cups" "bluetooth" "avahi-daemon"; do
+      if systemctl list-unit-files | grep -q "^$service"; then
+        if ! systemctl is-active --quiet $service 2>/dev/null; then
+          echo "Restarting service: $service"
+          systemctl start $service
+          echo "Service $service restarted during cleanup at $(date)" >> /tmp/chaos_log.txt
+        fi
+      fi
+    done
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+
+- name: Kill CPU and memory consuming processes
+  shell: |
+    pkill -f "^yes" 2>/dev/null || true
+    pkill -f "python3.*bytearray" 2>/dev/null || true
+    echo "Cleanup: Resource consuming processes terminated at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+
+- name: Restore system time
+  shell: |
+    systemctl start systemd-timesyncd
+    systemctl enable systemd-timesyncd
+    timedatectl set-ntp true
+    echo "Cleanup: System time synchronization restored at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+
+- name: Record cleanup completion
+  shell: |
+    echo "Cleanup completed at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash

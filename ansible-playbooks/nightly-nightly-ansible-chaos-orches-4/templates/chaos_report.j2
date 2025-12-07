@@ -1,0 +1,71 @@
+╔══════════════════════════════════════════════════════════════╗
+║                  CHAOS ENGINEERING REPORT                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+Hostname: {{ inventory_hostname }}
+Chaos Intensity: {{ chaos_intensity | upper }}
+Chaos Duration: {{ chaos_duration }} seconds
+Timestamp: {{ ansible_date_time.iso8601 }}
+
+╔══════════════════════════════════════════════════════════════╗
+║                        CHAOS SCENARIOS                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+{% if chaos_intensity == 'low' %}
+• 🐣 Gentle network latency introduced
+• 🔄 Single service restarted
+• 💾 Minimal CPU consumption
+{% elif chaos_intensity == 'medium' %}
+• 🌪️  Moderate network latency and packet loss
+• 🔄 Multiple services restarted
+• 💾 Moderate CPU and memory consumption
+• ⏰ System time adjusted
+{% elif chaos_intensity == 'high' %}
+• 🌋 Severe network latency and packet loss
+• 🔄 Multiple critical services restarted
+• 💾 High CPU and memory consumption
+• ⏰ Significant time manipulation
+{% endif %}
+
+╔══════════════════════════════════════════════════════════════╗
+║                        SYSTEM HEALTH                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+• CPU Usage: {{ ansible_processor_vcpus }} cores available
+• Memory: {{ ansible_memtotal_mb }} MB total
+• OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+• Kernel: {{ ansible_kernel }}
+
+╔══════════════════════════════════════════════════════════════╗
+║                      CHAOS SUMMARY                           ║
+╚══════════════════════════════════════════════════════════════╝
+
+{% if chaos_enabled %}
+✅ Chaos engineering successfully executed!
+✅ Systems demonstrated resilience
+✅ Automatic rollback completed
+{% else %}
+❌ Chaos engineering was disabled
+ℹ️  Enable chaos_enabled=true to run scenarios
+{% endif %}
+
+╔══════════════════════════════════════════════════════════════╗
+║                        RECOMMENDATIONS                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+• Review system logs for any anomalies
+• Monitor application performance
+• Consider implementing circuit breakers
+• Test disaster recovery procedures
+• Document lessons learned
+
+╔══════════════════════════════════════════════════════════════╗
+║                    CHAOS ENGINEER'S NOTE                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+"Chaos is not a pit. Chaos is a ladder. And those who fail to climb
+will be left behind when the next disaster strikes."
+
+— The Nightly Chaos Orchestrator
+
+Report generated: {{ ansible_date_time.strftime('%Y-%m-%d %H:%M:%S %Z') }}

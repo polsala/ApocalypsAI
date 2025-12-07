@@ -1,0 +1,102 @@
+---
+- name: Test Nightly Ansible Chaos Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Test playbook syntax
+      command: ansible-playbook --syntax-check chaos_orchestrator.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: Display syntax check results
+      debug:
+        var: syntax_check.stdout_lines
+
+    - name: Test inventory file exists
+      stat:
+        path: inventory.ini
+      register: inventory_stat
+
+    - name: Assert inventory file exists
+      assert:
+        that:
+          - inventory_stat.stat.exists
+        msg: "Inventory file should exist"
+
+    - name: Test chaos scenarios variables
+      include_vars:
+        file: vars/chaos_scenarios.yml
+        name: test_vars
+
+    - name: Test low intensity scenarios defined
+      assert:
+        that:
+          - test_vars.chaos_scenarios.low is defined
+          - test_vars.chaos_scenarios.low | length > 0
+        msg: "Low intensity scenarios should be defined"
+
+    - name: Test medium intensity scenarios defined
+      assert:
+        that:
+          - test_vars.chaos_scenarios.medium is defined
+          - test_vars.chaos_scenarios.medium | length > 0
+        msg: "Medium intensity scenarios should be defined"
+
+    - name: Test high intensity scenarios defined
+      assert:
+        that:
+          - test_vars.chaos_scenarios.high is defined
+          - test_vars.chaos_scenarios.high | length > 0
+        msg: "High intensity scenarios should be defined"
+
+    - name: Test chaos limits defined
+      assert:
+        that:
+          - test_vars.chaos_limits.max_duration is defined
+          - test_vars.chaos_limits.max_concurrent is defined
+          - test_vars.chaos_limits.rollback_timeout is defined
+        msg: "Chaos limits should be defined"
+
+    - name: Test protected services defined
+      assert:
+        that:
+          - test_vars.protected_services is defined
+          - test_vars.protected_services | length > 0
+        msg: "Protected services should be defined"
+
+    - name: Test reporting configuration
+      assert:
+        that:
+          - test_vars.reporting.enabled is defined
+          - test_vars.reporting.format is defined
+        msg: "Reporting configuration should be defined"
+
+    - name: Test template exists
+      stat:
+        path: templates/chaos_report.j2
+      register: template_stat
+
+    - name: Assert template exists
+      assert:
+        that:
+          - template_stat.stat.exists
+        msg: "Chaos report template should exist"
+
+    - name: Test task files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - tasks/chaos/network.yml
+        - tasks/chaos/service.yml
+        - tasks/chaos/resource.yml
+        - tasks/chaos/time.yml
+        - tasks/cleanup.yml
+      register: task_files
+
+    - name: Assert all task files exist
+      assert:
+        that:
+          - item.stat.exists
+        msg: "Task file {{ item.item }} should exist"
+      loop: "{{ task_files }}"

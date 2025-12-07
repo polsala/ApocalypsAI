@@ -1,0 +1,84 @@
+# Chaos Engineering Scenarios Configuration
+
+# Scenario definitions by intensity
+chaos_scenarios:
+  low:
+    - name: "Gentle Network Latency"
+      description: "Adds 100ms latency to network traffic"
+      duration: 30
+      rollback: true
+    - name: "Single Service Restart"
+      description: "Restarts one random service"
+      duration: 10
+      rollback: true
+    - name: "Minimal CPU Load"
+      description: "Creates light CPU load for 30 seconds"
+      duration: 30
+      rollback: true
+
+  medium:
+    - name: "Moderate Network Chaos"
+      description: "Adds 500ms latency and 10% packet loss"
+      duration: 60
+      rollback: true
+    - name: "Multiple Service Restarts"
+      description: "Restarts 2-3 random services"
+      duration: 20
+      rollback: true
+    - name: "CPU and Memory Load"
+      description: "Creates moderate CPU and memory load"
+      duration: 60
+      rollback: true
+    - name: "Time Adjustment"
+      description: "Adjusts system time forward by 15 minutes"
+      duration: 30
+      rollback: true
+
+  high:
+    - name: "Severe Network Chaos"
+      description: "Adds 1000ms latency and 25% packet loss"
+      duration: 120
+      rollback: true
+    - name: "Critical Service Disruption"
+      description: "Restarts multiple critical services"
+      duration: 40
+      rollback: true
+    - name: "High Resource Consumption"
+      description: "Creates high CPU and memory load"
+      duration: 120
+      rollback: true
+    - name: "Time Manipulation"
+      description: "Adjusts system time forward by 30 minutes"
+      duration: 60
+      rollback: true
+
+# Safety limits
+chaos_limits:
+  max_duration: 300  # 5 minutes maximum
+  max_concurrent: 4  # Maximum 4 concurrent chaos actions
+  rollback_timeout: 60  # 1 minute for rollback
+
+# Excluded services (never touch these)
+protected_services:
+  - ssh
+  - sshd
+  - systemd
+  - kernel
+  - network
+  - networking
+  - docker
+  - kubernetes
+  - kubelet
+
+# Excluded network interfaces
+protected_interfaces:
+  - lo
+  - docker0
+  - kube-ipvs0
+
+# Chaos reporting
+reporting:
+  enabled: true
+  format: "ascii"
+  include_health_check: true
+  include_system_info: true

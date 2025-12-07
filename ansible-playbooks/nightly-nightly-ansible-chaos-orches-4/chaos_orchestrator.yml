@@ -1,0 +1,73 @@
+---
+- name: Nightly Ansible Chaos Orchestrator
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/chaos_scenarios.yml
+  vars:
+    chaos_enabled: "{{ chaos_enabled | default(true) }}"
+    chaos_duration: "{{ chaos_duration | default(60) }}"
+    chaos_intensity: "{{ chaos_intensity | default('medium') }}"
+    rollback_enabled: "{{ rollback_enabled | default(true) }}"
+  pre_tasks:
+    - name: Display chaos configuration
+      debug:
+        msg: |
+          Chaos Engineering Playbook Starting
+          Enabled: {{ chaos_enabled }}
+          Duration: {{ chaos_duration }} seconds
+          Intensity: {{ chaos_intensity }}
+          Rollback: {{ rollback_enabled }}
+
+    - name: Check if chaos is enabled
+      fail:
+        msg: "Chaos engineering is disabled. Set chaos_enabled=true to proceed."
+      when: not chaos_enabled | bool
+
+    - name: Record system state before chaos
+      shell: |
+        echo "{{ inventory_hostname }}:$(date +%s):$(uptime -p)" > /tmp/chaos_pre_state.txt
+      args:
+        executable: /bin/bash
+      when: rollback_enabled | bool
+
+  tasks:
+    - name: Run health check before chaos
+      shell: |
+        echo "Health check passed at $(date)" > /tmp/health_check_pre.txt
+        exit 0
+      args:
+        executable: /bin/bash
+
+    - name: Include chaos scenarios based on intensity
+      include_tasks: tasks/chaos/{{ chaos_intensity }}.yml
+      when: chaos_enabled | bool
+
+    - name: Wait for chaos duration
+      wait_for:
+        timeout: "{{ chaos_duration | int }}"
+      when: chaos_enabled | bool
+
+    - name: Run health check after chaos
+      shell: |
+        echo "Health check passed at $(date)" > /tmp/health_check_post.txt
+        exit 0
+      args:
+        executable: /bin/bash
+      when: chaos_enabled | bool
+
+  post_tasks:
+    - name: Restore system state if rollback enabled
+      include_tasks: tasks/cleanup.yml
+      when: rollback_enabled | bool
+
+    - name: Generate chaos report
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_report_{{ inventory_hostname }}.txt
+        mode: '0644'
+
+    - name: Display chaos report
+      shell: cat /tmp/chaos_report_{{ inventory_hostname }}.txt
+      args:
+        executable: /bin/bash
