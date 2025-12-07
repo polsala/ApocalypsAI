@@ -1,0 +1,17 @@
+name: "Nightly PR Branch Cleaner"
+description: "Delete merged branches older than a configurable number of days."
+author: "ApocalypsAI"
+inputs:
+  days_to_keep:
+    description: "Number of days to keep merged branches."
+    required: false
+    default: "7"
+  github_token:
+    description: "GitHub token with repo scope."
+    required: true
+runs:
+  using: "node20"
+  main: "src/main.js"
+branding:
+  icon: "trash"
+  color: "red"
