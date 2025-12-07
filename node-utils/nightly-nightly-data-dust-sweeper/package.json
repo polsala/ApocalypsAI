@@ -1,0 +1,22 @@
+{
+  "name": "nightly-data-dust-sweeper",
+  "version": "1.0.0",
+  "description": "A Node.js CLI utility to identify and optionally remove old or temporary files, helping survivors keep their digital caches clean.",
+  "main": "src/main.js",
+  "bin": {
+    "data-dust-sweeper": "src/main.js"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node tests/test_main.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "cleanup",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT"
+}
