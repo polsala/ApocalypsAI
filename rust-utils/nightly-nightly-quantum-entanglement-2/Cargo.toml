@@ -1,0 +1,19 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "1.0.0"
+edition = "2021"
+authors = ["ApocalypsAI Community"]
+description = "A whimsical utility that simulates quantum entanglement verification for distributed systems"
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+keywords = ["quantum", "distributed", "monitoring", "cli"]
+categories = ["command-line-utilities", "science"]
+
+[dependencies]
+rand = "0.8"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
