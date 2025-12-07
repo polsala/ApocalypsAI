@@ -1,0 +1,17 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical quantum physics simulator that detects entanglement between particles"
+authors = ["ApocalypsAI"]
+license = "MIT"
+homepage = "https://github.com/polsala/ApocalypsAI"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+dependencies = [
+    "rand = \"0.8.5\"",
+]
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
