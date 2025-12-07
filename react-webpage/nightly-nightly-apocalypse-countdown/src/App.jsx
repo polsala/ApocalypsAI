@@ -1,0 +1,1 @@
+import React from \"react\";\nimport Countdown from \"./Countdown\";\n\nfunction App() {\n  // Example target: Jan 1 2099 UTC\n  const targetDate = new Date(\"2099-01-01T00:00:00Z\").getTime();\n  return (\n    <div style={{ textAlign: \"center\", marginTop: \"2rem\" }}>\n      <Countdown target={targetDate} />\n    </div>\n  );\n}\n\nexport default App;\n
