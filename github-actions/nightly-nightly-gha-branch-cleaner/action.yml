@@ -1,0 +1,172 @@
+name: 'Nightly GitHub Actions Branch Cleaner'
+description: 'Automatically cleans up stale branches after PR merge/close with configurable retention and safety filters'
+author: 'ApocalypsAI'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  protected-branches:
+    description: 'Comma-separated list of branch patterns to protect (supports glob patterns)'
+    required: false
+    default: 'main,master'
+  retention-days:
+    description: 'Delete branches older than this many days (0 = disabled)'
+    required: false
+    default: '0'
+  max-branches-to-delete:
+    description: 'Maximum number of branches to delete in one run'
+    required: false
+    default: '100'
+  dry-run:
+    description: 'Show what would be deleted without actually deleting'
+    required: false
+    default: 'true'
+  verbose:
+    description: 'Enable verbose logging'
+    required: false
+    default: 'false'
+
+outputs:
+  deleted-branches:
+    description: 'JSON array of deleted branch names'
+    value: ${{ steps.cleanup.outputs.deleted-branches }}
+  protected-branches:
+    description: 'JSON array of protected branch names that were skipped'
+    value: ${{ steps.cleanup.outputs.protected-branches }}
+  total-deleted:
+    description: 'Number of branches deleted'
+    value: ${{ steps.cleanup.outputs.total-deleted }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Clean stale branches
+      id: cleanup
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { github, context } = require('@actions/github');
+          const { glob } = require('@actions/toolkit');
+          
+          // Get inputs
+          const token = process.env.GITHUB_TOKEN;
+          const protectedBranches = process.env.PROTECTED_BRANCHES.split(',').map(s => s.trim()).filter(Boolean);
+          const retentionDays = parseInt(process.env.RETENTION_DAYS, 10);
+          const maxBranchesToDelete = parseInt(process.env.MAX_BRANCHES_TO_DELETE, 10);
+          const dryRun = process.env.DRY_RUN === 'true';
+          const verbose = process.env.VERBOSE === 'true';
+          
+          // Initialize GitHub client
+          const octokit = github.getOctokit(token);
+          
+          // Helper functions
+          function log(message) {
+            if (verbose) {
+              console.log(message);
+            }
+          }
+          
+          function isBranchProtected(branchName, protectedPatterns) {
+            return protectedPatterns.some(pattern => {
+              const regex = glob.makeRegex(pattern);
+              return regex.test(branchName);
+            });
+          }
+          
+          function isBranchExpired(branch, retentionDays) {
+            if (retentionDays <= 0) return false;
+            
+            const lastCommitDate = new Date(branch.commit.lastCommitDate || branch.commit.commitDate);
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+            
+            return lastCommitDate < cutoffDate;
+          }
+          
+          // Get all branches
+          log('Fetching all branches...');
+          const branches = await octokit.rest.repos.listBranches({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          });
+          
+          log(`Found ${branches.data.length} branches`);
+          
+          // Filter branches to delete
+          const branchesToDelete = [];
+          const protectedBranchesList = [];
+          
+          for (const branch of branches.data) {
+            // Skip if branch is protected
+            if (isBranchProtected(branch.name, protectedBranches)) {
+              protectedBranchesList.push(branch.name);
+              log(`Skipping protected branch: ${branch.name}`);
+              continue;
+            }
+            
+            // Skip if branch is expired
+            if (isBranchExpired(branch, retentionDays)) {
+              branchesToDelete.push(branch.name);
+              log(`Branch marked for deletion: ${branch.name} (expired)`);
+            }
+          }
+          
+          log(`Found ${branchesToDelete.length} branches to delete`);
+          
+          // Limit number of branches to delete
+          const branchesToDeleteLimited = branchesToDelete.slice(0, maxBranchesToDelete);
+          
+          // Perform deletions
+          let deletedCount = 0;
+          const deletedBranches = [];
+          
+          for (const branchName of branchesToDeleteLimited) {
+            try {
+              if (dryRun) {
+                log(`[DRY RUN] Would delete branch: ${branchName}`);
+                deletedBranches.push(branchName);
+                deletedCount++;
+              } else {
+                await octokit.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branchName}`
+                });
+                log(`Deleted branch: ${branchName}`);
+                deletedBranches.push(branchName);
+                deletedCount++;
+              }
+            } catch (error) {
+              log(`Failed to delete branch ${branchName}: ${error.message}`);
+            }
+          }
+          
+          // Set outputs
+          core.setOutput('deleted-branches', JSON.stringify(deletedBranches));
+          core.setOutput('protected-branches', JSON.stringify(protectedBranchesList));
+          core.setOutput('total-deleted', deletedCount.toString());
+          
+          // Summary
+          const action = dryRun ? 'would delete' : 'deleted';
+          console.log(`\n=== Summary ===`);
+          console.log(`${action} ${deletedCount} branches`);
+          console.log(`Protected ${protectedBranchesList.length} branches`);
+          
+          if (deletedBranches.length > 0) {
+            console.log(`\nDeleted branches:`);
+            deletedBranches.forEach(branch => console.log(`  - ${branch}`));
+          }
+          
+          if (protectedBranchesList.length > 0) {
+            console.log(`\nProtected branches:`);
+            protectedBranchesList.forEach(branch => console.log(`  - ${branch}`));
+          }
+        env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+          PROTECTED_BRANCHES: ${{ inputs.protected-branches }}
+          RETENTION_DAYS: ${{ inputs.retention-days }}
+          MAX_BRANCHES_TO_DELETE: ${{ inputs.max-branches-to-delete }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          VERBOSE: ${{ inputs.verbose }}
