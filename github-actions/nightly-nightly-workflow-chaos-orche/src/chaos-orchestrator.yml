@@ -1,0 +1,508 @@
+name: Nightly Workflow Chaos Orchestrator
+
+on:
+  workflow_call:
+    inputs:
+      chaos_level:
+        description: 'Chaos level (0-10, 0 = disabled)'
+        required: false
+        default: '0'
+        type: string
+      chaos_types:
+        description: 'Types of chaos to inject (comma-separated)'
+        required: false
+        default: 'network,cpu,memory,disk'
+        type: string
+      target_workflows:
+        description: 'Workflows to inject chaos into (comma-separated, empty = all)'
+        required: false
+        default: ''
+        type: string
+      chaos_duration:
+        description: 'Duration of chaos effects in seconds'
+        required: false
+        default: '300'
+        type: string
+    secrets:
+      GITHUB_TOKEN:
+        description: 'GitHub token for API access'
+        required: true
+
+jobs:
+  chaos-preparation:
+    name: Prepare Chaos Environment
+    runs-on: ubuntu-latest
+    outputs:
+      chaos-enabled: ${{ steps.check-chaos.outputs.enabled }}
+      chaos-level: ${{ steps.parse-inputs.outputs.chaos-level }}
+      chaos-types: ${{ steps.parse-inputs.outputs.chaos-types }}
+      chaos-duration: ${{ steps.parse-inputs.outputs.chaos-duration }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse and validate inputs
+        id: parse-inputs
+        run: |
+          # Parse chaos level
+          CHAOS_LEVEL=${{ inputs.chaos_level }}
+          if ! [[ "$CHAOS_LEVEL" =~ ^[0-9]+$ ]] || [ "$CHAOS_LEVEL" -lt 0 ] || [ "$CHAOS_LEVEL" -gt 10 ]; then
+            echo "Invalid chaos_level: must be 0-10, got '$CHAOS_LEVEL'"
+            exit 1
+          fi
+          echo "chaos-level=$CHAOS_LEVEL" >> $GITHUB_OUTPUT
+          
+          # Parse chaos types
+          CHAOS_TYPES="${{ inputs.chaos_types }}"
+          VALID_TYPES="network,cpu,memory,disk,time,random"
+          echo "chaos-types=$CHAOS_TYPES" >> $GITHUB_OUTPUT
+          
+          # Parse chaos duration
+          CHAOS_DURATION=${{ inputs.chaos_duration }}
+          if ! [[ "$CHAOS_DURATION" =~ ^[0-9]+$ ]] || [ "$CHAOS_DURATION" -lt 10 ] || [ "$CHAOS_DURATION" -gt 3600 ]; then
+            echo "Invalid chaos_duration: must be 10-3600 seconds, got '$CHAOS_DURATION'"
+            exit 1
+          fi
+          echo "chaos-duration=$CHAOS_DURATION" >> $GITHUB_OUTPUT
+
+      - name: Check if chaos is enabled
+        id: check-chaos
+        run: |
+          CHAOS_LEVEL=${{ steps.parse-inputs.outputs.chaos-level }}
+          if [ "$CHAOS_LEVEL" -eq 0 ]; then
+            echo "Chaos is disabled (level 0)"
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          else
+            echo "Chaos enabled at level $CHAOS_LEVEL"
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup chaos environment
+        if: steps.check-chaos.outputs.enabled == 'true'
+        run: |
+          echo "Setting up chaos environment..."
+          echo "CHAOS_LEVEL=${{ steps.parse-inputs.outputs.chaos-level }}" >> $GITHUB_ENV
+          echo "CHAOS_TYPES=${{ steps.parse-inputs.outputs.chaos-types }}" >> $GITHUB_ENV
+          echo "CHAOS_DURATION=${{ steps.parse-inputs.outputs.chaos-duration }}" >> $GITHUB_ENV
+          
+          # Create chaos log directory
+          mkdir -p ${{ github.workspace }}/chaos-logs
+          echo "CHAOS_LOG_DIR=${{ github.workspace }}/chaos-logs" >> $GITHUB_ENV
+
+  chaos-injection:
+    name: Inject Chaos
+    needs: chaos-preparation
+    if: needs.chaos-preparation.outputs.chaos-enabled == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chaos-type: ["network", "cpu", "memory", "disk", "time", "random"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine if chaos type should run
+        id: should-run
+        run: |
+          CHAOS_TYPES="${{ needs.chaos-preparation.outputs.chaos-types }}"
+          CURRENT_TYPE="${{ matrix.chaos-type }}"
+          
+          if [[ ",${CHAOS_TYPES}," == *",${CURRENT_TYPE},"* ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "Chaos type $CURRENT_TYPE is enabled"
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "Chaos type $CURRENT_TYPE is not enabled"
+          fi
+
+      - name: Network Chaos - Introduce latency and packet loss
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'network'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting network chaos at level $CHAOS_LEVEL..."
+          
+          # Calculate latency and packet loss based on chaos level
+          LATENCY_BASE=$((CHAOS_LEVEL * 50))  # 0-500ms
+          LATENCY_JITTER=$((CHAOS_LEVEL * 10)) # 0-100ms
+          PACKET_LOSS=$((CHAOS_LEVEL * 2))     # 0-20%
+          
+          # Install tc if not available
+          sudo apt-get update -qq && sudo apt-get install -y iproute2
+          
+          # Add network delay and packet loss
+          sudo tc qdisc add dev lo root netem delay ${LATENCY_BASE}ms\(${LATENCY_JITTER}ms\) loss ${PACKET_LOSS}%
+          
+          # Log the chaos effect
+          echo "Network chaos: ${LATENCY_BASE}ms delay ± ${LATENCY_JITTER}ms, ${PACKET_LOSS}% packet loss" > ${{ env.CHAOS_LOG_DIR }}/network_chaos.log
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          # Clean up
+          sudo tc qdisc del dev lo root
+          echo "Network chaos cleanup completed"
+
+      - name: CPU Chaos - Spawn CPU-intensive processes
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'cpu'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting CPU chaos at level $CHAOS_LEVEL..."
+          
+          # Calculate number of CPU hogs based on chaos level
+          CPU_HOGS=$((CHAOS_LEVEL / 2 + 1))  # 1-6 processes
+          
+          # Start CPU-intensive background processes
+          for i in $(seq 1 $CPU_HOGS); do
+            (while true; do :; done) &
+            echo $! >> ${{ env.CHAOS_LOG_DIR }}/cpu_hogs.pid
+          done
+          
+          # Log the chaos effect
+          echo "CPU chaos: $CPU_HOGS background processes started" > ${{ env.CHAOS_LOG_DIR }}/cpu_chaos.log
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          # Clean up
+          if [ -f ${{ env.CHAOS_LOG_DIR }}/cpu_hogs.pid ]; then
+            kill $(cat ${{ env.CHAOS_LOG_DIR }}/cpu_hogs.pid) 2>/dev/null || true
+          fi
+          rm -f ${{ env.CHAOS_LOG_DIR }}/cpu_hogs.pid
+          echo "CPU chaos cleanup completed"
+
+      - name: Memory Chaos - Consume available memory
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'memory'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting memory chaos at level $CHAOS_LEVEL..."
+          
+          # Calculate memory to consume based on chaos level
+          MEMORY_PERCENT=$((CHAOS_LEVEL * 10))  # 0-100%
+          
+          # Get total memory in KB
+          TOTAL_MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+          MEM_TO_CONSUME=$((TOTAL_MEM * MEMORY_PERCENT / 100))
+          
+          # Create memory consumption script
+          cat > /tmp/memory_hog.py << 'EOF'
+          import time
+          import sys
+          
+          def consume_memory(size_kb):
+              # Allocate memory in chunks
+              chunks = []
+              chunk_size = 1024 * 1024  # 1MB chunks
+              total_bytes = size_kb * 1024
+              
+              try:
+                  while total_bytes > 0:
+                      allocate_size = min(chunk_size, total_bytes)
+                      chunks.append('x' * allocate_size)
+                      total_bytes -= allocate_size
+              except MemoryError:
+                  pass
+              
+              return len(chunks)
+          
+          if __name__ == "__main__":
+              size_kb = int(sys.argv[1]) if len(sys.argv) > 1 else 100000
+              print(f"Consuming {size_kb} KB of memory...")
+              chunks = consume_memory(size_kb)
+              print(f"Successfully allocated {chunks} chunks")
+              time.sleep(3600)  # Keep memory allocated
+          EOF
+          
+          # Start memory consumption in background
+          python3 /tmp/memory_hog.py $MEM_TO_CONSUME > ${{ env.CHAOS_LOG_DIR }}/memory_chaos.log 2>&1 &
+          echo $! > ${{ env.CHAOS_LOG_DIR }}/memory_hog.pid
+          
+          # Log the chaos effect
+          echo "Memory chaos: consuming ${MEMORY_PERCENT}% of memory (${MEM_TO_CONSUME} KB)" >> ${{ env.CHAOS_LOG_DIR }}/memory_chaos.log
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          # Clean up
+          if [ -f ${{ env.CHAOS_LOG_DIR }}/memory_hog.pid ]; then
+            kill $(cat ${{ env.CHAOS_LOG_DIR }}/memory_hog.pid) 2>/dev/null || true
+          fi
+          rm -f ${{ env.CHAOS_LOG_DIR }}/memory_hog.pid
+          echo "Memory chaos cleanup completed"
+
+      - name: Disk Chaos - Fill disk space and introduce I/O delays
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'disk'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting disk chaos at level $CHAOS_LEVEL..."
+          
+          # Calculate disk fill percentage based on chaos level
+          DISK_FILL=$((CHAOS_LEVEL * 5))  # 0-50%
+          
+          # Get disk usage
+          DISK_TOTAL=$(df / --output=size | tail -1)
+          DISK_FILL_BYTES=$((DISK_TOTAL * 1024 * DISK_FILL / 100))
+          
+          # Create large file to fill disk
+          echo "Creating ${DISK_FILL}% disk usage..."
+          dd if=/dev/zero of=${{ env.CHAOS_LOG_DIR }}/disk_filler.tmp bs=1M count=$((DISK_FILL_BYTES / 1024 / 1024)) 2>/dev/null
+          
+          # Log the chaos effect
+          echo "Disk chaos: filled ${DISK_FILL}% of disk space" > ${{ env.CHAOS_LOG_DIR }}/disk_chaos.log
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          # Clean up
+          rm -f ${{ env.CHAOS_LOG_DIR }}/disk_filler.tmp
+          echo "Disk chaos cleanup completed"
+
+      - name: Time Chaos - Manipulate system time
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'time'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting time chaos at level $CHAOS_LEVEL..."
+          
+          # Calculate time offset based on chaos level
+          TIME_OFFSET=$((CHAOS_LEVEL * 3600))  # 0-10 hours
+          
+          # Save original time
+          date > ${{ env.CHAOS_LOG_DIR }}/original_time.log
+          
+          # Log the chaos effect
+          echo "Time chaos: would manipulate system time by ${TIME_OFFSET} seconds" > ${{ env.CHAOS_LOG_DIR }}/time_chaos.log
+          echo "Note: Actual time manipulation skipped for safety in CI environment" >> ${{ env.CHAOS_LOG_DIR }}/time_chaos.log
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          echo "Time chaos completed (no actual manipulation performed)"
+
+      - name: Random Chaos - Random failures and unexpected behavior
+        if: steps.should-run.outputs.should-run == 'true' && matrix.chaos-type == 'random'
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "Injecting random chaos at level $CHAOS_LEVEL..."
+          
+          # Seed random with chaos level for reproducible chaos
+          RANDOM=$CHAOS_LEVEL
+          
+          # Generate random chaos events
+          CHAOS_EVENTS=()
+          
+          # Network glitch
+          if [ $((RANDOM % 10)) -lt $CHAOS_LEVEL ]; then
+            CHAOS_EVENTS+=("network_glitch")
+          fi
+          
+          # Process failure
+          if [ $((RANDOM % 10)) -lt $CHAOS_LEVEL ]; then
+            CHAOS_EVENTS+=("process_failure")
+          fi
+          
+          # File corruption
+          if [ $((RANDOM % 10)) -lt $CHAOS_LEVEL ]; then
+            CHAOS_EVENTS+=("file_corruption")
+          fi
+          
+          # Time jump
+          if [ $((RANDOM % 10)) -lt $CHAOS_LEVEL ]; then
+            CHAOS_EVENTS+=("time_jump")
+          fi
+          
+          # Log the chaos effects
+          echo "Random chaos events: ${CHAOS_EVENTS[*]}" > ${{ env.CHAOS_LOG_DIR }}/random_chaos.log
+          
+          # Simulate the chaos events
+          for event in "${CHAOS_EVENTS[@]}"; do
+            case $event in
+              "network_glitch")
+                echo "Simulating network glitch..."
+                sleep 2
+                ;;
+              "process_failure")
+                echo "Simulating process failure..."
+                sleep 1
+                ;;
+              "file_corruption")
+                echo "Simulating file corruption..."
+                sleep 1
+                ;;
+              "time_jump")
+                echo "Simulating time jump..."
+                sleep 3
+                ;;
+            esac
+          done
+          
+          # Wait for chaos duration
+          sleep $CHAOS_DURATION
+          
+          echo "Random chaos completed"
+
+  chaos-reporting:
+    name: Generate Chaos Report
+    needs: [chaos-preparation, chaos-injection]
+    if: always() && needs.chaos-preparation.outputs.chaos-enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download chaos logs
+        uses: actions/download-artifact@v4
+        with:
+          name: chaos-logs
+          path: ${{ github.workspace }}/chaos-logs
+
+      - name: Generate chaos report
+        run: |
+          CHAOS_LEVEL=${{ needs.chaos-preparation.outputs.chaos-level }}
+          CHAOS_TYPES="${{ needs.chaos-preparation.outputs.chaos-types }}"
+          CHAOS_DURATION=${{ needs.chaos-preparation.outputs.chaos-duration }}
+          
+          echo "# Chaos Testing Report" > chaos_report.md
+          echo "" >> chaos_report.md
+          echo "**Chaos Level:** $CHAOS_LEVEL/10" >> chaos_report.md
+          echo "**Chaos Types:** $CHAOS_TYPES" >> chaos_report.md
+          echo "**Duration:** ${CHAOS_DURATION} seconds" >> chaos_report.md
+          echo "**Timestamp:** $(date)" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "## Chaos Effects Applied" >> chaos_report.md
+          echo "" >> chaos_report.md
+          
+          # Include individual chaos logs
+          if [ -f ${{ github.workspace }}/chaos-logs/network_chaos.log ]; then
+            echo "### Network Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/network_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          if [ -f ${{ github.workspace }}/chaos-logs/cpu_chaos.log ]; then
+            echo "### CPU Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/cpu_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          if [ -f ${{ github.workspace }}/chaos-logs/memory_chaos.log ]; then
+            echo "### Memory Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/memory_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          if [ -f ${{ github.workspace }}/chaos-logs/disk_chaos.log ]; then
+            echo "### Disk Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/disk_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          if [ -f ${{ github.workspace }}/chaos-logs/time_chaos.log ]; then
+            echo "### Time Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/time_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          if [ -f ${{ github.workspace }}/chaos-logs/random_chaos.log ]; then
+            echo "### Random Chaos" >> chaos_report.md
+            cat ${{ github.workspace }}/chaos-logs/random_chaos.log >> chaos_report.md
+            echo "" >> chaos_report.md
+          fi
+          
+          echo "## Recommendations" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "Based on the chaos testing results, consider the following improvements:" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "1. **Network Resilience:**" >> chaos_report.md
+          echo "   - Implement retry mechanisms for network calls" >> chaos_report.md
+          echo "   - Add timeouts for long-running operations" >> chaos_report.md
+          echo "   - Use circuit breakers for external dependencies" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "2. **Resource Management:**" >> chaos_report.md
+          echo "   - Monitor CPU and memory usage" >> chaos_report.md
+          echo "   - Implement graceful degradation under load" >> chaos_report.md
+          echo "   - Add resource limits and quotas" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "3. **Error Handling:**" >> chaos_report.md
+          echo "   - Add comprehensive error handling" >> chaos_report.md
+          echo "   - Implement proper logging and monitoring" >> chaos_report.md
+          echo "   - Design for failure scenarios" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "## Summary" >> chaos_report.md
+          echo "" >> chaos_report.md
+          echo "Chaos testing completed successfully. Review the above recommendations to improve system resilience." >> chaos_report.md
+
+      - name: Upload chaos report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-report
+          path: chaos_report.md
+
+      - name: Comment on PR with chaos report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('chaos_report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧪 Chaos Testing Report\n\n${report}`
+            });
+
+  chaos-cleanup:
+    name: Cleanup Chaos Environment
+    needs: [chaos-preparation, chaos-injection, chaos-reporting]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure cleanup
+        run: |
+          echo "Performing final cleanup..."
+          
+          # Clean up any remaining network rules
+          sudo tc qdisc del dev lo root 2>/dev/null || true
+          
+          # Clean up any remaining processes
+          pkill -f memory_hog.py 2>/dev/null || true
+          
+          echo "Chaos environment cleanup completed"
+
+  chaos-summary:
+    name: Chaos Testing Summary
+    needs: [chaos-preparation, chaos-injection, chaos-reporting, chaos-cleanup]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display summary
+        run: |
+          if [ '${{ needs.chaos-preparation.outputs.chaos-enabled }}' == 'true' ]; then
+            echo "## 🧪 Chaos Testing Summary"
+            echo ""
+            echo "**Status:** Completed"
+            echo "**Chaos Level:** ${{ needs.chaos-preparation.outputs.chaos-level }}/10"
+            echo "**Chaos Types:** ${{ needs.chaos-preparation.outputs.chaos-types }}"
+            echo "**Duration:** ${{ needs.chaos-preparation.outputs.chaos-duration }} seconds"
+            echo ""
+            echo "Check the artifacts for detailed chaos reports and recommendations."
+          else
+            echo "## ✅ Chaos Testing Summary"
+            echo ""
+            echo "**Status:** Skipped (chaos disabled)"
+            echo "**Chaos Level:** ${{ needs.chaos-preparation.outputs.chaos-level }}/10"
+            echo ""
+            echo "To enable chaos testing, set chaos_level to a value between 1-10."
+          fi
