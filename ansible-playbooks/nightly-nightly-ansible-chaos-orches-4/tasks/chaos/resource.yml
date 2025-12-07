@@ -1,0 +1,51 @@
+- name: Consume CPU resources (low intensity)
+  shell: |
+    timeout 30s yes > /dev/null &
+    sleep 1
+    echo "CPU chaos started (low) at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'low'
+  ignore_errors: true
+
+- name: Consume CPU resources (medium intensity)
+  shell: |
+    for i in {1..2}; do
+      timeout 60s yes > /dev/null &
+    done
+    sleep 1
+    echo "CPU chaos started (medium) at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'medium'
+  ignore_errors: true
+
+- name: Consume CPU resources (high intensity)
+  shell: |
+    for i in {1..4}; do
+      timeout 120s yes > /dev/null &
+    done
+    sleep 1
+    echo "CPU chaos started (high) at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true
+
+- name: Consume memory resources (medium intensity)
+  shell: |
+    python3 -c "import time; [bytearray(1024*1024*50) for _ in range(10)]; time.sleep(30)" &
+    echo "Memory chaos started (medium) at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  when: chaos_intensity in ['medium', 'high']
+  ignore_errors: true
+
+- name: Consume memory resources (high intensity)
+  shell: |
+    python3 -c "import time; [bytearray(1024*1024*100) for _ in range(20)]; time.sleep(60)" &
+    echo "Memory chaos started (high) at $(date)" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true

@@ -1,0 +1,45 @@
+- name: Apply network latency (low intensity)
+  shell: |
+    tc qdisc add dev eth0 root netem delay 100ms 50ms distribution normal
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'low'
+  ignore_errors: true
+
+- name: Apply network latency (medium intensity)
+  shell: |
+    tc qdisc add dev eth0 root netem delay 500ms 200ms distribution normal
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'medium'
+  ignore_errors: true
+
+- name: Apply network latency (high intensity)
+  shell: |
+    tc qdisc add dev eth0 root netem delay 1000ms 500ms distribution normal
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true
+
+- name: Add packet loss (medium intensity)
+  shell: |
+    tc qdisc add dev eth0 root netem loss 10%
+  args:
+    executable: /bin/bash
+  when: chaos_intensity in ['medium', 'high']
+  ignore_errors: true
+
+- name: Add packet loss (high intensity)
+  shell: |
+    tc qdisc add dev eth0 root netem loss 25%
+  args:
+    executable: /bin/bash
+  when: chaos_intensity == 'high'
+  ignore_errors: true
+
+- name: Record network chaos applied
+  shell: |
+    echo "Network chaos applied at $(date) with intensity: {{ chaos_intensity }}" >> /tmp/chaos_log.txt
+  args:
+    executable: /bin/bash
