@@ -1,0 +1,11 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tempfile = "3.8"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
