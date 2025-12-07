@@ -1,0 +1,18 @@
+focus_mode:
+  enabled: true
+  start_time: 09:00
+  end_time: 17:00
+
+work_blocks:
+  - task: 'Prioritize urgent tasks'
+    duration: 90
+  - break: 'Nerd snipe: Solve 3x+1 conjecture'
+    duration: 5
+  - task: 'Collaborate on team goals'
+    duration: 60
+
+notification_channels:
+  - teams_webhook
+  - slack_webhook
+
+fun_facts: [] # Populated by playbook
