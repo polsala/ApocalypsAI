@@ -1,0 +1,1 @@
+output "bucket_id" {\n  description = "The ID of the created S3 bucket"\n  value       = aws_s3_bucket.static_site.id\n}\n\noutput "website_endpoint" {\n  description = "The website endpoint URL"\n  value       = aws_s3_bucket.static_site.website_endpoint\n}\n
