@@ -1,0 +1,297 @@
+name: Nightly Workflow Chaos Orchestrator
+
+on:
+  workflow_call:
+    inputs:
+      chaos-level:
+        description: 'Level of chaos to inject (low/medium/high)'
+        required: false
+        default: 'medium'
+        type: string
+        options:
+          - low
+          - medium
+          - high
+      target-branch:
+        description: 'Branch to target for chaos testing'
+        required: false
+        default: 'main'
+        type: string
+      enable-network-chaos:
+        description: 'Enable network latency and packet loss'
+        required: false
+        default: 'true'
+        type: boolean
+      enable-resource-chaos:
+        description: 'Enable CPU and memory stress testing'
+        required: false
+        default: 'true'
+        type: boolean
+      enable-time-chaos:
+        description: 'Enable time manipulation chaos'
+        required: false
+        default: 'false'
+        type: boolean
+      chaos-duration:
+        description: 'Duration of chaos in seconds'
+        required: false
+        default: '180'
+        type: string
+      report-format:
+        description: 'Format of the chaos report (markdown/json)'
+        required: false
+        default: 'markdown'
+        type: string
+        options:
+          - markdown
+          - json
+    outputs:
+      chaos-report:
+        description: 'Path to the generated chaos report'
+        value: ${{ jobs.chaos-test.outputs.chaos-report }}
+      chaos-metrics:
+        description: 'JSON string containing chaos metrics'
+        value: ${{ jobs.chaos-test.outputs.chaos-metrics }}
+
+jobs:
+  chaos-test:
+    name: Chaos Testing
+    runs-on: ubuntu-latest
+    if: github.ref == format('refs/heads/{0}', inputs.target-branch)
+    
+    outputs:
+      chaos-report: ${{ steps.report.outputs.report-path }}
+      chaos-metrics: ${{ steps.metrics.outputs.metrics-json }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize chaos metrics
+        id: init
+        run: |
+          echo "chaos_start_time=$(date -u +%s)" >> $GITHUB_ENV
+          echo "chaos_level=${{ inputs.chaos-level }}" >> $GITHUB_ENV
+          echo "target_branch=${{ inputs.target-branch }}" >> $GITHUB_ENV
+
+      - name: Setup chaos environment
+        id: setup
+        run: |
+          mkdir -p chaos-reports
+          echo "report_path=chaos-reports/chaos-report-$(date +%Y%m%d-%H%M%S).md" >> $GITHUB_OUTPUT
+          echo "metrics_path=chaos-reports/chaos-metrics-$(date +%Y%m%d-%H%M%S).json" >> $GITHUB_OUTPUT
+
+      - name: Apply Network Chaos
+        if: inputs.enable-network-chaos == 'true'
+        id: network-chaos
+        run: |
+          # Install network chaos tools
+          sudo apt-get update
+          sudo apt-get install -y iproute2
+          
+          # Configure network chaos based on level
+          case "${{ inputs.chaos-level }}" in
+            "low")
+              latency=100
+              loss=5
+              ;;
+            "medium")
+              latency=500
+              loss=15
+              ;;
+            "high")
+              latency=1000
+              loss=25
+              ;;
+          esac
+          
+          # Apply network rules
+          sudo tc qdisc add dev eth0 root handle 1: prio
+          sudo tc qdisc add dev eth0 parent 1:2 handle 20: netem delay ${latency}ms loss ${loss}%
+          
+          echo "network_latency=${latency}" >> $GITHUB_OUTPUT
+          echo "network_loss=${loss}" >> $GITHUB_OUTPUT
+          echo "network_applied=true" >> $GITHUB_OUTPUT
+
+      - name: Apply Resource Chaos
+        if: inputs.enable-resource-chaos == 'true'
+        id: resource-chaos
+        run: |
+          # Install stress tool
+          sudo apt-get install -y stress
+          
+          # Configure resource chaos based on level
+          case "${{ inputs.chaos-level }}" in
+            "low")
+              cpu_load=20
+              memory_mb=100
+              ;;
+            "medium")
+              cpu_load=50
+              memory_mb=500
+              ;;
+            "high")
+              cpu_load=80
+              memory_mb=1000
+              ;;
+          esac
+          
+          # Start stress in background
+          stress --cpu 2 --timeout ${{ inputs.chaos-duration }}s &
+          stress --vm 1 --vm-bytes ${memory_mb}M --timeout ${{ inputs.chaos-duration }}s &
+          
+          echo "cpu_load=${cpu_load}" >> $GITHUB_OUTPUT
+          echo "memory_mb=${memory_mb}" >> $GITHUB_OUTPUT
+          echo "resource_applied=true" >> $GITHUB_OUTPUT
+
+      - name: Apply Time Chaos
+        if: inputs.enable-time-chaos == 'true'
+        id: time-chaos
+        run: |
+          # Install chrony for time manipulation
+          sudo apt-get install -y chrony
+          
+          # Configure time chaos based on level
+          case "${{ inputs.chaos-level }}" in
+            "low")
+              time_offset=1
+              ;;
+            "medium")
+              time_offset=5
+              ;;
+            "high")
+              time_offset=15
+              ;;
+          esac
+          
+          # Apply time offset
+          sudo timedatectl set-ntp false
+          sudo date -s "$(date -d '+${time_offset} minutes')"
+          
+          echo "time_offset=${time_offset}" >> $GITHUB_OUTPUT
+          echo "time_applied=true" >> $GITHUB_OUTPUT
+
+      - name: Wait for chaos duration
+        run: |
+          echo "Chaos applied for ${{ inputs.chaos-duration }} seconds..."
+          sleep ${{ inputs.chaos-duration }}
+
+      - name: Cleanup chaos
+        if: always()
+        run: |
+          # Cleanup network chaos
+          sudo tc qdisc del dev eth0 root 2>/dev/null || true
+          
+          # Cleanup resource chaos
+          sudo pkill -f stress 2>/dev/null || true
+          
+          # Cleanup time chaos
+          if [ "${{ inputs.enable-time-chaos }}" == "true" ]; then
+            sudo timedatectl set-ntp true
+          fi
+
+      - name: Generate chaos metrics
+        id: metrics
+        run: |
+          chaos_end_time=$(date -u +%s)
+          chaos_duration=$((chaos_end_time - $CHAOS_START_TIME))
+          
+          metrics=$(cat <<EOF
+          {
+            "chaos_level": "${{ inputs.chaos-level }}",
+            "target_branch": "${{ inputs.target-branch }}",
+            "chaos_start_time": $CHAOS_START_TIME,
+            "chaos_end_time": $chaos_end_time,
+            "chaos_duration": $chaos_duration,
+            "network_chaos": {
+              "enabled": ${{ inputs.enable-network-chaos }},
+              "latency": ${NETWORK_LATENCY:-0},
+              "loss": ${NETWORK_LOSS:-0}
+            },
+            "resource_chaos": {
+              "enabled": ${{ inputs.enable-resource-chaos }},
+              "cpu_load": ${CPU_LOAD:-0},
+              "memory_mb": ${MEMORY_MB:-0}
+            },
+            "time_chaos": {
+              "enabled": ${{ inputs.enable-time-chaos }},
+              "offset": ${TIME_OFFSET:-0}
+            }
+          }
+          EOF
+          )
+          
+          echo "$metrics" > ${{ steps.setup.outputs.metrics-path }}
+          echo "metrics-json=$metrics" >> $GITHUB_OUTPUT
+
+      - name: Generate chaos report
+        id: report
+        run: |
+          report_content="# Chaos Testing Report
+
+          ## Test Summary
+          - **Chaos Level**: ${{ inputs.chaos-level }}
+          - **Target Branch**: ${{ inputs.target-branch }}
+          - **Test Date**: $(date)
+          - **Duration**: ${{ inputs.chaos-duration }} seconds
+
+          ## Applied Chaos
+
+          ### Network Chaos
+          - **Enabled**: ${{ inputs.enable-network-chaos }}
+          - **Latency**: ${NETWORK_LATENCY:-0}ms
+          - **Packet Loss**: ${NETWORK_LOSS:-0}%
+
+          ### Resource Chaos
+          - **Enabled**: ${{ inputs.enable-resource-chaos }}
+          - **CPU Load**: ${CPU_LOAD:-0}%
+          - **Memory Allocation**: ${MEMORY_MB:-0}MB
+
+          ### Time Chaos
+          - **Enabled**: ${{ inputs.enable-time-chaos }}
+          - **Time Offset**: ${TIME_OFFSET:-0} minutes
+
+          ## Recommendations
+          1. Monitor application performance during chaos events
+          2. Implement circuit breakers for network failures
+          3. Add resource limits and monitoring
+          4. Use time-independent logic where possible
+          5. Test rollback procedures
+
+          ## Cleanup Status
+          - Network rules: Removed
+          - Resource stress: Stopped
+          - Time manipulation: Reverted
+          "
+          
+          echo "$report_content" > ${{ steps.setup.outputs.report-path }}
+          echo "report-path=${{ steps.setup.outputs.report-path }}" >> $GITHUB_OUTPUT
+
+      - name: Upload chaos report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-report
+          path: ${{ steps.setup.outputs.report-path }}
+
+      - name: Upload chaos metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-metrics
+          path: ${{ steps.setup.outputs.metrics-path }}
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('${{ steps.setup.outputs.report-path }}', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Chaos Testing Report\n\n' + report
+            });

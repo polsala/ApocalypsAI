@@ -1,0 +1,173 @@
+name: Test Chaos Orchestrator
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/chaos-orchestrator.yml'
+      - 'tests/test-chaos-orchestrator.yml'
+
+jobs:
+  test-low-chaos:
+    name: Test Low Chaos
+    uses: ./.github/workflows/nightly-workflow-chaos-orchestrator.yml
+    with:
+      chaos-level: "low"
+      target-branch: "main"
+      enable-network-chaos: true
+      enable-resource-chaos: true
+      enable-time-chaos: false
+      chaos-duration: "30"
+      report-format: "markdown"
+
+  test-medium-chaos:
+    name: Test Medium Chaos
+    uses: ./.github/workflows/nightly-workflow-chaos-orchestrator.yml
+    with:
+      chaos-level: "medium"
+      target-branch: "main"
+      enable-network-chaos: true
+      enable-resource-chaos: true
+      enable-time-chaos: false
+      chaos-duration: "30"
+      report-format: "markdown"
+
+  test-high-chaos:
+    name: Test High Chaos
+    uses: ./.github/workflows/nightly-workflow-chaos-orchestrator.yml
+    with:
+      chaos-level: "high"
+      target-branch: "main"
+      enable-network-chaos: true
+      enable-resource-chaos: true
+      enable-time-chaos: false
+      chaos-duration: "30"
+      report-format: "markdown"
+
+  test-time-chaos:
+    name: Test Time Chaos
+    uses: ./.github/workflows/nightly-workflow-chaos-orchestrator.yml
+    with:
+      chaos-level: "medium"
+      target-branch: "main"
+      enable-network-chaos: false
+      enable-resource-chaos: false
+      enable-time-chaos: true
+      chaos-duration: "30"
+      report-format: "markdown"
+
+  test-no-chaos:
+    name: Test No Chaos
+    uses: ./.github/workflows/nightly-workflow-chaos-orchestrator.yml
+    with:
+      chaos-level: "low"
+      target-branch: "main"
+      enable-network-chaos: false
+      enable-resource-chaos: false
+      enable-time-chaos: false
+      chaos-duration: "10"
+      report-format: "markdown"
+
+  verify-artifacts:
+    name: Verify Artifacts
+    runs-on: ubuntu-latest
+    needs: [test-low-chaos, test-medium-chaos, test-high-chaos, test-time-chaos, test-no-chaos]
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+
+      - name: Verify chaos reports exist
+        run: |
+          echo "Checking for chaos reports..."
+          ls -la test-artifacts/chaos-report/ || true
+          
+          # Count reports
+          report_count=$(find test-artifacts/chaos-report/ -name "*.md" | wc -l)
+          echo "Found $report_count chaos reports"
+          
+          if [ $report_count -lt 5 ]; then
+            echo "ERROR: Expected at least 5 chaos reports"
+            exit 1
+          fi
+
+      - name: Verify chaos metrics exist
+        run: |
+          echo "Checking for chaos metrics..."
+          ls -la test-artifacts/chaos-metrics/ || true
+          
+          # Count metrics
+          metrics_count=$(find test-artifacts/chaos-metrics/ -name "*.json" | wc -l)
+          echo "Found $metrics_count chaos metrics files"
+          
+          if [ $metrics_count -lt 5 ]; then
+            echo "ERROR: Expected at least 5 chaos metrics files"
+            exit 1
+          fi
+
+      - name: Validate report content
+        run: |
+          # Check that reports contain expected sections
+          for report in test-artifacts/chaos-report/*.md; do
+            if [ -f "$report" ]; then
+              echo "Validating $report"
+              
+              # Check for required sections
+              if ! grep -q "Test Summary" "$report"; then
+                echo "ERROR: Missing Test Summary in $report"
+                exit 1
+              fi
+              
+              if ! grep -q "Applied Chaos" "$report"; then
+                echo "ERROR: Missing Applied Chaos section in $report"
+                exit 1
+              fi
+              
+              if ! grep -q "Recommendations" "$report"; then
+                echo "ERROR: Missing Recommendations section in $report"
+                exit 1
+              fi
+              
+              echo "✓ $report is valid"
+            fi
+          done
+
+      - name: Validate metrics content
+        run: |
+          # Check that metrics contain expected JSON structure
+          for metrics in test-artifacts/chaos-metrics/*.json; do
+            if [ -f "$metrics" ]; then
+              echo "Validating $metrics"
+              
+              # Check JSON validity
+              if ! python3 -m json.tool "$metrics" > /dev/null 2>&1; then
+                echo "ERROR: Invalid JSON in $metrics"
+                exit 1
+              fi
+              
+              # Check for required fields
+              if ! grep -q "chaos_level" "$metrics"; then
+                echo "ERROR: Missing chaos_level in $metrics"
+                exit 1
+              fi
+              
+              if ! grep -q "target_branch" "$metrics"; then
+                echo "ERROR: Missing target_branch in $metrics"
+                exit 1
+              fi
+              
+              echo "✓ $metrics is valid"
+            fi
+          done
+
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: verify-artifacts
+    if: always()
+    steps:
+      - name: Clean up test artifacts
+        run: |
+          rm -rf test-artifacts
+          echo "Test artifacts cleaned up"
