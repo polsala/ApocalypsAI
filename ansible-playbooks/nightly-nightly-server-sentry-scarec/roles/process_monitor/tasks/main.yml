@@ -1,0 +1,22 @@
+---
+- name: Gather process information
+  ansible.builtin.shell: "ps aux --sort=-%cpu"
+  register: ps_output
+  changed_when: false
+  # Mock rationale: In tests, ps_output will be set via set_fact.
+  # This task is effectively skipped in test mode by the variable override.
+
+- name: Identify high CPU processes
+  ansible.builtin.set_fact:
+    high_cpu_processes: "{{ ps_output.stdout_lines | select('match', '^[a-zA-Z0-9_\\-]+.*') | map('split') | selectattr(8, 'float') | select('>', high_cpu_threshold | float) | rejectattr(10, 'in', ignored_processes) | list }}"
+  when: ps_output is defined and ps_output.stdout_lines is defined
+
+- name: Identify high Memory processes
+  ansible.builtin.set_fact:
+    high_mem_processes: "{{ ps_output.stdout_lines | select('match', '^[a-zA-Z0-9_\\-]+.*') | map('split') | selectattr(9, 'float') | select('>', high_mem_threshold | float) | rejectattr(10, 'in', ignored_processes) | list }}"
+  when: ps_output is defined and ps_output.stdout_lines is defined
+
+- name: Identify potentially idle processes (based on 0% CPU usage, simplified)
+  ansible.builtin.set_fact:
+    idle_processes: "{{ ps_output.stdout_lines | select('match', '^[a-zA-Z0-9_\\-]+.*') | map('split') | selectattr(10, 'in', ignored_processes, operator='not') | selectattr(8, 'float') | select('==', 0.0) | list }}"
+  when: ps_output is defined and ps_output.stdout_lines is defined

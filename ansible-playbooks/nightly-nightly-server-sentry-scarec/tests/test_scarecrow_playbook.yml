@@ -1,0 +1,90 @@
+---
+- name: Test Server Sentry Scarecrow Playbook
+  hosts: test_servers
+  gather_facts: yes
+  vars_files:
+    - vars/scarecrow_rules.yml # Load default rules for consistency
+
+  vars:
+    # Mock rationale: Simulate ps aux output for testing process monitoring logic.
+    # This avoids needing a real system and makes tests deterministic.
+    ps_output:
+      stdout_lines:
+        - "USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND"
+        - "root           1  0.0  0.1 225000  1200 ?        Ss   Oct01   0:01 /sbin/init"
+        - "user       10000 95.0 80.0 1000000 800000 ?       R    10:00   5:30 /usr/bin/stress-ng --cpu 8 --timeout 600s"
+        - "user       10001 0.0  0.5 50000  5000 ?         S    Oct01   0:00 /usr/bin/idle-app"
+        - "root       10002 0.0  0.1 20000  1000 ?         S    Oct01   0:00 /usr/sbin/sshd -D" # Ignored process
+        - "user       10003 75.0 60.0 300000 60000 ?        R    10:05   2:15 /usr/bin/another-high-cpu-app"
+        - "user       10004 0.0  0.0 10000  1000 ?         S    Oct01   0:00 /usr/bin/another-idle-app"
+
+    # Mock rationale: Simulate df -h output for testing disk usage logic.
+    # This avoids needing a real filesystem and makes tests deterministic.
+    df_output:
+      stdout_lines:
+        - "Filesystem      Size  Used Avail Use% Mounted on"
+        - "/dev/sda1        50G   45G  2.5G  90% /"
+        - "tmpfs           3.9G     0  3.9G   0% /dev/shm"
+        - "/dev/sdb1       100G   50G   45G  50% /data"
+
+  tasks:
+    - name: Create a temporary directory for the report
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: scarecrow_test
+      register: temp_dir_result
+      delegate_to: localhost
+
+    - name: Set report_path to the temporary directory
+      ansible.builtin.set_fact:
+        report_path: "{{ temp_dir_result.path }}/scarecrow_report_{{ ansible_hostname }}.txt"
+
+    - name: Run the main scarecrow playbook
+      ansible.builtin.include_playbook: scarecrow_playbook.yml
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ report_path }}"
+      register: report_content
+      delegate_to: localhost
+
+    - name: Assert high CPU processes are reported
+      ansible.builtin.assert:
+        that:
+          - '"WARNING: High CPU Processes Detected" in report_content.content | b64decode'
+          - '"stress-ng" in report_content.content | b64decode'
+          - '"another-high-cpu-app" in report_content.content | b64decode'
+          - '"95.0%" in report_content.content | b64decode'
+          - '"75.0%" in report_content.content | b64decode'
+        msg: "High CPU processes not correctly reported."
+
+    - name: Assert high Memory processes are reported
+      ansible.builtin.assert:
+        that:
+          - '"WARNING: High Memory Processes Detected" in report_content.content | b64decode'
+          - '"stress-ng" in report_content.content | b64decode'
+          - '"80.0%" in report_content.content | b64decode'
+        msg: "High Memory processes not correctly reported."
+
+    - name: Assert idle processes are reported
+      ansible.builtin.assert:
+        that:
+          - '"NOTICE: Potentially Idle Processes" in report_content.content | b64decode'
+          - '"idle-app" in report_content.content | b64decode'
+          - '"another-idle-app" in report_content.content | b64decode'
+          - '"sshd" not in report_content.content | b64decode' # Ignored process should not be in idle list
+        msg: "Idle processes not correctly reported or ignored processes included."
+
+    - name: Assert high disk usage is reported
+      ansible.builtin.assert:
+        that:
+          - '"WARNING: High Disk Usage Partitions Detected" in report_content.content | b64decode'
+          - '"/dev/sda1" in report_content.content | b64decode'
+          - '"90%" in report_content.content | b64decode'
+        msg: "High disk usage not correctly reported."
+
+    - name: Clean up temporary report file
+      ansible.builtin.file:
+        path: "{{ temp_dir_result.path }}"
+        state: absent
+      delegate_to: localhost

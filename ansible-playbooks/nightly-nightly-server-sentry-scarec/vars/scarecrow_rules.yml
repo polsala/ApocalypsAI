@@ -1,0 +1,21 @@
+---
+# Thresholds for identifying resource-hungry processes
+high_cpu_threshold: 80  # Percentage CPU
+high_mem_threshold: 70  # Percentage Memory
+
+# Threshold for identifying high disk usage
+high_disk_threshold: 85 # Percentage disk usage
+
+# Threshold for identifying long-running idle processes
+idle_process_age_hours: 24 # Processes running longer than this without activity (approximation)
+
+# List of processes to ignore during monitoring (e.g., essential system services)
+ignored_processes:
+  - sshd
+  - systemd
+  - rsyslogd
+  - cron
+  - kworker
+
+# Path to save the report on the target host.
+report_path: "/tmp/scarecrow_report_{{ ansible_hostname }}.txt"
