@@ -1,0 +1,19 @@
+[package]
+name = "quantum-entanglement-checker"
+version = "1.0.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical tool that simulates quantum entanglement between files to detect spooky correlations"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+tempfile = "3.0"
+
+[dev-dependencies]
+test = "0.1"
+
+[[bin]]
+name = "quantum-entanglement-checker"
+path = "src/main.rs"
