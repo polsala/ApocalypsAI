@@ -1,0 +1,6 @@
+---
+- name: Generate scarecrow report
+  ansible.builtin.template:
+    src: scarecrow_report.j2
+    dest: "{{ report_path }}"
+  delegate_to: "{{ inventory_hostname }}"

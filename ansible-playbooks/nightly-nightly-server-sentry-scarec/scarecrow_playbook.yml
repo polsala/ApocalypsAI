@@ -1,0 +1,19 @@
+---
+- name: Run Server Sentry Scarecrow
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/scarecrow_rules.yml
+
+  tasks:
+    - name: Ensure roles directory exists for local execution (if not already present)
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/roles"
+        state: directory
+      delegate_to: localhost
+      run_once: true
+
+  roles:
+    - process_monitor
+    - resource_audit
+    - action_report

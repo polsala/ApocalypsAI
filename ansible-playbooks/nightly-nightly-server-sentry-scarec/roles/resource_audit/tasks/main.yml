@@ -1,0 +1,11 @@
+---
+- name: Get disk usage
+  ansible.builtin.command: "df -h"
+  register: df_output
+  changed_when: false
+  # Mock rationale: In tests, df_output will be set via set_fact.
+
+- name: Parse disk usage and identify high usage
+  ansible.builtin.set_fact:
+    high_disk_usage_partitions: "{{ df_output.stdout_lines[1:] | map('split') | selectattr(4, 'match', '^[0-9]+%') | selectattr(4, 'regex_replace', '%', '') | select('>', high_disk_threshold | string) | list }}"
+  when: df_output is defined and df_output.stdout_lines is defined

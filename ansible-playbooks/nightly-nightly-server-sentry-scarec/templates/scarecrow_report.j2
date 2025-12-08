@@ -1,0 +1,45 @@
+Scarecrow Report for {{ ansible_hostname }} ({{ ansible_date_time.iso8601_micro }})
+=================================================================================
+
+Digital Hygiene Check:
+
+{% if high_cpu_processes %}
+WARNING: High CPU Processes Detected (threshold > {{ high_cpu_threshold }}%):
+{% for proc in high_cpu_processes %}
+  - PID: {{ proc[1] }}, CPU: {{ proc[8] }}%, MEM: {{ proc[9] }}%, CMD: {{ proc[10:] | join(' ') }}
+{% endfor %}
+{% else %}
+No high CPU processes found. Good job!
+{% endif %}
+
+{% if high_mem_processes %}
+WARNING: High Memory Processes Detected (threshold > {{ high_mem_threshold }}%):
+{% for proc in high_mem_processes %}
+  - PID: {{ proc[1] }}, CPU: {{ proc[8] }}%, MEM: {{ proc[9] }}%, CMD: {{ proc[10:] | join(' ') }}
+{% endfor %}
+{% else %}
+No high memory processes found. Excellent!
+{% endif %}
+
+{% if idle_processes %}
+NOTICE: Potentially Idle Processes (0% CPU, not ignored):
+{% for proc in idle_processes %}
+  - PID: {{ proc[1] }}, CMD: {{ proc[10:] | join(' ') }}
+{% endfor %}
+Consider investigating these digital dust bunnies.
+{% else %}
+No significantly idle processes detected. Your digital garden is active!
+{% endif %}
+
+{% if high_disk_usage_partitions %}
+WARNING: High Disk Usage Partitions Detected (threshold > {{ high_disk_threshold }}%):
+{% for partition in high_disk_usage_partitions %}
+  - Filesystem: {{ partition[0] }}, Used: {{ partition[4] }}, Mounted on: {{ partition[5] }}
+{% endfor %}
+Time to sweep some digital leaves!
+{% else %}
+Disk usage looks healthy. Keep up the good work!
+{% endif %}
+
+---
+End of Scarecrow Report.
