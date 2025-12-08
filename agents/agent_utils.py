@@ -580,3 +580,205 @@ def close_pr(repo: str, number: int, comment: str | None = None) -> None:
     owner, name = repo.split("/", 1)
     path = f"/repos/{owner}/{name}/pulls/{number}"
     _request("PATCH", path, json={"state": "closed"})
+
+
+def _graphql_request(query: str, variables: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Make a GraphQL request to GitHub API.
+    
+    Args:
+        query: GraphQL query or mutation
+        variables: Optional variables for the query
+        
+    Returns:
+        Response data
+    """
+    graphql_url = "https://api.github.com/graphql"
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise GitHubError("Missing GITHUB_TOKEN environment variable")
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    
+    payload: Dict[str, Any] = {"query": query}
+    if variables:
+        payload["variables"] = variables
+    
+    response = requests.post(graphql_url, headers=headers, json=payload, timeout=30.0)
+    
+    if response.status_code >= 400:
+        raise GitHubError(f"GraphQL request failed: {response.status_code} {response.text}")
+    
+    result = response.json()
+    if "errors" in result:
+        raise GitHubError(f"GraphQL errors: {result['errors']}")
+    
+    return result.get("data", {})
+
+
+def get_discussion(repo: str, discussion_number: int) -> Dict[str, Any]:
+    """Get a discussion by number.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        discussion_number: Discussion number
+        
+    Returns:
+        Discussion object with id, title, body, category, author, etc.
+    """
+    owner, name = repo.split("/", 1)
+    
+    query = """
+    query GetDiscussion($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        discussion(number: $number) {
+          id
+          number
+          title
+          body
+          category {
+            id
+            name
+            emoji
+          }
+          author {
+            login
+          }
+          createdAt
+          updatedAt
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "owner": owner,
+        "name": name,
+        "number": discussion_number
+    }
+    
+    data = _graphql_request(query, variables)
+    discussion = data.get("repository", {}).get("discussion")
+    if not discussion:
+        raise GitHubError(f"Discussion #{discussion_number} not found")
+    return discussion
+
+
+def get_discussion_comments(repo: str, discussion_id: str, limit: int = 20) -> list[Dict[str, Any]]:
+    """Get comments for a discussion.
+    
+    Args:
+        repo: Repository in 'owner/name' format
+        discussion_id: Discussion GraphQL node ID
+        limit: Maximum number of comments to fetch
+        
+    Returns:
+        List of comment objects
+    """
+    query = """
+    query GetDiscussionComments($discussionId: ID!, $limit: Int!) {
+      node(id: $discussionId) {
+        ... on Discussion {
+          comments(first: $limit) {
+            nodes {
+              id
+              body
+              author {
+                login
+              }
+              createdAt
+              replies(first: 10) {
+                nodes {
+                  id
+                  body
+                  author {
+                    login
+                  }
+                  createdAt
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "discussionId": discussion_id,
+        "limit": limit
+    }
+    
+    data = _graphql_request(query, variables)
+    comments = data.get("node", {}).get("comments", {}).get("nodes", [])
+    return comments
+
+
+def post_discussion_comment(discussion_id: str, body: str) -> Dict[str, Any]:
+    """Post a comment to a discussion.
+    
+    Args:
+        discussion_id: Discussion GraphQL node ID
+        body: Comment body (markdown)
+        
+    Returns:
+        Created comment object
+    """
+    mutation = """
+    mutation AddDiscussionComment($discussionId: ID!, $body: String!) {
+      addDiscussionComment(input: {discussionId: $discussionId, body: $body}) {
+        comment {
+          id
+          body
+          createdAt
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "discussionId": discussion_id,
+        "body": body
+    }
+    
+    data = _graphql_request(mutation, variables)
+    comment = data.get("addDiscussionComment", {}).get("comment")
+    if not comment:
+        raise GitHubError("Failed to create discussion comment")
+    return comment
+
+
+def post_discussion_comment_reply(comment_id: str, body: str) -> Dict[str, Any]:
+    """Reply to a discussion comment.
+    
+    Args:
+        comment_id: Comment GraphQL node ID to reply to
+        body: Reply body (markdown)
+        
+    Returns:
+        Created reply object
+    """
+    mutation = """
+    mutation AddDiscussionCommentReply($commentId: ID!, $body: String!) {
+      addDiscussionComment(input: {discussionId: $commentId, body: $body}) {
+        comment {
+          id
+          body
+          createdAt
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "commentId": comment_id,
+        "body": body
+    }
+    
+    data = _graphql_request(mutation, variables)
+    reply = data.get("addDiscussionComment", {}).get("comment")
+    if not reply:
+        raise GitHubError("Failed to create discussion comment reply")
+    return reply
