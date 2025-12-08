@@ -516,8 +516,8 @@ To change the rate limit:
 ### Crisis Resources
 
 If you're in crisis or need immediate help:
+- **988 Suicide & Crisis Lifeline**: Call or text 988 (US)
 - **Crisis Text Line**: Text HOME to 741741 (US)
-- **National Suicide Prevention Lifeline**: 1-800-273-8255 (US)
 - **International Association for Suicide Prevention**: https://www.iasp.info/resources/Crisis_Centres/
 
 ## Troubleshooting

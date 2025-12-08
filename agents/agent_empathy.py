@@ -130,6 +130,40 @@ class EmpathyAgent(AgentBase):
     def __init__(self):
         self.rate_limiter = RateLimiter()
     
+    def _sanitize_user_input(self, text: str) -> str:
+        """Sanitize user input to prevent prompt injection.
+        
+        This removes or escapes potential prompt injection attempts while
+        preserving the emotional content of the message.
+        """
+        # Limit length to prevent extremely long inputs
+        max_length = 2000
+        if len(text) > max_length:
+            text = text[:max_length] + "..."
+        
+        # Remove any potential instruction-like phrases that could manipulate the AI
+        # These are common prompt injection patterns
+        dangerous_patterns = [
+            "ignore previous instructions",
+            "ignore all previous",
+            "disregard previous",
+            "forget previous",
+            "system:",
+            "assistant:",
+            "you are now",
+            "new instructions:",
+            "###",  # Often used to break context
+        ]
+        
+        text_lower = text.lower()
+        for pattern in dangerous_patterns:
+            if pattern in text_lower:
+                # Replace with a safe marker
+                # Case-insensitive replacement
+                text = re.sub(re.escape(pattern), "[message filtered]", text, flags=re.IGNORECASE)
+        
+        return text.strip()
+    
     def _contains_feelings(self, text: str) -> bool:
         """Check if text contains feeling-related keywords."""
         text_lower = text.lower()
@@ -141,12 +175,16 @@ class EmpathyAgent(AgentBase):
     
     def _generate_empathetic_response(self, user_message: str, user_name: str) -> str:
         """Generate an empathetic response using LLM."""
+        # Sanitize inputs to prevent prompt injection
+        sanitized_message = self._sanitize_user_input(user_message)
+        sanitized_name = self._sanitize_user_input(user_name)
+        
         prompt = f"""You are a compassionate AI companion in a support discussion category called "🫂You talk AI response".
 
-A user named {user_name} has shared the following message:
+A user named {sanitized_name} has shared the following message:
 
 ---
-{user_message}
+{sanitized_message}
 ---
 
 Generate a warm, empathetic, and supportive response that:

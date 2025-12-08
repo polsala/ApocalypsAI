@@ -761,8 +761,8 @@ def post_discussion_comment_reply(comment_id: str, body: str) -> Dict[str, Any]:
         Created reply object
     """
     mutation = """
-    mutation AddDiscussionCommentReply($commentId: ID!, $body: String!) {
-      addDiscussionComment(input: {discussionId: $commentId, body: $body}) {
+    mutation ReplyToDiscussionComment($commentId: ID!, $body: String!) {
+      addDiscussionCommentReply(input: {discussionCommentId: $commentId, body: $body}) {
         comment {
           id
           body
@@ -778,7 +778,7 @@ def post_discussion_comment_reply(comment_id: str, body: str) -> Dict[str, Any]:
     }
     
     data = _graphql_request(mutation, variables)
-    reply = data.get("addDiscussionComment", {}).get("comment")
+    reply = data.get("addDiscussionCommentReply", {}).get("comment")
     if not reply:
         raise GitHubError("Failed to create discussion comment reply")
     return reply
