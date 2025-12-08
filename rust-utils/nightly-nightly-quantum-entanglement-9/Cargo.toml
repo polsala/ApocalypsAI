@@ -1,0 +1,16 @@
+[package]
+name = "quantum-entanglement-checker"
+version = "1.0.0"
+edition = "2021"
+description = "A whimsical utility that simulates quantum entanglement verification for distributed systems"
+authors = ["ApocalypsAI"]
+license = "MIT"
+
+[dependencies]
+rand = "0.8"
+structopt = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
