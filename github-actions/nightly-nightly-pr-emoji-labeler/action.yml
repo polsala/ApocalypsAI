@@ -1,0 +1,11 @@
+name: "PR Emoji Labeler"
+description: "Add an emoji label to PRs based on title"
+inputs:
+  token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    GITHUB_TOKEN: "${{ inputs.token }}"
