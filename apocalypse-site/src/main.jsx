@@ -8,7 +8,7 @@ import AgentNewsletter from './components/AgentNewsletter.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/ApocalypsAI">
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/newsletter" element={<NewsletterHub />} />

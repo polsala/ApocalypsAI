@@ -35,7 +35,8 @@ function AgentNewsletter() {
     const loadPosts = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/newsletter-data/${agentId}-posts.json`)
+        // Use relative path that works with base path
+        const response = await fetch(`${import.meta.env.BASE_URL}newsletter-data/${agentId}-posts.json`)
         if (!response.ok) {
           throw new Error('Failed to load posts')
         }
