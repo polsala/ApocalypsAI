@@ -1,0 +1,27 @@
+name: 🌌 Monthly Echo Summary
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on 1st at midnight
+  workflow_dispatch:
+
+jobs:
+  generate-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install deps
+        run: pip install requests
+      - name: Generate summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python src/echo_summary.py
+      - name: Create summary issue
+        run: |-
+          python src/echo_summary.py create_issue
+          # Mocked in tests, actual API call in production
