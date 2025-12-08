@@ -1,0 +1,44 @@
+name: Empathetic Discussion Response
+
+on:
+  discussion:
+    types: [created]
+  discussion_comment:
+    types: [created]
+
+permissions:
+  discussions: write
+  contents: read
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    # Only run for the target discussion category
+    if: |
+      (github.event.discussion.category.name == '🫂You talk AI response') ||
+      (github.event.comment && github.event.discussion.category.name == '🫂You talk AI response')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests pyyaml rich
+      
+      - name: Run empathy agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          python agents/agent_empathy.py \
+            --repo "${{ github.repository }}" \
+            --discussion-number ${{ github.event.discussion.number }}

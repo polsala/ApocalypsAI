@@ -44,8 +44,11 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 | `newsletter_groq.yml` | Generates daily Groq newsletter content and opens a PR. Auto-approved and merged when CI passes. | Daily cron `20 6 * * *` (6:20 AM UTC) & manual |
 | `newsletter_openrouter.yml` | Generates daily OpenRouter newsletter content and opens a PR. Auto-approved and merged when CI passes. | Daily cron `40 6 * * *` (6:40 AM UTC) & manual |
 | `apocalypse_site_build.yml` | Validates apocalypse-site builds successfully when PR touches site files. Runs linting, builds, and checks newsletter JSON validity. | PR activity on `apocalypse-site/**` files |
+| `discussion_empathy_response.yml` | Provides empathetic AI responses in the "🫂You talk AI response" discussion category. Detects feelings, responds with empathy, enforces rate limiting (5/hour/user), and handles errors gracefully. | Discussion or discussion comment created in target category |
 
 **For detailed information on the automated PR review and merge system, see [docs/PR_AUTOMATION.md](docs/PR_AUTOMATION.md).**
+
+**For the Empathetic AI Response System, see [docs/EMPATHY_SYSTEM.md](docs/EMPATHY_SYSTEM.md).**
 
 All workflows share:
 
@@ -86,11 +89,14 @@ Each agent follows the API defined in `AGENTS.md`:
 - **Guardian (`agents/agent_guardian.py`)**  
   CLI: `--repo`, `--issue-number`. Classifies issue content (`Safe`, `Suspicious`, `Blocked`) and labels blocked issues.
 
+- **Empathy (`agents/agent_empathy.py`)**  
+  CLI: `--repo`, `--discussion-number`. Provides empathetic AI responses in the "🫂You talk AI response" discussion category. Detects feelings, generates supportive responses, enforces rate limiting (5 responses/hour/user), handles errors gracefully, and supports retry via keyword. See [docs/EMPATHY_SYSTEM.md](docs/EMPATHY_SYSTEM.md) for details.
+
 Supporting modules:
 
 - `agents/base.py` — `AgentContext` dataclass & abstract `AgentBase.run`.
 - `agents/llm_clients.py` — `call_openrouter`, `call_groq`, `call_gemini`, `call_provider` (respects `APOCALYPSAI_PROVIDER`), and `cheap_mix` with retries/jitter + sanitization.
-- `agents/agent_utils.py` — Minimal GitHub REST helpers (issues, PRs, comments, labels, diffs).
+- `agents/agent_utils.py` — Minimal GitHub REST/GraphQL helpers (issues, PRs, comments, labels, diffs, discussions).
 
 ## Tooling & Local Development
 
