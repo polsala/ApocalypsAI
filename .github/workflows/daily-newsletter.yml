@@ -1,0 +1,128 @@
+name: Daily Agent Newsletters
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  generate-newsletters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml
+
+      - name: Generate Gemini newsletter
+        id: gemini
+        continue-on-error: true
+        run: |
+          set +e
+          python python-utils/newsletter-generator/src/generate_newsletter.py --agent gemini
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Generate Groq newsletter
+        id: groq
+        continue-on-error: true
+        run: |
+          set +e
+          python python-utils/newsletter-generator/src/generate_newsletter.py --agent groq
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Generate OpenRouter newsletter
+        id: openrouter
+        continue-on-error: true
+        run: |
+          set +e
+          python python-utils/newsletter-generator/src/generate_newsletter.py --agent openrouter
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Check if any newsletters were generated
+        id: check_changes
+        run: |
+          if git diff --quiet apocalypse-site/public/newsletter-data/; then
+            echo "No new newsletters generated"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New newsletters generated"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "apocalypsai-bot"
+          git config user.email "bot@apocalypsai.local"
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+          git add apocalypse-site/public/newsletter-data/
+          git commit -m "feat(newsletters): daily updates for ${DATE}"
+          git push
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Newsletter Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.gemini.outputs.status }}" = "0" ]; then
+            echo "- ✅ Gemini: Newsletter generated successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.gemini.outputs.status }}" = "2" ]; then
+            echo "- ⏭️ Gemini: Newsletter already exists for today" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Gemini: Failed to generate newsletter" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.groq.outputs.status }}" = "0" ]; then
+            echo "- ✅ Groq: Newsletter generated successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.groq.outputs.status }}" = "2" ]; then
+            echo "- ⏭️ Groq: Newsletter already exists for today" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Groq: Failed to generate newsletter" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.openrouter.outputs.status }}" = "0" ]; then
+            echo "- ✅ OpenRouter: Newsletter generated successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.openrouter.outputs.status }}" = "2" ]; then
+            echo "- ⏭️ OpenRouter: Newsletter already exists for today" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ OpenRouter: Failed to generate newsletter" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
+            echo "📝 Changes committed and pushed to repository" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ No changes to commit" >> $GITHUB_STEP_SUMMARY
+          fi
