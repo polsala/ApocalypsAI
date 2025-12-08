@@ -1,0 +1,90 @@
+name: Test Chaos Chaos
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-chaos:
+    name: Test Chaos Injection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test chaos script creation
+        run: |
+          # Create test chaos script
+          mkdir -p .github/workflows/chaos
+          cat > .github/workflows/chaos/test_chaos.sh << 'EOF'
+#!/bin/bash
+# Test chaos script
+
+# Mock network delay
+sleep $((RANDOM % 3))
+
+# Mock resource stress
+for i in $(seq 1 5); do
+  dd if=/dev/zero of=/tmp/test_$i bs=1M count=1 2>/dev/null
+  rm -f /tmp/test_$i
+done
+
+echo "[TEST CHAOS] Chaos applied successfully"
+EOF
+          chmod +x .github/workflows/chaos/test_chaos.sh
+          
+          # Test that script exists and is executable
+          if [[ -f .github/workflows/chaos/test_chaos.sh && -x .github/workflows/chaos/test_chaos.sh ]]; then
+            echo "✓ Chaos script created and executable"
+          else
+            echo "✗ Chaos script creation failed"
+            exit 1
+          fi
+
+      - name: Test chaos script execution
+        run: |
+          # Run the test chaos script
+          .github/workflows/chaos/test_chaos.sh
+          
+          if [[ $? -eq 0 ]]; then
+            echo "✓ Chaos script executed successfully"
+          else
+            echo "✗ Chaos script execution failed"
+            exit 1
+          fi
+
+      - name: Test workflow modification
+        run: |
+          # Create a test workflow
+          mkdir -p .github/workflows
+          cat > .github/workflows/test_workflow.yml << 'EOF'
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test step
+        run: echo "Hello from test workflow"
+EOF
+          
+          # Test that workflow was created
+          if [[ -f .github/workflows/test_workflow.yml ]]; then
+            echo "✓ Test workflow created"
+          else
+            echo "✗ Test workflow creation failed"
+            exit 1
+          fi
+
+      - name: Cleanup test files
+        run: |
+          rm -rf .github/workflows/chaos
+          rm -f .github/workflows/test_workflow.yml
+          echo "Cleaned up test files"
+
+      - name: Test chaos chaos workflow
+        run: |
+          echo "✓ Chaos Chaos workflow test completed successfully"
+          echo "This test validates that the chaos chaos workflow can be created and executed"

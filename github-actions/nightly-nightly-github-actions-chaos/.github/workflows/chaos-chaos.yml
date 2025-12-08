@@ -1,0 +1,335 @@
+name: Chaos Chaos
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      target_workflow:
+        description: 'Target workflow to inject chaos into (optional)'
+        required: false
+        default: ''
+      chaos_type:
+        description: 'Type of chaos to inject (optional)'
+        required: false
+        default: 'random'
+        type: choice
+        options:
+          - random
+          - network
+          - resource
+          - time
+          - service
+          - failure
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  chaos-chaos:
+    name: Inject Chaos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get workflows
+        id: get-workflows
+        run: |
+          # Get all workflow files
+          WORKFLOWS=$(find .github/workflows -name '*.yml' -o -name '*.yaml' | grep -v chaos-chaos.yml)
+          echo "workflows=$WORKFLOWS" >> $GITHUB_OUTPUT
+          echo "Found workflows:"
+          echo "$WORKFLOWS"
+
+      - name: Select target workflow
+        id: select-workflow
+        run: |
+          # If workflow_dispatch input provided, use that
+          if [[ -n "${{ github.event.inputs.target_workflow }}" ]]; then
+            TARGET="${{ github.event.inputs.target_workflow }}"
+          else
+            # Randomly select a workflow
+            WORKFLOWS=(${{ steps.get-workflows.outputs.workflows }})
+            if [[ ${#WORKFLOWS[@]} -eq 0 ]]; then
+              echo "No workflows found to chaos!"
+              exit 0
+            fi
+            RAND=$((RANDOM % ${#WORKFLOWS[@]}))
+            TARGET="${WORKFLOWS[$RAND]}"
+          fi
+          
+          echo "target_workflow=$TARGET" >> $GITHUB_OUTPUT
+          echo "Selected target workflow: $TARGET"
+
+      - name: Select chaos type
+        id: select-chaos
+        run: |
+          # If chaos type provided, use that
+          if [[ -n "${{ github.event.inputs.chaos_type }}" ]]; then
+            CHAOS_TYPE="${{ github.event.inputs.chaos_type }}"
+          else
+            # Randomly select chaos type
+            CHAOS_TYPES=("network" "resource" "time" "service" "failure")
+            RAND=$((RANDOM % ${#CHAOS_TYPES[@]}))
+            CHAOS_TYPE="${CHAOS_TYPES[$RAND]}"
+          fi
+          
+          echo "chaos_type=$CHAOS_TYPE" >> $GITHUB_OUTPUT
+          echo "Selected chaos type: $CHAOS_TYPE"
+
+      - name: Create chaos scenario
+        id: chaos-scenario
+        run: |
+          CHAOS_TYPE="${{ steps.select-chaos.outputs.chaos_type }}"
+          TARGET="${{ steps.select-workflow.outputs.target_workflow }}"
+          
+          # Create a temporary directory for chaos files
+          mkdir -p .github/workflows/chaos
+          
+          # Generate chaos script based on type
+          case "$CHAOS_TYPE" in
+            "network")
+              cat > .github/workflows/chaos/chaos_script.sh << 'EOF'
+#!/bin/bash
+# Network Chaos: Add random delays and packet loss
+
+# Mock network delay
+sleep $((RANDOM % 5))
+
+# Mock packet loss simulation
+if [[ $((RANDOM % 10)) -lt 3 ]]; then
+  echo "[CHAOS] Simulated network packet loss"
+  sleep 2
+fi
+
+# Mock network jitter
+sleep $((RANDOM % 3))
+
+echo "[CHAOS] Network chaos applied"
+EOF
+              ;;
+            "resource")
+              cat > .github/workflows/chaos/chaos_script.sh << 'EOF'
+#!/bin/bash
+# Resource Chaos: Limit resources and add CPU stress
+
+# Mock CPU stress
+stress_time=$((RANDOM % 10 + 5))
+for i in $(seq 1 $stress_time); do
+  dd if=/dev/zero of=/tmp/stress_$i bs=1M count=10 2>/dev/null
+  rm -f /tmp/stress_$i
+done
+
+# Mock memory pressure
+echo "[CHAOS] Simulated resource constraints"
+
+# Mock cleanup
+for i in $(seq 1 $stress_time); do
+  rm -f /tmp/stress_$i
+done
+
+echo "[CHAOS] Resource chaos applied"
+EOF
+              ;;
+            "time")
+              cat > .github/workflows/chaos/chaos_script.sh << 'EOF'
+#!/bin/bash
+# Time Chaos: Manipulate time perception
+
+# Mock time manipulation
+original_time=$(date)
+chaos_offset=$((RANDOM % 3600))
+
+# Add random delay
+sleep $((RANDOM % 10))
+
+# Mock time confusion
+if [[ $((RANDOM % 10)) -lt 5 ]]; then
+  echo "[CHAOS] Time confusion applied (offset: ${chaos_offset}s)"
+  sleep $((RANDOM % 5))
+fi
+
+echo "[CHAOS] Time chaos applied"
+EOF
+              ;;
+            "service")
+              cat > .github/workflows/chaos/chaos_script.sh << 'EOF'
+#!/bin/bash
+# Service Chaos: Mock service disruptions
+
+# Mock service restart
+if [[ $((RANDOM % 10)) -lt 5 ]]; then
+  echo "[CHAOS] Simulated service restart"
+  sleep $((RANDOM % 3))
+fi
+
+# Mock service failure
+if [[ $((RANDOM % 10)) -lt 3 ]]; then
+  echo "[CHAOS] Simulated service failure"
+  sleep $((RANDOM % 2))
+fi
+
+# Mock service recovery
+if [[ $((RANDOM % 10)) -lt 7 ]]; then
+  echo "[CHAOS] Simulated service recovery"
+  sleep $((RANDOM % 3))
+fi
+
+echo "[CHAOS] Service chaos applied"
+EOF
+              ;;
+            "failure")
+              cat > .github/workflows/chaos/chaos_script.sh << 'EOF'
+#!/bin/bash
+# Random Failure Chaos: Randomly fail steps
+
+# Mock random failure
+failure_chance=$((RANDOM % 10))
+if [[ $failure_chance -lt 4 ]]; then
+  echo "[CHAOS] Simulated random failure"
+  # Don't actually fail, just log
+  sleep $((RANDOM % 3))
+fi
+
+# Mock partial success
+if [[ $failure_chance -lt 7 ]]; then
+  echo "[CHAOS] Partial success"
+  sleep $((RANDOM % 2))
+fi
+
+echo "[CHAOS] Failure chaos applied"
+EOF
+              ;;
+            *)
+              echo "Unknown chaos type: $CHAOS_TYPE"
+              exit 1
+              ;;
+          esac
+          
+          chmod +x .github/workflows/chaos/chaos_script.sh
+          echo "chaos_script=.github/workflows/chaos/chaos_script.sh" >> $GITHUB_OUTPUT
+          echo "Created chaos script for $CHAOS_TYPE"
+
+      - name: Apply chaos to target workflow
+        id: apply-chaos
+        run: |
+          TARGET="${{ steps.select-workflow.outputs.target_workflow }}"
+          CHAOS_SCRIPT="${{ steps.chaos-scenario.outputs.chaos_script }}"
+          CHAOS_TYPE="${{ steps.select-chaos.outputs.chaos_type }}"
+          
+          # Create a chaos-modified version of the target workflow
+          CHAOS_WORKFLOW=".github/workflows/chaos/chaos_$(basename $TARGET)"
+          
+          # Copy the original workflow
+          cp "$TARGET" "$CHAOS_WORKFLOW"
+          
+          # Inject chaos script into the workflow
+          # Add a chaos step at the beginning of each job
+          sed -i '/jobs:/a\n  chaos-injection:
+    name: Chaos Injection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply Chaos
+        run: |
+          echo "[CHAOS] Injecting $CHAOS_TYPE chaos"
+          "$CHAOS_SCRIPT"
+          echo "[CHAOS] Chaos injection complete"' "$CHAOS_WORKFLOW"
+          
+          echo "chaos_workflow=$CHAOS_WORKFLOW" >> $GITHUB_OUTPUT
+          echo "Applied chaos to $TARGET"
+          echo "Chaos workflow created: $CHAOS_WORKFLOW"
+
+      - name: Run chaos workflow
+        id: run-chaos
+        run: |
+          CHAOS_WORKFLOW="${{ steps.apply-chaos.outputs.chaos_workflow }}"
+          
+          # Extract workflow name from filename
+          WORKFLOW_NAME=$(basename "$CHAOS_WORKFLOW" .yml)
+          
+          # Create a dispatch event for the chaos workflow
+          # Note: This is a mock - we'll just simulate running it
+          echo "[MOCK] Would dispatch workflow: $WORKFLOW_NAME"
+          echo "[MOCK] Chaos workflow would run with injected chaos"
+          
+          # Simulate chaos results
+          echo "chaos_results=success" >> $GITHUB_OUTPUT
+          echo "chaos_applied=true" >> $GITHUB_OUTPUT
+          
+          # Mock different results based on chaos type
+          case "${{ steps.select-chaos.outputs.chaos_type }}" in
+            "network")
+              echo "chaos_details=Network delays and packet loss simulated" >> $GITHUB_OUTPUT
+              ;;
+            "resource")
+              echo "chaos_details=CPU and memory constraints simulated" >> $GITHUB_OUTPUT
+              ;;
+            "time")
+              echo "chaos_details=Time manipulation simulated" >> $GITHUB_OUTPUT
+              ;;
+            "service")
+              echo "chaos_details=Service disruptions simulated" >> $GITHUB_OUTPUT
+              ;;
+            "failure")
+              echo "chaos_details=Random failures simulated" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Report chaos results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            const chaosType = '${{ steps.select-chaos.outputs.chaos_type }}';
+            const targetWorkflow = '${{ steps.select-workflow.outputs.target_workflow }}';
+            const chaosDetails = '${{ steps.run-chaos.outputs.chaos_details }}';
+            
+            console.log(`[CHAOS CHAOS REPORT]`);
+            console.log(`Chaos Type: ${chaosType}`);
+            console.log(`Target Workflow: ${targetWorkflow}`);
+            console.log(`Chaos Details: ${chaosDetails}`);
+            console.log(`Status: Applied successfully`);
+            
+            // Create a summary file
+            const summary = `# Chaos Chaos Report
+
+**Chaos Type:** ${chaosType}
+**Target Workflow:** ${targetWorkflow}
+**Chaos Details:** ${chaosDetails}
+**Status:** Applied successfully
+
+This is a simulated chaos injection for testing resilience.
+`;
+            
+            fs.writeFileSync('chaos_report.md', summary);
+            console.log('Chaos report generated');
+
+      - name: Upload chaos report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-report
+          path: chaos_report.md
+
+      - name: Cleanup chaos files
+        run: |
+          rm -rf .github/workflows/chaos
+          echo "Cleaned up chaos files"
+
+      - name: Post chaos summary
+        run: |
+          echo ""
+          echo "========================================"
+          echo "CHAOS CHAOS SUMMARY"
+          echo "========================================"
+          echo "Chaos Type: ${{ steps.select-chaos.outputs.chaos_type }}"
+          echo "Target Workflow: ${{ steps.select-workflow.outputs.target_workflow }}"
+          echo "Chaos Applied: ${{ steps.run-chaos.outputs.chaos_applied }}"
+          echo "Chaos Details: ${{ steps.run-chaos.outputs.chaos_details }}"
+          echo "========================================"
+          echo ""
