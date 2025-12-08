@@ -1,0 +1,284 @@
+name: 'Nightly GitHub Action Runner Validator'
+
+on:
+  workflow_call:
+    inputs:
+      workflow-paths:
+        description: 'Comma-separated list of paths to check for workflow files'
+        required: false
+        default: '.github/workflows'
+        type: string
+      strict-mode:
+        description: 'Enable strict validation (fails on warnings)'
+        required: false
+        default: 'false'
+        type: boolean
+      ignore-patterns:
+        description: 'Comma-separated list of file patterns to ignore'
+        required: false
+        default: ''
+        type: string
+    outputs:
+      validation-result:
+        description: 'JSON result with passed/failed counts and details'
+        value: ${{ jobs.validate.outputs.validation-result }}
+      has-errors:
+        description: 'Boolean indicating if any validation errors were found'
+        value: ${{ jobs.validate.outputs.has-errors }}
+
+jobs:
+  validate:
+    name: 'Validate GitHub Actions Workflows'
+    runs-on: ubuntu-latest
+    outputs:
+      validation-result: ${{ steps.validate.outputs.result }}
+      has-errors: ${{ steps.validate.outputs.has-errors }}
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup Python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 'Install dependencies'
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: 'Find workflow files'
+        id: find-workflows
+        run: |
+          WORKFLOW_PATHS='${{ inputs.workflow-paths }}'
+          IGNORE_PATTERNS='${{ inputs.ignore-patterns }}'
+          
+          # Convert comma-separated paths to array
+          IFS=',' read -ra PATHS <<< "$WORKFLOW_PATHS"
+          
+          # Build find command
+          FIND_CMD="find"
+          for path in "${PATHS[@]}"; do
+            FIND_CMD="$FIND_CMD $path -name '*.yml' -o -name '*.yaml'"
+          done
+          
+          # Add ignore patterns if provided
+          if [ -n "$IGNORE_PATTERNS" ]; then
+            IFS=',' read -ra IGNORES <<< "$IGNORE_PATTERNS"
+            for ignore in "${IGNORES[@]}"; do
+              FIND_CMD="$FIND_CMD ! -path '*$ignore*'"
+            done
+          fi
+          
+          # Execute find and store results
+          WORKFLOW_FILES=$(eval $FIND_CMD | grep -E 'workflows/' | sort)
+          echo "workflow-files=$WORKFLOW_FILES" >> $GITHUB_OUTPUT
+          echo "Found workflow files:"
+          echo "$WORKFLOW_FILES"
+
+      - name: 'Validate workflows'
+        id: validate
+        env:
+          STRICT_MODE: '${{ inputs.strict-mode }}'
+        run: |
+          WORKFLOW_FILES='${{ steps.find-workflows.outputs.workflow-files }}'
+          
+          # Python validation script
+          python3 << 'EOF'
+          import os
+          import sys
+          import yaml
+          import json
+          import re
+          from pathlib import Path
+          from typing import Dict, List, Any
+          
+          class WorkflowValidator:
+              def __init__(self, strict_mode: bool = False):
+                  self.strict_mode = strict_mode
+                  self.results = {
+                      'passed': 0,
+                      'warnings': 0,
+                      'errors': 0,
+                      'details': []
+                  }
+              
+              def validate_workflow(self, file_path: str) -> Dict[str, Any]:
+                  result = {
+                      'file': file_path,
+                      'status': 'passed',
+                      'issues': [],
+                      'warnings': []
+                  }
+                  
+                  try:
+                      # Read file
+                      with open(file_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                      
+                      # Parse YAML
+                      try:
+                          workflow = yaml.safe_load(content)
+                      except yaml.YAMLError as e:
+                          result['status'] = 'failed'
+                          result['issues'].append(f'YAML syntax error: {e}')
+                          return result
+                      
+                      if not isinstance(workflow, dict):
+                          result['status'] = 'failed'
+                          result['issues'].append('Workflow must be a YAML object')
+                          return result
+                      
+                      # Check required fields
+                      self._check_required_fields(workflow, result)
+                      
+                      # Check security practices
+                      self._check_security_practices(workflow, result)
+                      
+                      # Check performance practices
+                      self._check_performance_practices(workflow, result)
+                      
+                      # Check action usage
+                      self._check_action_usage(workflow, result)
+                      
+                  except Exception as e:
+                      result['status'] = 'failed'
+                      result['issues'].append(f'Unexpected error: {e}')
+                  
+                  return result
+              
+              def _check_required_fields(self, workflow: Dict, result: Dict):
+                  required = ['name', 'on', 'jobs']
+                  for field in required:
+                      if field not in workflow:
+                          result['status'] = 'failed'
+                          result['issues'].append(f'Missing required field: {field}')
+              
+              def _check_security_practices(self, workflow: Dict, result: Dict):
+                  # Check for hardcoded secrets
+                  content = yaml.dump(workflow)
+                  secret_patterns = [
+                      r'password\s*[:=]\s*[^\s]+',
+                      r'secret\s*[:=]\s*[^\s]+',
+                      r'token\s*[:=]\s*[^\s]+',
+                      r'key\s*[:=]\s*[^\s]+'
+                  ]
+                  
+                  for pattern in secret_patterns:
+                      if re.search(pattern, content, re.IGNORECASE):
+                          result['warnings'].append('Potential hardcoded secret detected')
+                  
+                  # Check permissions
+                  if 'permissions' not in workflow:
+                      result['warnings'].append('No permissions specified - consider adding explicit permissions')
+                  else:
+                      permissions = workflow['permissions']
+                      if permissions.get('contents') == 'write' and permissions.get('id-token') != 'write':
+                          result['warnings'].append('Consider using OIDC for deployments instead of write permissions')
+              
+              def _check_performance_practices(self, workflow: Dict, result: Dict):
+                  jobs = workflow.get('jobs', {})
+                  
+                  for job_name, job in jobs.items():
+                      steps = job.get('steps', [])
+                      
+                      # Check for caching
+                      has_cache = any('actions/cache' in str(step.get('uses', '')) for step in steps)
+                      if not has_cache and any('npm' in str(step) or 'yarn' in str(step) or 'pip' in str(step) for step in steps):
+                          result['warnings'].append(f'Job {job_name}: Consider adding cache for dependencies')
+                      
+                      # Check matrix strategy
+                      strategy = job.get('strategy', {})
+                      matrix = strategy.get('matrix', {})
+                      if isinstance(matrix, dict) and len(matrix) > 5:
+                          result['warnings'].append(f'Job {job_name}: Large matrix may cause performance issues')
+              
+              def _check_action_usage(self, workflow: Dict, result: Dict):
+                  jobs = workflow.get('jobs', {})
+                  
+                  for job_name, job in jobs.items():
+                      steps = job.get('steps', [])
+                      
+                      for step in steps:
+                          uses = step.get('uses', '')
+                          if uses and not uses.startswith('.'):  # Skip local actions
+                              # Check for unpinned versions
+                              if '@' not in uses or uses.endswith('@main') or uses.endswith('@master'):
+                                  result['warnings'].append(f'Job {job_name}: Action {uses} should be pinned to a specific version')
+                              
+                              # Check for deprecated actions
+                              if 'actions/checkout@v1' in uses or 'actions/setup-node@v1' in uses:
+                                  result['issues'].append(f'Job {job_name}: Action {uses} is deprecated')
+                              
+                              # Check for trusted publishers
+                              if not any(trusted in uses for trusted in ['actions/', 'docker/', 'google-github-actions/', 'aws-actions/', 'azure/']):
+                                  result['warnings'].append(f'Job {job_name}: Action {uses} is from an untrusted publisher')
+              
+              def validate_all(self, workflow_files: List[str]) -> Dict[str, Any]:
+                  for file_path in workflow_files:
+                      if os.path.exists(file_path):
+                          result = self.validate_workflow(file_path)
+                          self.results['details'].append(result)
+                          
+                          if result['status'] == 'failed':
+                              self.results['errors'] += 1
+                          elif result['warnings']:
+                              self.results['warnings'] += 1
+                          else:
+                              self.results['passed'] += 1
+                  
+                  return self.results
+          
+          # Get workflow files from environment
+          workflow_files = os.environ.get('WORKFLOW_FILES', '').strip()
+          if not workflow_files:
+              print('No workflow files found')
+              sys.exit(0)
+          
+          workflow_list = [f.strip() for f in workflow_files.split('\n') if f.strip()]
+          
+          # Validate
+          validator = WorkflowValidator(strict_mode=os.environ.get('STRICT_MODE', 'false').lower() == 'true')
+          results = validator.validate_all(workflow_list)
+          
+          # Print results
+          print('\n' + '='*60)
+          print('GITHUB ACTIONS VALIDATION RESULTS')
+          print('='*60)
+          
+          has_errors = results['errors'] > 0
+          has_warnings = results['warnings'] > 0
+          
+          for detail in results['details']:
+              status_emoji = '✅' if detail['status'] == 'passed' else '⚠️' if detail['warnings'] else '❌'
+              print(f'\n{status_emoji} Validating workflow: {detail["file"]}')
+              
+              if detail['issues']:
+                  print('  ❌ Errors:')
+                  for issue in detail['issues']:
+                      print(f'    • {issue}')
+              
+              if detail['warnings']:
+                  print('  ⚠️  Warnings:')
+                  for warning in detail['warnings']:
+                      print(f'    • {warning}')
+              
+              if not detail['issues'] and not detail['warnings']:
+                  print('  ✅ All checks passed')
+          
+          print(f'\nSummary: {results["passed"]} passed, {results["warnings"]} warnings, {results["errors"]} failed')
+          
+          # Set outputs
+          print(f'\n::set-output name=result::{json.dumps(results)}')
+          print(f'::set-output name=has-errors::{"true" if has_errors else "false"}')
+          
+          # Exit with error if strict mode and has errors/warnings
+          if os.environ.get('STRICT_MODE', 'false').lower() == 'true' and (has_errors or has_warnings):
+              sys.exit(1)
+          elif has_errors:
+              sys.exit(1)
+          
+          print('\nValidation completed successfully!')
+          EOF
