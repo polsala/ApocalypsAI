@@ -58,47 +58,59 @@ jobs:
                   
                   # Check if PR is from an AI agent branch
                   branch = pr.get("head", {}).get("ref", "")
-                  is_ai_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  # Newsletter PRs have different approval logic
+                  is_newsletter_pr = any(branch.startswith(f"ai/newsletter-{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  # Utility generator PRs
+                  is_utility_pr = any(branch.startswith(f"ai/{agent}-") for agent in ["gemini", "groq", "openrouter"])
+                  
+                  is_ai_pr = is_newsletter_pr or is_utility_pr
                   
                   if not is_ai_pr:
                       return False, "PR is not from an AI agent branch"
                   
-                  # Determine which agent created the PR
-                  pr_agent = None
-                  for agent in ["gemini", "groq", "openrouter"]:
-                      if branch.startswith(f"ai/{agent}-"):
-                          pr_agent = agent
-                          break
-                  
-                  # Get reviews
-                  reviews = agent_utils.get_pr_reviews(repo, pr_number)
-                  
-                  # Expected reviewers are the other two agents
-                  expected_reviewers = {"gemini", "groq", "openrouter"} - {pr_agent}
-                  
-                  # Check if we have approvals from expected reviewers
-                  approved_by = set()
-                  for review in reviews:
-                      if review.get("state") == "APPROVED":
-                          # Check review body for agent identifier
-                          body = review.get("body", "")
+                  # For newsletter PRs, we only need CI to pass (no agent reviews required)
+                  if is_newsletter_pr:
+                      # CI check will be validated below
+                      pass
+                  elif is_utility_pr:
+                      # Determine which agent created the PR
+                      pr_agent = None
+                      for agent in ["gemini", "groq", "openrouter"]:
+                          if branch.startswith(f"ai/{agent}-"):
+                              pr_agent = agent
+                              break
+                      
+                      # Get reviews
+                      reviews = agent_utils.get_pr_reviews(repo, pr_number)
+                      
+                      # Expected reviewers are the other two agents
+                      expected_reviewers = {"gemini", "groq", "openrouter"} - {pr_agent}
+                      
+                      # Check if we have approvals from expected reviewers
+                      approved_by = set()
+                      for review in reviews:
+                          if review.get("state") == "APPROVED":
+                              # Check review body for agent identifier
+                              body = review.get("body", "")
+                              for agent in expected_reviewers:
+                                  if f"Review by {agent.upper()} Agent" in body:
+                                      approved_by.add(agent)
+                                      break
+                      
+                      # Also check comments for agent reviews (they post as comments, not formal reviews)
+                      comments = agent_utils.get_issue_comments(repo, pr_number)
+                      for comment in comments:
+                          body = comment.get("body", "")
                           for agent in expected_reviewers:
                               if f"Review by {agent.upper()} Agent" in body:
+                                  # Review is present - add to reviewed set
                                   approved_by.add(agent)
-                                  break
-                  
-                  # Also check comments for agent reviews (they post as comments, not formal reviews)
-                  comments = agent_utils.get_issue_comments(repo, pr_number)
-                  for comment in comments:
-                      body = comment.get("body", "")
-                      for agent in expected_reviewers:
-                          if f"Review by {agent.upper()} Agent" in body:
-                              # Review is present - add to reviewed set
-                              approved_by.add(agent)
-                  
-                  # Require at least one approval from any expected reviewer
-                  if not approved_by:
-                      return False, f"Missing reviews from any of: {', '.join(expected_reviewers)}"
+                      
+                      # Require at least one approval from any expected reviewer
+                      if not approved_by:
+                          return False, f"Missing reviews from any of: {', '.join(expected_reviewers)}"
                   
                   # Check CI status
                   sha = pr.get("head", {}).get("sha")

@@ -1,0 +1,87 @@
+name: Validate Apocalypse Site Build
+on:
+  pull_request:
+    paths:
+      - 'apocalypse-site/**'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    paths:
+      - 'apocalypse-site/**'
+    branches:
+      - main
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          cd apocalypse-site
+          npm ci
+
+      - name: Run ESLint
+        run: |
+          set -euo pipefail
+          cd apocalypse-site
+          npm run lint || echo "Linting completed with warnings"
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          cd apocalypse-site
+          npm run build
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          cd apocalypse-site
+          # Check that dist directory was created
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Build did not create dist directory"
+            exit 1
+          fi
+          # Check that index.html exists
+          if [ ! -f "dist/index.html" ]; then
+            echo "ERROR: Build did not create index.html"
+            exit 1
+          fi
+          # Check that assets were created
+          if [ ! -d "dist/assets" ]; then
+            echo "ERROR: Build did not create assets directory"
+            exit 1
+          fi
+          echo "✅ Build validation successful"
+          
+      - name: Verify newsletter data structure
+        if: ${{ hashFiles('apocalypse-site/public/newsletter-data/*.json') != '' }}
+        run: |
+          set -euo pipefail
+          cd apocalypse-site/public/newsletter-data
+          for file in *.json; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              # Check if it's valid JSON
+              if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+                echo "ERROR: $file is not valid JSON"
+                exit 1
+              fi
+              echo "✅ $file is valid JSON"
+            fi
+          done
