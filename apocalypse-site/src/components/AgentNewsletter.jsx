@@ -29,7 +29,18 @@ function AgentNewsletter() {
     }
   }
 
-  const agent = agentConfig[agentId] || agentConfig.gemini
+  const agent = agentConfig[agentId]
+  
+  if (!agent) {
+    return (
+      <div className="agent-newsletter">
+        <div className="newsletter-container">
+          <p className="error">Invalid agent ID: {agentId}</p>
+          <Link to="/newsletter">← Back to All Newsletters</Link>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     const loadPosts = async () => {
