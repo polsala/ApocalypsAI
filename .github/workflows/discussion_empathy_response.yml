@@ -2,7 +2,7 @@ name: Empathetic Discussion Response
 
 on:
   discussion:
-    types: [created]
+    types: [created, edited]
   discussion_comment:
     types: [created]
 
@@ -13,10 +13,8 @@ permissions:
 jobs:
   respond:
     runs-on: ubuntu-latest
-    # Only run for the target discussion category
-    if: |
-      (github.event.discussion.category.name == '🫂You talk AI response') ||
-      (github.event.comment && github.event.discussion.category.name == '🫂You talk AI response')
+    # Only run for the target discussion category (with or without emoji)
+    if: contains(fromJson('["🫂You talk AI response","You talk AI response"]'), github.event.discussion.category.name)
     
     steps:
       - name: Checkout repository
