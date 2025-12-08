@@ -1,0 +1,172 @@
+name: Nightly Chaos Chaos
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+env:
+  CHAOS_ENABLED: false
+  CHAOS_PROBABILITY: 0.3
+  MAX_DELAY_SECONDS: 30
+  MAX_CPU_LOAD: 80
+  MAX_MEMORY_USAGE: 70
+
+jobs:
+  chaos-chaos:
+    name: Inject Chaos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if chaos is enabled
+        id: chaos-check
+        run: |
+          if [ "$CHAOS_ENABLED" = "true" ]; then
+            echo "Chaos is enabled! Injecting chaos..."
+            echo "chaos_enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "Chaos is disabled. Running normal workflow..."
+            echo "chaos_enabled=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Chaos Seed
+        id: chaos-seed
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          # Generate a random seed for reproducible chaos
+          SEED=$(date +%s%N | cut -c1-10)
+          echo "seed=$SEED" >> $GITHUB_OUTPUT
+          echo "Chaos seed: $SEED"
+
+      - name: Random Delay
+        id: random-delay
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          # Calculate random delay based on probability
+          PROB=$(echo "$CHAOS_PROBABILITY * 100" | bc)
+          ROLL=$(($SEED % 100))
+          echo "Rolled $ROLL (threshold: $PROB)"
+          
+          if [ $ROLL -lt $PROB ]; then
+            DELAY=$(($SEED % $MAX_DELAY_SECONDS + 1))
+            echo "Injecting $DELAY second delay..."
+            echo "chaos_event=delay" >> $GITHUB_OUTPUT
+            echo "delay_seconds=$DELAY" >> $GITHUB_OUTPUT
+            sleep $DELAY
+          else
+            echo "No delay this time"
+            echo "chaos_event=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Controlled Failure
+        id: controlled-failure
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          # Randomly fail based on probability
+          PROB=$(echo "$CHAOS_PROBABILITY * 100" | bc)
+          ROLL=$(($SEED % 100 + 100))  # Offset to avoid 0
+          echo "Rolled $ROLL (threshold: $PROB)"
+          
+          if [ $ROLL -lt $PROB ]; then
+            echo "CHAOS: Simulated failure triggered"
+            echo "chaos_event=failure" >> $GITHUB_OUTPUT
+            echo "failure_reason=chaos_injection" >> $GITHUB_OUTPUT
+            # Exit with error code to simulate failure
+            exit 1
+          else
+            echo "No failure this time"
+            echo "chaos_event=none" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Resource Constraint Simulation
+        id: resource-constraint
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          # Simulate CPU load
+          PROB=$(echo "$CHAOS_PROBABILITY * 100" | bc)
+          ROLL=$(($SEED % 200))
+          echo "Rolled $ROLL (threshold: $PROB)"
+          
+          if [ $ROLL -lt $PROB ]; then
+            echo "CHAOS: Simulating CPU load"
+            echo "chaos_event=cpu_load" >> $GITHUB_OUTPUT
+            # Run a CPU-intensive task for a short time
+            timeout 30s bash -c 'while true; do :; done' &
+            sleep 5
+            # Kill the background process
+            pkill -f 'while true' || true
+          else
+            echo "No CPU constraint this time"
+            echo "chaos_event=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Memory Constraint Simulation
+        id: memory-constraint
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          # Simulate memory usage
+          PROB=$(echo "$CHAOS_PROBABILITY * 100" | bc)
+          ROLL=$(($SEED % 300))
+          echo "Rolled $ROLL (threshold: $PROB)"
+          
+          if [ $ROLL -lt $PROB ]; then
+            echo "CHAOS: Simulating memory usage"
+            echo "chaos_event=memory_load" >> $GITHUB_OUTPUT
+            # Allocate memory temporarily
+            python3 << 'EOF'
+import time
+import os
+
+# Allocate approximately 500MB
+size = 500 * 1024 * 1024
+try:
+    data = bytearray(size)
+    print(f"Allocated {size / (1024*1024):.1f}MB")
+    time.sleep(10)
+    print("Releasing memory")
+del data
+EOF
+          else
+            echo "No memory constraint this time"
+            echo "chaos_event=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Chaos Report
+        if: always()
+        run: |
+          echo "## Chaos Chaos Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Chaos Enabled: $CHAOS_ENABLED" >> $GITHUB_STEP_SUMMARY
+          echo "- Chaos Probability: $CHAOS_PROBABILITY" >> $GITHUB_STEP_SUMMARY
+          echo "- Max Delay: $MAX_DELAY_SECONDS seconds" >> $GITHUB_STEP_SUMMARY
+          echo "- Max CPU Load: $MAX_CPU_LOAD%" >> $GITHUB_STEP_SUMMARY
+          echo "- Max Memory Usage: $MAX_MEMORY_USAGE%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Chaos Events" >> $GITHUB_STEP_SUMMARY
+          if [ "$CHAOS_ENABLED" = "true" ]; then
+            echo "- Random Delay: ${{ steps.random-delay.outputs.chaos_event }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Controlled Failure: ${{ steps.controlled-failure.outputs.chaos_event }}" >> $GITHUB_STEP_SUMMARY
+            echo "- CPU Constraint: ${{ steps.resource-constraint.outputs.chaos_event }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Memory Constraint: ${{ steps.memory-constraint.outputs.chaos_event }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No chaos events (chaos disabled)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          if [ "$CHAOS_ENABLED" = "true" ]; then
+            echo "Chaos chaos workflow completed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Normal workflow completed (chaos disabled)." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Success Message
+        if: steps.chaos-check.outputs.chaos_enabled == 'false'
+        run: |
+          echo "✅ Normal workflow completed successfully!"
+
+      - name: Chaos Completion
+        if: steps.chaos-check.outputs.chaos_enabled == 'true'
+        run: |
+          echo "🎉 Chaos chaos workflow completed! Your pipeline survived (or didn't) the chaos injection."

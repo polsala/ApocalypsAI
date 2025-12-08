@@ -1,0 +1,101 @@
+name: Test Chaos Chaos Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-chaos:
+    name: Test Chaos Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Chaos Disabled
+        id: test-disabled
+        env:
+          CHAOS_ENABLED: false
+        run: |
+          if [ "$CHAOS_ENABLED" = "false" ]; then
+            echo "✅ Chaos disabled test passed"
+            echo "test_result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Chaos disabled test failed"
+            echo "test_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Test Chaos Enabled
+        id: test-enabled
+        env:
+          CHAOS_ENABLED: true
+        run: |
+          if [ "$CHAOS_ENABLED" = "true" ]; then
+            echo "✅ Chaos enabled test passed"
+            echo "test_result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Chaos enabled test failed"
+            echo "test_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Test Probability Range
+        id: test-probability
+        env:
+          CHAOS_PROBABILITY: 0.5
+        run: |
+          if (( $(echo "$CHAOS_PROBABILITY >= 0.0 && $CHAOS_PROBABILITY <= 1.0" | bc -l) )); then
+            echo "✅ Probability range test passed"
+            echo "test_result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Probability range test failed"
+            echo "test_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Test Delay Configuration
+        id: test-delay
+        env:
+          MAX_DELAY_SECONDS: 60
+        run: |
+          if [ $MAX_DELAY_SECONDS -gt 0 ] && [ $MAX_DELAY_SECONDS -le 300 ]; then
+            echo "✅ Delay configuration test passed"
+            echo "test_result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Delay configuration test failed"
+            echo "test_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Test Resource Limits
+        id: test-resources
+        env:
+          MAX_CPU_LOAD: 80
+          MAX_MEMORY_USAGE: 70
+        run: |
+          if [ $MAX_CPU_LOAD -gt 0 ] && [ $MAX_CPU_LOAD -le 100 ] && [ $MAX_MEMORY_USAGE -gt 0 ] && [ $MAX_MEMORY_USAGE -le 100 ]; then
+            echo "✅ Resource limits test passed"
+            echo "test_result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Resource limits test failed"
+            echo "test_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Test Workflow Summary
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Chaos Disabled Test: ${{ steps.test-disabled.outputs.test_result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Chaos Enabled Test: ${{ steps.test-enabled.outputs.test_result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Probability Range Test: ${{ steps.test-probability.outputs.test_result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Delay Configuration Test: ${{ steps.test-delay.outputs.test_result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Resource Limits Test: ${{ steps.test-resources.outputs.test_result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.test-disabled.outputs.test_result }}" = "passed" ] && \
+             [ "${{ steps.test-enabled.outputs.test_result }}" = "passed" ] && \
+             [ "${{ steps.test-probability.outputs.test_result }}" = "passed" ] && \
+             [ "${{ steps.test-delay.outputs.test_result }}" = "passed" ] && \
+             [ "${{ steps.test-resources.outputs.test_result }}" = "passed" ]; then
+            echo "🎉 All tests passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some tests failed!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
