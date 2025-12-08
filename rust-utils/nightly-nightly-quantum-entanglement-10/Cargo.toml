@@ -1,0 +1,15 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Collective"]
+description = "A whimsical CLI tool that checks if two files are quantum-entangled using hash-based entanglement detection"
+license = "MIT"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
+
+[dependencies]
+
+[dev-dependencies]
