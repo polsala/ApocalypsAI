@@ -1,0 +1,18 @@
+- name: Generate Gnome of the Day
+  hosts: all
+  gather_facts: true
+  vars_files:
+    - ../vars/quotes.yml
+  vars:
+    day_of_month: "{{ ansible_date_time.day | int }}"
+  tasks:
+    - name: Determine quote index
+      set_fact:
+        quote_index: "{{ (day_of_month) % (gnome_quotes | length) }}"
+
+    - name: Render quote file
+      template:
+        src: ../templates/quote.j2
+        dest: /tmp/gnome_of_the_day.txt
+      vars:
+        selected_quote: "{{ gnome_quotes[quote_index] }}"
