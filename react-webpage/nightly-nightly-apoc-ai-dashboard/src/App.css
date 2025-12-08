@@ -1,0 +1,68 @@
+/* App-specific styles can go here if needed */
+
+.app-container {
+  position: relative;
+}
+
+.card {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chip {
+  transition: all 0.3s ease;
+}
+
+.chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(76, 201, 240, 0.3);
+}
+
+button {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+select {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border: 1px solid rgba(76, 201, 240, 0.3);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.metric-value.glow {
+  text-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
+}
+
+@media (max-width: 768px) {
+  .card h3 {
+    font-size: 1.1rem;
+  }
+  
+  .metric-label {
+    font-size: 0.8rem;
+  }
+  
+  .metric-value {
+    font-size: 0.9rem;
+  }
+}
