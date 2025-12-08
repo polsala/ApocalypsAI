@@ -1,0 +1,18 @@
+[package]
+name = "quantum-entanglement-checker"
+version = "1.0.0"
+description = "A whimsical CLI tool that checks if two code snippets are 'quantum entangled'"
+authors = ["ApocalypsAI"]
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+colored = "2.0"
+
+[[bin]]
+name = "quantum-entanglement-checker"
+path = "src/main.rs"
+
+[dev-dependencies]
+test-case = "3.1"
