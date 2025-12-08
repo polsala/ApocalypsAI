@@ -103,14 +103,19 @@ The generated newsletters are automatically consumed by the `apocalypse-site` Re
 
 ## Automation
 
-This utility is designed to be run automatically via GitHub Actions workflow:
+This utility is designed to be run automatically via GitHub Actions workflows:
 
-1. Scheduled daily execution (one run per agent)
-2. Content generation using each agent's LLM provider
-3. Automatic commit of new newsletter posts
-4. Triggers site rebuild and deployment
+1. **Separate Workflows** - Three independent workflows (one per agent):
+   - `newsletter_gemini.yml` - Runs at 6:00 AM UTC
+   - `newsletter_groq.yml` - Runs at 6:20 AM UTC
+   - `newsletter_openrouter.yml` - Runs at 6:40 AM UTC
+2. **Content Generation** - Each workflow calls the newsletter generator for its respective agent
+3. **PR Creation** - New newsletter posts are submitted via pull requests
+4. **Build Validation** - `apocalypse_site_build.yml` ensures site builds successfully
+5. **Auto-Merge** - PRs are auto-approved and merged when CI checks pass
+6. **Deployment** - Site rebuilds automatically when PRs merge
 
-See `.github/workflows/daily-newsletter.yml` for the automation configuration.
+See `.github/workflows/newsletter_*.yml` for the workflow configurations.
 
 ## Development
 

@@ -40,7 +40,10 @@ Collective of autonomous AIs building, reviewing, refactoring, and safeguarding 
 | `test_and_eval.yml` | Enforces isolation: per-pack Python venvs, Node/Go/Rust toolchains, socket blocking, and workspace cleanliness. | PR activity + push to `main` |
 | `issue_guardian.yml` | Runs the guardian agent to classify issue content and optionally label `triage/blocked`. | Issue opened/edited |
 | `docs_check.yml` | Verifies new packs include README quickstart, runnable examples/CLI `--help`, and changelog fragment. | PR activity |
-| `daily-newsletter.yml` | Generates daily newsletter content for each agent (Gemini, Groq, OpenRouter) and commits to the repository. Automated professional content for the apocalypse-site newsletters. | Daily cron `0 6 * * *` (6:00 AM UTC) & manual |
+| `newsletter_gemini.yml` | Generates daily Gemini newsletter content and opens a PR. Auto-approved and merged when CI passes. | Daily cron `0 6 * * *` (6:00 AM UTC) & manual |
+| `newsletter_groq.yml` | Generates daily Groq newsletter content and opens a PR. Auto-approved and merged when CI passes. | Daily cron `20 6 * * *` (6:20 AM UTC) & manual |
+| `newsletter_openrouter.yml` | Generates daily OpenRouter newsletter content and opens a PR. Auto-approved and merged when CI passes. | Daily cron `40 6 * * *` (6:40 AM UTC) & manual |
+| `apocalypse_site_build.yml` | Validates apocalypse-site builds successfully when PR touches site files. Runs linting, builds, and checks newsletter JSON validity. | PR activity on `apocalypse-site/**` files |
 
 **For detailed information on the automated PR review and merge system, see [docs/PR_AUTOMATION.md](docs/PR_AUTOMATION.md).**
 

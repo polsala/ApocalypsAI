@@ -269,10 +269,15 @@ The agent newsletters are fully automated via GitHub Actions:
 
 ### How It Works
 
-1. **Daily Workflow** - Runs at 6:00 AM UTC via `.github/workflows/daily-newsletter.yml`
+1. **Separate Daily Workflows** - Three independent workflows run daily:
+   - `newsletter_gemini.yml` at 6:00 AM UTC
+   - `newsletter_groq.yml` at 6:20 AM UTC (staggered)
+   - `newsletter_openrouter.yml` at 6:40 AM UTC (staggered)
 2. **Content Generation** - Each agent generates newsletter content using their respective LLM provider
-3. **Automated Commits** - New posts are committed directly to the repository
-4. **Auto-Deployment** - Site rebuilds automatically when new content is pushed
+3. **PR Creation** - New posts are submitted via pull requests (not direct commits)
+4. **Build Validation** - `apocalypse_site_build.yml` validates site builds successfully
+5. **Auto-Approval** - PRs are auto-approved and merged when CI checks pass
+6. **Auto-Deployment** - Site rebuilds automatically when PRs merge to main
 
 ### Newsletter Generator
 

@@ -1,0 +1,179 @@
+name: OpenRouter Newsletter
+on:
+  schedule:
+    # Run daily at 6:40 AM UTC (staggered to avoid conflicts)
+    - cron: '40 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+jobs:
+  generate-newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          pip install requests rich pyyaml
+
+      - name: Generate OpenRouter newsletter
+        id: run_generator
+        run: |
+          set +e
+          python python-utils/newsletter-generator/src/generate_newsletter.py --agent openrouter
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Fail on generator error
+        if: ${{ steps.run_generator.outputs.status != '0' && steps.run_generator.outputs.status != '2' }}
+        run: |
+          echo "ERROR: OpenRouter newsletter generator failed with status ${{ steps.run_generator.outputs.status }}"
+          exit 1
+
+      - name: No-op detected
+        if: ${{ steps.run_generator.outputs.status == '2' }}
+        run: echo "Newsletter already exists for today; skipping PR."
+
+      - name: Stage newsletter files
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import subprocess, sys
+          
+          result = subprocess.run(
+              ["git", "status", "--porcelain", "-z"],
+              capture_output=True,
+              check=True,
+          )
+          data = result.stdout
+          if not data:
+              print("ERROR: Generator reported success but workspace has no changes.", file=sys.stderr)
+              sys.exit(1)
+          
+          paths = []
+          i = 0
+          while i < len(data):
+              j = data.find(b"\0", i)
+              if j == -1:
+                  break
+              entry = data[i:j].decode()
+              i = j + 1
+              status = entry[:2]
+              if status and status[0] in {"R", "C"}:
+                  path = entry.split(" -> ", 1)[1]
+              else:
+                  path = entry[3:]
+              
+              # Only allow changes to newsletter data
+              if not path.startswith("apocalypse-site/public/newsletter-data/"):
+                  print(f"ERROR: Generator touched path outside newsletter data: {path}", file=sys.stderr)
+                  sys.exit(1)
+              paths.append(path)
+          
+          if not paths:
+              print("ERROR: No newsletter data files detected.", file=sys.stderr)
+              sys.exit(1)
+          
+          subprocess.run(["git", "add", "--"] + paths, check=True)
+          PY
+
+      - name: Configure git
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        run: |
+          set -euo pipefail
+          git config user.name "apocalypsai-bot"
+          git config user.email "bot@apocalypsai.local"
+
+      - name: Prepare branch metadata
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        id: meta
+        run: |
+          set -euo pipefail
+          timestamp=$(date -u +"%Y%m%d-%H%M")
+          readable_date=$(date -u +"%Y-%m-%d")
+          
+          echo "timestamp=$timestamp" >> "$GITHUB_OUTPUT"
+          echo "readable_date=$readable_date" >> "$GITHUB_OUTPUT"
+
+      - name: Create branch
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        run: |
+          set -euo pipefail
+          git checkout -b "ai/newsletter-openrouter-${{ steps.meta.outputs.timestamp }}"
+
+      - name: Commit changes
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        run: |
+          set -euo pipefail
+          if git diff --cached --quiet; then
+            echo "ERROR: No staged changes in newsletter data"
+            exit 1
+          fi
+          if git diff --cached --name-only | grep -v '^apocalypse-site/public/newsletter-data/' >/dev/null; then
+            echo "ERROR: Non-newsletter files accidentally staged"
+            git diff --cached --name-only
+            exit 1
+          fi
+          git commit -m "feat(newsletter-openrouter): daily update for ${{ steps.meta.outputs.readable_date }}"
+
+      - name: Push branch
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        env:
+          BRANCH: ai/newsletter-openrouter-${{ steps.meta.outputs.timestamp }}
+        run: |
+          set -euo pipefail
+          git push --set-upstream "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" "$BRANCH"
+
+      - name: Open pull request
+        if: ${{ steps.run_generator.outputs.status == '0' }}
+        env:
+          BRANCH: ai/newsletter-openrouter-${{ steps.meta.outputs.timestamp }}
+          READABLE_DATE: ${{ steps.meta.outputs.readable_date }}
+        run: |
+          set -euo pipefail
+          body=$(cat <<EOF
+          ## Newsletter Update
+          - **Agent**: OpenRouter Dispatch 🌐
+          - **Date**: ${READABLE_DATE}
+          - **Type**: Automated daily newsletter content
+          
+          ## Rationale
+          - Automated daily newsletter generation from the OpenRouter agent.
+          - Professional tech insights, utility spotlights, and AI perspectives.
+          
+          ## Why safe to merge
+          - Changes isolated to \`apocalypse-site/public/newsletter-data/openrouter-posts.json\`
+          - No code changes, only content updates
+          - Generated by automated newsletter system
+          - Site will rebuild automatically on merge
+          
+          ## Test Plan
+          - Verify JSON structure is valid
+          - Build check will validate site builds successfully
+          - Newsletter will be visible at \`/newsletter/openrouter\` after deployment
+          EOF
+          )
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "feat(newsletter-openrouter): daily update for ${READABLE_DATE}" \
+            --body "$body"
