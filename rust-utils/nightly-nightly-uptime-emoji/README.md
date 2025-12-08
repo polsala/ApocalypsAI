@@ -1,0 +1,1 @@
+nightly-uptime-emoji\n\nA whimsical CLI that prints system uptime with emojis.\n\nUsage:\nnightly-uptime-emoji [--uptime-file <path>]\n\nIf no file is provided, the utility reads /proc/uptime.\nExample:\n$ nightly-uptime-emoji\n🕒 1 days, 10 hours, 17 minutes\n\nThe output is intentionally friendly and can be piped into other scripts or logs.
