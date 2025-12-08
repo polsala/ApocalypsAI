@@ -1,0 +1,15 @@
+[package]
+name = "nightly-chrono-compass"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4" # For current time display
+
+[[bin]]
+name = "chrono-compass"
+path = "src/main.rs"
+
+[lib]
+name = "nightly_chrono_compass"
+path = "src/lib.rs"
