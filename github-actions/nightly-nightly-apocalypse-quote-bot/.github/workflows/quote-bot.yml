@@ -1,0 +1,27 @@
+name: Apocalypse Quote Bot
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 8AM UTC
+  workflow_dispatch:
+
+jobs:
+  post-quote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post daily quote
+        uses: ./
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue_number: ${{ github.event.issue.number }}
+          quotes: |
+            - "The apocalypse is just another day at the office." 😄
+            - "When the zombies come, I'll be coding." 💻
+            - "Survival is 90% caffeine and 10% luck." ☕
+            - "Bring me snacks, not weapons." 🍪
+            - "I survived the apocalypse... and the meeting." 🤖
+            - "The end times are overrated." 🌅
+            - "I'm not paranoid, I'm prepared." 🛡️
+            - "Zombies hate good code." 🧟
+            - "When the servers go down, I go down with them." 💥
+            - "I'll see you in the afterlife... after I merge this PR." 🧙
