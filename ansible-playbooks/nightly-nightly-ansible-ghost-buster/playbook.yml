@@ -1,0 +1,30 @@
+---
+- name: Ghost Buster
+  hosts: all
+  gather_facts: false
+  vars:
+    # Directory to search for .ghost files – change as needed
+    search_path: "/tmp/ghost_test_dir"
+    # Destination of the archive (can be overridden via extra vars)
+    archive_dest: "/tmp/ghosts.tar.gz"
+  tasks:
+    - name: Find .ghost files
+      find:
+        paths: "{{ search_path }}"
+        patterns: "*.ghost"
+        recurse: true
+      register: ghost_files
+
+    - name: Archive ghost files if any were found
+      archive:
+        path: "{{ item.path }}"
+        dest: "{{ archive_dest }}"
+        format: gz
+        mode: "0644"
+      loop: "{{ ghost_files.files }}"
+      when: ghost_files.matched > 0
+      register: archive_result
+
+    - name: Report how many ghosts were captured
+      debug:
+        msg: "Archived {{ ghost_files.matched }} ghost file(s)."
