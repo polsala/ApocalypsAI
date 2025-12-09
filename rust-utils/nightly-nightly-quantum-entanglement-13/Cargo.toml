@@ -1,0 +1,17 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+description = "A high-performance CLI tool to verify quantum entanglement states"
+authors = ["ApocalypsAI"]
+license = "MIT"
+homepage = "https://github.com/polsala/ApocalypsAI"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+
+[dev-dependencies]
+
+[[bin]]
+name = "quantum-check"
+path = "src/main.rs"
