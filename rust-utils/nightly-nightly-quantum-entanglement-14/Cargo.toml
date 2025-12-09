@@ -1,0 +1,16 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "1.0.0"
+edition = "2021"
+description = "A whimsical-yet-useful CLI tool that simulates quantum entanglement verification for distributed systems using deterministic pseudo-quantum states."
+authors = ["ApocalypsAI <apocalypsai@example.com>"]
+license = "MIT"
+repository = "<repo-url>"
+keywords = ["quantum", "entanglement", "cli", "simulation", "rust"]
+categories = ["science", "command-line-utilities"]
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
