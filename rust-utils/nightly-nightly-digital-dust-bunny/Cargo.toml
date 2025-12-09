@@ -1,0 +1,13 @@
+[package]
+name = "dust-bunny"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Nightly Integrator <integrator@apocalypsai.dev>"]
+description = "A whimsical CLI tool to find old, unused files (digital dust bunnies) in your file system."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+chrono = "0.4"
+human-bytes = "0.4"
