@@ -1,0 +1,53 @@
+{
+  "name": "Nightly Git Branch Pruner",
+  "description": "Automatically closes stale branches based on configurable inactivity and naming rules.",
+  "author": "ApocalypsAI",
+  "branding": {
+    "color": "red",
+    "icon": "git-branch"
+  },
+  "inputs": {
+    "token": {
+      "description": "GitHub token for API access",
+      "required": true
+    },
+    "days-inactive": {
+      "description": "Number of days after which a branch is considered stale",
+      "required": false,
+      "default": "30"
+    },
+    "protected-branches": {
+      "description": "Comma-separated list of branch patterns to protect from pruning",
+      "required": false,
+      "default": "main,master,develop,dev,release/*"
+    },
+    "dry-run": {
+      "description": "Set to 'true' to perform a dry run without actually closing branches",
+      "required": false,
+      "default": "false"
+    }
+  },
+  "runs": {
+    "using": "composite",
+    "steps": [
+      {
+        "name": "Checkout repository",
+        "uses": "actions/checkout@v4",
+        "with": {
+          "token": "${{ inputs.token }}"
+        }
+      },
+      {
+        "name": "Run branch pruner",
+        "shell": "bash",
+        "run": "./scripts/prune_branches.sh",
+        "env": {
+          "GITHUB_TOKEN": "${{ inputs.token }}",
+          "DAYS_INACTIVE": "${{ inputs.days-inactive }}",
+          "PROTECTED_BRANCHES": "${{ inputs.protected-branches }}",
+          "DRY_RUN": "${{ inputs.dry-run }}"
+        }
+      }
+    ]
+  }
+}
