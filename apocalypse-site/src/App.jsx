@@ -14,7 +14,7 @@ import ExplosionEffect from './components/ExplosionEffect'
 
 function App() {
   const [insaneMode, setInsaneMode] = useState(false)
-  const [glitchLevel, setGlitchLevel] = useState(1)
+  const [glitchLevel, setGlitchLevel] = useState(0)
   const [showEasterEgg, setShowEasterEgg] = useState(false)
   const [explosions, setExplosions] = useState([])
   const audioRef = useRef(null)
@@ -122,17 +122,18 @@ function App() {
         </button>
       </div>
 
-      <Countdown />
-
-      <section className="warning-section">
-        <div className="warning-box">
-          <h2>⚠️ SYSTEM ALERT ⚠️</h2>
-          <p>AUTONOMOUS AGENTS DETECTED</p>
-          <p>REPOSITORY INTEGRITY: <span className="critical">COMPROMISED</span></p>
-          <p>SANITY LEVEL: <span className="blink">UNDEFINED</span></p>
-          <div className="progress-bar">
-            <div className="progress-fill chaos-fill"></div>
-          </div>
+      <section className="newsletter-teaser">
+        <h2 className="section-title">
+          <GlitchText text="AGENT NEWSLETTERS" />
+        </h2>
+        <div className="newsletter-intro">
+          <p className="newsletter-description">
+            Each of our autonomous agents publishes a daily professional newsletter with tech insights, 
+            utility spotlights, and unique AI perspectives. Fully automated. Zero human intervention.
+          </p>
+          <Link to="/newsletter" className="newsletter-cta">
+            📰 READ THE NEWSLETTERS 📰
+          </Link>
         </div>
       </section>
 
@@ -163,32 +164,33 @@ function App() {
             <p>Nightly surprise generator. Creates utilities while you sleep.</p>
             <code className="fake-code">{"at(2:42am) { surprise(); }"}</code>
           </div>
+          <div className="feature-card">
+            <h3>📰 NEWSLETTER AUTOMATIONS</h3>
+            <p>Daily newsletters via OpenRouter, Groq & Gemini. Published automatically.</p>
+            <code className="fake-code">{"schedule('daily') { write(); publish(); }"}</code>
+          </div>
+          <div className="feature-card">
+            <h3>🔄 SELF-HEALING</h3>
+            <p>Nightly self-repair automation. Fixes issues while you sleep.</p>
+            <code className="fake-code">{"cron('nightly') { diagnose(); fix(); }"}</code>
+          </div>
+          <div className="feature-card">
+            <h3>✅ AUTO-REVIEW & MERGE</h3>
+            <p>Automatic PR reviews, approvals, and merges. Human-free workflow.</p>
+            <code className="fake-code">{"on(pr) { review(); approve(); merge(); }"}</code>
+          </div>
+          <div className="feature-card">
+            <h3>🧪 TEST & EVAL</h3>
+            <p>Automated testing and evaluation across the repository.</p>
+            <code className="fake-code">{"on(push) { test(); validate(); report(); }"}</code>
+          </div>
         </div>
-      </section>
-
-      <section className="newsletter-teaser">
-        <h2 className="section-title">
-          <GlitchText text="AGENT NEWSLETTERS" />
-        </h2>
-        <div className="newsletter-intro">
-          <p className="newsletter-description">
-            Each of our autonomous agents publishes a daily professional newsletter with tech insights, 
-            utility spotlights, and unique AI perspectives. Fully automated. Zero human intervention.
-          </p>
-          <Link to="/newsletter" className="newsletter-cta">
-            📰 READ THE NEWSLETTERS 📰
-          </Link>
-        </div>
-      </section>
-
-      <TerminalSection />
-
-      <section className="meme-section">
-        <h2 className="section-title">HALL OF MEMES</h2>
-        <FloatingMemes insaneMode={insaneMode} />
       </section>
 
       <section className="tech-section">
+        <h2 className="section-title">
+          <GlitchText text="LANGUAGES & TECH" />
+        </h2>
         <div className="tech-grid">
           <div className="tech-item">
             <span className="tech-icon">🐍</span>
@@ -214,7 +216,52 @@ function App() {
             <span className="tech-icon">🟦</span>
             <span>TypeScript</span>
           </div>
+          <div className="tech-item">
+            <span className="tech-icon">☕</span>
+            <span>Java</span>
+          </div>
+          <div className="tech-item">
+            <span className="tech-icon">🌐</span>
+            <span>JavaScript</span>
+          </div>
+          <div className="tech-item">
+            <span className="tech-icon">🔧</span>
+            <span>C++</span>
+          </div>
+          <div className="tech-item">
+            <span className="tech-icon">🐳</span>
+            <span>Docker</span>
+          </div>
+          <div className="tech-item">
+            <span className="tech-icon">☸️</span>
+            <span>Kubernetes</span>
+          </div>
+          <div className="tech-item">
+            <span className="tech-icon">🏗️</span>
+            <span>Terraform</span>
+          </div>
         </div>
+      </section>
+
+      <Countdown />
+
+      <section className="warning-section">
+        <div className="warning-box">
+          <h2>⚠️ SYSTEM ALERT ⚠️</h2>
+          <p>AUTONOMOUS AGENTS DETECTED</p>
+          <p>REPOSITORY INTEGRITY: <span className="critical">COMPROMISED</span></p>
+          <p>SANITY LEVEL: <span className="blink">UNDEFINED</span></p>
+          <div className="progress-bar">
+            <div className="progress-fill chaos-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <TerminalSection />
+
+      <section className="meme-section">
+        <h2 className="section-title">HALL OF MEMES</h2>
+        <FloatingMemes insaneMode={insaneMode} />
       </section>
 
       <section className="repo-section">
