@@ -1,0 +1,1 @@
+{\n  "name": "nightly-qr-code-cli",\n  "version": "0.1.0",\n  "description": "Deterministic ASCII art generator from text",\n  "main": "src/main.ts",\n  "scripts": {\n    "start": "ts-node src/main.ts",\n    "test": "ts-node -O '{\"module\":\"commonjs\"}' tests/test_main.ts"\n  },\n  "devDependencies": {\n    "ts-node": "^10.9.1",\n    "typescript": "^5.3.3"\n  }\n}\n
