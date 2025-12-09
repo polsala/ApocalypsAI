@@ -1,0 +1,1 @@
+FROM python:3.11-slim\nWORKDIR /app\nCOPY src/main.py src/main.py\nCOPY requirements.txt requirements.txt\nRUN pip install --no-cache-dir -r requirements.txt\nEXPOSE 8080\nCMD ["python", "src/main.py", "--serve"]\n
