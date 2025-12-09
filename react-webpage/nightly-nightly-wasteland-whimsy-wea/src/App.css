@@ -1,0 +1,95 @@
+body {
+  font-family: 'Courier New', monospace;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.app-container {
+  text-align: center;
+  background-color: #0f0f1a;
+  border: 2px solid #4a00e0;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 0 20px rgba(74, 0, 224, 0.7);
+  max-width: 600px;
+  width: 90%;
+}
+
+.app-header h1 {
+  color: #8a2be2;
+  margin-bottom: 10px;
+  font-size: 2.5em;
+  text-shadow: 0 0 5px #8a2be2;
+}
+
+.app-header p {
+  font-style: italic;
+  color: #b0b0b0;
+  margin-bottom: 30px;
+}
+
+.forecast-card {
+  background-color: #2a0050;
+  border: 1px solid #6a00ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 0 10px rgba(106, 0, 255, 0.5);
+}
+
+.forecast-card h2 {
+  color: #ffcc00;
+  margin-top: 0;
+  font-size: 1.8em;
+  text-shadow: 0 0 3px #ffcc00;
+}
+
+.forecast-card p {
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+.forecast-card strong {
+  color: #00ffff;
+}
+
+.timestamp {
+  font-size: 0.9em;
+  color: #999;
+  margin-top: 20px;
+}
+
+.reroll-button {
+  background-color: #8a2be2;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 5px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 20px;
+}
+
+.reroll-button:hover {
+  background-color: #6a00ff;
+  transform: translateY(-2px);
+}
+
+.reroll-button:active {
+  background-color: #4a00e0;
+  transform: translateY(0);
+}
+
+.app-footer {
+  margin-top: 30px;
+  font-size: 0.8em;
+  color: #777;
+}
