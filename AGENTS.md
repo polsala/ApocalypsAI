@@ -126,6 +126,9 @@ Classifiers can be specified explicitly in the JSON payload via the `classifier`
 * `GROQ_MODEL_POOL` (optional) — JSON array of Groq model names for fallback sequence
   * Example: `["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]`
   * Default: `["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]`
+* `GEMINI_MODEL_POOL` (optional) — JSON array of Gemini model names for fallback sequence
+  * Example: `["gemini-2.5-flash", "gemini-2.5-flash-lite"]`
+  * Default: `["gemini-2.5-flash", "gemini-2.5-flash-lite"]`
 * `GITHUB_TOKEN` (**required** for GitHub API)
 * Agents MAY choose any available provider via `llm_clients.py`. If none available → fail with code `1`.
 
@@ -158,14 +161,14 @@ Classifiers can be specified explicitly in the JSON payload via the `classifier`
 
 ```python
 # Required interface (do not rename)
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 class LLMError(RuntimeError): ...
 def call_openrouter(prompt: str, model: str = "google/gemini-1.5-flash-8b") -> str: ...
 def call_groq(
     prompt: str,
     model: Optional[str] = None,
-    model_pool: Optional[list[str]] = None,
+    model_pool: Optional[List[str]] = None,
 ) -> str:
     """
     Call Groq with configurable model fallback.
@@ -179,7 +182,23 @@ def call_groq(
     env var (JSON array format), or uses default pool:
     ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3-32b"]
     """
-def call_gemini(prompt: str, model: str = "gemini-1.5-flash") -> str: ...
+def call_gemini(
+    prompt: str,
+    model: Optional[str] = None,
+    model_pool: Optional[List[str]] = None,
+) -> str:
+    """
+    Call Gemini with configurable model fallback.
+    
+    Args:
+        prompt: The prompt to send
+        model: Single model to use (overrides pool)
+        model_pool: List of models to try in sequence
+        
+    If neither model nor model_pool is provided, reads from GEMINI_MODEL_POOL
+    env var (JSON array format), or uses default pool:
+    ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    """
 def cheap_mix(prompt: str, models: Optional[Dict[str, str]] = None) -> str:
     """
     Try providers in order: Groq -> Gemini -> OpenRouter.

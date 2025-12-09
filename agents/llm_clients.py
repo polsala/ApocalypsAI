@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import re
@@ -8,6 +9,10 @@ import time
 from typing import Dict, Optional
 
 import requests
+
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class LLMError(RuntimeError):
@@ -185,38 +190,98 @@ def call_groq(
     raise LLMError(f"All Groq models failed ({error_details})")
 
 
-def call_gemini(prompt: str, model: str = "gemini-2.5-flash") -> str:
+def call_gemini(
+    prompt: str,
+    model: Optional[str] = None,
+    model_pool: Optional[list[str]] = None,
+) -> str:
+    """
+    Call Gemini API with configurable model fallback.
+    
+    Args:
+        prompt: The prompt to send to the model
+        model: Single model to use (overrides pool if provided)
+        model_pool: List of models to try in sequence. If not provided,
+                   reads from GEMINI_MODEL_POOL env var (JSON format),
+                   or uses default pool.
+    
+    Default pool: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    
+    Returns:
+        The model's response text
+        
+    Raises:
+        LLMError: If all models in the pool fail
+    """
     api_key = _require_env("GOOGLE_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    params = {"key": api_key}
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2},
-    }
-    last_error: Optional[Exception] = None
-    for attempt in range(3):
-        try:
-            response = requests.post(url, params=params, headers=headers, json=payload, timeout=60.0)
-            if response.status_code >= 400:
-                raise LLMError(f"HTTP {response.status_code}: {response.text.strip()}")
-            data = response.json()
-            candidates = data.get("candidates")
-            if not candidates:
-                raise LLMError("Gemini response missing candidates")
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                raise LLMError("Gemini candidate missing content parts")
-            text = parts[0].get("text")
-            if not isinstance(text, str):
-                raise LLMError("Gemini content missing text")
-            return _clean_response_text(text)
-        except (LLMError, requests.RequestException) as exc:
-            last_error = exc
-            if attempt == 2:
-                break
-            _sleep_with_jitter(attempt)
-    raise LLMError(f"Gemini call failed: {last_error}")
+    
+    # Determine the model pool to use
+    if model is not None:
+        # Single model provided - use it with retries
+        models_to_try = [model]
+    elif model_pool is not None:
+        # Model pool provided as argument
+        models_to_try = model_pool
+    else:
+        # Check environment variable for custom pool
+        pool_env = os.environ.get("GEMINI_MODEL_POOL")
+        if pool_env:
+            try:
+                models_to_try = json.loads(pool_env)
+                if not isinstance(models_to_try, list):
+                    raise ValueError(f"GEMINI_MODEL_POOL must be a JSON array, got {type(models_to_try).__name__}")
+            except (json.JSONDecodeError, ValueError) as exc:
+                raise LLMError(f"Invalid GEMINI_MODEL_POOL format: {exc}") from exc
+        else:
+            # Use default fallback pool
+            models_to_try = [
+                "gemini-2.5-flash",
+                "gemini-2.5-flash-lite",
+            ]
+    
+    # Try each model in the pool
+    all_errors: Dict[str, Exception] = {}
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        params = {"key": api_key}
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.2},
+        }
+        last_error: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                response = requests.post(url, params=params, headers=headers, json=payload, timeout=60.0)
+                if response.status_code >= 400:
+                    error_msg = f"HTTP {response.status_code}: {response.text.strip()}"
+                    # Check for rate limiting specifically
+                    if response.status_code == 429 or "rate limit" in response.text.lower() or "quota" in response.text.lower():
+                        logger.info(f"Gemini rate limit detected for {model_name}, will try next model in pool")
+                    raise LLMError(error_msg)
+                data = response.json()
+                candidates = data.get("candidates")
+                if not candidates:
+                    raise LLMError("Gemini response missing candidates")
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    raise LLMError("Gemini candidate missing content parts")
+                text = parts[0].get("text")
+                if not isinstance(text, str):
+                    raise LLMError("Gemini content missing text")
+                return _clean_response_text(text)
+            except (LLMError, requests.RequestException) as exc:
+                last_error = exc
+                if attempt == 2:
+                    break
+                _sleep_with_jitter(attempt)
+        # Record the error for this model and try the next one
+        if last_error is not None:
+            all_errors[model_name] = last_error
+    
+    # All models failed
+    error_details = "; ".join(f"{model}: {str(error)}" for model, error in all_errors.items())
+    raise LLMError(f"All Gemini models failed ({error_details})")
 
 
 def call_provider(prompt: str, models: Optional[Dict[str, str]] = None) -> tuple[str, str]:
