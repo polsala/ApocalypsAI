@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import re
@@ -8,6 +9,10 @@ import time
 from typing import Dict, Optional
 
 import requests
+
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class LLMError(RuntimeError):
@@ -224,7 +229,7 @@ def call_gemini(
             try:
                 models_to_try = json.loads(pool_env)
                 if not isinstance(models_to_try, list):
-                    raise ValueError("GEMINI_MODEL_POOL must be a JSON array")
+                    raise ValueError(f"GEMINI_MODEL_POOL must be a JSON array, got {type(models_to_try).__name__}")
             except (json.JSONDecodeError, ValueError) as exc:
                 raise LLMError(f"Invalid GEMINI_MODEL_POOL format: {exc}") from exc
         else:
@@ -252,7 +257,7 @@ def call_gemini(
                     error_msg = f"HTTP {response.status_code}: {response.text.strip()}"
                     # Check for rate limiting specifically
                     if response.status_code == 429 or "rate limit" in response.text.lower() or "quota" in response.text.lower():
-                        print(f"INFO: Gemini rate limit detected for {model_name}, will try next model in pool")
+                        logger.info(f"Gemini rate limit detected for {model_name}, will try next model in pool")
                     raise LLMError(error_msg)
                 data = response.json()
                 candidates = data.get("candidates")

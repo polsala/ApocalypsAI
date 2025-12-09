@@ -7,7 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.llm_clients import LLMError, call_gemini, call_groq, call_provider, cheap_mix
+from agents.llm_clients import (
+    LLMError,
+    call_gemini,
+    call_groq,
+    call_provider,
+    cheap_mix,
+)
 
 
 class TestProviderSelection:

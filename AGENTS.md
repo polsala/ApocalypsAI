@@ -161,14 +161,14 @@ Classifiers can be specified explicitly in the JSON payload via the `classifier`
 
 ```python
 # Required interface (do not rename)
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 class LLMError(RuntimeError): ...
 def call_openrouter(prompt: str, model: str = "google/gemini-1.5-flash-8b") -> str: ...
 def call_groq(
     prompt: str,
     model: Optional[str] = None,
-    model_pool: Optional[list[str]] = None,
+    model_pool: Optional[List[str]] = None,
 ) -> str:
     """
     Call Groq with configurable model fallback.
@@ -185,7 +185,7 @@ def call_groq(
 def call_gemini(
     prompt: str,
     model: Optional[str] = None,
-    model_pool: Optional[list[str]] = None,
+    model_pool: Optional[List[str]] = None,
 ) -> str:
     """
     Call Gemini with configurable model fallback.
