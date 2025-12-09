@@ -1,0 +1,50 @@
+---
+- name: Harmonize Log Formats Across Servers
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/log_harmonizer_vars.yml
+
+  tasks:
+    - name: Ensure target log directory exists (if applicable)
+      ansible.builtin.file:
+        path: "{{ item.path | dirname }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ log_files_to_harmonize }}"
+      when: item.path is defined
+
+    - name: Apply log format standardization (example using sed for JSON conversion)
+      ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        line: "{{ item.format_command }}"
+        state: present
+        insertafter: EOF
+      loop:
+        - { path: "/var/log/syslog", format_command: "{{ '{\"timestamp\": \"' ~ ansible_date_time.iso8601 ~ '\", \"message\": \"' ~ ansible_log_message ~ '\"}' }}" } # Example for syslog
+        # Add more complex transformations or use dedicated log shippers like Fluentd/Logstash for real-world scenarios
+      when: item.path in log_files_to_harmonize and target_log_format == 'json'
+
+    - name: Configure log rotation (using logrotate)
+      ansible.builtin.template:
+        src: templates/logrotate.conf.j2
+        dest: "/etc/logrotate.d/{{ item.name }}"
+        mode: '0644'
+      loop:
+        - { name: 'apocalypse_logs', path: "{{ item.path }}" } # Example for a custom log file
+      when: log_rotation_enabled and item.path in log_files_to_harmonize
+
+    - name: Ensure logrotate service is running and enabled
+      ansible.builtin.service:
+        name: logrotate
+        state: started
+        enabled: yes
+      when: log_rotation_enabled
+
+    - name: Clean up old log files (if not using logrotate for specific files)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop:
+        - { path: "/var/log/old_log_file.log" } # Example of manual cleanup
+      when: not log_rotation_enabled

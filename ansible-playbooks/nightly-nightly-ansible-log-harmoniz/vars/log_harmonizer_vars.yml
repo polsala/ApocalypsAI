@@ -1,0 +1,21 @@
+# Variables for the Ansible Log Harmonizer playbook
+
+# List of log file paths to harmonize. Each entry can optionally include a 'format_command' for specific transformations.
+# For complex transformations, consider using dedicated log shippers (e.g., Fluentd, Logstash) and managing their configuration via Ansible.
+log_files_to_harmonize:
+  - path: "/var/log/syslog"
+  - path: "/var/log/auth.log"
+  - path: "/var/log/myapp/application.log"
+
+# The desired log format. Supported values are illustrative and depend on the implementation of the standardization task.
+# Common options: 'json', 'syslog', 'plain'
+target_log_format: "json"
+
+# Enable or disable log rotation.
+log_rotation_enabled: true
+
+# Log rotation interval. Common values: 'daily', 'weekly', 'monthly', 'yearly'.
+log_rotation_interval: "daily"
+
+# Number of old log files to keep after rotation.
+log_rotation_count: 7

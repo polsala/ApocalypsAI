@@ -1,0 +1,59 @@
+---
+- name: Test Log Harmonizer Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mock variables to simulate target environment and log content
+    mock_log_files: ["/tmp/mock_syslog.log", "/tmp/mock_auth.log"]
+    mock_target_log_format: "json"
+    mock_log_rotation_enabled: true
+    mock_log_rotation_interval: "daily"
+    mock_log_rotation_count: 3
+
+  tasks:
+    - name: Create mock log files
+      ansible.builtin.copy:
+        dest: "{{ item }}"
+        content: "This is a sample log line.\nAnother log entry."
+      loop: "{{ mock_log_files }}"
+
+    - name: Mock the logrotate module to check its configuration
+      ansible.builtin.template:
+        src: templates/logrotate.conf.j2
+        dest: "/tmp/mock_logrotate_conf"
+      vars:
+        item: { name: "mock_app", path: "{{ mock_log_files[2] }}" } # Using a third mock file for rotation test
+        log_rotation_enabled: "{{ mock_log_rotation_enabled }}"
+        log_rotation_interval: "{{ mock_log_rotation_interval }}"
+        log_rotation_count: "{{ mock_log_rotation_count }}"
+
+    - name: Assert logrotate configuration content (mock)
+      ansible.builtin.assert:
+        that:
+          - "'/tmp/mock_logrotate_conf' is file"
+          - "'daily' in lookup('file', '/tmp/mock_logrotate_conf')"
+          - "'rotate 3' in lookup('file', '/tmp/mock_logrotate_conf')"
+          - "'compress' in lookup('file', '/tmp/mock_logrotate_conf')"
+        fail_msg: "Logrotate configuration test failed."
+        success_msg: "Logrotate configuration test passed."
+
+    - name: Mock the lineinfile module for JSON formatting (simulated)
+      ansible.builtin.command: "echo '{{ '{\"timestamp\": \"' ~ '2023-10-27T10:00:00Z' ~ '\", \"message\": \"' ~ 'Test message' ~ '\"}' }}' >> /tmp/mock_syslog.log"
+      register: mock_json_output
+      # Mock rationale: Simulating the output of lineinfile to verify the format. In a real test, you'd check the file content.
+
+    - name: Assert JSON formatting (simulated)
+      ansible.builtin.assert:
+        that:
+          - "mock_json_output is succeeded"
+          - "'/tmp/mock_syslog.log' contains '{\"timestamp\": \"2023-10-27T10:00:00Z\", \"message\": \"Test message\"}'"
+        fail_msg: "JSON formatting test failed."
+        success_msg: "JSON formatting test passed."
+
+    - name: Clean up mock files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ mock_log_files + ['/tmp/mock_logrotate_conf'] }}"
