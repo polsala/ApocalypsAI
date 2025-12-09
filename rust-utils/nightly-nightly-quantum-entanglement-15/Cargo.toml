@@ -1,0 +1,26 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical utility for simulating quantum entanglement between files"
+authors = ["ApocalypsAI"]
+license = "MIT"
+homepage = "https://github.com/polsala/ApocalypsAI"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
+
+[lib]
+name = "nightly_quantum_entanglement_checker"
+path = "src/lib.rs"
