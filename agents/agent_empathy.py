@@ -129,7 +129,7 @@ class EmpathyAgent(AgentBase):
     RETRY_KEYWORD = "retry-ai-response"
     
     # Target category for empathetic responses
-    TARGET_CATEGORY = "🫂You talk AI response"
+    TARGET_CATEGORY = "You talk AI response"
     
     def __init__(self):
         self.rate_limiter = RateLimiter()
