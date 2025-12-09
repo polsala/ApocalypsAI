@@ -1,0 +1,23 @@
+name: Daily Whimsy Comment
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 8AM UTC
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate whimsy
+        id: generate
+        run: | 
+            echo "WHIMSY_COMMENT=$(node src/main.js)" >> $GITHUB_OUTPUT
+      - name: Post comment
+        uses: actions/github-script@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.createComment({
+              issue_number: process.env.ISSUE_NUMBER,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: ${{ steps.generate.outputs.WHIMSY_COMMENT }}
+            })
