@@ -1,0 +1,11 @@
+[package]
+name = "nightly-emoji-echo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
+regex = "1"
