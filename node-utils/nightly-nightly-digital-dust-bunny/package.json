@@ -1,0 +1,26 @@
+{
+  "name": "nightly-digital-dust-bunny",
+  "version": "1.0.0",
+  "description": "A Node.js CLI utility to sweep digital dust bunnies (old, unused files).",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-cleanup",
+    "node-utils",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
