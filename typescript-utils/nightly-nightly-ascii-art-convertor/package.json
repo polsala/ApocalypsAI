@@ -1,0 +1,33 @@
+{
+  "name": "nightly-ascii-art-convertor",
+  "version": "1.0.0",
+  "description": "A whimsical TypeScript CLI tool that converts images to ASCII art",
+  "main": "dist/main.js",
+  "bin": {
+    "ascii-art": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node dist/tests/test_main.js",
+    "dev": "tsc --watch",
+    "start": "node dist/main.js"
+  },
+  "keywords": [
+    "ascii",
+    "art",
+    "cli",
+    "image",
+    "converter",
+    "terminal",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
