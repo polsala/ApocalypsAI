@@ -1,0 +1,16 @@
+- name: Test Task Tamer
+  hosts: localhost
+  vars:
+    daily_task: "Test Task"
+  tasks:
+    - name: Mock task status check
+      ansible.builtin.assert:
+        that:
+          - task_status is defined
+          - task_status.stdout|from_json.status == 'completed'
+        fail_msg: "Task status check failed"
+    - name: Verify report generation
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.file', 'reports/localhost_report.txt') is defined
+        fail_msg: "Report file not generated"
