@@ -1,0 +1,40 @@
+# Chaos Engineering Scenarios
+# Configure the types of chaos to apply
+
+chaos_scenarios:
+  - name: "Network Latency"
+    duration: 100
+    probability: 0.5
+    description: "Adds network latency to simulate poor connectivity"
+  
+  - name: "Service Restart"
+    services:
+      - nginx
+      - apache2
+      - ssh
+    count: 2
+    duration: 30
+    description: "Randomly restarts critical services"
+
+  - name: "Resource Exhaustion"
+    cpu_cores: 2
+    memory_mb: 200
+    duration: 30
+    description: "Consumes CPU and memory to simulate high load"
+
+  - name: "Time Manipulation"
+    offset: 3600
+    duration: 60
+    description: "Manipulates system time to test time-sensitive applications"
+
+# Safety settings
+safety_checks:
+  enabled: true
+  max_duration: 300
+  allowed_hosts: ["localhost", "test-server"]
+
+# Reporting
+reporting:
+  format: "text"
+  include_metrics: true
+  send_email: false

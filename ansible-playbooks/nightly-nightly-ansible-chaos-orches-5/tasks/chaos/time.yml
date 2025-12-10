@@ -1,0 +1,20 @@
+# Time Chaos Tasks
+# Manipulates system time
+
+- name: "Backup current system time"
+  shell: date '+%Y-%m-%d %H:%M:%S'
+  register: backup_time
+  changed_when: false
+
+- name: "Manipulate system time"
+  shell: |
+    offset={{ chaos_scenarios | selectattr('name', 'equalto', 'Time Manipulation') | list | first | default({'offset': 3600}) | map('extract', 'offset') | first | default(3600) }}
+    date -s "$(date -d '+${offset} seconds')"
+  when: chaos_enabled | bool
+  ignore_errors: true
+
+- name: "Log time chaos applied"
+  lineinfile:
+    path: /tmp/chaos_report.log
+    line: "Time Manipulation: System time offset by {{ chaos_scenarios | selectattr('name', 'equalto', 'Time Manipulation') | list | first | default({'offset': 3600}) | map('extract', 'offset') | first | default(3600) }} seconds\n"
+    insertafter: EOF

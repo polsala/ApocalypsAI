@@ -1,0 +1,26 @@
+# Resource Chaos Tasks
+# Consumes CPU and memory resources
+
+- name: "Install stress tool"
+  package:
+    name: stress
+    state: present
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+
+- name: "Consume CPU resources"
+  shell: |
+    stress --cpu {{ ansible_processor_vcpus | default(2) }} --timeout {{ chaos_scenarios | selectattr('name', 'equalto', 'Resource Exhaustion') | list | first | default({'duration': 30}) | map('extract', 'duration') | first | default(30) }}s &
+  when: chaos_enabled | bool
+  ignore_errors: true
+
+- name: "Consume memory resources"
+  shell: |
+    stress --vm {{ ansible_processor_vcpus | default(2) | int / 2 | max(1) }} --vm-bytes 100M --timeout {{ chaos_scenarios | selectattr('name', 'equalto', 'Resource Exhaustion') | list | first | default({'duration': 30}) | map('extract', 'duration') | first | default(30) }}s &
+  when: chaos_enabled | bool
+  ignore_errors: true
+
+- name: "Log resource chaos applied"
+  lineinfile:
+    path: /tmp/chaos_report.log
+    line: "Resource Exhaustion: CPU and Memory stress applied for {{ chaos_scenarios | selectattr('name', 'equalto', 'Resource Exhaustion') | list | first | default({'duration': 30}) | map('extract', 'duration') | first | default(30) }} seconds\n"
+    insertafter: EOF

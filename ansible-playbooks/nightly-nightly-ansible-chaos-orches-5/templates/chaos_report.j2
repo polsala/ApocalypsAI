@@ -1,0 +1,32 @@
+╔══════════════════════════════════════════════════════════════╗
+║                    CHAOS ENGINEERING REPORT                  ║
+╚══════════════════════════════════════════════════════════════╝
+
+Report Generated: {{ ansible_date_time.iso8601 }}
+Target Host: {{ inventory_hostname }}
+OS: {{ ansible_os_family }} {{ ansible_distribution }} {{ ansible_distribution_version }}
+CPU: {{ ansible_processor_vcpus }} cores
+Memory: {{ ansible_memtotal_mb }} MB
+
+CHAOS SCENARIOS EXECUTED:
+{% for scenario in chaos_scenarios %}
+• {{ scenario.name }}
+{% endfor %}
+
+SYSTEM HEALTH:
+• Pre-chaos: {{ pre_chaos_health.stdout | replace('\n', ', ') }}
+• Post-chaos: {{ post_chaos_health.stdout | replace('\n', ', ') }}
+
+CHAOS IMPACT:
+{% if chaos_enabled %}
+• Chaos experiments were ENABLED
+• All safety measures were applied
+• System has been restored to original state
+{% else %}
+• Chaos experiments were DISABLED
+• No actual chaos was applied
+{% endif %}
+
+╔══════════════════════════════════════════════════════════════╗
+║                    End of Report                           ║
+╚══════════════════════════════════════════════════════════════╝

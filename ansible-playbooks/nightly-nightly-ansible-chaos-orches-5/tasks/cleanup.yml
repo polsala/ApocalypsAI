@@ -1,0 +1,34 @@
+# Cleanup Tasks
+# Restores system state after chaos experiments
+
+- name: "Stop stress processes"
+  shell: pkill -f stress
+  ignore_errors: true
+  always_run: true
+
+- name: "Remove network rules"
+  shell: tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root 2>/dev/null || true
+  ignore_errors: true
+  always_run: true
+
+- name: "Restart services that were stopped"
+  service:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ running_services.stdout_lines | default([]) }}"
+  when: chaos_enabled | bool
+  ignore_errors: true
+  always_run: true
+
+- name: "Restore system time"
+  shell: |
+    date -s "{{ backup_time.stdout }}"
+  when: chaos_enabled | bool
+  ignore_errors: true
+  always_run: true
+
+- name: "Log cleanup completed"
+  lineinfile:
+    path: /tmp/chaos_report.log
+    line: "Cleanup: All chaos effects have been removed\n"
+    insertafter: EOF

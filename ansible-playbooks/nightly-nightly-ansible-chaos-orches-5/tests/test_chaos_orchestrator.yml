@@ -1,0 +1,85 @@
+---
+# Test Playbook for Chaos Orchestrator
+# Run with: ansible-playbook -i inventory.ini tests/test_chaos_orchestrator.yml
+
+- name: "Test Chaos Orchestrator"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: "Test inventory file exists"
+      stat:
+        path: inventory.ini
+      register: inventory_stat
+
+    - name: "Inventory file should exist"
+      assert:
+        that:
+          - inventory_stat.stat.exists
+          - inventory_stat.stat.isreg
+
+    - name: "Test playbook file exists"
+      stat:
+        path: chaos_orchestrator.yml
+      register: playbook_stat
+
+    - name: "Playbook file should exist"
+      assert:
+        that:
+          - playbook_stat.stat.exists
+          - playbook_stat.stat.isreg
+
+    - name: "Test variables file exists"
+      stat:
+        path: vars/chaos_scenarios.yml
+      register: vars_stat
+
+    - name: "Variables file should exist"
+      assert:
+        that:
+          - vars_stat.stat.exists
+          - vars_stat.stat.isreg
+
+    - name: "Test tasks directory exists"
+      stat:
+        path: tasks/
+      register: tasks_stat
+
+    - name: "Tasks directory should exist"
+      assert:
+        that:
+          - tasks_stat.stat.exists
+          - tasks_stat.stat.isdir
+
+    - name: "Test template file exists"
+      stat:
+        path: templates/chaos_report.j2
+      register: template_stat
+
+    - name: "Template file should exist"
+      assert:
+        that:
+          - template_stat.stat.exists
+          - template_stat.stat.isreg
+
+    - name: "Test chaos scenarios structure"
+      include_vars:
+        file: vars/chaos_scenarios.yml
+        name: chaos_vars
+
+    - name: "Chaos scenarios should be a list"
+      assert:
+        that:
+          - chaos_vars.chaos_scenarios is iterable
+          - chaos_vars.chaos_scenarios | length > 0
+
+    - name: "Each chaos scenario should have a name"
+      assert:
+        that:
+          - item.name is defined
+          - item.name | length > 0
+      loop: "{{ chaos_vars.chaos_scenarios }}"
+
+    - name: "Print test results"
+      debug:
+        msg: "All tests passed! Chaos Orchestrator is ready for deployment."

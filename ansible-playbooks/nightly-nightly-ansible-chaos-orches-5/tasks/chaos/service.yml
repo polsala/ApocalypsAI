@@ -1,0 +1,24 @@
+# Service Chaos Tasks
+# Randomly restarts services
+
+- name: "Get list of running services"
+  shell: systemctl list-units --type=service --state=running --no-pager --plain | awk '{print $1}' | grep -v UNIT
+  register: running_services
+  changed_when: false
+  when: ansible_service_mgr == 'systemd'
+
+- name: "Restart random services"
+  service:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ running_services.stdout_lines | sample(chaos_scenarios | selectattr('name', 'equalto', 'Service Restart') | list | first | default({'count': 2}) | map('extract', 'count') | first | default(2)) | list }}"
+  when: chaos_enabled | bool
+  ignore_errors: true
+  loop_control:
+    pause: 2
+
+- name: "Log service chaos applied"
+  lineinfile:
+    path: /tmp/chaos_report.log
+    line: "Service Chaos: Restarted {{ chaos_scenarios | selectattr('name', 'equalto', 'Service Restart') | list | first | default({'count': 2}) | map('extract', 'count') | first | default(2) }} services\n"
+    insertafter: EOF

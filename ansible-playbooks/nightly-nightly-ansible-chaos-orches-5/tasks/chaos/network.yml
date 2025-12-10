@@ -1,0 +1,27 @@
+# Network Chaos Tasks
+# Introduces network latency and packet loss
+
+- name: "Install tc for network manipulation"
+  package:
+    name: iproute2
+    state: present
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+
+- name: "Apply network latency"
+  shell: |
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem delay {{ chaos_scenarios | selectattr('name', 'equalto', 'Network Latency') | list | first | default({'duration': 100}) | map('extract', 'duration') | first | default(100) }}ms
+  when: chaos_enabled | bool
+  ignore_errors: true
+
+- name: "Log network chaos applied"
+  lineinfile:
+    path: /tmp/chaos_report.log
+    line: "Network Latency: {{ chaos_scenarios | selectattr('name', 'equalto', 'Network Latency') | list | first | default({'duration': 100}) | map('extract', 'duration') | first | default(100) }}ms applied\n"
+    insertafter: EOF
+
+- name: "Remove network latency"
+  shell: |
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem delay {{ chaos_scenarios | selectattr('name', 'equalto', 'Network Latency') | list | first | default({'duration': 100}) | map('extract', 'duration') | first | default(100) }}ms
+  when: chaos_enabled | bool
+  ignore_errors: true
+  always_run: true

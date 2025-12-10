@@ -1,0 +1,73 @@
+---
+- name: "Chaos Engineering Orchestrator"
+  hosts: all
+  become: true
+  vars_files:
+    - vars/chaos_scenarios.yml
+  tasks:
+    - name: "Initialize chaos log"
+      copy:
+        content: "=== Chaos Engineering Report ===\nTimestamp: {{ ansible_date_time.iso8601 }}\nTarget Hosts: {{ ansible_play_hosts }}\n\n"
+        dest: /tmp/chaos_report.log
+        mode: '0644'
+
+    - name: "Check system health before chaos"
+      shell: |
+        echo "CPU Load: $(uptime)"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3}')"
+        echo "Disk: $(df -h / | tail -1 | awk '{print $5}')"
+      register: pre_chaos_health
+      changed_when: false
+
+    - name: "Log pre-chaos health"
+      lineinfile:
+        path: /tmp/chaos_report.log
+        line: "Pre-chaos Health:\n{{ pre_chaos_health.stdout }}\n"
+        insertafter: EOF
+
+    - name: "Execute chaos scenarios"
+      include_tasks: tasks/chaos/network.yml
+      when: chaos_scenarios | selectattr('name', 'equalto', 'Network Latency') | list | length > 0
+
+    - name: "Execute service chaos"
+      include_tasks: tasks/chaos/service.yml
+      when: chaos_scenarios | selectattr('name', 'equalto', 'Service Restart') | list | length > 0
+
+    - name: "Execute resource chaos"
+      include_tasks: tasks/chaos/resource.yml
+      when: chaos_scenarios | selectattr('name', 'equalto', 'Resource Exhaustion') | list | length > 0
+
+    - name: "Execute time chaos"
+      include_tasks: tasks/chaos/time.yml
+      when: chaos_scenarios | selectattr('name', 'equalto', 'Time Manipulation') | list | length > 0
+
+    - name: "Wait for chaos duration"
+      pause:
+        seconds: "{{ chaos_duration | default(60) }}"
+
+    - name: "Execute cleanup"
+      include_tasks: tasks/cleanup.yml
+
+    - name: "Check system health after chaos"
+      shell: |
+        echo "CPU Load: $(uptime)"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3}')"
+        echo "Disk: $(df -h / | tail -1 | awk '{print $5}')"
+      register: post_chaos_health
+      changed_when: false
+
+    - name: "Log post-chaos health"
+      lineinfile:
+        path: /tmp/chaos_report.log
+        line: "Post-chaos Health:\n{{ post_chaos_health.stdout }}\n"
+        insertafter: EOF
+
+    - name: "Generate final report"
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_final_report.txt
+        mode: '0644'
+
+    - name: "Display chaos report"
+      debug:
+        msg: "{{ lookup('file', '/tmp/chaos_final_report.txt') }}"
