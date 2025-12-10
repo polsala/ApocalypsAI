@@ -1,0 +1,16 @@
+# Logrotate configuration for {{ item.name }}
+"{{ item.path }}" {
+    {{ log_rotation_interval }}
+    rotate {{ log_rotation_count }}
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root adm
+    sharedscripts
+    postrotate
+        # Commands to run after rotation, e.g., signal the service to re-open logs
+        # Example for systemd: systemctl kill -s USR1 {{ item.service_name | default('syslog') }}.service
+        # Example for init.d: /etc/init.d/{{ item.service_name | default('syslog') }} reload
+    endscript
+}
