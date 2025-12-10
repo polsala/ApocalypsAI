@@ -1,0 +1,90 @@
+---
+- name: Nightly Ansible Chaos Orchestrator
+  hosts: all
+  become: yes
+  gather_facts: false
+  vars:
+    chaos_duration: 60
+    chaos_scenarios_file: "vars/chaos_scenarios.yml"
+    report_template: "templates/chaos_report.j2"
+    chaos_log_dir: "/tmp/chaos_logs"
+    apocalypse_score: 0
+    chaos_results: []
+  pre_tasks:
+    - name: Load chaos scenarios
+      include_vars:
+        file: "{{ chaos_scenarios_file }}"
+
+    - name: Create chaos log directory
+      file:
+        path: "{{ chaos_log_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Initialize chaos report
+      set_fact:
+        chaos_report: []
+
+    - name: Announce chaos commencement
+      debug:
+        msg: |
+          🚨 CHAOS ENGINE ENGAGED 🚨
+          Preparing to unleash controlled chaos upon your infrastructure...
+          May your backups be plentiful and your rollbacks swift!
+
+  tasks:
+    - name: Execute network chaos scenarios
+      include_tasks: "tasks/chaos/network.yml"
+      when: chaos_scenarios.network.enabled | default(true)
+
+    - name: Execute service chaos scenarios
+      include_tasks: "tasks/chaos/service.yml"
+      when: chaos_scenarios.service.enabled | default(true)
+
+    - name: Execute resource chaos scenarios
+      include_tasks: "tasks/chaos/resource.yml"
+      when: chaos_scenarios.resource.enabled | default(true)
+
+    - name: Execute time chaos scenarios
+      include_tasks: "tasks/chaos/time.yml"
+      when: chaos_scenarios.time.enabled | default(true)
+
+    - name: Execute random chaos scenarios
+      include_tasks: "tasks/chaos/random.yml"
+      when: chaos_scenarios.random.enabled | default(true)
+
+    - name: Generate chaos report
+      template:
+        src: "{{ report_template }}"
+        dest: "{{ chaos_log_dir }}/chaos_report_{{ ansible_date_time.epoch }}.html"
+        mode: '0644'
+
+    - name: Display chaos summary
+      debug:
+        msg: |
+          📊 CHAOS SUMMARY REPORT 📊
+          
+          Total Chaos Score: {{ apocalypse_score }}/100
+          Chaos Events Executed: {{ chaos_results | length }}
+          
+          {{ (chaos_results | map(attribute='description') | list) | join('\n          ') }}
+          
+          🎭 The show must go on! May your systems be resilient!
+
+  post_tasks:
+    - name: Cleanup chaos artifacts
+      include_tasks: "tasks/cleanup.yml"
+      when: chaos_scenarios.cleanup.enabled | default(true)
+
+    - name: Final chaos blessing
+      debug:
+        msg: |
+          ✨ CHAOS BLESSING CONFERRED ✨
+          
+          May your:
+          - Load balancers distribute gracefully
+          - Databases replicate faithfully
+          - Caches hit consistently
+          - Logs rotate automatically
+          
+          Go forth and be chaotic! (But not too chaotic.)

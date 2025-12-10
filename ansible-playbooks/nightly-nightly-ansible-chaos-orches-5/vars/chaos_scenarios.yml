@@ -1,0 +1,106 @@
+---
+# Chaos Engineering Scenarios Configuration
+# Customize these settings to control your chaos experiments
+
+chaos_scenarios:
+  # Network chaos scenarios
+  network:
+    enabled: true
+    scenarios:
+      - name: "latency"
+        description: "Add network latency"
+        duration: 60
+        parameters:
+          delay: "100ms"
+          jitter: "50ms"
+      - name: "packet_loss"
+        description: "Simulate packet loss"
+        duration: 60
+        parameters:
+          loss: "5%"
+
+  # Service chaos scenarios
+  service:
+    enabled: true
+    scenarios:
+      - name: "restart_web"
+        description: "Restart web services"
+        services: ["nginx", "apache2", "httpd"]
+      - name: "restart_db"
+        description: "Stop and restart database services"
+        services: ["mysql", "postgresql", "mongod"]
+        downtime: 30
+
+  # Resource chaos scenarios
+  resource:
+    enabled: true
+    scenarios:
+      - name: "memory_pressure"
+        description: "Create memory pressure"
+        size_mb: 512
+        duration: 60
+      - name: "cpu_load"
+        description: "Create CPU load"
+        processes: 2
+        duration: 60
+
+  # Time chaos scenarios
+  time:
+    enabled: true
+    scenarios:
+      - name: "time_shift"
+        description: "Shift system time"
+        shift_minutes: 5
+        duration: 30
+
+  # Random chaos scenarios
+  random:
+    enabled: true
+    scenarios:
+      - name: "disk_space"
+        description: "Create disk space pressure"
+        size_gb: 1
+        duration: 60
+      - name: "process_kill"
+        description: "Kill random processes"
+        count: 1
+      - name: "network_partition"
+        description: "Create network partitions"
+        subnets: ["10.0.0.0/8", "192.168.0.0/16"]
+
+  # Cleanup settings
+  cleanup:
+    enabled: true
+    auto_cleanup: true
+    cleanup_delay: 5
+
+# Global chaos settings
+chaos_settings:
+  max_duration: 300  # 5 minutes max
+  safety_checks: true
+  require_approval: false
+  log_level: "INFO"
+
+# Apocalypse preparedness scoring
+apocalypse_scoring:
+  network_latency: 10
+  packet_loss: 15
+  service_restart: 20
+  database_chaos: 25
+  memory_pressure: 15
+  cpu_load: 15
+  time_manipulation: 20
+  random_chaos: 25
+  cleanup_bonus: -5
+
+# Host-specific chaos rules
+host_rules:
+  webservers:
+    allowed_chaos: ["network", "service", "resource"]
+    forbidden_chaos: ["time"]
+  databases:
+    allowed_chaos: ["network", "service"]
+    forbidden_chaos: ["resource", "time"]
+  cache:
+    allowed_chaos: ["service", "resource"]
+    forbidden_chaos: ["network", "time"]
