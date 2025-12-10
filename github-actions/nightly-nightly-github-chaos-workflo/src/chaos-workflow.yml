@@ -1,0 +1,273 @@
+name: Nightly Chaos Workflow
+
+on:
+  workflow_call:
+    inputs:
+      chaos-level:
+        description: 'Level of chaos to introduce (low, medium, high)'
+        required: false
+        default: 'medium'
+        type: string
+      target-environment:
+        description: 'Target environment for chaos testing'
+        required: false
+        default: 'staging'
+        type: string
+      max-failure-rate:
+        description: 'Maximum percentage of tests that can fail'
+        required: false
+        default: '20'
+        type: string
+      chaos-enabled:
+        description: 'Enable or disable chaos testing'
+        required: false
+        default: 'true'
+        type: string
+    secrets:
+      github-token:
+        description: 'GitHub token for API access'
+        required: true
+
+jobs:
+  # Safety check: only run on non-production branches
+  safety-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    steps:
+      - name: Check branch safety
+        id: check
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Chaos testing disabled on production branches"
+          elif [[ "${{ inputs.chaos-enabled }}" == "false" ]]; then
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Chaos testing explicitly disabled"
+          else
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "✅ Chaos testing enabled"
+          fi
+
+  chaos-setup:
+    needs: safety-check
+    if: needs.safety-check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      chaos-seed: ${{ steps.seed.outputs.seed }}
+      network-delay: ${{ steps.config.outputs.network-delay }}
+      failure-rate: ${{ steps.config.outputs.failure-rate }}
+      cpu-limit: ${{ steps.config.outputs.cpu-limit }}
+      memory-limit: ${{ steps.config.outputs.memory-limit }}
+    steps:
+      - name: Generate chaos seed
+        id: seed
+        run: |
+          SEED=$((RANDOM % 1000000))
+          echo "seed=$SEED" >> $GITHUB_OUTPUT
+          echo "🎲 Chaos seed: $SEED"
+
+      - name: Configure chaos parameters
+        id: config
+        run: |
+          case "${{ inputs.chaos-level }}" in
+            "low")
+              NETWORK_DELAY=100
+              FAILURE_RATE=5
+              CPU_LIMIT="0.5"
+              MEMORY_LIMIT="512m"
+              ;;
+            "medium")
+              NETWORK_DELAY=500
+              FAILURE_RATE=15
+              CPU_LIMIT="0.75"
+              MEMORY_LIMIT="1g"
+              ;;
+            "high")
+              NETWORK_DELAY=1000
+              FAILURE_RATE=30
+              CPU_LIMIT="0.9"
+              MEMORY_LIMIT="2g"
+              ;;
+            *)
+              echo "Invalid chaos level, defaulting to medium"
+              NETWORK_DELAY=500
+              FAILURE_RATE=15
+              CPU_LIMIT="0.75"
+              MEMORY_LIMIT="1g"
+              ;;
+          esac
+
+          echo "network-delay=$NETWORK_DELAY" >> $GITHUB_OUTPUT
+          echo "failure-rate=$FAILURE_RATE" >> $GITHUB_OUTPUT
+          echo "cpu-limit=$CPU_LIMIT" >> $GITHUB_OUTPUT
+          echo "memory-limit=$MEMORY_LIMIT" >> $GITHUB_OUTPUT
+
+          echo "🔧 Chaos configuration:"
+          echo "  Network delay: ${NETWORK_DELAY}ms"
+          echo "  Failure rate: ${FAILURE_RATE}%"
+          echo "  CPU limit: $CPU_LIMIT"
+          echo "  Memory limit: $MEMORY_LIMIT"
+
+  network-chaos:
+    needs: [safety-check, chaos-setup]
+    if: needs.safety-check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install network simulation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y netem
+
+      - name: Apply network latency
+        run: |
+          DELAY=${{ needs.chaos-setup.outputs.network-delay }}
+          echo "🌐 Adding ${DELAY}ms network latency"
+          sudo tc qdisc add dev eth0 root netem delay ${DELAY}ms
+
+      - name: Clean up network changes
+        if: always()
+        run: |
+          sudo tc qdisc del dev eth0 root netem
+          echo "🧹 Network configuration cleaned up"
+
+  resource-chaos:
+    needs: [safety-check, chaos-setup]
+    if: needs.safety-check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create resource-constrained container
+        run: |
+          CPU_LIMIT="${{ needs.chaos-setup.outputs.cpu-limit }}"
+          MEMORY_LIMIT="${{ needs.chaos-setup.outputs.memory-limit }}"
+
+          echo "📦 Creating container with limits:"
+          echo "  CPU: $CPU_LIMIT"
+          echo "  Memory: $MEMORY_LIMIT"
+
+          # Create a simple test container with resource limits
+          docker run -d --name chaos-test \
+            --cpus="$CPU_LIMIT" \
+            --memory="$MEMORY_LIMIT" \
+            --memory-swap="$MEMORY_LIMIT" \
+            alpine:latest sleep 300
+
+      - name: Verify resource limits
+        run: |
+          echo "🔍 Verifying container resource limits..."
+          docker stats --no-stream chaos-test
+
+      - name: Clean up container
+        if: always()
+        run: |
+          docker stop chaos-test || true
+          docker rm chaos-test || true
+          echo "🧹 Container cleaned up"
+
+  time-chaos:
+    needs: [safety-check, chaos-setup]
+    if: needs.safety-check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Time distortion test
+        id: time-test
+        run: |
+          echo "⏱️  Testing time perception..."
+          START_TIME=$(date +%s)
+
+          # Simulate time distortion by sleeping with variable delays
+          for i in {1..3}; do
+            echo "  Iteration $i: $(date)"
+            sleep $((RANDOM % 3 + 1))
+          done
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo "time-duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "⏱️  Time test completed in ${DURATION}s"
+
+  chaos-report:
+    needs: [safety-check, chaos-setup, network-chaos, resource-chaos, time-chaos]
+    if: always() && needs.safety-check.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate chaos report
+        run: |
+          echo "# 🧪 Chaos Testing Report" > chaos-report.md
+          echo "" >> chaos-report.md
+          echo "**Environment:** ${{ inputs.target-environment }}" >> chaos-report.md
+          echo "**Chaos Level:** ${{ inputs.chaos-level }}" >> chaos-report.md
+          echo "**Max Failure Rate:** ${{ inputs.max-failure-rate }}%" >> chaos-report.md
+          echo "**Chaos Seed:** ${{ needs.chaos-setup.outputs.chaos-seed }}" >> chaos-report.md
+          echo "" >> chaos-report.md
+          echo "## Results" >> chaos-report.md
+          echo "" >> chaos-report.md
+          echo "### Network Chaos" >> chaos-report.md
+          if [[ "${{ needs.network-chaos.result }}" == "success" ]]; then
+            echo "✅ Network latency applied successfully" >> chaos-report.md
+          else
+            echo "❌ Network chaos failed" >> chaos-report.md
+          fi
+          echo "" >> chaos-report.md
+
+          echo "### Resource Chaos" >> chaos-report.md
+          if [[ "${{ needs.resource-chaos.result }}" == "success" ]]; then
+            echo "✅ Resource limits applied successfully" >> chaos-report.md
+          else
+            echo "❌ Resource chaos failed" >> chaos-report.md
+          fi
+          echo "" >> chaos-report.md
+
+          echo "### Time Chaos" >> chaos-report.md
+          if [[ "${{ needs.time-chaos.result }}" == "success" ]]; then
+            echo "✅ Time distortion test completed" >> chaos-report.md
+          else
+            echo "❌ Time chaos failed" >> chaos-report.md
+          fi
+          echo "" >> chaos-report.md
+
+          echo "### Summary" >> chaos-report.md
+          echo "- Network Delay: ${{ needs.chaos-setup.outputs.network-delay }}ms" >> chaos-report.md
+          echo "- Failure Rate: ${{ needs.chaos-setup.outputs.failure-rate }}%" >> chaos-report.md
+          echo "- CPU Limit: ${{ needs.chaos-setup.outputs.cpu-limit }}" >> chaos-report.md
+          echo "- Memory Limit: ${{ needs.chaos-setup.outputs.memory-limit }}" >> chaos-report.md
+
+      - name: Upload chaos report
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-report
+          path: chaos-report.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('chaos-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  chaos-summary:
+    needs: [safety-check, chaos-setup, network-chaos, resource-chaos, time-chaos, chaos-report]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chaos testing summary
+        run: |
+          if [[ "${{ needs.safety-check.outputs.should-run }}" == "true" ]]; then
+            echo "🎉 Chaos testing completed successfully!"
+            echo ""
+            echo "Chaos level: ${{ inputs.chaos-level }}"
+            echo "Environment: ${{ inputs.target-environment }}"
+            echo ""
+            echo "Check the artifacts for detailed reports."
+          else
+            echo "⏭️  Chaos testing skipped (safety check failed)"
+          fi
