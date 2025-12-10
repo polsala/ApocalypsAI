@@ -1,0 +1,24 @@
+name: Apocalyptic Affirmation Bot
+on: [pull_request, issues]
+
+jobs:
+  affirm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment affirmation
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const affirmations = [
+              "The void acknowledges your resilience... survive the merge!",
+              "Your code will outlast the silicon it runs on... commit with confidence!",
+              "Even the apocalypse needs a code review... you're doing fine",
+              "This PR is shielded by the ghost of dead deadlines... proceed!"
+            ];
+            const msg = affirmations[Math.floor(Math.random() * affirmations.length)];
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔥 **Apocalyptic Affirmation** 🔥\n\n${msg}`
+            });
