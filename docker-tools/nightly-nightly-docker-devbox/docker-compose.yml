@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  devbox:
+    build: .
+    stdin_open: true
+    tty: true
+    volumes:
+      # Mount current directory as workspace
+      - .:/workspace
+      # Mount Docker socket for Docker-in-Docker
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount git config
+      - ${HOME}/.gitconfig:/root/.gitconfig:ro
+      # Optional: Mount SSH keys
+      - ${HOME}/.ssh:/root/.ssh:ro
+    ports:
+      - "8080-8090:8080-8090"
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - TERM=xterm-256color
+    working_dir: /workspace
+    command: bash

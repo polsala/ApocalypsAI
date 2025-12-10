@@ -1,0 +1,44 @@
+{
+  "name": "ApocalypsAI DevBox",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "devbox",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "rust-lang.rust",
+        "golang.go",
+        "ms-vscode.vscode-node-azure-pack",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true
+      }
+    }
+  },
+  "forwardPorts": [8080, 8081, 8090],
+  "portsAttributes": {
+    "8080": {
+      "label": "Application",
+      "onAutoForward": "notify"
+    },
+    "8081": {
+      "label": "Debug Port",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "echo 'Dev container ready! Happy coding! 🚀'"
+}
