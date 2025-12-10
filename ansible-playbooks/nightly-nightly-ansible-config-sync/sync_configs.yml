@@ -1,0 +1,37 @@
+---
+- name: Synchronize Ansible Configurations
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure destination base path exists on remote hosts
+      ansible.builtin.file:
+        path: "{{ destination_base_path }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ target_hosts }}"
+      loop_control:
+        loop_var: ansible_host
+
+    - name: Synchronize inventory file
+      ansible.builtin.copy:
+        src: "{{ inventory_source }}"
+        dest: "{{ destination_base_path }}/inventory.ini"
+        mode: '0644'
+      loop: "{{ target_hosts }}"
+      loop_control:
+        loop_var: ansible_host
+
+    - name: Synchronize playbook directories
+      ansible.builtin.synchronize:
+        src: "{{ item }}"
+        dest: "{{ destination_base_path }}/"
+        mode: push
+      loop: "{{ playbook_sources }}"
+      when: playbook_sources is defined and playbook_sources
+      loop_control:
+        loop_var: ansible_host

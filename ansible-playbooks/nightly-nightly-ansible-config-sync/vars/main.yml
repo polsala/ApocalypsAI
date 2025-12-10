@@ -1,0 +1,12 @@
+# Mock rationale: These are example variables. In a real scenario, these would be tailored to the specific environment.
+target_hosts:
+  - "server1.example.com"
+  - "server2.example.com"
+
+inventory_source: "./inventory.ini"
+
+playbook_sources:
+  - "./roles/"
+  - "./playbooks/"
+
+destination_base_path: "/etc/ansible-sync/"
