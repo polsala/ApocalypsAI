@@ -1,0 +1,48 @@
+name: 'Nightly AI Reviewer'
+description: 'Automatically review pull requests using AI'
+author: 'ApocalypsAI'
+
+inputs:
+  openrouter-api-key:
+    description: 'OpenRouter API key'
+    required: true
+  model:
+    description: 'AI model to use'
+    required: false
+    default: 'anthropic/claude-3-5-sonnet'
+  max-tokens:
+    description: 'Maximum tokens for response'
+    required: false
+    default: '2000'
+  temperature:
+    description: 'Temperature for creativity'
+    required: false
+    default: '0.3'
+
+outputs:
+  review-comment:
+    description: 'AI-generated review comment'
+    value: ${{ steps.review.outputs.comment }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run AI Reviewer
+      id: review
+      uses: ./
+      run: |
+        python3 ai_reviewer.py
+      shell: bash
+      env:
+        OPENROUTER_API_KEY: ${{ inputs.openrouter-api-key }}
+        MODEL: ${{ inputs.model }}
+        MAX_TOKENS: ${{ inputs.max-tokens }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
