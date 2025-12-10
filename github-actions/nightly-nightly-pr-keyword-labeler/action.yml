@@ -1,0 +1,16 @@
+name: PR Keyword Labeler
+description: Auto‑label PRs based on configurable keyword mappings
+inputs:
+  token:
+    description: GitHub token with repo permissions
+    required: true
+  mapping:
+    description: |
+      Multiline keyword to label mapping (format: keyword:label)
+      Example:
+        bug:🐞 Bug
+        feature:✨ Feature
+    required: true
+runs:
+  using: node12
+  main: src/main.js
