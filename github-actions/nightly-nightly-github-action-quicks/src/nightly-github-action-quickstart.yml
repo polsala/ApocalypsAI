@@ -1,0 +1,230 @@
+name: Nightly GitHub Action Quickstart
+
+# This is a reusable workflow that can be called from other workflows
+# It generates a starter CI/CD pipeline based on the project type
+
+on:
+  workflow_call:
+    inputs:
+      project-type:
+        description: 'Type of project (python, node, rust, go, java)'
+        required: true
+        type: string
+        default: 'python'
+      python-version:
+        description: 'Python version to use (for python projects)'
+        required: false
+        type: string
+        default: '3.11'
+      node-version:
+        description: 'Node.js version to use (for node projects)'
+        required: false
+        type: string
+        default: '20'
+      rust-version:
+        description: 'Rust version to use (for rust projects)'
+        required: false
+        type: string
+        default: '1.70'
+      go-version:
+        description: 'Go version to use (for go projects)'
+        required: false
+        type: string
+        default: '1.21'
+      java-version:
+        description: 'Java version to use (for java projects)'
+        required: false
+        type: string
+        default: '17'
+    outputs:
+      build-status:
+        description: 'Status of the build job'
+        value: ${{ jobs.build.outputs.status }}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.build-status.outputs.status }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up environment for ${{ inputs.project-type }}
+        if: inputs.project-type == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Set up environment for ${{ inputs.project-type }}
+        if: inputs.project-type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Set up environment for ${{ inputs.project-type }}
+        if: inputs.project-type == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-version }}
+
+      - name: Set up environment for ${{ inputs.project-type }}
+        if: inputs.project-type == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: Set up environment for ${{ inputs.project-type }}
+        if: inputs.project-type == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ inputs.java-version }}
+
+      - name: Install dependencies (Python)
+        if: inputs.project-type == 'python'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flake8 pytest
+
+      - name: Install dependencies (Node.js)
+        if: inputs.project-type == 'node'
+        run: |
+          npm ci
+          npm install eslint --save-dev
+
+      - name: Install dependencies (Rust)
+        if: inputs.project-type == 'rust'
+        run: rustup component add clippy
+
+      - name: Install dependencies (Go)
+        if: inputs.project-type == 'go'
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Install dependencies (Java)
+        if: inputs.project-type == 'java'
+        run: |
+          mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+
+      - name: Lint (Python)
+        if: inputs.project-type == 'python'
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats warnings as errors
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Lint (Node.js)
+        if: inputs.project-type == 'node'
+        run: |
+          npx eslint . --ext .js,.jsx,.ts,.tsx
+
+      - name: Lint (Rust)
+        if: inputs.project-type == 'rust'
+        run: |
+          cargo clippy -- -D warnings
+
+      - name: Lint (Go)
+        if: inputs.project-type == 'go'
+        run: |
+          golangci-lint run ./...
+
+      - name: Lint (Java)
+        if: inputs.project-type == 'java'
+        run: |
+          mvn checkstyle:check
+
+      - name: Test (Python)
+        if: inputs.project-type == 'python'
+        run: |
+          pytest
+
+      - name: Test (Node.js)
+        if: inputs.project-type == 'node'
+        run: |
+          npm test
+
+      - name: Test (Rust)
+        if: inputs.project-type == 'rust'
+        run: |
+          cargo test
+
+      - name: Test (Go)
+        if: inputs.project-type == 'go'
+        run: |
+          go test ./...
+
+      - name: Test (Java)
+        if: inputs.project-type == 'java'
+        run: |
+          mvn test
+
+      - name: Build (Python)
+        if: inputs.project-type == 'python'
+        run: |
+          pip install build
+          python -m build
+
+      - name: Build (Node.js)
+        if: inputs.project-type == 'node'
+        run: |
+          npm run build
+
+      - name: Build (Rust)
+        if: inputs.project-type == 'rust'
+        run: |
+          cargo build --release
+
+      - name: Build (Go)
+        if: inputs.project-type == 'go'
+        run: |
+          go build -o ./bin/ ./...
+
+      - name: Build (Java)
+        if: inputs.project-type == 'java'
+        run: |
+          mvn package -DskipTests=true
+
+      - name: Set build status
+        id: build-status
+        run: |
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts (Python)
+        if: inputs.project-type == 'python' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-build-artifacts
+          path: dist/
+
+      - name: Upload build artifacts (Node.js)
+        if: inputs.project-type == 'node' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-build-artifacts
+          path: dist/
+
+      - name: Upload build artifacts (Rust)
+        if: inputs.project-type == 'rust' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-build-artifacts
+          path: target/release/
+
+      - name: Upload build artifacts (Go)
+        if: inputs.project-type == 'go' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-build-artifacts
+          path: bin/
+
+      - name: Upload build artifacts (Java)
+        if: inputs.project-type == 'java' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-build-artifacts
+          path: target/*.jar

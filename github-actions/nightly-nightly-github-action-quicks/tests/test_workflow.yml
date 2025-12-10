@@ -1,0 +1,125 @@
+name: Test Nightly GitHub Action Quickstart
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/nightly-github-action-quickstart.yml'
+      - 'tests/test_workflow.yml'
+
+jobs:
+  test-python:
+    name: Test Python Project
+    uses: ./.github/workflows/nightly-github-action-quickstart.yml
+    with:
+      project-type: "python"
+      python-version: "3.11"
+
+  test-node:
+    name: Test Node.js Project
+    uses: ./.github/workflows/nightly-github-action-quickstart.yml
+    with:
+      project-type: "node"
+      node-version: "20"
+
+  test-rust:
+    name: Test Rust Project
+    uses: ./.github/workflows/nightly-github-action-quickstart.yml
+    with:
+      project-type: "rust"
+      rust-version: "1.70"
+
+  test-go:
+    name: Test Go Project
+    uses: ./.github/workflows/nightly-github-action-quickstart.yml
+    with:
+      project-type: "go"
+      go-version: "1.21"
+
+  test-java:
+    name: Test Java Project
+    uses: ./.github/workflows/nightly-github-action-quickstart.yml
+    with:
+      project-type: "java"
+      java-version: "17"
+
+  validate-workflow:
+    name: Validate Workflow Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate YAML syntax
+        run: |
+          python -c "import yaml; yaml.safe_load(open('src/nightly-github-action-quickstart.yml'))"
+          echo "✅ YAML syntax is valid"
+
+      - name: Check for required sections
+        run: |
+          content=$(cat src/nightly-github-action-quickstart.yml)
+          
+          # Check for workflow_call
+          if [[ ! "$content" =~ "workflow_call" ]]; then
+            echo "❌ Missing workflow_call"
+            exit 1
+          fi
+          
+          # Check for inputs
+          if [[ ! "$content" =~ "inputs:" ]]; then
+            echo "❌ Missing inputs"
+            exit 1
+          fi
+          
+          # Check for project-type input
+          if [[ ! "$content" =~ "project-type:" ]]; then
+            echo "❌ Missing project-type input"
+            exit 1
+          fi
+          
+          # Check for jobs
+          if [[ ! "$content" =~ "jobs:" ]]; then
+            echo "❌ Missing jobs"
+            exit 1
+          fi
+          
+          echo "✅ All required sections present"
+
+      - name: Verify all project types are supported
+        run: |
+          content=$(cat src/nightly-github-action-quickstart.yml)
+          
+          for project in python node rust go java; do
+            if [[ ! "$content" =~ "project-type == '$project'" ]]; then
+              echo "❌ Missing support for $project"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All project types supported"
+
+      - name: Check for lint, test, and build steps
+        run: |
+          content=$(cat src/nightly-github-action-quickstart.yml)
+          
+          for project in python node rust go java; do
+            # Check for lint
+            if [[ ! "$content" =~ "Lint \($project\)" ]]; then
+              echo "❌ Missing lint step for $project"
+              exit 1
+            fi
+            
+            # Check for test
+            if [[ ! "$content" =~ "Test \($project\)" ]]; then
+              echo "❌ Missing test step for $project"
+              exit 1
+            fi
+            
+            # Check for build
+            if [[ ! "$content" =~ "Build \($project\)" ]]; then
+              echo "❌ Missing build step for $project"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All required steps present for all project types"
