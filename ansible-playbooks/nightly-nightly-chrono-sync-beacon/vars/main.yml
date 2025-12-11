@@ -1,0 +1,8 @@
+---
+time_sync_package: "ntp" # Options: "ntp" or "chrony"
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+  - 3.pool.ntp.org
+force_time_sync: true # Set to false to only configure and start service, not force immediate sync
