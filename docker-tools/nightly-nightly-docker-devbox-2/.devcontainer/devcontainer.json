@@ -1,0 +1,30 @@
+{
+  "name": "Nightly DevBox",
+  "dockerFile": "../Dockerfile",
+  "context": "..",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "forwardPorts": [22],
+  "portsAttributes": {
+    "22": {
+      "label": "SSH",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "echo 'DevBox ready! All tools pre-installed.'",
+  "remoteUser": "root",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "rust-lang.rust",
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-vscode.vscode-json"
+      ]
+    }
+  }
+}
