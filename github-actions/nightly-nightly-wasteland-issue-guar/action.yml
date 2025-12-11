@@ -1,0 +1,14 @@
+name: 'Wasteland Issue Guardian'
+description: 'Adds survival tips and labels to new issues'
+branches: [main]
+inputs:
+  token:
+    description: 'GitHub token'
+    required: true
+  tips-file:
+    description: 'Path to YAML file with survival tips'
+    default: 'survival_tips.yaml'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+  post: 'dist/post.js'
