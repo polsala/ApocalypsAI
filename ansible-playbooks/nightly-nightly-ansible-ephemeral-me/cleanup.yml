@@ -1,0 +1,19 @@
+---
+- name: Cleanup expired ephemeral messages
+  hosts: all
+  vars:
+    ttl_seconds: "{{ ttl_seconds | default(3600) }}"
+  tasks:
+    - name: Find expired message files
+      ansible.builtin.find:
+        paths: "/tmp/ephemeral_messages/{{ inventory_hostname }}"
+        patterns: "message.txt"
+        age: "{{ ttl_seconds }}"
+        age_stamp: mtime
+      register: old_messages
+
+    - name: Delete expired messages
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_messages.files }}"
