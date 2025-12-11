@@ -1,0 +1,70 @@
+---
+- name: "Audit System Configuration"
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/desired_state.yml
+
+  tasks:
+    - name: "Initialize audit results dictionary"
+      set_fact:
+        audit_results: {}
+
+    # Package Auditing
+    - name: "Check installed packages"
+      package_facts:
+        manager: "auto"
+      register: package_facts_result
+
+    - name: "Compare installed packages against desired state"
+      set_fact:
+        audit_results: "{{ audit_results | combine({ 'packages': (audit_results.packages | default([]) + [ {'name': item.name, 'desired_state': item.state, 'state': (package_facts_result.packages.get(item.name, {}).get('state', 'absent'))} ]) }}) }}"
+      loop:
+        - "{{ desired_packages | default([]) | map(attribute='name') | list | map('regex_replace', '^(.*)$', '{"name": "\1", "state": "present"}') | from_json }}"
+      when: desired_packages is defined
+      loop_control:
+        label: "{{ item.name }}"
+
+    # Service Auditing
+    - name: "Check service status"
+      service_facts:
+
+    - name: "Compare services against desired state"
+      set_fact:
+        audit_results: "{{ audit_results | combine({ 'services': (audit_results.services | default([]) + [ {'name': item.name, 'desired_state': item.state, 'desired_enabled': item.enabled, 'state': (service_facts_result.services.get(item.name, {}).get('state', 'stopped')), 'enabled': (service_facts_result.services.get(item.name, {}).get('enabled', 'no'))} ]) }}) }}"
+      loop:
+        - "{{ desired_services | default([]) | map(attribute='name') | list | map('regex_replace', '^(.*)$', '{"name": "\1", "state": "running", "enabled": "yes"}') | from_json }}"
+      when: desired_services is defined
+      loop_control:
+        label: "{{ item.name }}"
+
+    # File Auditing
+    - name: "Check file attributes"
+      stat:
+        path: "{{ item.path }}"
+      loop:
+        - "{{ desired_files | default([]) | map(attribute='path') | list | map('regex_replace', '^(.*)$', '{"path": "\1"}') | from_json }}"
+      register: file_stats
+      when: desired_files is defined
+
+    - name: "Compare file attributes against desired state"
+      set_fact:
+        audit_results: "{{ audit_results | combine({ 'files': (audit_results.files | default([]) + [ {'path': item.path, 'desired_mode': item.mode, 'desired_owner': item.owner, 'desired_group': item.group, 'mode': (file_stats.results | selectattr('stat.path', 'equalto', item.path) | first).stat.mode, 'owner': (file_stats.results | selectattr('stat.path', 'equalto', item.path) | first).stat.owner, 'group': (file_stats.results | selectattr('stat.path', 'equalto', item.path) | first).stat.group} ]) }}) }}"
+      loop:
+        - "{{ desired_files | default([]) | map(attribute='path') | list | map('regex_replace', '^(.*)$', '{"path": "\1", "mode": "0644", "owner": "root", "group": "root"}') | from_json }}"
+      when: desired_files is defined
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: "Generate configuration audit report"
+      template:
+        src: "templates/config_report.j2"
+        dest: "/tmp/config_audit_report_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+      run_once: true
+
+    - name: "Display audit report path"
+      debug:
+        msg: "Configuration audit report for {{ inventory_hostname }} saved to /tmp/config_audit_report_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+      run_once: true

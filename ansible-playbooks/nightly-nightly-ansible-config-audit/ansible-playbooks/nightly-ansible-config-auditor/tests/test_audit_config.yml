@@ -1,0 +1,119 @@
+---
+- name: "Test Configuration Auditor"
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mock desired state for testing
+    desired_packages:
+      - name: "test-package-1"
+        state: "present"
+      - name: "test-package-2"
+        state: "absent"
+    desired_services:
+      - name: "test-service-1"
+        state: "started"
+        enabled: "yes"
+    desired_files:
+      - path: "/tmp/test_file_1"
+        mode: "0644"
+        owner: "root"
+        group: "root"
+
+  tasks:
+    - name: "Mock package facts"
+      set_fact:
+        package_facts_result: {
+          "packages": {
+            "test-package-1": {"state": "present"},
+            "another-package": {"state": "present"}
+          }
+        }
+      # Mock rationale: Simulates the output of the 'package_facts' module.
+
+    - name: "Mock service facts"
+      set_fact:
+        service_facts_result: {
+          "services": {
+            "test-service-1": {"state": "stopped", "enabled": "no"},
+            "another-service": {"state": "running", "enabled": "yes"}
+          }
+        }
+      # Mock rationale: Simulates the output of the 'service_facts' module.
+
+    - name: "Mock file stats"
+      set_fact:
+        file_stats: {
+          "results": [
+            {"stat": {"path": "/tmp/test_file_1", "mode": "0600", "owner": "user", "group": "group"}},
+            {"stat": {"path": "/tmp/another_file", "mode": "0644", "owner": "root", "group": "root"}}
+          ]
+        }
+      # Mock rationale: Simulates the output of the 'stat' module for file attributes.
+
+    - name: "Run the main audit playbook logic (simulated)"
+      include_tasks: "../audit_config.yml"
+      vars:
+        # Override tasks to use mocked facts directly
+        tasks:
+          - name: "Check installed packages"
+            package_facts:
+              manager: "auto"
+            register: package_facts_result
+
+          - name: "Check service status"
+            service_facts:
+
+          - name: "Check file attributes"
+            stat:
+              path: "{{ item.path }}"
+            loop:
+              - "{{ desired_files | default([]) | map(attribute='path') | list | map('regex_replace', '^(.*)$', '{"path": "\1"}') | from_json }}"
+            register: file_stats
+            when: desired_files is defined
+            loop_control:
+              label: "{{ item.path }}"
+
+    - name: "Assert package audit results"
+      assert:
+        that:
+          - "audit_results.packages | length == 2"
+          - "audit_results.packages[0].name == 'test-package-1'"
+          - "audit_results.packages[0].desired_state == 'present'"
+          - "audit_results.packages[0].state == 'present'"
+          - "audit_results.packages[1].name == 'test-package-2'"
+          - "audit_results.packages[1].desired_state == 'absent'"
+          - "audit_results.packages[1].state == 'absent'"
+      # Mock rationale: Verifies the package audit logic correctly identifies matches and mismatches.
+
+    - name: "Assert service audit results"
+      assert:
+        that:
+          - "audit_results.services | length == 1"
+          - "audit_results.services[0].name == 'test-service-1'"
+          - "audit_results.services[0].desired_state == 'started'"
+          - "audit_results.services[0].state == 'stopped'"
+          - "audit_results.services[0].desired_enabled == 'yes'"
+          - "audit_results.services[0].enabled == 'no'"
+      # Mock rationale: Verifies the service audit logic correctly identifies state and enabled status discrepancies.
+
+    - name: "Assert file audit results"
+      assert:
+        that:
+          - "audit_results.files | length == 1"
+          - "audit_results.files[0].path == '/tmp/test_file_1'"
+          - "audit_results.files[0].desired_mode == '0644'"
+          - "audit_results.files[0].mode == '0600'"
+          - "audit_results.files[0].desired_owner == 'root'"
+          - "audit_results.files[0].owner == 'user'"
+          - "audit_results.files[0].desired_group == 'root'"
+          - "audit_results.files[0].group == 'group'"
+      # Mock rationale: Verifies the file attribute audit logic correctly identifies mode, owner, and group mismatches.
+
+    - name: "Clean up mock files"
+      file:
+        path: "{{ item.path }}"
+        state: "absent"
+      loop: "{{ desired_files }}"
+      # Mock rationale: Cleans up any temporary files created during the test run.
