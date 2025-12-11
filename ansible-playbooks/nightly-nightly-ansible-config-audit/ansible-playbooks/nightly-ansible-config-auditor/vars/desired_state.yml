@@ -1,0 +1,18 @@
+# Define your desired system configuration here.
+# This is a sample, customize it to your needs.
+desired_packages:
+  - name: "htop"
+    state: "present"
+  - name: "vim"
+    state: "present"
+
+desired_services:
+  - name: "nginx"
+    state: "started"
+    enabled: "yes"
+
+desired_files:
+  - path: "/etc/motd"
+    mode: "0644"
+    owner: "root"
+    group: "root"
