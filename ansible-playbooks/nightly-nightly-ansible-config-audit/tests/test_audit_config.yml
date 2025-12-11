@@ -1,0 +1,32 @@
+# This file is intended to be used with Molecule.
+# Molecule will manage the lifecycle of your test environment.
+# See: https://molecule.readthedocs.io/en/latest/
+
+# The actual test logic is in verify.yml within the molecule scenario.
+# This file primarily defines the scenario and dependencies.
+
+# Mock rationale: Molecule provides a robust framework for testing Ansible roles and playbooks.
+# It spins up isolated environments (e.g., Docker containers) and runs your playbooks against them.
+# The 'verify.yml' playbook within the scenario is where you define assertions and checks.
+# This setup allows for deterministic and offline testing as it doesn't rely on external services.
+
+dependencies:
+  - name: docker
+    command: "pip install docker"
+
+platforms:
+  - name: instance
+    # Use a minimal image for faster testing
+    image: "ubuntu:latest"
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: converge.yml
+    verify: verify.yml
+
+verifier:
+  name: ansible
+  playbooks:
+    verify: verify.yml
