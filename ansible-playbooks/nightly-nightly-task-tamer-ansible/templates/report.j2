@@ -1,0 +1,6 @@
+=== TASK TAMER REPORT ===
+Hostname: {{ inventory_hostname }}
+Task: {{ hostvars['localhost']['daily_task'] }}
+Status: {{ task_status.stdout|from_json.status | default('pending') }}
+Date: {{ lookup('ansible.builtin.localtime', '%Y-%m-%d') }}
+=========================

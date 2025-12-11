@@ -1,0 +1,18 @@
+- name: Task Tamer Automation
+  hosts: all
+  vars_files:
+    - vars/tasks.yml
+  tasks:
+    - name: Assign daily task
+      ansible.builtin.debug:
+        msg: "{{ hostvars['localhost']['daily_task'] }}"
+    - name: Check task completion
+      ansible.builtin.shell: | 
+        echo "Checking task status..."
+        # Mock status logic
+        echo '{"status": "completed"}'
+      register: task_status
+    - name: Generate progress report
+      template:
+        src: templates/report.j2
+        dest: reports/{{ inventory_hostname }}_report.txt
