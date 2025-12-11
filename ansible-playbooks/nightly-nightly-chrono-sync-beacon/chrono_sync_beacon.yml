@@ -1,0 +1,80 @@
+---
+- name: Ensure system clocks are synchronized across the fleet
+  hosts: all
+  become: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Install {{ time_sync_package }} package
+      ansible.builtin.package:
+        name: "{{ time_sync_package }}"
+        state: present
+
+    - name: Configure NTP (ntp.conf)
+      ansible.builtin.template:
+        src: templates/ntp.conf.j2
+        dest: /etc/ntp.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: time_sync_package == 'ntp'
+      notify: Restart ntp service
+
+    - name: Configure Chrony (chrony.conf)
+      ansible.builtin.template:
+        src: templates/chrony.conf.j2
+        dest: /etc/chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: time_sync_package == 'chrony'
+      notify: Restart chrony service
+
+    - name: Ensure NTP service is running and enabled
+      ansible.builtin.service:
+        name: ntp
+        state: started
+        enabled: true
+      when: time_sync_package == 'ntp'
+
+    - name: Ensure Chrony service is running and enabled
+      ansible.builtin.service:
+        name: chronyd # Common for RedHat/CentOS. For Debian/Ubuntu, it's typically 'chrony'.
+        state: started
+        enabled: true
+      when: time_sync_package == 'chrony'
+
+    - name: Force immediate time synchronization (NTP)
+      ansible.builtin.command: ntpdate -s {{ ntp_servers[0] }}
+      when: time_sync_package == 'ntp' and force_time_sync
+      changed_when: true # Assume ntpdate always changes time if needed
+      # Note: ntpdate is often deprecated in favor of ntp/chrony's own sync mechanisms.
+      # It might also require a separate package installation (e.g., 'ntpdate' on Debian/Ubuntu).
+
+    - name: Force immediate time synchronization (Chrony)
+      ansible.builtin.command: chronyc -a makestep
+      when: time_sync_package == 'chrony' and force_time_sync
+      changed_when: true # Assume makestep always changes time if needed
+
+    - name: Report current system time
+      ansible.builtin.command: date
+      register: current_time_output
+      changed_when: false
+
+    - name: Display current system time
+      ansible.builtin.debug:
+        msg: "Current system time on {{ inventory_hostname }}: {{ current_time_output.stdout }}"
+
+  handlers:
+    - name: Restart ntp service
+      ansible.builtin.service:
+        name: ntp
+        state: restarted
+      when: time_sync_package == 'ntp'
+
+    - name: Restart chrony service
+      ansible.builtin.service:
+        name: chronyd # Common for RedHat/CentOS. For Debian/Ubuntu, it's typically 'chrony'.
+        state: restarted
+      when: time_sync_package == 'chrony'

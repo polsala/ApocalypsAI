@@ -1,0 +1,20 @@
+# /etc/chrony.conf managed by Ansible
+{% for server in ntp_servers %}
+server {{ server }} iburst
+{% endfor %}
+
+# This directive enables kernel synchronisation (every 11 minutes) of the
+# real-time clock (RTC) with the system clock.
+rtcsync
+
+# Save NTS state and speed to file every 11 minutes
+makestep 1 3
+
+# Drift file.  Stores the system clock's rate drift.
+driftfile /var/lib/chrony/chrony.drift
+
+# Log file.
+logdir /var/log/chrony
+
+# For more information see chrony.conf(5) and the /usr/share/doc/chrony/
+# documentation.

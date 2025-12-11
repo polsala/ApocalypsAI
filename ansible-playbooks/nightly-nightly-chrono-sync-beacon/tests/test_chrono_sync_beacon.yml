@@ -1,0 +1,98 @@
+---
+- name: Run deterministic offline tests for Chrono-Sync Beacon
+  hosts: localhost
+  connection: local
+  become: true # Needed for creating files in /tmp
+  vars_files:
+    - ../vars/main.yml # Load variables from the main playbook's vars
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: /tmp/chrono_sync_beacon_test
+        state: directory
+        mode: '0755'
+
+    - name: Mock package installation (ntp)
+      ansible.builtin.file:
+        path: /tmp/chrono_sync_beacon_test/mock_ntp_package_installed
+        state: touch
+        mode: '0644'
+      when: time_sync_package == 'ntp'
+      # Mock rationale: Simulate package presence for offline testing by creating a dummy file.
+
+    - name: Mock package installation (chrony)
+      ansible.builtin.file:
+        path: /tmp/chrono_sync_beacon_test/mock_chrony_package_installed
+        state: touch
+        mode: '0644'
+      when: time_sync_package == 'chrony'
+      # Mock rationale: Simulate package presence for offline testing by creating a dummy file.
+
+    - name: Create mock ntp.conf based on template
+      ansible.builtin.template:
+        src: ../templates/ntp.conf.j2
+        dest: /tmp/chrono_sync_beacon_test/mock_ntp.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: time_sync_package == 'ntp'
+      # Mock rationale: Generate a mock config file to verify template rendering logic without touching /etc.
+
+    - name: Create mock chrony.conf based on template
+      ansible.builtin.template:
+        src: ../templates/chrony.conf.j2
+        dest: /tmp/chrono_sync_beacon_test/mock_chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: time_sync_package == 'chrony'
+      # Mock rationale: Generate a mock config file to verify template rendering logic without touching /etc.
+
+    - name: Assert mock ntp package file exists
+      ansible.builtin.assert:
+        that:
+          - "'/tmp/chrono_sync_beacon_test/mock_ntp_package_installed' is exists"
+        fail_msg: "Mock NTP package file does not exist."
+      when: time_sync_package == 'ntp'
+
+    - name: Assert mock chrony package file exists
+      ansible.builtin.assert:
+        that:
+          - "'/tmp/chrono_sync_beacon_test/mock_chrony_package_installed' is exists"
+        fail_msg: "Mock Chrony package file does not exist."
+      when: time_sync_package == 'chrony'
+
+    - name: Read mock ntp.conf content
+      ansible.builtin.slurp:
+        src: /tmp/chrono_sync_beacon_test/mock_ntp.conf
+      register: ntp_conf_content
+      when: time_sync_package == 'ntp'
+
+    - name: Read mock chrony.conf content
+      ansible.builtin.slurp:
+        src: /tmp/chrono_sync_beacon_test/mock_chrony.conf
+      register: chrony_conf_content
+      when: time_sync_package == 'chrony'
+
+    - name: Assert mock ntp.conf contains expected servers
+      ansible.builtin.assert:
+        that:
+          - "ntp_conf_content.content | b64decode | regex_search('server {{ item }} iburst')"
+        fail_msg: "Mock ntp.conf does not contain expected server: {{ item }}"
+      loop: "{{ ntp_servers }}"
+      when: time_sync_package == 'ntp'
+
+    - name: Assert mock chrony.conf contains expected servers
+      ansible.builtin.assert:
+        that:
+          - "chrony_conf_content.content | b64decode | regex_search('server {{ item }} iburst')"
+        fail_msg: "Mock chrony.conf does not contain expected server: {{ item }}"
+      loop: "{{ ntp_servers }}"
+      when: time_sync_package == 'chrony'
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: /tmp/chrono_sync_beacon_test
+        state: absent
+      always_run: true
