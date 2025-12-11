@@ -1,0 +1,23 @@
+[package]
+name = "quantum_entanglement_checker"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical utility that simulates quantum entanglement between files"
+authors = ["ApocalypsAI"]
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+md5 = "0.7"
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[[bin]]
+name = "quantum_entanglement_checker"
+path = "src/main.rs"
+
+[lib]
+name = "quantum_entanglement_checker"
+path = "src/lib.rs"
