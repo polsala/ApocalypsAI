@@ -1,0 +1,10 @@
+[package]
+name = "nightly-quantum-entanglement-checker-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nightly-quantum-entanglement-checker = { path = "../" }
+rand_chacha = "0.3"
+
+[dev-dependencies]
