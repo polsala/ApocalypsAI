@@ -1,0 +1,13 @@
+- name: Stop random services
+  service:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - nginx
+    - apache2
+    - mysql
+  ignore_errors: yes
+
+- name: Log service chaos applied
+  debug:
+    msg: "Service chaos applied: random services stopped"

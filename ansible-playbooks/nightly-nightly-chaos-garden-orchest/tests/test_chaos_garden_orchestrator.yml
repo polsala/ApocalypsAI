@@ -1,0 +1,68 @@
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Verify playbook syntax
+      command: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: Verify inventory syntax
+      command: ansible-inventory -i inventory.ini --list
+      register: inventory_check
+      changed_when: false
+
+    - name: Verify template syntax
+      command: ansible-playbook -i inventory.ini --check --list-hosts chaos_garden_orchestrator.yml
+      register: template_check
+      changed_when: false
+
+    - name: Verify variables file exists
+      stat:
+        path: vars/chaos_scenarios.yml
+      register: vars_file
+
+    - name: Assert variables file exists
+      assert:
+        that:
+          - vars_file.stat.exists
+          - vars_file.stat.isreg
+
+    - name: Verify all chaos task files exist
+      stat:
+        path: tasks/chaos/{{ item }}.yml
+      loop:
+        - network
+        - resource
+        - service
+        - time
+      register: chaos_task_files
+
+    - name: Assert all chaos task files exist
+      assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+      loop: "{{ chaos_task_files.results }}"
+
+    - name: Verify cleanup task file exists
+      stat:
+        path: tasks/cleanup.yml
+      register: cleanup_file
+
+    - name: Assert cleanup task file exists
+      assert:
+        that:
+          - cleanup_file.stat.exists
+          - cleanup_file.stat.isreg
+
+    - name: Verify template file exists
+      stat:
+        path: templates/chaos_report.j2
+      register: template_file
+
+    - name: Assert template file exists
+      assert:
+        that:
+          - template_file.stat.exists
+          - template_file.stat.isreg

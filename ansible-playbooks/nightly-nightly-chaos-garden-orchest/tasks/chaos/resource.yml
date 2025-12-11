@@ -1,0 +1,13 @@
+- name: Consume CPU resources
+  shell: |
+    stress --cpu 4 --timeout 60s
+  ignore_errors: yes
+
+- name: Consume memory resources
+  shell: |
+    stress --vm 2 --vm-bytes 1G --timeout 60s
+  ignore_errors: yes
+
+- name: Log resource chaos applied
+  debug:
+    msg: "Resource chaos applied: CPU and memory stress introduced"

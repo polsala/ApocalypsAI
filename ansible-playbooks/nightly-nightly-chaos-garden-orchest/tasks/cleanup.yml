@@ -1,0 +1,23 @@
+- name: Remove network chaos
+  shell: |
+    tc qdisc del dev eth0 root
+  ignore_errors: yes
+
+- name: Restart stopped services
+  service:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - nginx
+    - apache2
+    - mysql
+  ignore_errors: yes
+
+- name: Reset system time
+  shell: |
+    ntpdate -s time.nist.gov
+  ignore_errors: yes
+
+- name: Log cleanup completed
+  debug:
+    msg: "Chaos garden cleanup completed"
