@@ -1,0 +1,101 @@
+---
+- name: Nightly Ansible Configuration Auditor
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/baseline_config.yml
+
+  tasks:
+    - name: Ensure baseline configuration directory exists
+      file:
+        path: "{{ audit_baseline_dir }}"
+        state: directory
+        mode: '0755'
+      when: audit_baseline_dir is defined
+
+    - name: Audit critical files against baseline checksums
+      block:
+        - name: Get current file checksum
+          command: "sha256sum {{ item.path }}"
+          register: current_checksum_result
+          changed_when: false
+          failed_when: current_checksum_result.rc != 0
+          loop: "{{ baseline_files }}"
+          when: item.path is defined
+
+        - name: Compare checksums with baseline
+          assert:
+            that:
+              - "current_checksum_result.stdout.split(' ')[0] == item.checksum"
+            fail_msg: "Checksum mismatch for {{ item.path }}. Expected {{ item.checksum }}, got {{ current_checksum_result.stdout.split(' ')[0] }}"
+            success_msg: "Checksum for {{ item.path }} matches baseline."
+          loop: "{{ baseline_files }}"
+          when: item.path is defined
+      rescue:
+        - name: Handle file audit failures
+          debug:
+            msg: "Failed to audit file {{ item.path }}. It might not exist or permissions are insufficient."
+          loop: "{{ baseline_files }}"
+          when: item.path is defined
+
+    - name: Audit running services against baseline
+      block:
+        - name: Check service status
+          service:
+            name: "{{ item.name }}"
+            state: "{{ item.state | default('started') }}"
+          register: service_status
+          loop: "{{ baseline_services }}"
+          when: item.name is defined
+
+        - name: Assert service status
+          assert:
+            that:
+              - "service_status.results | selectattr('item.name', 'equalto', item.name) | first | attr('state') == item.state | default('started')"
+            fail_msg: "Service {{ item.name }} is not in expected state '{{ item.state | default('started') }}'. Current state: {{ service_status.results | selectattr('item.name', 'equalto', item.name) | first | attr('state') }}"
+            success_msg: "Service {{ item.name }} is in expected state '{{ item.state | default('started') }}'."
+          loop: "{{ baseline_services }}"
+          when: item.name is defined
+      rescue:
+        - name: Handle service audit failures
+          debug:
+            msg: "Failed to audit service {{ item.name }}. It might not be installed or managed."
+          loop: "{{ baseline_services }}"
+          when: item.name is defined
+
+    - name: Audit users against baseline
+      block:
+        - name: Get user information
+          command: "id {{ item.username }}"
+          register: user_info_result
+          changed_when: false
+          failed_when: user_info_result.rc != 0 and user_info_result.rc != 1 # rc=1 means user not found
+          loop: "{{ baseline_users }}"
+          when: item.username is defined
+
+        - name: Assert user existence and group membership
+          assert:
+            that:
+              - "(user_info_result.rc == 0 and item.exists | default(true)) or (user_info_result.rc == 1 and not (item.exists | default(true)))"
+              - "(user_info_result.rc == 0 and (user_info_result.stdout | regex_search('groups=' + item.group)))"
+            fail_msg: "User {{ item.username }} audit failed. Expected exists: {{ item.exists | default(true) }}, group: {{ item.group }}. User info: {{ user_info_result.stdout }}"
+            success_msg: "User {{ item.username }} audit passed. Exists: {{ item.exists | default(true) }}, group: {{ item.group }}."
+          loop: "{{ baseline_users }}"
+          when: item.username is defined
+      rescue:
+        - name: Handle user audit failures
+          debug:
+            msg: "Failed to audit user {{ item.username }}."
+          loop: "{{ baseline_users }}"
+          when: item.username is defined
+
+    - name: Generate audit report
+      template:
+        src: templates/audit_report.j2
+        dest: "{{ audit_report_path | default('/tmp/audit_report.txt') }}"
+      when: audit_report_path is defined
+
+    - name: Display audit report path
+      debug:
+        msg: "Audit report generated at {{ audit_report_path | default('/tmp/audit_report.txt') }}"
+      when: audit_report_path is defined

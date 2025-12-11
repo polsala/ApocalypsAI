@@ -1,0 +1,65 @@
+---
+- name: Verify
+  hosts: instance
+  gather_facts: yes
+  tasks:
+    - name: Create dummy files for testing
+      copy:
+        content: ""
+        dest: "/tmp/test_file_1"
+        mode: '0644'
+
+    - name: Create dummy file with incorrect checksum for testing
+      copy:
+        content: "This is not the expected content."
+        dest: "/tmp/test_file_2"
+        mode: '0644'
+
+    - name: Ensure fake_service_1 is running (mocked)
+      command: "true"
+      register: fake_service_1_status
+      changed_when: false
+      # In a real scenario, you'd use a service module or check process status.
+      # For testing, we simulate the service being 'started'.
+
+    - name: Create test user
+      user:
+        name: "testuser"
+        group: "users"
+        state: "present"
+
+    - name: Assert file checksums are correct (or report mismatch)
+      assert:
+        that:
+          - "hostvars[inventory_hostname]['current_checksum_result']['results'] | selectattr('item.path', 'equalto', '/tmp/test_file_1') | first | attr('stdout').split(' ')[0] == 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'"
+          - "hostvars[inventory_hostname]['current_checksum_result']['results'] | selectattr('item.path', 'equalto', '/tmp/test_file_2') | first | attr('stdout').split(' ')[0] != 'a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'"
+        fail_msg: "File checksum verification failed."
+        success_msg: "File checksum verification passed."
+
+    - name: Assert service status is correct
+      assert:
+        that:
+          - "hostvars[inventory_hostname]['service_status']['results'] | selectattr('item.name', 'equalto', 'fake_service_1') | first | attr('state') == 'started'"
+        fail_msg: "Service status verification failed."
+        success_msg: "Service status verification passed."
+
+    - name: Assert user existence and group membership
+      assert:
+        that:
+          - "hostvars[inventory_hostname]['user_info_result']['results'] | selectattr('item.username', 'equalto', 'testuser') | first | attr('rc') == 0"
+          - "hostvars[inventory_hostname]['user_info_result']['results'] | selectattr('item.username', 'equalto', 'testuser') | first | attr('stdout') | regex_search('groups=users')"
+          - "hostvars[inventory_hostname]['user_info_result']['results'] | selectattr('item.username', 'equalto', 'nonexistent_user') | first | attr('rc') == 1"
+        fail_msg: "User audit verification failed."
+        success_msg: "User audit verification passed."
+
+    - name: Check if audit report file exists
+      stat:
+        path: "/tmp/molecule/audit_report.txt"
+      register: audit_report_stat
+
+    - name: Assert audit report was generated
+      assert:
+        that:
+          - "audit_report_stat.stat.exists == true"
+        fail_msg: "Audit report was not generated."
+        success_msg: "Audit report was generated successfully."

@@ -1,0 +1,35 @@
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: instance
+    image: "ubuntu:latest"
+    pre_build_image: true
+    command: ""
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    networks:
+      - name: "molecule"
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: converge.yml
+
+verifier:
+  name: ansible
+  playbooks:
+    verify: verify.yml
+
+scenario:
+  name: default
+  test_sequence:
+    - destroy
+    - create
+    - converge
+    - verify
+    - destroy

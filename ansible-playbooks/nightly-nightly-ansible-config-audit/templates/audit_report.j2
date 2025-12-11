@@ -1,0 +1,47 @@
+Apocalypse System Audit Report
+=============================
+
+Timestamp: {{ ansible_date_time.iso8601 }}
+
+--- File Integrity Checks ---
+{% for item in baseline_files %}
+{% set current_checksum = hostvars[inventory_hostname]['current_checksum_result']['results'] | selectattr('item.path', 'equalto', item.path) | first %}
+{% if current_checksum is defined %}
+  {{ item.path }}:
+    Expected: {{ item.checksum }}
+    Actual:   {{ current_checksum.stdout.split(' ')[0] }}
+    Status:   {% if current_checksum.stdout.split(' ')[0] == item.checksum %}OK{% else %}MISMATCH{% endif %}
+{% else %}
+  {{ item.path }}: Status: NOT_FOUND
+{% endif %}
+{% endfor %}
+
+--- Service Status Checks ---
+{% for item in baseline_services %}
+{% set service_status = hostvars[inventory_hostname]['service_status']['results'] | selectattr('item.name', 'equalto', item.name) | first %}
+{% if service_status is defined %}
+  {{ item.name }}:
+    Expected State: {{ item.state }}
+    Actual State:   {{ service_status.state }}
+    Status:         {% if service_status.state == item.state %}OK{% else %}MISMATCH{% endif %}
+{% else %}
+  {{ item.name }}: Status: UNKNOWN (Service not found or managed)
+{% endif %}
+{% endfor %}
+
+--- User Audits ---
+{% for item in baseline_users %}
+{% set user_info = hostvars[inventory_hostname]['user_info_result']['results'] | selectattr('item.username', 'equalto', item.username) | first %}
+{% if user_info is defined %}
+  {{ item.username }}:
+    Expected Exists: {{ item.exists | default(true) }}
+    Actual Exists:   {% if user_info.rc == 0 %}Yes{% else %}No{% endif %}
+    Expected Group:  {{ item.group }}
+    Actual Group:    {% if user_info.rc == 0 %}{{ user_info.stdout.split('groups=')[1].split(' ')[0] | replace(',', ' ') }}{% else %}N/A{% endif %}
+    Status:          {% if (user_info.rc == 0 and item.exists | default(true)) or (user_info.rc == 1 and not (item.exists | default(true))) %}{% if user_info.rc == 0 and (user_info.stdout | regex_search('groups=' + item.group)) %}OK{% else %}GROUP_MISMATCH{% endif %}{% else %}EXISTENCE_MISMATCH{% endif %}
+{% else %}
+  {{ item.username }}: Status: NOT_FOUND (or error during lookup)
+{% endif %}
+{% endfor %}
+
+--- End of Report ---
