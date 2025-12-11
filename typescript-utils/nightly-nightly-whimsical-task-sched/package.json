@@ -1,0 +1,21 @@
+{"name": "whimsical-task-scheduler",
+  "version": "1.0.0",
+  "description": "Whimsical task scheduler CLI",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.10",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }}
