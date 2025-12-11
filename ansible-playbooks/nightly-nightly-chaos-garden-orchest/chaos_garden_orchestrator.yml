@@ -1,0 +1,32 @@
+- name: Chaos Garden Orchestrator
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/chaos_scenarios.yml
+  tasks:
+    - name: Announce chaos gardening session
+      debug:
+        msg: "Welcome to the Chaos Garden! We'll be pruning some services today."
+
+    - name: Apply chaos scenarios
+      include_tasks: tasks/chaos/{{ item }}.yml
+      loop: "{{ chaos_scenarios }}"
+      when: item in chaos_scenarios
+
+    - name: Generate chaos report
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_garden_report.txt
+      delegate_to: localhost
+
+    - name: Display chaos report
+      debug:
+        msg: "{{ lookup('file', '/tmp/chaos_garden_report.txt') }}"
+
+    - name: Cleanup chaos garden
+      include_tasks: tasks/cleanup.yml
+      when: cleanup_enabled | default(true)
+
+    - name: Announce chaos gardening complete
+      debug:
+        msg: "Chaos gardening session complete! The garden is now more resilient."

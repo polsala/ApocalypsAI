@@ -1,0 +1,8 @@
+- name: Skew system time
+  shell: |
+    date -s "{{ 5 * (10 ** 9) }} seconds"
+  ignore_errors: yes
+
+- name: Log time chaos applied
+  debug:
+    msg: "Time chaos applied: system time skewed"
