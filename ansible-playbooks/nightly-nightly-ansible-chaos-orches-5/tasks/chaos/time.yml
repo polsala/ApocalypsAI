@@ -1,0 +1,37 @@
+- name: Time Chaos - Adjust system time forward
+  shell: |
+    set -e
+    current_time=$(date '+%Y-%m-%d %H:%M:%S')
+    new_time=$(date -d '+5 minutes' '+%Y-%m-%d %H:%M:%S')
+    timedatectl set-time "{{ new_time }}" 2>/dev/null || \
+    date -s "{{ new_time }}" 2>/dev/null
+    echo "Time adjusted forward by 5 minutes"
+  args:
+    executable: /bin/bash
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+  register: time_forward
+  ignore_errors: true
+
+- name: Time Chaos - Record time manipulation
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Adjusted system time forward',
+      'impact': 'System time moved 5 minutes ahead',
+      'apocalypse_points': 20
+    }] }}"
+  when: time_forward is succeeded
+
+- name: Time Chaos - Wait before restoring time
+  pause:
+    seconds: 30
+  when: time_forward is succeeded
+
+- name: Time Chaos - Restore system time
+  shell: |
+    timedatectl set-time "{{ current_time }}" 2>/dev/null || \
+    date -s "{{ current_time }}" 2>/dev/null
+    echo "Time restored"
+  args:
+    executable: /bin/bash
+  when: time_forward is succeeded
+  ignore_errors: true

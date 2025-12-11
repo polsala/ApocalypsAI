@@ -1,0 +1,34 @@
+- name: Cleanup - Remove network chaos artifacts
+  shell: tc qdisc del dev eth0 root netem 2>/dev/null || true
+  ignore_errors: true
+
+- name: Cleanup - Remove iptables rules
+  shell: iptables -D INPUT -s 10.0.0.0/8 -j DROP 2>/dev/null || true
+  ignore_errors: true
+
+- name: Cleanup - Remove temporary files
+  file:
+    path: /tmp/chaos_*.tmp
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup - Reset any modified services
+  service:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - nginx
+    - apache2
+    - httpd
+    - mysql
+    - postgresql
+    - mongod
+  ignore_errors: true
+
+- name: Cleanup - Record cleanup completion
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Completed chaos cleanup',
+      'impact': 'All chaos artifacts removed',
+      'apocalypse_points': 0
+    }] }}"

@@ -1,0 +1,60 @@
+- name: Random Chaos - Generate random chaos event
+  set_fact:
+    random_chaos: "{{ ['disk_space', 'process_kill', 'network_partition'] | random }}"
+
+- name: Random Chaos - Create disk space pressure
+  shell: |
+    set -e
+    dd if=/dev/zero of=/tmp/chaos_disk.tmp bs=100M count=10
+    echo "Disk space pressure created"
+  args:
+    executable: /bin/bash
+  when: random_chaos == 'disk_space'
+  register: disk_pressure
+  ignore_errors: true
+
+- name: Random Chaos - Kill random process
+  shell: |
+    set -e
+    process=$(ps aux | grep -v 'grep' | awk '{print $2}' | head -5 | tail -1)
+    kill -TERM $process 2>/dev/null || true
+    echo "Attempted to kill process $process"
+  args:
+    executable: /bin/bash
+  when: random_chaos == 'process_kill'
+  register: process_kill
+  ignore_errors: true
+
+- name: Random Chaos - Create network partition
+  shell: |
+    set -e
+    iptables -A INPUT -s 10.0.0.0/8 -j DROP 2>/dev/null || true
+    echo "Network partition created"
+  args:
+    executable: /bin/bash
+  when: random_chaos == 'network_partition'
+  register: network_partition
+  ignore_errors: true
+
+- name: Random Chaos - Record random chaos
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Executed random chaos: ' + random_chaos,
+      'impact': 'Varies based on chaos type',
+      'apocalypse_points': 25
+    }] }}"
+  when: random_chaos == 'disk_space' and disk_pressure is succeeded or
+        random_chaos == 'process_kill' and process_kill is succeeded or
+        random_chaos == 'network_partition' and network_partition is succeeded
+
+- name: Random Chaos - Clean up disk pressure
+  file:
+    path: /tmp/chaos_disk.tmp
+    state: absent
+  when: random_chaos == 'disk_space' and disk_pressure is succeeded
+  ignore_errors: true
+
+- name: Random Chaos - Restore network partition
+  shell: iptables -D INPUT -s 10.0.0.0/8 -j DROP 2>/dev/null || true
+  when: random_chaos == 'network_partition' and network_partition is succeeded
+  ignore_errors: true

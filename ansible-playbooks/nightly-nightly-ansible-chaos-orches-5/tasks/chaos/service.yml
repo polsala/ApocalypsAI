@@ -1,0 +1,58 @@
+- name: Service Chaos - Restart web services
+  service:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - nginx
+    - apache2
+    - httpd
+  ignore_errors: true
+  register: service_restart
+  when: "'webservers' in group_names"
+
+- name: Service Chaos - Record service restarts
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Restarted web services',
+      'impact': 'Temporary service interruption during restart',
+      'apocalypse_points': 20
+    }] }}"
+  when: service_restart is succeeded
+
+- name: Service Chaos - Stop database services temporarily
+  service:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - mysql
+    - postgresql
+    - mongod
+  ignore_errors: true
+  when: "'databases' in group_names"
+  register: db_stop
+
+- name: Service Chaos - Wait before restarting databases
+  pause:
+    seconds: 30
+  when: db_stop is succeeded
+
+- name: Service Chaos - Restart database services
+  service:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - mysql
+    - postgresql
+    - mongod
+  ignore_errors: true
+  when: "'databases' in group_names"
+  register: db_start
+
+- name: Service Chaos - Record database chaos
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Stopped and restarted database services',
+      'impact': 'Database unavailable for ~30 seconds',
+      'apocalypse_points': 25
+    }] }}"
+  when: db_stop is succeeded or db_start is succeeded

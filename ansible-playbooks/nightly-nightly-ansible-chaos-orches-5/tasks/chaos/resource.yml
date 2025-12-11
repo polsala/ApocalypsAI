@@ -1,0 +1,47 @@
+- name: Resource Chaos - Create memory pressure
+  shell: |
+    set -e
+    dd if=/dev/zero of=/tmp/chaos_memory.tmp bs=1M count=512
+    echo "Memory pressure created"
+  args:
+    executable: /bin/bash
+  when: ansible_memtotal_mb > 1024
+  register: memory_pressure
+  ignore_errors: true
+
+- name: Resource Chaos - Record memory pressure
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Created memory pressure',
+      'impact': 'Consumed 512MB of RAM temporarily',
+      'apocalypse_points': 15
+    }] }}"
+  when: memory_pressure is succeeded
+
+- name: Resource Chaos - Create CPU load
+  shell: |
+    timeout 60s yes > /dev/null &
+    timeout 60s yes > /dev/null &
+    wait
+    echo "CPU load created"
+  args:
+    executable: /bin/bash
+  when: ansible_processor_vcpus > 1
+  register: cpu_load
+  ignore_errors: true
+
+- name: Resource Chaos - Record CPU load
+  set_fact:
+    chaos_results: "{{ chaos_results + [{
+      'description': 'Created CPU load',
+      'impact': 'High CPU usage for chaos duration',
+      'apocalypse_points': 15
+    }] }}"
+  when: cpu_load is succeeded
+
+- name: Resource Chaos - Clean up memory pressure
+  file:
+    path: /tmp/chaos_memory.tmp
+    state: absent
+  when: memory_pressure is succeeded
+  ignore_errors: true

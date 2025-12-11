@@ -1,0 +1,101 @@
+---
+- name: Test Nightly Ansible Chaos Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Test 1 - Check playbook syntax
+      command: ansible-playbook --syntax-check chaos_orchestrator.yml
+      args:
+        chdir: "{{ playbook_dir }}"
+      register: syntax_check
+      changed_when: false
+
+    - name: Test 2 - Verify required files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - chaos_orchestrator.yml
+        - inventory.ini
+        - vars/chaos_scenarios.yml
+        - templates/chaos_report.j2
+        - tasks/chaos/network.yml
+        - tasks/chaos/service.yml
+        - tasks/chaos/resource.yml
+        - tasks/chaos/time.yml
+        - tasks/chaos/random.yml
+        - tasks/cleanup.yml
+        - run_chaos.sh
+      register: file_checks
+
+    - name: Test 3 - Verify all required files exist
+      fail:
+        msg: "Missing required file: {{ item.item }}"
+      when: not item.stat.exists
+      loop: "{{ file_checks.results }}"
+
+    - name: Test 4 - Check chaos scenarios YAML syntax
+      include_vars:
+        file: vars/chaos_scenarios.yml
+      register: scenarios_load
+
+    - name: Test 5 - Verify chaos scenarios structure
+      assert:
+        that:
+          - chaos_scenarios.network is defined
+          - chaos_scenarios.service is defined
+          - chaos_scenarios.resource is defined
+          - chaos_scenarios.time is defined
+          - chaos_scenarios.random is defined
+          - chaos_scenarios.cleanup is defined
+        fail_msg: "Chaos scenarios structure is invalid"
+
+    - name: Test 6 - Check Jinja2 template syntax
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/test_chaos_report.html
+      register: template_test
+
+    - name: Test 7 - Verify template was generated
+      stat:
+        path: /tmp/test_chaos_report.html
+      register: template_stat
+
+    - name: Test 8 - Clean up test template
+      file:
+        path: /tmp/test_chaos_report.html
+        state: absent
+      when: template_stat.stat.exists
+
+    - name: Test 9 - Check shell script is executable
+      stat:
+        path: run_chaos.sh
+      register: script_stat
+
+    - name: Test 10 - Make shell script executable if needed
+      file:
+        path: run_chaos.sh
+        mode: '0755'
+      when: not script_stat.stat.mode | regex_search('rwx')
+
+    - name: Test 11 - Verify shell script syntax
+      command: bash -n run_chaos.sh
+      args:
+        chdir: "{{ playbook_dir }}"
+      register: script_syntax
+      changed_when: false
+      ignore_errors: true
+
+    - name: Test 12 - Display test results
+      debug:
+        msg: |
+          🧪 CHAOS ORCHESTRATOR TEST RESULTS 🧪
+          
+          ✅ Playbook syntax check: {{ 'PASSED' if syntax_check.rc == 0 else 'FAILED' }}
+          ✅ Required files: {{ 'ALL PRESENT' if (file_checks.results | selectattr('stat.exists') | list | length) == 11 else 'MISSING FILES' }}
+          ✅ Chaos scenarios: {{ 'VALID' if scenarios_load is succeeded else 'INVALID' }}
+          ✅ Jinja2 template: {{ 'VALID' if template_test is succeeded else 'INVALID' }}
+          ✅ Shell script: {{ 'EXECUTABLE' if script_stat.stat.mode | regex_search('rwx') else 'NOT EXECUTABLE' }}
+          ✅ Script syntax: {{ 'VALID' if script_syntax.rc == 0 else 'INVALID' }}
+          
+          🎉 All tests completed! Your chaos orchestrator is ready to unleash! 🎉
