@@ -1,0 +1,35 @@
+name: Test Nightly GitHub Actions Quickstart
+
+on:
+  workflow_dispatch
+
+jobs:
+  test-python:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: python
+
+  test-node:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: node
+
+  test-rust:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: rust
+
+  test-go:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: go
+
+  test-java:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: java
+
+  test-cpp:
+    uses: ./.github/workflows/nightly-github-actions-quickstart.yml
+    with:
+      language: cpp
