@@ -1,0 +1,358 @@
+name: Nightly GitHub Actions Quickstart
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: 'Language/Framework'
+        required: true
+        type: string
+        default: 'python'
+        options:
+          - python
+          - node
+          - rust
+          - go
+          - java
+          - cpp
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Scaffold project
+        run: |
+          python <<EOF
+          import os
+          import sys
+          import json
+          
+          language = os.environ.get('INPUT_LANGUAGE', 'python')
+          
+          # Create project structure
+          os.makedirs('src', exist_ok=True)
+          os.makedirs('tests', exist_ok=True)
+          
+          # Generate README
+          with open('README.md', 'w') as f:
+              f.write(f"""# {language.title()} Project
+
+This is a {language} project scaffolded by Nightly GitHub Actions Quickstart.
+
+## Getting Started
+
+1. Clone this repository
+2. Install dependencies
+3. Run tests
+
+## License
+
+MIT
+""")
+          
+          # Generate basic source file
+          if language == 'python':
+              with open('src/main.py', 'w') as f:
+                  f.write("""def hello():
+    return "Hello from Python!"
+
+if __name__ == "__main__":
+    print(hello())
+""")
+              with open('tests/test_main.py', 'w') as f:
+                  f.write("""import unittest
+from src.main import hello
+
+class TestMain(unittest.TestCase):
+    def test_hello(self):
+        self.assertEqual(hello(), "Hello from Python!")
+
+if __name__ == "__main__":
+    unittest.main()
+""")
+          elif language == 'node':
+              with open('package.json', 'w') as f:
+                  json.dump({
+                      "name": "node-project",
+                      "version": "1.0.0",
+                      "main": "src/index.js",
+                      "scripts": {
+                          "test": "jest"
+                      },
+                      "devDependencies": {
+                          "jest": "^29.0.0"
+                      }
+                  }, f, indent=2)
+              with open('src/index.js', 'w') as f:
+                  f.write("""function hello() {
+    return "Hello from Node.js!";
+}
+
+module.exports = { hello };
+""")
+              with open('tests/index.test.js', 'w') as f:
+                  f.write("""const { hello } = require('../src/index');
+
+test('hello', () => {
+    expect(hello()).toBe('Hello from Node.js!');
+});
+""")
+          elif language == 'rust':
+              with open('Cargo.toml', 'w') as f:
+                  f.write("""[package]
+name = "rust-project"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+""")
+              with open('src/main.rs', 'w') as f:
+                  f.write("""fn hello() -> &'static str {
+    "Hello from Rust!"
+}
+
+fn main() {
+    println!("{}", hello());
+}
+""")
+              with open('src/lib.rs', 'w') as f:
+                  f.write("""pub fn hello() -> &'static str {
+    "Hello from Rust!"
+}
+""")
+              with open('tests/integration_test.rs', 'w') as f:
+                  f.write("""#[test]
+fn test_hello() {
+    assert_eq!(crate::hello(), "Hello from Rust!");
+}
+""")
+          elif language == 'go':
+              with open('go.mod', 'w') as f:
+                  f.write("""module go-project
+
+go 1.21
+""")
+              with open('main.go', 'w') as f:
+                  f.write("""package main
+
+import "fmt"
+
+func hello() string {
+    return "Hello from Go!"
+}
+
+func main() {
+    fmt.Println(hello())
+}
+""")
+              with open('main_test.go', 'w') as f:
+                  f.write("""package main
+
+import "testing"
+
+testHello(t *testing.T) {
+    got := hello()
+    want := "Hello from Go!"
+    if got != want {
+        t.Errorf("got %q, want %q", got, want)
+    }
+}
+""")
+          elif language == 'java':
+              os.makedirs('src/main/java', exist_ok=True)
+              os.makedirs('src/test/java', exist_ok=True)
+              with open('src/main/java/App.java', 'w') as f:
+                  f.write("""public class App {
+    public static String hello() {
+        return "Hello from Java!";
+    }
+
+    public static void main(String[] args) {
+        System.out.println(hello());
+    }
+}
+""")
+              with open('src/test/java/AppTest.java', 'w') as f:
+                  f.write("""import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+
+class AppTest {
+    @Test
+    public void testHello() {
+        assertEquals("Hello from Java!", App.hello());
+    }
+}
+""")
+          elif language == 'cpp':
+              with open('main.cpp', 'w') as f:
+                  f.write("""#include <iostream>
+#include <string>
+
+std::string hello() {
+    return "Hello from C++!";
+}
+
+int main() {
+    std::cout << hello() << std::endl;
+    return 0;
+}
+""")
+              with open('test.cpp', 'w') as f:
+                  f.write("""#include <cassert>
+#include <string>
+
+std::string hello();
+
+int main() {
+    assert(hello() == "Hello from C++!");
+    return 0;
+}
+""")
+          
+          print(f"Scaffolded {language} project successfully!")
+          
+          # Create a workflow file for the project
+          os.makedirs('.github/workflows', exist_ok=True)
+          with open('.github/workflows/build.yml', 'w') as f:
+              if language == 'python':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Run tests
+      run: python -m unittest discover
+""")
+              elif language == 'node':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: npm install
+    - name: Run tests
+      run: npm test
+""")
+              elif language == 'rust':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Run tests
+      run: cargo test
+""")
+              elif language == 'go':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    - name: Run tests
+      run: go test -v ./...
+""")
+              elif language == 'java':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    - name: Run tests
+      run: javac -cp . src/test/java/*.java src/main/java/*.java && java -cp . org.junit.runner.JUnitCore AppTest
+""")
+              elif language == 'cpp':
+                  f.write("""name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile and test
+      run: |
+        g++ -o main main.cpp
+        g++ -o test test.cpp
+        ./test
+""")
+          
+          print(f"Created workflow file for {language} project!")
+          
+          # Commit and push changes
+          os.system('git config --global user.name "Nightly GitHub Actions Quickstart"')
+          os.system('git config --global user.email "noreply@github.com"')
+          os.system('git add .')
+          os.system('git commit -m "Scaffold new project"')
+          os.system('git push')
+          
+          print("Changes committed and pushed!")
+          
+          EOF
+        env:
+          INPUT_LANGUAGE: ${{ inputs.language }}
+
+      - name: Checkout back to original branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Pull latest changes
+        run: git pull origin ${{ github.ref_name }}
