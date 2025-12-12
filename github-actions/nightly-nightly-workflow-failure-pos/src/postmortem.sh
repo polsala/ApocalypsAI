@@ -1,0 +1,4 @@
+#!/usr/bin/env bash\nset -euo pipefail\n\n# Required environment variables\n: "${GITHUB_TOKEN:?}"\n: "${GITHUB_REPOSITORY:?}"\n: "${GITHUB_RUN_ID:?}"\n: "${GITHUB_WORKFLOW:?}"\n: "${GITHUB_SERVER_URL:?}"\n\nAPI_URL="${GITHUB_SERVER_URL}/api/v3"\nRUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"\nISSUE_TITLE="Workflow Failure: ${GITHUB_WORKFLOW}"\nISSUE_BODY="A workflow run has failed.\n\n- Run: ${RUN_URL}\n- Run ID: ${GITHUB_RUN_ID}\n- Timestamp: $(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"\n\n# Create issue via GitHub API\ncurl -s -X POST "${API_URL}/repos/${GITHUB_REPOSITORY}/issues" \
+  -H "Authorization: token ${GITHUB_TOKEN}" \
+  -H "Accept: application/vnd.github+json" \
+  -d "$(cat <<EOF\n{\n  \"title\": \"${ISSUE_TITLE}\",\n  \"body\": \"${ISSUE_BODY}\"\n}\nEOF\n)" > /dev/null\n\nexit 0
