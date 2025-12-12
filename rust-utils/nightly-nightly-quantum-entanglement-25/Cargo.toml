@@ -1,0 +1,18 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical utility that simulates quantum entanglement verification for distributed systems"
+license = "MIT"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+clap = { version = "4.0", features = ["derive"] }
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full", "test-util"] }
