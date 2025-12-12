@@ -1,0 +1,71 @@
+---
+# Time Chaos Tasks for Chaos Garden Orchestrator
+
+- name: "Record time chaos start"
+  set_fact:
+    time_chaos_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Backup original timezone"
+  shell: date
+  register: original_timezone
+  when: ansible_os_family != 'Windows'
+  tags: time-backup
+
+- name: "Apply time shift chaos"
+  shell: |
+    set -e
+    # Shift system time forward by chaos offset
+    offset_seconds={{ selected_chaos.offset_seconds | default(3600) }}
+    current_epoch=$(date +%s)
+    new_epoch=$((current_epoch + offset_seconds))
+    date -s "@$new_epoch"
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'time_shift' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: time-shift
+
+- name: "Wait for time chaos duration"
+  pause:
+    seconds: "{{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}"
+  when: selected_chaos.effect == 'time_shift'
+  tags: time-wait
+
+- name: "Restore original time"
+  shell: |
+    set -e
+    # Restore original time
+    hwclock --hctosys
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'time_shift' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: time-restore
+
+- name: "Apply timezone chaos"
+  shell: |
+    set -e
+    # Change timezone temporarily
+    export TZ={{ selected_chaos.timezone | default('UTC') }}
+    echo $TZ > /tmp/chaos_timezone
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'timezone' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: time-timezone
+
+- name: "Record time chaos end"
+  set_fact:
+    time_chaos_end: "{{ ansible_date_time.epoch | int }}"
+  when: time_chaos_start is defined
+
+- name: "Store time chaos results"
+  set_fact:
+    chaos_results_time: >
+      {{ {
+        'chaos_type': 'time',
+        'effect': selected_chaos.effect,
+        'duration': (time_chaos_end | default(ansible_date_time.epoch | int)) - (time_chaos_start | default(ansible_date_time.epoch | int)),
+        'success': true
+      } | to_json }}
+  when: time_chaos_start is defined

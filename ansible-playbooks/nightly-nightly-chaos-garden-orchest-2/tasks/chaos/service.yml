@@ -1,0 +1,74 @@
+---
+# Service Chaos Tasks for Chaos Garden Orchestrator
+
+- name: "Record service chaos start"
+  set_fact:
+    service_chaos_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Identify critical services to chaos"
+  shell: |
+    set -e
+    # Get list of running services (systemd-based)
+    systemctl list-units --type=service --state=running --no-pager --no-legend | head -5 | awk '{print $1}'
+  args:
+    executable: /bin/bash
+  register: running_services
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: true
+  tags: service-identify
+
+- name: "Select random service for chaos"
+  set_fact:
+    chaos_service: "{{ running_services.stdout_lines | random }}"
+  when: running_services is defined and running_services.stdout_lines | length > 0
+  tags: service-select
+
+- name: "Stop service chaos"
+  service:
+    name: "{{ chaos_service | default('ssh') }}"
+    state: stopped
+  when: selected_chaos.effect == 'service_stop' and chaos_service is defined
+  ignore_errors: true
+  tags: service-stop
+
+- name: "Wait for service chaos duration"
+  pause:
+    seconds: "{{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}"
+  when: selected_chaos.effect == 'service_stop' and chaos_service is defined
+  tags: service-wait
+
+- name: "Restart service after chaos"
+  service:
+    name: "{{ chaos_service | default('ssh') }}"
+    state: started
+  when: selected_chaos.effect == 'service_stop' and chaos_service is defined
+  ignore_errors: true
+  tags: service-restart
+
+- name: "Kill random process chaos"
+  shell: |
+    set -e
+    # Kill a random non-critical process
+    pkill -f "{{ selected_chaos.process_pattern | default('sleep|test') }}" || true
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'process_kill' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: service-process-kill
+
+- name: "Record service chaos end"
+  set_fact:
+    service_chaos_end: "{{ ansible_date_time.epoch | int }}"
+  when: service_chaos_start is defined
+
+- name: "Store service chaos results"
+  set_fact:
+    chaos_results_service: >
+      {{ {
+        'chaos_type': 'service',
+        'effect': selected_chaos.effect,
+        'target': chaos_service | default('N/A'),
+        'duration': (service_chaos_end | default(ansible_date_time.epoch | int)) - (service_chaos_start | default(ansible_date_time.epoch | int)),
+        'success': true
+      } | to_json }}
+  when: service_chaos_start is defined

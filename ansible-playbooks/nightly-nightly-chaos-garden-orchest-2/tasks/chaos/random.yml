@@ -1,0 +1,86 @@
+---
+# Random Chaos Tasks for Chaos Garden Orchestrator
+
+- name: "Record random chaos start"
+  set_fact:
+    random_chaos_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Generate random chaos effect"
+  set_fact:
+    random_chaos_effect: "{{ ['cpu_spike', 'memory_spike', 'network_glitch', 'disk_slowdown', 'service_restart'] | random }}"
+  tags: random-effect
+
+- name: "Execute random CPU spike chaos"
+  shell: |
+    set -e
+    # Random CPU spike
+    stress --cpu {{ range(1, 5) | random }} --timeout {{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}s
+  args:
+    executable: /bin/bash
+  when: random_chaos_effect == 'cpu_spike' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: random-cpu
+
+- name: "Execute random memory spike chaos"
+  shell: |
+    set -e
+    # Random memory spike
+    stress --vm {{ range(1, 4) | random }} --vm-bytes {{ ['128M', '256M', '512M'] | random }} --timeout {{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}s
+  args:
+    executable: /bin/bash
+  when: random_chaos_effect == 'memory_spike' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: random-memory
+
+- name: "Execute random network glitch chaos"
+  shell: |
+    set -e
+    # Random network glitch
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem delay {{ range(50, 500) | random }}ms loss {{ range(5, 50) | random }}%
+    sleep {{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+  args:
+    executable: /bin/bash
+  when: random_chaos_effect == 'network_glitch' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: random-network
+
+- name: "Execute random disk slowdown chaos"
+  shell: |
+    set -e
+    # Random disk slowdown
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root tbf rate {{ ['1mbit', '2mbit', '512kbit'] | random }} burst 32kbit latency 400ms
+    sleep {{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+  args:
+    executable: /bin/bash
+  when: random_chaos_effect == 'disk_slowdown' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: random-disk
+
+- name: "Execute random service restart chaos"
+  shell: |
+    set -e
+    # Random service restart
+    systemctl restart {{ ['ssh', 'cron', 'rsyslog'] | random }} || true
+  args:
+    executable: /bin/bash
+  when: random_chaos_effect == 'service_restart' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: random-service
+
+- name: "Record random chaos end"
+  set_fact:
+    random_chaos_end: "{{ ansible_date_time.epoch | int }}"
+  when: random_chaos_start is defined
+
+- name: "Store random chaos results"
+  set_fact:
+    chaos_results_random: >
+      {{ {
+        'chaos_type': 'random',
+        'effect': random_chaos_effect,
+        'duration': (random_chaos_end | default(ansible_date_time.epoch | int)) - (random_chaos_start | default(ansible_date_time.epoch | int)),
+        'success': true
+      } | to_json }}
+  when: random_chaos_start is defined

@@ -1,0 +1,94 @@
+---
+# Nightly Chaos Garden Orchestrator
+# A whimsical Ansible playbook for controlled chaos engineering
+
+- name: "Welcome to the Chaos Garden"
+  hosts: all
+  become: true
+  vars:
+    chaos_garden_name: "{{ inventory_hostname }}"
+    chaos_report_dir: "/tmp/chaos_garden_reports"
+    max_chaos_duration: 300  # 5 minutes max chaos time
+    chaos_enabled: true
+  pre_tasks:
+    - name: "Prepare chaos garden report directory"
+      file:
+        path: "{{ chaos_report_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: "Record garden entry timestamp"
+      set_fact:
+        chaos_start_time: "{{ ansible_date_time.epoch | int }}"
+
+    - name: "Announce chaos garden opening"
+      debug:
+        msg: |
+          🌱 Welcome to {{ chaos_garden_name }}'s Chaos Garden!
+          Today's weather: {{ chaos_enabled | ternary('Chaos', 'Calm') }}
+          Maximum chaos duration: {{ max_chaos_duration }} seconds
+
+  tasks:
+    - name: "Select random chaos scenario"
+      set_fact:
+        selected_chaos: "{{ chaos_scenarios | random }}"
+      when: chaos_enabled
+
+    - name: "Apply network chaos"
+      include_tasks: tasks/chaos/network.yml
+      when: chaos_enabled and (selected_chaos.type == 'network' or 'network' in selected_chaos.tags)
+      tags: network-chaos
+
+    - name: "Apply resource chaos"
+      include_tasks: tasks/chaos/resource.yml
+      when: chaos_enabled and (selected_chaos.type == 'resource' or 'resource' in selected_chaos.tags)
+      tags: resource-chaos
+
+    - name: "Apply service chaos"
+      include_tasks: tasks/chaos/service.yml
+      when: chaos_enabled and (selected_chaos.type == 'service' or 'service' in selected_chaos.tags)
+      tags: service-chaos
+
+    - name: "Apply time chaos"
+      include_tasks: tasks/chaos/time.yml
+      when: chaos_enabled and (selected_chaos.type == 'time' or 'time' in selected_chaos.tags)
+      tags: time-chaos
+
+    - name: "Apply random chaos"
+      include_tasks: tasks/chaos/random.yml
+      when: chaos_enabled and (selected_chaos.type == 'random' or 'random' in selected_chaos.tags)
+      tags: random-chaos
+
+    - name: "Validate garden health after chaos"
+      include_tasks: tasks/chaos/health_check.yml
+      when: chaos_enabled
+      tags: health-check
+
+    - name: "Generate chaos garden report"
+      template:
+        src: templates/chaos_report.j2
+        dest: "{{ chaos_report_dir }}/{{ chaos_garden_name }}_chaos_report_{{ ansible_date_time.epoch }}.md"
+        mode: '0644'
+      when: chaos_enabled
+      tags: report
+
+  post_tasks:
+    - name: "Announce chaos garden closing"
+      debug:
+        msg: |
+          🌸 Chaos Garden {{ chaos_garden_name }} is now closed.
+          Report saved to: {{ chaos_report_dir }}
+          Until next time, may your chaos be controlled and your rollbacks be swift!
+
+    - name: "Cleanup if requested"
+      include_tasks: tasks/cleanup.yml
+      when: cleanup_chaos | default(false)
+      tags: cleanup
+
+- name: "Chaos Garden Cleanup (Standalone)"
+  hosts: all
+  become: true
+  tasks:
+    - name: "Run cleanup tasks"
+      include_tasks: tasks/cleanup.yml
+      tags: cleanup-only

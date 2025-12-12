@@ -1,0 +1,68 @@
+---
+# Resource Chaos Tasks for Chaos Garden Orchestrator
+
+- name: "Record resource chaos start"
+  set_fact:
+    resource_chaos_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Apply CPU stress chaos"
+  shell: |
+    set -e
+    # Stress CPU for specified duration
+    stress --cpu {{ selected_chaos.cpus | default(2) }} --timeout {{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}s
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'cpu_stress' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: resource-cpu
+
+- name: "Apply memory pressure chaos"
+  shell: |
+    set -e
+    # Consume memory for specified duration
+    stress --vm {{ selected_chaos.vms | default(1) }} --vm-bytes {{ selected_chaos.vm_bytes | default('256M') }} --timeout {{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}s
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'memory_pressure' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: resource-memory
+
+- name: "Apply disk I/O chaos"
+  shell: |
+    set -e
+    # Stress disk I/O for specified duration
+    stress --io {{ selected_chaos.io_workers | default(2) }} --timeout {{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}s
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'disk_io' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: resource-disk
+
+- name: "Apply disk space chaos"
+  shell: |
+    set -e
+    # Fill disk space temporarily
+    dd if=/dev/zero of=/tmp/chaos_disk_filler bs=1M count={{ selected_chaos.fill_mb | default(100) }}
+    sleep {{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}
+    rm -f /tmp/chaos_disk_filler
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'disk_space' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: resource-disk-space
+
+- name: "Record resource chaos end"
+  set_fact:
+    resource_chaos_end: "{{ ansible_date_time.epoch | int }}"
+  when: resource_chaos_start is defined
+
+- name: "Store resource chaos results"
+  set_fact:
+    chaos_results_resource: >
+      {{ {
+        'chaos_type': 'resource',
+        'effect': selected_chaos.effect,
+        'duration': (resource_chaos_end | default(ansible_date_time.epoch | int)) - (resource_chaos_start | default(ansible_date_time.epoch | int)),
+        'success': true
+      } | to_json }}
+  when: resource_chaos_start is defined

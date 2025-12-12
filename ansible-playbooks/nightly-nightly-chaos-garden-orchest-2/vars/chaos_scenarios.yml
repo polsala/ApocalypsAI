@@ -1,0 +1,110 @@
+---
+# Chaos Scenarios for Chaos Garden Orchestrator
+# Each scenario defines a type of chaos to apply
+
+chaos_scenarios:
+  # Network Chaos Scenarios
+  - name: "Network Latency Storm"
+    type: "network"
+    effect: "latency"
+    duration: 60
+    tags: ["network", "latency", "storm"]
+    description: "Adds 100ms latency with 20% packet loss"
+
+  - name: "Network Partition Wall"
+    type: "network"
+    effect: "partition"
+    duration: 30
+    tags: ["network", "partition", "wall"]
+    description: "Blocks outgoing network traffic temporarily"
+
+  - name: "Network Bandwidth Drought"
+    type: "network"
+    effect: "bandwidth"
+    duration: 45
+    tags: ["network", "bandwidth", "drought"]
+    description: "Limits bandwidth to 1mbit for a period"
+
+  # Resource Chaos Scenarios
+  - name: "CPU Heat Wave"
+    type: "resource"
+    effect: "cpu_stress"
+    cpus: 2
+    duration: 60
+    tags: ["resource", "cpu", "heat"]
+    description: "Stresses CPU cores to simulate high load"
+
+  - name: "Memory Leak Spring"
+    type: "resource"
+    effect: "memory_pressure"
+    vms: 1
+    vm_bytes: "256M"
+    duration: 60
+    tags: ["resource", "memory", "leak"]
+    description: "Consumes memory to simulate memory pressure"
+
+  - name: "Disk I/O Flood"
+    type: "resource"
+    effect: "disk_io"
+    io_workers: 2
+    duration: 60
+    tags: ["resource", "disk", "io"]
+    description: "Stresses disk I/O operations"
+
+  - name: "Disk Space Drought"
+    type: "resource"
+    effect: "disk_space"
+    fill_mb: 100
+    duration: 60
+    tags: ["resource", "disk", "space"]
+    description: "Temporarily fills disk space"
+
+  # Service Chaos Scenarios
+  - name: "Service Hibernation"
+    type: "service"
+    effect: "service_stop"
+    duration: 30
+    tags: ["service", "hibernation", "stop"]
+    description: "Stops and restarts a random service"
+
+  - name: "Process Migration"
+    type: "service"
+    effect: "process_kill"
+    process_pattern: "sleep|test"
+    duration: 30
+    tags: ["service", "process", "migration"]
+    description: "Kills processes matching a pattern"
+
+  # Time Chaos Scenarios
+  - name: "Time Warp"
+    type: "time"
+    effect: "time_shift"
+    offset_seconds: 3600
+    duration: 60
+    tags: ["time", "warp", "shift"]
+    description: "Shifts system time forward by 1 hour"
+
+  - name: "Timezone Confusion"
+    type: "time"
+    effect: "timezone"
+    timezone: "UTC"
+    duration: 60
+    tags: ["time", "timezone", "confusion"]
+    description: "Changes system timezone temporarily"
+
+  # Random Chaos Scenarios
+  - name: "Chaos Surprise"
+    type: "random"
+    effect: "random"
+    duration: 30
+    tags: ["random", "surprise", "chaos"]
+    description: "Applies a random chaos effect"
+
+# Default scenario if no chaos is selected
+default_chaos_scenario:
+  name: "Gentle Breeze"
+  type: "calm"
+  effect: "none"
+  duration: 0
+  tags: ["calm", "gentle", "breeze"]
+  description: "No chaos applied - garden remains peaceful"
