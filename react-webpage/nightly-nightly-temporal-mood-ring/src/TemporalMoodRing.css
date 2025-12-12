@@ -1,0 +1,54 @@
+.temporal-mood-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.temporal-orb {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background-color: #61dafb; /* Default color */
+  box-shadow: 0 0 30px rgba(97, 218, 251, 0.7),
+              inset 0 0 20px rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+}
+
+.orb-inner-glow {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+  animation: pulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.temporal-mood-text {
+  margin-top: 25px;
+  font-size: 1.5em;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.temporal-severity-display {
+  margin-top: 10px;
+  font-size: 1em;
+  color: #b0b0b0;
+}
