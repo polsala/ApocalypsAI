@@ -1,0 +1,130 @@
+---
+# Tests for Chaos Garden Orchestrator
+# Run with: ansible-playbook -i inventory.ini tests/test_chaos_garden_orchestrator.yml
+
+- name: "Test Chaos Garden Orchestrator"
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: true
+
+  tasks:
+    - name: "Verify playbook syntax"
+      command: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: "Verify inventory syntax"
+      command: ansible-inventory -i inventory.ini --list
+      register: inventory_check
+      changed_when: false
+
+    - name: "Verify template syntax"
+      command: python3 -c "from jinja2 import Template; open('templates/chaos_report.j2').read()"
+      register: template_check
+      changed_when: false
+
+    - name: "Verify variables file syntax"
+      command: python3 -c "import yaml; yaml.safe_load(open('vars/chaos_scenarios.yml'))"
+      register: vars_check
+      changed_when: false
+
+    - name: "Verify task files exist"
+      stat:
+        path: "tasks/chaos/{{ item }}.yml"
+      loop:
+        - network
+        - resource
+        - service
+        - time
+        - random
+        - health_check
+        - cleanup
+      register: task_files
+
+    - name: "Verify all task files exist"
+      assert:
+        that:
+          - task_files.results | selectattr('stat.exists', 'equalto', true) | list | length == 7
+        fail_msg: "One or more task files are missing"
+        success_msg: "All task files exist"
+
+    - name: "Verify chaos scenarios structure"
+      set_fact:
+        chaos_scenarios_valid: >
+          {{ chaos_scenarios is defined and
+             chaos_scenarios | length > 0 and
+             chaos_scenarios[0].name is defined and
+             chaos_scenarios[0].type is defined and
+             chaos_scenarios[0].effect is defined }}
+
+    - name: "Verify chaos scenarios are valid"
+      assert:
+        that:
+          - chaos_scenarios_valid
+        fail_msg: "Chaos scenarios are not properly structured"
+        success_msg: "Chaos scenarios are valid"
+
+    - name: "Verify template renders without errors"
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/test_chaos_report.md
+      vars:
+        inventory_hostname: "test-host"
+        ansible_date_time:
+          epoch: "1234567890"
+        chaos_start_time: 1234567800
+        selected_chaos:
+          name: "Test Scenario"
+          type: "test"
+          effect: "none"
+          tags: ["test"]
+        chaos_enabled: true
+        chaos_results_health:
+          health_score: 100
+          success: true
+      register: template_render
+
+    - name: "Verify report was generated"
+      stat:
+        path: /tmp/test_chaos_report.md
+      register: report_check
+
+    - name: "Verify report file exists"
+      assert:
+        that:
+          - report_check.stat.exists
+        fail_msg: "Chaos report was not generated"
+        success_msg: "Chaos report generated successfully"
+
+    - name: "Clean up test files"
+      file:
+        path: /tmp/test_chaos_report.md
+        state: absent
+      when: report_check.stat.exists
+
+    - name: "Display test results summary"
+      debug:
+        msg: |
+          ✅ All tests passed!
+          - Playbook syntax: {{ syntax_check.rc == 0 }}
+          - Inventory syntax: {{ inventory_check.rc == 0 }}
+          - Template syntax: {{ template_check.rc == 0 }}
+          - Variables syntax: {{ vars_check.rc == 0 }}
+          - Task files: {{ task_files.results | selectattr('stat.exists', 'equalto', true) | list | length == 7 }}
+          - Chaos scenarios: {{ chaos_scenarios_valid }}
+          - Template rendering: {{ template_render is succeeded }}
+          - Report generation: {{ report_check.stat.exists }}
+
+    - name: "Fail if any tests failed"
+      fail:
+        msg: "One or more tests failed"
+      when: >
+        syntax_check.rc != 0 or
+        inventory_check.rc != 0 or
+        template_check.rc != 0 or
+        vars_check.rc != 0 or
+        task_files.results | selectattr('stat.exists', 'equalto', false) | list | length > 0 or
+        not chaos_scenarios_valid or
+        template_render is failed or
+        not report_check.stat.exists

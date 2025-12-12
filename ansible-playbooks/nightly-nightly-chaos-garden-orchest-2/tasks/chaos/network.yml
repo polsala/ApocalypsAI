@@ -1,0 +1,61 @@
+---
+# Network Chaos Tasks for Chaos Garden Orchestrator
+
+- name: "Record network chaos start"
+  set_fact:
+    network_chaos_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Apply network latency chaos"
+  shell: |
+    set -e
+    # Add 100ms latency with 20% packet loss for 60 seconds
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root netem delay 100ms loss 20%
+    sleep {{ [selected_chaos.duration | default(60), max_chaos_duration] | min }}
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'latency' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: network-latency
+
+- name: "Apply network partition chaos"
+  shell: |
+    set -e
+    # Block outgoing traffic for 30 seconds
+    iptables -A OUTPUT -j DROP
+    sleep {{ [selected_chaos.duration | default(30), max_chaos_duration] | min }}
+    iptables -D OUTPUT -j DROP
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'partition' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: network-partition
+
+- name: "Apply bandwidth throttling chaos"
+  shell: |
+    set -e
+    # Limit bandwidth to 1mbit for 45 seconds
+    tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }} root tbf rate 1mbit burst 32kbit latency 400ms
+    sleep {{ [selected_chaos.duration | default(45), max_chaos_duration] | min }}
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+  args:
+    executable: /bin/bash
+  when: selected_chaos.effect == 'bandwidth' and ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: network-bandwidth
+
+- name: "Record network chaos end"
+  set_fact:
+    network_chaos_end: "{{ ansible_date_time.epoch | int }}"
+  when: network_chaos_start is defined
+
+- name: "Store network chaos results"
+  set_fact:
+    chaos_results_network: >
+      {{ {
+        'chaos_type': 'network',
+        'effect': selected_chaos.effect,
+        'duration': (network_chaos_end | default(ansible_date_time.epoch | int)) - (network_chaos_start | default(ansible_date_time.epoch | int)),
+        'success': true
+      } | to_json }}
+  when: network_chaos_start is defined

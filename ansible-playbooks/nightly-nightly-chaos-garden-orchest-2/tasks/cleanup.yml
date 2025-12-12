@@ -1,0 +1,88 @@
+---
+# Cleanup Tasks for Chaos Garden Orchestrator
+
+- name: "Record cleanup start"
+  set_fact:
+    cleanup_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Remove network traffic control rules"
+  shell: |
+    set -e
+    # Clean up any tc rules
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root 2>/dev/null || true
+    tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} ingress 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  when: ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: cleanup-network
+
+- name: "Remove iptables rules"
+  shell: |
+    set -e
+    # Clean up any iptables rules
+    iptables -D OUTPUT -j DROP 2>/dev/null || true
+    iptables -D INPUT -j DROP 2>/dev/null || true
+  args:
+    executable: /bin/bash
+  when: ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: cleanup-firewall
+
+- name: "Stop stress processes"
+  shell: |
+    set -e
+    # Kill any stress processes
+    pkill -f stress || true
+  args:
+    executable: /bin/bash
+  when: ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: cleanup-stress
+
+- name: "Remove temporary files"
+  file:
+    path: /tmp/chaos_{{ item }}
+    state: absent
+  loop:
+    - disk_filler
+    - timezone
+  tags: cleanup-files
+
+- name: "Restart critical services if needed"
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - ssh
+    - cron
+    - rsyslog
+  when: ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: cleanup-services
+
+- name: "Verify system is healthy after cleanup"
+  shell: systemctl is-system-running
+  register: system_health
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: true
+  tags: cleanup-verify
+
+- name: "Report cleanup completion"
+  debug:
+    msg: |
+      🧹 Cleanup completed for {{ inventory_hostname }}
+      System health: {{ system_health.stdout | default('unknown') }}
+      Cleanup duration: {{ (ansible_date_time.epoch | int) - (cleanup_start | default(ansible_date_time.epoch | int)) }} seconds
+  tags: cleanup-report
+
+- name: "Store cleanup results"
+  set_fact:
+    chaos_results_cleanup: >
+      {{ {
+        'chaos_type': 'cleanup',
+        'duration': (ansible_date_time.epoch | int) - (cleanup_start | default(ansible_date_time.epoch | int)),
+        'success': true,
+        'system_health': system_health.stdout | default('unknown')
+      } | to_json }}

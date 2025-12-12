@@ -1,0 +1,81 @@
+---
+# Health Check Tasks for Chaos Garden Orchestrator
+
+- name: "Record health check start"
+  set_fact:
+    health_check_start: "{{ ansible_date_time.epoch | int }}"
+
+- name: "Check system load after chaos"
+  shell: uptime
+  register: system_load
+  when: ansible_os_family != 'Windows'
+  tags: health-load
+
+- name: "Check memory usage after chaos"
+  shell: free -h
+  register: memory_usage
+  when: ansible_os_family != 'Windows'
+  tags: health-memory
+
+- name: "Check disk space after chaos"
+  shell: df -h
+  register: disk_usage
+  when: ansible_os_family != 'Windows'
+  tags: health-disk
+
+- name: "Check network connectivity after chaos"
+  shell: ping -c 3 8.8.8.8
+  register: network_connectivity
+  when: ansible_os_family != 'Windows'
+  ignore_errors: true
+  tags: health-network
+
+- name: "Check critical services after chaos"
+  shell: systemctl list-units --type=service --state=failed --no-pager --no-legend
+  register: failed_services
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: true
+  tags: health-services
+
+- name: "Assess overall garden health"
+  set_fact:
+    garden_health: >
+      {{ {
+        'timestamp': ansible_date_time.epoch,
+        'system_load': system_load.stdout | default('N/A'),
+        'memory_usage': memory_usage.stdout | default('N/A'),
+        'disk_usage': disk_usage.stdout | default('N/A'),
+        'network_connectivity': network_connectivity.rc == 0,
+        'failed_services': failed_services.stdout_lines | length,
+        'health_score': (
+          (network_connectivity.rc == 0) | ternary(25, 0) +
+          (failed_services.stdout_lines | length == 0) | ternary(25, 0) +
+          (memory_usage.stdout is defined) | ternary(25, 0) +
+          (disk_usage.stdout is defined) | ternary(25, 0)
+        )
+      } | to_json }}
+  tags: health-assessment
+
+- name: "Trigger rollback if health is critical"
+  include_tasks: tasks/cleanup.yml
+  when: >
+    (garden_health is defined) and
+    (garden_health.health_score is defined) and
+    (garden_health.health_score < 50)
+  tags: health-rollback
+
+- name: "Record health check end"
+  set_fact:
+    health_check_end: "{{ ansible_date_time.epoch | int }}"
+  when: health_check_start is defined
+
+- name: "Store health check results"
+  set_fact:
+    chaos_results_health: >
+      {{ {
+        'chaos_type': 'health_check',
+        'duration': (health_check_end | default(ansible_date_time.epoch | int)) - (health_check_start | default(ansible_date_time.epoch | int)),
+        'health_score': garden_health.health_score | default(0),
+        'success': garden_health.health_score | default(0) >= 50
+      } | to_json }}
+  when: health_check_start is defined
