@@ -1,0 +1,39 @@
+---
+- name: Test Environment Variable Synchronization
+  hosts: test_host
+  become: yes
+  vars_files:
+    - ../vars/environment_vars.yml
+
+  tasks:
+    - name: Ensure test environment variables are set
+      ansible.builtin.template:
+        src: ../templates/env_vars.sh.j2
+        dest: /tmp/apoc_test_env_vars.sh
+        mode: '0644'
+
+    - name: Source the test environment variables script
+      ansible.builtin.command: source /tmp/apoc_test_env_vars.sh
+      register: sourced_env
+      changed_when: false
+      failed_when: sourced_env.rc != 0
+
+    - name: Verify APOC_UTILITY_NAME
+      ansible.builtin.assert:
+        that:
+          - APOC_UTILITY_NAME == "nightly-ansible-env-sync"
+
+    - name: Verify APOC_UTILITY_VERSION
+      ansible.builtin.assert:
+        that:
+          - APOC_UTILITY_VERSION == "1.0.0"
+
+    - name: Verify APOC_AUTHOR
+      ansible.builtin.assert:
+        that:
+          - APOC_AUTHOR == "ApocalypsAI Integrator"
+
+    - name: Clean up test script
+      ansible.builtin.file:
+        path: /tmp/apoc_test_env_vars.sh
+        state: absent
