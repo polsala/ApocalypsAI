@@ -1,0 +1,49 @@
+# Nightly Docker DevBox - Python Environment
+# A whimsical-yet-useful development environment
+
+FROM python:3.11-slim
+
+# Prevent Python from writing .pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+# Force Python to run in unbuffered mode
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python development tools
+RUN pip install --no-cache-dir \
+    pipenv \
+    poetry \
+    black \
+    flake8 \
+    pytest \
+    mypy \
+    ipython \
+    jupyter
+
+# Copy requirements if they exist
+COPY requirements.txt* . 2>/dev/null || echo "No requirements.txt found"
+RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || echo "No requirements to install"
+
+# Create a non-root user
+RUN useradd --create-home --shell /bin/bash devuser
+RUN chown -R devuser:devuser /app
+USER devuser
+
+# Add /home/devuser/.local/bin to PATH
+ENV PATH=/home/devuser/.local/bin:$PATH
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Default command
+CMD ["/bin/bash"]
