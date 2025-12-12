@@ -1,0 +1,78 @@
+---
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: "🧪 Testing inventory file exists"
+      stat:
+        path: inventory.ini
+      register: inventory_file
+
+    - name: "✅ Inventory file exists"
+      assert:
+        that:
+          - inventory_file.stat.exists
+          - inventory_file.stat.isreg
+
+    - name: "🧪 Testing playbook syntax"
+      command: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+      register: syntax_check
+      ignore_errors: true
+
+    - name: "✅ Playbook syntax is valid"
+      assert:
+        that:
+          - syntax_check.rc == 0
+        fail_msg: "Playbook syntax errors: {{ syntax_check.stdout }}"
+
+    - name: "🧪 Testing task files exist"
+      stat:
+        path: "tasks/chaos/{{ item }}.yml"
+      with_items:
+        - network
+        - resource
+        - service
+        - time
+      register: task_files
+
+    - name: "✅ All task files exist"
+      assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+      with_items: "{{ task_files.results }}"
+
+    - name: "🧪 Testing cleanup tasks exist"
+      stat:
+        path: tasks/cleanup.yml
+      register: cleanup_file
+
+    - name: "✅ Cleanup tasks exist"
+      assert:
+        that:
+          - cleanup_file.stat.exists
+          - cleanup_file.stat.isreg
+
+    - name: "🧪 Testing template exists"
+      stat:
+        path: templates/chaos_report.j2
+      register: template_file
+
+    - name: "✅ Template exists"
+      assert:
+        that:
+          - template_file.stat.exists
+          - template_file.stat.isreg
+
+    - name: "🧪 Testing vars file exists"
+      stat:
+        path: vars/chaos_scenarios.yml
+      register: vars_file
+
+    - name: "✅ Vars file exists"
+      assert:
+        that:
+          - vars_file.stat.exists
+          - vars_file.stat.isreg

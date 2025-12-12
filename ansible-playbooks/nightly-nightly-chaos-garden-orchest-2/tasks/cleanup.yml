@@ -1,0 +1,25 @@
+- name: "🧹 Starting garden cleanup"
+  debug:
+    msg: "Cleaning up chaos effects on {{ inventory_hostname }}"
+
+- name: "🧹 Removing temporary files"
+  file:
+    path: /tmp/chaos_{{ item }}
+    state: absent
+  with_items:
+    - "1"
+    - "2"
+    - "disk.img"
+  ignore_errors: true
+
+- name: "🧹 Cleaning up iptables rules"
+  command: iptables -D INPUT -s {{ inventory_hostname }} -j DROP
+  ignore_errors: true
+
+- name: "🧹 Cleaning up traffic control"
+  command: tc qdisc del dev lo root
+  ignore_errors: true
+
+- name: "✅ Cleanup completed"
+  debug:
+    msg: "Garden cleanup finished on {{ inventory_hostname }}"

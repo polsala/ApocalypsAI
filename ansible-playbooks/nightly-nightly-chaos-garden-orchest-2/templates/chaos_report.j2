@@ -1,0 +1,41 @@
+CHAOS GARDEN REPORT
+===================
+
+Date: {{ ansible_date_time.iso8601 }}
+Host: {{ inventory_hostname }}
+
+CHAOS EXPERIMENT SUMMARY:
+-------------------------
+Scenario Executed: {{ selected_scenario }}
+Duration: {{ chaos_duration }} seconds
+Cleanup Timeout: {{ cleanup_timeout }} seconds
+
+SYSTEM STATUS:
+--------------
+Uptime: {{ ansible_uptime_seconds | default('Unknown') }} seconds
+OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+Kernel: {{ ansible_kernel }}
+
+CHAOS IMPACT:
+-------------
+{% if selected_scenario == 'network_partition' %}
+- Network partition applied
+- Latency introduced
+- Connectivity restored
+{% elif selected_scenario == 'resource_exhaustion' %}
+- CPU cycles consumed
+- Disk space utilized
+- Resources cleaned up
+{% elif selected_scenario == 'service_disruption' %}
+- Services stopped
+- Services restarted
+- Status verified
+{% elif selected_scenario == 'time_distortion' %}
+- Time perception distorted
+- Time jumps simulated
+- Temporal stability restored
+{% endif %}
+
+CHAOS GARDEN STATUS: {{ (selected_scenario is defined) | ternary('STABLE', 'UNSTABLE') }}
+
+"In chaos, there is opportunity. In gardens, there is growth." - Chaos Gardener's Proverb

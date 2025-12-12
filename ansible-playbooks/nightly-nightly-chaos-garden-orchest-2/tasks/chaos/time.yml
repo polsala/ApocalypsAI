@@ -1,0 +1,15 @@
+- name: "⏰ Distorting time perception"
+  command: date
+  when: selected_scenario == 'time_distortion'
+
+- name: "🕰️  Simulating time jumps"
+  shell: |
+    echo "Simulating time distortion for {{ chaos_duration }} seconds"
+    sleep {{ chaos_duration }}
+  when: selected_scenario == 'time_distortion'
+  async: 60
+  poll: 0
+
+- name: "📅 Checking time after distortion"
+  command: date
+  when: selected_scenario == 'time_distortion'

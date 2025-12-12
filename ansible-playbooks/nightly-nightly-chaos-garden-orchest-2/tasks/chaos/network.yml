@@ -1,0 +1,19 @@
+- name: "🕸️  Creating network partitions"
+  command: iptables -A INPUT -s {{ inventory_hostname }} -j DROP
+  when: selected_scenario == 'network_partition'
+  ignore_errors: true
+
+- name: "⏱️  Introducing network latency"
+  command: tc qdisc add dev lo root netem delay 100ms
+  when: selected_scenario == 'network_partition'
+  ignore_errors: true
+
+- name: "🌐 Restoring network connectivity"
+  command: tc qdisc del dev lo root
+  when: selected_scenario == 'network_partition'
+  ignore_errors: true
+
+- name: "🧹 Cleaning up network rules"
+  command: iptables -D INPUT -s {{ inventory_hostname }} -j DROP
+  when: selected_scenario == 'network_partition'
+  ignore_errors: true

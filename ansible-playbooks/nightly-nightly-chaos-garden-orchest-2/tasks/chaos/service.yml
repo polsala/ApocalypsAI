@@ -1,0 +1,22 @@
+- name: "🛑 Stopping critical services"
+  service:
+    name: ssh
+    state: stopped
+  when: selected_scenario == 'service_disruption'
+  ignore_errors: true
+
+- name: "🔄 Restarting services"
+  service:
+    name: ssh
+    state: started
+  when: selected_scenario == 'service_disruption'
+  ignore_errors: true
+
+- name: "✅ Verifying service status"
+  service_facts:
+  when: selected_scenario == 'service_disruption'
+
+- name: "📊 Service status report"
+  debug:
+    msg: "SSH service is {{ (ansible_facts.services['ssh.service'] is defined and ansible_facts.services['ssh.service'].state == 'running') | ternary('running', 'stopped') }}"
+  when: selected_scenario == 'service_disruption'

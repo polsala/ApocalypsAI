@@ -1,0 +1,37 @@
+---
+# Chaos Garden Scenarios Configuration
+chaos_scenarios:
+  - network_partition
+  - resource_exhaustion
+  - service_disruption
+  - time_distortion
+
+# Timing configurations
+chaos_duration: 30
+cleanup_timeout: 60
+
+# Chaos garden settings
+chaos_garden_enabled: true
+chaos_garden_version: "1.0.0"
+
+# Scenario-specific configurations
+network_chaos:
+  latency: 100ms
+  packet_loss: 5%
+  partition_duration: 30
+
+resource_chaos:
+  cpu_load: 80
+  memory_fill: 50%
+  disk_fill: 100MB
+
+service_chaos:
+  target_services:
+    - ssh
+    - nginx
+    - apache2
+  restart_timeout: 30
+
+ time_chaos:
+  distortion_duration: 60
+  time_jump_range: "1-5 minutes"

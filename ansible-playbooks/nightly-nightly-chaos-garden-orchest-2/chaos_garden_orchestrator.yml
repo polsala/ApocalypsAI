@@ -1,0 +1,43 @@
+---
+- name: Nightly Chaos Garden Orchestrator
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    chaos_scenarios:
+      - network_partition
+      - resource_exhaustion
+      - service_disruption
+      - time_distortion
+    chaos_duration: 30
+    cleanup_timeout: 60
+
+  tasks:
+    - name: "🌿 Planting chaos seeds in the garden"
+      debug:
+        msg: "Starting chaos experiments on {{ inventory_hostname }}"
+
+    - name: "🎲 Selecting chaos scenario"
+      set_fact:
+        selected_scenario: "{{ chaos_scenarios | random }}"
+
+    - name: "🌪️  Executing {{ selected_scenario }} chaos"
+      include_tasks: "tasks/chaos/{{ selected_scenario }}.yml"
+      when: selected_scenario is defined
+
+    - name: "🧹 Initiating garden cleanup"
+      include_tasks: tasks/cleanup.yml
+      when: selected_scenario is defined
+
+    - name: "📊 Generating chaos report"
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_report_{{ inventory_hostname }}.txt
+      run_once: true
+      delegate_to: localhost
+
+    - name: "📜 Displaying chaos report"
+      debug:
+        msg: "{{ lookup('file', '/tmp/chaos_report_' + inventory_hostname + '.txt') }}"
+      run_once: true
+      delegate_to: localhost

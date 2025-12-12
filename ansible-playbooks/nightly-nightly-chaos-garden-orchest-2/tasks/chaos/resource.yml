@@ -1,0 +1,27 @@
+- name: "🔥 Consuming CPU cycles"
+  shell: |
+    for i in {1..2}; do
+      dd if=/dev/zero of=/tmp/chaos_{{ i }} bs=1M count=100 &
+    done
+    wait
+  when: selected_scenario == 'resource_exhaustion'
+  async: 30
+  poll: 0
+  ignore_errors: true
+
+- name: "💾 Filling disk space"
+  shell: |
+    dd if=/dev/zero of=/tmp/chaos_disk.img bs=1M count=50
+  when: selected_scenario == 'resource_exhaustion'
+  ignore_errors: true
+
+- name: "🧹 Cleaning up resource chaos"
+  file:
+    path: /tmp/chaos_{{ item }}
+    state: absent
+  with_items:
+    - "1"
+    - "2"
+    - "disk.img"
+  when: selected_scenario == 'resource_exhaustion'
+  ignore_errors: true
