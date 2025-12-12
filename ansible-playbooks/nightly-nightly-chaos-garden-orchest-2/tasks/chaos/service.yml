@@ -1,0 +1,27 @@
+- name: 🚀 Inject service chaos
+  ansible.builtin.debug:
+    msg: "Injecting service chaos for {{ chaos_duration }} seconds"
+
+- name: 🛑 Stop critical services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+  loop: ["nginx", "apache2", "mysql"]
+  when: chaos_target == 'services' or chaos_target == 'all'
+
+- name: ⏸️ Pause services
+  ansible.builtin.shell: |
+    systemctl suspend {{ item }}
+    sleep {{ chaos_duration }}
+    systemctl resume {{ item }}
+  loop: ["nginx", "apache2"]
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'services' or chaos_target == 'all'
+
+- name: 🔄 Restart services randomly
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  loop: ["nginx", "apache2", "ssh"]
+  when: chaos_target == 'services' or chaos_target == 'all'

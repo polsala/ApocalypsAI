@@ -1,0 +1,36 @@
+chaos_scenarios:
+  - name: "Network Storm"
+    type: "network"
+    duration: 30
+    target: "network"
+    description: "Simulates network storms with latency and packet loss"
+
+  - name: "Resource Tsunami"
+    type: "resource"
+    duration: 60
+    target: "cpu"
+    description: "Consumes CPU and memory resources"
+
+  - name: "Service Avalanche"
+    type: "service"
+    duration: 45
+    target: "services"
+    description: "Stops and restarts critical services"
+
+  - name: "Time Warp"
+    type: "time"
+    duration: 20
+    target: "time"
+    description: "Skews system time and timezone"
+
+  - name: "Chaos Garden Mix"
+    type: "random"
+    duration: 40
+    target: "random"
+    description: "Randomly selects chaos type"
+
+  - name: "Full Garden Chaos"
+    type: "network"
+    duration: 90
+    target: "all"
+    description: "Comprehensive chaos across all systems"

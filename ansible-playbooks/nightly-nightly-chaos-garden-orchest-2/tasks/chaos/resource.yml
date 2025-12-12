@@ -1,0 +1,26 @@
+- name: 🖥️ Inject resource chaos
+  ansible.builtin.debug:
+    msg: "Injecting resource chaos for {{ chaos_duration }} seconds"
+
+- name: 🔥 Consume CPU resources
+  ansible.builtin.shell: |
+    stress --cpu 4 --timeout {{ chaos_duration }}s
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'cpu' or chaos_target == 'all'
+
+- name: 💾 Consume memory resources
+  ansible.builtin.shell: |
+    stress --vm 2 --vm-bytes 1G --timeout {{ chaos_duration }}s
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'memory' or chaos_target == 'all'
+
+- name: 💿 Fill disk space
+  ansible.builtin.shell: |
+    dd if=/dev/zero of=/tmp/chaos_file bs=1M count=100
+    sleep {{ chaos_duration }}
+    rm -f /tmp/chaos_file
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'disk' or chaos_target == 'all'

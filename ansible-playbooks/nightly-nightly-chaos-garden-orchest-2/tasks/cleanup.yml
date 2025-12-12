@@ -1,0 +1,34 @@
+- name: 🧹 Cleanup chaos artifacts
+  ansible.builtin.debug:
+    msg: "Cleaning up chaos artifacts"
+
+- name: 🗑️ Remove temporary files
+  ansible.builtin.file:
+    path: /tmp/chaos_file
+    state: absent
+
+- name: 🌐 Restore network rules
+  ansible.builtin.shell: |
+    iptables -F
+    tc qdisc del dev eth0 root 2>/dev/null || true
+  args:
+    executable: /bin/bash
+
+- name: 🚀 Restore services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+  loop: ["nginx", "apache2", "mysql", "ssh"]
+
+- name: ⏰ Restore time settings
+  ansible.builtin.shell: |
+    ntpdate -s time.nist.gov
+  args:
+    executable: /bin/bash
+
+- name: 📝 Log cleanup completion
+  ansible.builtin.debug:
+    msg: "Chaos cleanup completed successfully"
+
+- name: 🔄 Notify handlers
+  ansible.builtin.meta: flush_handlers

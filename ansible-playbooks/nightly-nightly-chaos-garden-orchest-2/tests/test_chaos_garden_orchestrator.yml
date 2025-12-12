@@ -1,0 +1,95 @@
+---
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: 🧪 Test inventory file exists
+      ansible.builtin.stat:
+        path: inventory.ini
+      register: inventory_file
+
+    - name: ✅ Assert inventory file exists
+      ansible.builtin.assert:
+        that:
+          - inventory_file.stat.exists
+        fail_msg: "Inventory file not found"
+
+    - name: 🧪 Test playbook syntax
+      ansible.builtin.command: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+      register: syntax_check
+      ignore_errors: true
+
+    - name: ✅ Assert playbook syntax is valid
+      ansible.builtin.assert:
+        that:
+          - syntax_check.rc == 0
+        fail_msg: "Playbook syntax error"
+        success_msg: "Playbook syntax is valid"
+
+    - name: 🧪 Test variables file exists
+      ansible.builtin.stat:
+        path: vars/chaos_scenarios.yml
+      register: vars_file
+
+    - name: ✅ Assert variables file exists
+      ansible.builtin.assert:
+        that:
+          - vars_file.stat.exists
+        fail_msg: "Variables file not found"
+
+    - name: 🧪 Test template file exists
+      ansible.builtin.stat:
+        path: templates/chaos_report.j2
+      register: template_file
+
+    - name: ✅ Assert template file exists
+      ansible.builtin.assert:
+        that:
+          - template_file.stat.exists
+        fail_msg: "Template file not found"
+
+    - name: 🧪 Test task files exist
+      ansible.builtin.stat:
+        path: "tasks/chaos/{{ item }}.yml"
+      loop:
+        - "network"
+        - "resource"
+        - "service"
+        - "time"
+        - "random"
+      register: task_files
+
+    - name: ✅ Assert all task files exist
+      ansible.builtin.assert:
+        that:
+          - task_files.results | selectattr('stat.exists', 'equalto', true) | list | length == 5
+        fail_msg: "Some task files are missing"
+        success_msg: "All task files exist"
+
+    - name: 🧪 Test cleanup task exists
+      ansible.builtin.stat:
+        path: tasks/cleanup.yml
+      register: cleanup_file
+
+    - name: ✅ Assert cleanup task exists
+      ansible.builtin.assert:
+        that:
+          - cleanup_file.stat.exists
+        fail_msg: "Cleanup task not found"
+
+    - name: 🧪 Test chaos scenarios structure
+      ansible.builtin.include_vars:
+        file: vars/chaos_scenarios.yml
+        name: chaos_vars
+
+    - name: ✅ Assert chaos scenarios are defined
+      ansible.builtin.assert:
+        that:
+          - chaos_vars.chaos_scenarios is defined
+          - chaos_vars.chaos_scenarios | length > 0
+        fail_msg: "No chaos scenarios defined"
+        success_msg: "Chaos scenarios are defined"
+
+    - name: ✅ Test complete - Chaos Garden Orchestrator is ready
+      ansible.builtin.debug:
+        msg: "🎉 All tests passed! Chaos Garden Orchestrator is ready for deployment"

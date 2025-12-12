@@ -1,0 +1,27 @@
+- name: ⏰ Inject time chaos
+  ansible.builtin.debug:
+    msg: "Injecting time chaos for {{ chaos_duration }} seconds"
+
+- name: 🕰️ Skew system time forward
+  ansible.builtin.shell: |
+    date -s "+{{ chaos_duration }} seconds"
+    sleep {{ chaos_duration }}
+    ntpdate -s time.nist.gov
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'time' or chaos_target == 'all'
+
+- name: 🔄 Change system timezone
+  ansible.builtin.shell: |
+    timedatectl set-timezone UTC
+    sleep {{ chaos_duration }}
+    timedatectl set-timezone America/New_York
+  args:
+    executable: /bin/bash
+  when: chaos_target == 'time' or chaos_target == 'all'
+
+- name: 🕵️ Stop NTP daemon
+  ansible.builtin.service:
+    name: ntp
+    state: stopped
+  when: chaos_target == 'time' or chaos_target == 'all'

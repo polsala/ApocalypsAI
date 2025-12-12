@@ -1,0 +1,41 @@
+---
+- name: Chaos Garden Orchestrator
+  hosts: garden_nodes
+  become: true
+  vars_files:
+    - vars/chaos_scenarios.yml
+  tasks:
+    - name: 🌱 Initialize chaos garden
+      ansible.builtin.debug:
+        msg: "Initializing chaos garden for {{ inventory_hostname }}"
+
+    - name: 🎲 Select random chaos scenario
+      ansible.builtin.set_fact:
+        selected_scenario: "{{ chaos_scenarios | random }}"
+
+    - name: 📊 Log selected scenario
+      ansible.builtin.debug:
+        msg: "Selected chaos scenario: {{ selected_scenario.name }}"
+
+    - name: 🌪️ Execute chaos scenario
+      include_tasks: "tasks/chaos/{{ selected_scenario.type }}.yml"
+      vars:
+        chaos_duration: "{{ selected_scenario.duration }}"
+        chaos_target: "{{ selected_scenario.target | default('all') }}"
+
+    - name: 🧹 Cleanup chaos artifacts
+      include_tasks: tasks/cleanup.yml
+
+    - name: 📈 Generate chaos report
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_garden_report_{{ inventory_hostname }}.txt
+        mode: '0644'
+
+  handlers:
+    - name: Restart services after chaos
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+      loop: ["nginx", "apache2", "ssh"]
+      when: chaos_target == 'services' or chaos_target == 'all'

@@ -1,0 +1,46 @@
+========================================
+CHAOS GARDEN REPORT
+========================================
+
+Hostname: {{ inventory_hostname }}
+Timestamp: {{ ansible_date_time.iso8601 }}
+
+CHAOS EXPERIMENT SUMMARY:
+- Scenario: {{ selected_scenario.name }}
+- Type: {{ selected_scenario.type }}
+- Duration: {{ chaos_duration }} seconds
+- Target: {{ selected_scenario.target | default('all') }}
+
+SYSTEM METRICS:
+- CPU Usage: {{ ansible_processor_vcpus }} cores
+- Memory: {{ ansible_memtotal_mb }} MB
+- Disk Space: {{ ansible_devices | dict2items | selectattr('key', 'match', '^sd') | list | length }} devices
+
+CHAOS IMPACT:
+{% if chaos_target == 'network' or chaos_target == 'all' %}
+- Network: ✗ Disrupted
+{% else %}
+- Network: ✓ Stable
+{% endif %}
+
+{% if chaos_target == 'services' or chaos_target == 'all' %}
+- Services: ✗ Restarted
+{% else %}
+- Services: ✓ Running
+{% endif %}
+
+{% if chaos_target == 'time' or chaos_target == 'all' %}
+- Time: ✗ Skewed
+{% else %}
+- Time: ✓ Synchronized
+{% endif %}
+
+CHAOS RECOMMENDATIONS:
+- 🌱 Implement circuit breakers
+- 🌷 Add graceful degradation
+- 🌺 Monitor chaos metrics
+- 🌿 Practice chaos gardening regularly
+
+========================================
+End of Report
+========================================

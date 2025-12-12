@@ -1,0 +1,16 @@
+- name: 🎭 Inject random chaos
+  ansible.builtin.debug:
+    msg: "Injecting random chaos for {{ chaos_duration }} seconds"
+
+- name: 🎲 Roll chaos dice
+  ansible.builtin.set_fact:
+    chaos_dice: "{{ range(1, 7) | random }}"
+
+- name: 🎲 Execute random chaos based on dice roll
+  ansible.builtin.include_tasks: "tasks/chaos/{{ ['network', 'resource', 'service', 'time', 'network', 'resource'][chaos_dice - 1] }}.yml"
+  when: chaos_target == 'random' or chaos_target == 'all'
+
+- name: 🍀 Apply chaos luck factor
+  ansible.builtin.shell: |
+    echo "Chaos luck factor: {{ chaos_dice }}" >> /tmp/chaos_luck.log
+  when: chaos_target == 'random' or chaos_target == 'all'
