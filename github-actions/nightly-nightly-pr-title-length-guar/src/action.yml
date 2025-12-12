@@ -1,0 +1,16 @@
+name: "PR Title Length Guard"
+description: "Fails a PR if its title exceeds a configurable length."
+inputs:
+  max-length:
+    description: "Maximum allowed title length"
+    required: false
+    default: "72"
+runs:
+  using: "composite"
+  steps:
+    - name: "Check PR title length"
+      env:
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+      run: |
+        python "${{ github.action_path }}/check_title.py" "${{ inputs.max-length }}"
+      shell: bash
