@@ -1,0 +1,82 @@
+---
+- name: Chaos Garden Orchestrator
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/chaos_scenarios.yml
+  tasks:
+    - name: Initialize chaos garden
+      ansible.builtin.debug:
+        msg: "🌿 Initializing chaos garden on {{ inventory_hostname }}"
+
+    - name: Record temporal baseline
+      ansible.builtin.set_fact:
+        temporal_baseline: "{{ ansible_date_time.epoch }}"
+
+    - name: Execute network chaos
+      include_tasks: tasks/chaos/network.yml
+      when: chaos_scenarios.network.enabled | default(true)
+
+    - name: Execute resource chaos
+      include_tasks: tasks/chaos/resource.yml
+      when: chaos_scenarios.resource.enabled | default(true)
+
+    - name: Execute service chaos
+      include_tasks: tasks/chaos/service.yml
+      when: chaos_scenarios.service.enabled | default(true)
+
+    - name: Execute time chaos
+      include_tasks: tasks/chaos/time.yml
+      when: chaos_scenarios.time.enabled | default(false)
+
+    - name: Execute random chaos
+      include_tasks: tasks/chaos/random.yml
+      when: chaos_scenarios.random.enabled | default(false)
+
+    - name: Execute health check chaos
+      include_tasks: tasks/chaos/health_check.yml
+      when: chaos_scenarios.health_check.enabled | default(true)
+
+    - name: Collect chaos metrics
+      ansible.builtin.set_fact:
+        chaos_metrics: >
+          {
+            "host": "{{ inventory_hostname }}",
+            "baseline": "{{ temporal_baseline }}",
+            "end_time": "{{ ansible_date_time.epoch }}",
+            "chaos_executed": "{{ chaos_executed | default([]) | join(',') }}"
+          }
+
+    - name: Store chaos metrics
+      ansible.builtin.copy:
+        content: "{{ chaos_metrics | to_json }}"
+        dest: "/tmp/chaos_metrics_{{ inventory_hostname }}.json"
+
+    - name: Cleanup after chaos
+      include_tasks: tasks/cleanup.yml
+      when: chaos_cleanup | default(true)
+
+    - name: Report chaos completion
+      ansible.builtin.debug:
+        msg: "⚡ Chaos garden experiment completed on {{ inventory_hostname }}"
+
+- name: Generate Chaos Report
+  hosts: localhost
+  tasks:
+    - name: Gather chaos metrics from all hosts
+      ansible.builtin.set_fact:
+        all_chaos_metrics: >
+          [
+            {% for host in groups['all'] %}
+              {{ hostvars[host].chaos_metrics | default('{}') | from_json }},
+            {% endfor %}
+          ]
+
+    - name: Generate chaos report
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_garden_report.txt
+
+    - name: Display chaos report
+      ansible.builtin.debug:
+        msg: "📄 Chaos report generated at /tmp/chaos_garden_report.txt"

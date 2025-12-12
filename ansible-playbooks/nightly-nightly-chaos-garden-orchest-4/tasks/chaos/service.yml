@@ -1,0 +1,23 @@
+- name: Service Chaos - Stop web service
+  ansible.builtin.systemd:
+    name: nginx
+    state: stopped
+  when: chaos_scenarios.service.stop_web | default(false)
+  ignore_errors: true
+
+- name: Service Chaos - Restart database
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
+  when: chaos_scenarios.service.restart_db | default(false)
+  ignore_errors: true
+
+- name: Service Chaos - Kill random process
+  ansible.builtin.shell: |
+    pkill -f "python" || true
+  when: chaos_scenarios.service.kill_process | default(false)
+  ignore_errors: true
+
+- name: Record service chaos execution
+  ansible.builtin.set_fact:
+    chaos_executed: "{{ (chaos_executed | default([])) + ['service'] }}"

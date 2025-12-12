@@ -1,0 +1,61 @@
+---
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test inventory parsing
+      ansible.builtin.debug:
+        msg: "Inventory groups: {{ groups | to_json }}"
+
+    - name: Test chaos scenarios loading
+      ansible.builtin.include_vars:
+        file: vars/chaos_scenarios.yml
+
+    - name: Validate chaos scenarios structure
+      ansible.builtin.assert:
+        that:
+          - chaos_scenarios.network is defined
+          - chaos_scenarios.resource is defined
+          - chaos_scenarios.service is defined
+          - chaos_scenarios.time is defined
+          - chaos_scenarios.random is defined
+          - chaos_scenarios.health_check is defined
+        fail_msg: "Chaos scenarios structure is invalid"
+
+    - name: Test template rendering
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/test_chaos_report.txt
+      vars:
+        ansible_date_time:
+          iso8601: "2024-01-01T00:00:00Z"
+        groups:
+          all: ["test_host1", "test_host2"]
+        hostvars:
+          test_host1:
+            chaos_metrics:
+              baseline: "1609459200"
+              end_time: "1609459260"
+              chaos_executed: "network,resource"
+          test_host2:
+            chaos_metrics:
+              baseline: "1609459201"
+              end_time: "1609459261"
+              chaos_executed: "service"
+
+    - name: Verify report generation
+      ansible.builtin.stat:
+        path: /tmp/test_chaos_report.txt
+      register: report_file
+
+    - name: Assert report was created
+      ansible.builtin.assert:
+        that:
+          - report_file.stat.exists
+          - report_file.stat.size > 0
+        fail_msg: "Chaos report was not generated properly"
+
+    - name: Cleanup test files
+      ansible.builtin.file:
+        path: /tmp/test_chaos_report.txt
+        state: absent

@@ -1,0 +1,29 @@
+- name: Cleanup - Remove network rules
+  ansible.builtin.shell: |
+    tc qdisc del dev eth0 root 2>/dev/null || true
+  ignore_errors: true
+
+- name: Cleanup - Restart services
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+  when: chaos_scenarios.service.stop_web | default(false)
+  ignore_errors: true
+
+- name: Cleanup - Restore NTP
+  ansible.builtin.systemd:
+    name: ntp
+    state: started
+  when: chaos_scenarios.time.ntp_stop | default(false)
+  ignore_errors: true
+
+- name: Cleanup - Remove metrics files
+  ansible.builtin.file:
+    path: "/tmp/chaos_metrics_{{ inventory_hostname }}.json"
+    state: absent
+  ignore_errors: true
+
+- name: Cleanup - Remove temp files
+  ansible.builtin.shell: |
+    rm -f /tmp/low_space_warning
+  ignore_errors: true

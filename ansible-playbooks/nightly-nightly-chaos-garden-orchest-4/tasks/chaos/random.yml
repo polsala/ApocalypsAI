@@ -1,0 +1,15 @@
+- name: Random Chaos - Random reboot
+  ansible.builtin.shell: |
+    if [ $((RANDOM % 10)) -eq 0 ]; then reboot; fi
+  when: chaos_scenarios.random.random_reboot | default(false)
+  ignore_errors: true
+
+- name: Random Chaos - Random file deletion
+  ansible.builtin.shell: |
+    find /tmp -type f -delete
+  when: chaos_scenarios.random.random_cleanup | default(false)
+  ignore_errors: true
+
+- name: Record random chaos execution
+  ansible.builtin.set_fact:
+    chaos_executed: "{{ (chaos_executed | default([])) + ['random'] }}"

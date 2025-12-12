@@ -1,0 +1,15 @@
+- name: Health Check Chaos - Simulate high load
+  ansible.builtin.shell: |
+    echo "100" > /proc/loadavg
+  when: chaos_scenarios.health_check.high_load | default(true)
+  ignore_errors: true
+
+- name: Health Check Chaos - Disk space warning
+  ansible.builtin.shell: |
+    df -h | grep -q "/tmp" && touch /tmp/low_space_warning
+  when: chaos_scenarios.health_check.disk_warning | default(false)
+  ignore_errors: true
+
+- name: Record health check chaos execution
+  ansible.builtin.set_fact:
+    chaos_executed: "{{ (chaos_executed | default([])) + ['health_check'] }}"
