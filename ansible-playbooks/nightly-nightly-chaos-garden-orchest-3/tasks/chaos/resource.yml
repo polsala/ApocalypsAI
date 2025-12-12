@@ -1,0 +1,47 @@
+- name: 🌿 Check if resource chaos should run
+  ansible.builtin.set_fact:
+    run_resource_chaos: "{{ (chaos_scenarios.resource.probability | default(resource_chaos_probability)) | random < chaos_scenarios.resource.probability | default(resource_chaos_probability) }}"
+  when: chaos_enabled
+
+- name: 🌺 Consume memory (overgrown weeds)
+  ansible.builtin.shell: |
+    python3 -c "
+import time
+import os
+import sys
+
+# Allocate memory
+mb = {{ chaos_scenarios.resource.memory_mb | default(memory_consumption_mb) }}
+print(f'Allocating {mb}MB of memory...')
+
+# Allocate in chunks to avoid OOM killer
+chunks = []
+chunk_size = 10 * 1024 * 1024  # 10MB chunks
+num_chunks = (mb * 1024 * 1024) // chunk_size
+
+for i in range(num_chunks):
+    chunks.append('x' * chunk_size)
+    if i % 10 == 0:
+        print(f'Allocated {i * chunk_size / 1024 / 1024:.1f}MB')
+
+print(f'Sleeping for {chaos_duration} seconds...')
+time.sleep({{ chaos_duration }})
+print('Memory chaos completed')
+"
+  async: 3600
+  poll: 0
+  when: run_resource_chaos and chaos_level in ['medium', 'high']
+  ignore_errors: true
+
+- name: 🐞 Stress CPU (busy bees)
+  ansible.builtin.shell: |
+    stress --cpu 1 --timeout {{ chaos_scenarios.resource.cpu_duration | default(cpu_stress_duration) }}s
+  when: run_resource_chaos and chaos_level == 'high'
+  ignore_errors: true
+
+- name: 🌈 Log resource chaos
+  ansible.builtin.shell: |
+    echo "Resource chaos applied at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Memory consumed: {{ chaos_scenarios.resource.memory_mb | default(memory_consumption_mb) }}MB" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "CPU stress duration: {{ chaos_scenarios.resource.cpu_duration | default(cpu_stress_duration) }}s" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: run_resource_chaos

@@ -1,0 +1,21 @@
+- name: ⏰ Check if time chaos should run
+  ansible.builtin.set_fact:
+    run_time_chaos: "{{ (chaos_scenarios.time.probability | default(time_chaos_probability)) | random < chaos_scenarios.time.probability | default(time_chaos_probability) }}"
+  when: chaos_enabled
+
+- name: ⏰ Backup current system time
+  ansible.builtin.shell: |
+    date > /tmp/chaos_logs/original_time_{{ ansible_date_time.epoch }}.txt
+  when: run_time_chaos
+
+- name: ⏰ Shift system time forward (seasonal jump)
+  ansible.builtin.shell: |
+    date -s "{{ ansible_date_time.epoch | int + (chaos_scenarios.time.shift_seconds | default(time_shift_seconds)) }} seconds"
+  when: run_time_chaos and chaos_level in ['medium', 'high']
+  ignore_errors: true
+
+- name: ⏰ Log time chaos
+  ansible.builtin.shell: |
+    echo "Time chaos applied at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Time shift: {{ chaos_scenarios.time.shift_seconds | default(time_shift_seconds) }} seconds" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: run_time_chaos

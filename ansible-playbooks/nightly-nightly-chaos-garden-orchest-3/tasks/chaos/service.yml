@@ -1,0 +1,41 @@
+- name: 🌺 Check if service chaos should run
+  ansible.builtin.set_fact:
+    run_service_chaos: "{{ (chaos_scenarios.service.probability | default(service_chaos_probability)) | random < chaos_scenarios.service.probability | default(service_chaos_probability) }}"
+  when: chaos_enabled
+
+- name: 🐞 Get list of running services
+  ansible.builtin.shell: |
+    systemctl list-units --type=service --state=running --no-pager --no-legend | head -10 | awk '{print $1}'
+  register: running_services
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+  ignore_errors: true
+
+- name: 🌈 Select random service to chaos
+  ansible.builtin.set_fact:
+    target_service: "{{ running_services.stdout_lines | random }}"
+  when: run_service_chaos and running_services.stdout_lines | length > 0
+
+- name: 🐛 Stop service (wilting flower)
+  ansible.builtin.systemd:
+    name: "{{ target_service }}"
+    state: stopped
+  when: run_service_chaos and target_service is defined
+  ignore_errors: true
+
+- name: 🌿 Wait for service chaos duration
+  ansible.builtin.pause:
+    seconds: "{{ chaos_scenarios.service.restart_delay | default(service_restart_delay) }}"
+  when: run_service_chaos
+
+- name: 🌺 Restart service (reviving flower)
+  ansible.builtin.systemd:
+    name: "{{ target_service }}"
+    state: started
+  when: run_service_chaos and target_service is defined
+  ignore_errors: true
+
+- name: 🌈 Log service chaos
+  ansible.builtin.shell: |
+    echo "Service chaos applied at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Target service: {{ target_service | default('none') }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: run_service_chaos

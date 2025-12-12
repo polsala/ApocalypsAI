@@ -1,0 +1,117 @@
+# Chaos Garden Scenarios Configuration
+
+# Global chaos settings
+chaos_enabled: true
+chaos_level: "medium"  # Options: low, medium, high
+chaos_duration: 30     # Duration in seconds for each chaos experiment
+cleanup_enabled: true
+chaos_reports_dir: "/tmp/chaos_reports"
+
+# Chaos scenario definitions
+chaos_scenarios:
+  network:
+    enabled: true
+    probability: 0.3        # 30% chance of network chaos
+    latency_ms: 100        # Network latency in milliseconds
+    packet_loss: 5       # Packet loss percentage
+    duration: 30         # Duration in seconds
+
+  resource:
+    enabled: true
+    probability: 0.2        # 20% chance of resource chaos
+    memory_mb: 100        # Memory consumption in megabytes
+    cpu_duration: 10      # CPU stress duration in seconds
+    disk_fill_mb: 100     # Disk space to fill in megabytes
+
+  service:
+    enabled: true
+    probability: 0.25       # 25% chance of service chaos
+    restart_delay: 5      # Delay before restarting service in seconds
+    services_to_target: [] # Empty array = random selection
+
+  time:
+    enabled: true
+    probability: 0.1        # 10% chance of time chaos
+    shift_seconds: 60     # Time shift in seconds (forward)
+
+  random:
+    enabled: true
+    probability: 0.15       # 15% chance of random chaos
+    types:
+      - "disk"
+      - "process"
+      - "network"
+
+# Chaos level configurations
+chaos_levels:
+  low:
+    network:
+      probability: 0.1
+      latency_ms: 50
+      packet_loss: 2
+    resource:
+      probability: 0.1
+      memory_mb: 50
+      cpu_duration: 5
+    service:
+      probability: 0.15
+      restart_delay: 3
+    time:
+      probability: 0.05
+      shift_seconds: 30
+    random:
+      probability: 0.1
+
+  medium:
+    network:
+      probability: 0.3
+      latency_ms: 100
+      packet_loss: 5
+    resource:
+      probability: 0.2
+      memory_mb: 100
+      cpu_duration: 10
+    service:
+      probability: 0.25
+      restart_delay: 5
+    time:
+      probability: 0.1
+      shift_seconds: 60
+    random:
+      probability: 0.15
+
+  high:
+    network:
+      probability: 0.5
+      latency_ms: 200
+      packet_loss: 10
+    resource:
+      probability: 0.3
+      memory_mb: 200
+      cpu_duration: 20
+    service:
+      probability: 0.4
+      restart_delay: 10
+    time:
+      probability: 0.2
+      shift_seconds: 120
+    random:
+      probability: 0.25
+
+# Safety limits
+safety_limits:
+  max_memory_mb: 500      # Maximum memory to consume
+  max_duration: 300       # Maximum chaos duration in seconds
+  max_cpu_cores: 2        # Maximum CPU cores to stress
+  protected_services:     # Services that should never be touched
+    - ssh
+    - systemd
+    - network
+    - cron
+
+# Reporting settings
+reporting:
+  format: "html"         # Report format (html, json, text)
+  include_logs: true      # Include detailed logs in report
+  send_email: false       # Send report via email
+  email_recipients: []    # List of email recipients

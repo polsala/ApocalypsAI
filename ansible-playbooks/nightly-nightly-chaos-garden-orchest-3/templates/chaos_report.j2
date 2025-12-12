@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaos Garden Report - {{ inventory_hostname }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .garden-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+        }
+        .card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .chaos-experiments {
+            margin-top: 30px;
+        }
+        .experiment {
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 0 10px 10px 0;
+        }
+        .experiment h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+        }
+        .experiment-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .detail {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #667eea;
+            font-style: italic;
+        }
+        .emoji {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌿 Chaos Garden Report 🌸</h1>
+        <div class="garden-summary">
+            <div class="card">
+                <h3>Host</h3>
+                <div class="value">{{ inventory_hostname }}</div>
+            </div>
+            <div class="card">
+                <h3>Chaos Level</h3>
+                <div class="value">{{ chaos_level | title }}</div>
+            </div>
+            <div class="card">
+                <h3>Duration</h3>
+                <div class="value">{{ chaos_duration }}s</div>
+            </div>
+            <div class="card">
+                <h3>Timestamp</h3>
+                <div class="value">{{ ansible_date_time.iso8601 }}</div>
+            </div>
+        </div>
+        
+        <div class="chaos-experiments">
+            <h2>🔬 Chaos Experiments Conducted</h2>
+            
+            {% if chaos_scenarios.network.enabled %}
+            <div class="experiment">
+                <h4>🐛 Network Chaos (Garden Pests)</h4>
+                <div class="experiment-details">
+                    <div class="detail">
+                        <span class="detail-label">Latency:</span><br>
+                        {{ chaos_scenarios.network.latency_ms | default(network_latency_ms) }}ms
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Packet Loss:</span><br>
+                        {{ chaos_scenarios.network.packet_loss | default(network_packet_loss) }}%
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Probability:</span><br>
+                        {{ chaos_scenarios.network.probability | default(network_chaos_probability) * 100 }}%
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chaos_scenarios.resource.enabled %}
+            <div class="experiment">
+                <h4>🌿 Resource Chaos (Overgrown Weeds)</h4>
+                <div class="experiment-details">
+                    <div class="detail">
+                        <span class="detail-label">Memory Consumed:</span><br>
+                        {{ chaos_scenarios.resource.memory_mb | default(memory_consumption_mb) }}MB
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">CPU Stress:</span><br>
+                        {{ chaos_scenarios.resource.cpu_duration | default(cpu_stress_duration) }}s
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Probability:</span><br>
+                        {{ chaos_scenarios.resource.probability | default(resource_chaos_probability) * 100 }}%
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chaos_scenarios.service.enabled %}
+            <div class="experiment">
+                <h4>🌺 Service Chaos (Wilting Flowers)</h4>
+                <div class="experiment-details">
+                    <div class="detail">
+                        <span class="detail-label">Target Service:</span><br>
+                        {{ target_service | default('Random Selection') }}
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Restart Delay:</span><br>
+                        {{ chaos_scenarios.service.restart_delay | default(service_restart_delay) }}s
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Probability:</span><br>
+                        {{ chaos_scenarios.service.probability | default(service_chaos_probability) * 100 }}%
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chaos_scenarios.time.enabled %}
+            <div class="experiment">
+                <h4>⏰ Time Chaos (Seasonal Shifts)</h4>
+                <div class="experiment-details">
+                    <div class="detail">
+                        <span class="detail-label">Time Shift:</span><br>
+                        {{ chaos_scenarios.time.shift_seconds | default(time_shift_seconds) }}s
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Probability:</span><br>
+                        {{ chaos_scenarios.time.probability | default(time_chaos_probability) * 100 }}%
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chaos_scenarios.random.enabled %}
+            <div class="experiment">
+                <h4>🎲 Random Chaos (Butterfly Effect)</h4>
+                <div class="experiment-details">
+                    <div class="detail">
+                        <span class="detail-label">Chaos Type:</span><br>
+                        {{ random_chaos_type | default('Random') }}
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Probability:</span><br>
+                        {{ chaos_scenarios.random.probability | default(random_chaos_probability) * 100 }}%
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            <p>🌻 Remember: A little chaos keeps your systems humble. 🌻</p>
+            <p>Report generated by Nightly Chaos Garden Orchestrator</p>
+        </div>
+    </div>
+</body>
+</html>
