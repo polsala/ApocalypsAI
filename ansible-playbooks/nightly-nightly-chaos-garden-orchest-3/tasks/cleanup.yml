@@ -1,0 +1,34 @@
+- name: 🧹 Clean up network chaos
+  ansible.builtin.shell: |
+    tc qdisc del dev lo root 2>/dev/null || true
+  ignore_errors: true
+
+- name: 🧹 Clean up disk chaos
+  ansible.builtin.file:
+    path: /tmp/chaos_disk_filler_{{ ansible_date_time.epoch }}
+    state: absent
+  ignore_errors: true
+
+- name: 🧹 Clean up memory chaos
+  ansible.builtin.shell: |
+    pkill -f "python3 -c" || true
+  ignore_errors: true
+
+- name: 🧹 Restore system time
+  ansible.builtin.shell: |
+    original_time=$(cat /tmp/chaos_logs/original_time_{{ ansible_date_time.epoch }}.txt 2>/dev/null)
+    if [ -n "$original_time" ]; then
+      date -s "$original_time"
+    fi
+  ignore_errors: true
+
+- name: 🧹 Clean up chaos logs
+  ansible.builtin.file:
+    path: /tmp/chaos_logs
+    state: absent
+  when: cleanup_enabled
+
+- name: 🧹 Log cleanup completion
+  ansible.builtin.shell: |
+    echo "Cleanup completed at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: cleanup_enabled

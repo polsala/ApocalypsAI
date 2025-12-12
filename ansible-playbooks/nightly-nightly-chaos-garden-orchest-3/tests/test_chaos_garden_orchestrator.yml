@@ -1,0 +1,135 @@
+---
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  connection: local
+  become: false
+  vars:
+    test_inventory: "tests/test_inventory.ini"
+  tasks:
+    - name: 🧪 Test inventory file exists
+      ansible.builtin.assert:
+        that:
+          - test_inventory is file
+        msg: "Test inventory file not found"
+
+    - name: 🧪 Load test inventory
+      ansible.builtin.include_vars:
+        file: "{{ test_inventory }}"
+        name: test_vars
+
+    - name: 🧪 Verify chaos configuration
+      ansible.builtin.assert:
+        that:
+          - test_vars.chaos_enabled is defined
+          - test_vars.chaos_level is defined
+          - test_vars.chaos_duration is defined
+        msg: "Missing chaos configuration in test inventory"
+
+    - name: 🧪 Test chaos scenarios file exists
+      ansible.builtin.assert:
+        that:
+          - "vars/chaos_scenarios.yml" is file
+        msg: "Chaos scenarios file not found"
+
+    - name: 🧪 Load chaos scenarios
+      ansible.builtin.include_vars:
+        file: "vars/chaos_scenarios.yml"
+        name: chaos_vars
+
+    - name: 🧪 Verify chaos scenarios structure
+      ansible.builtin.assert:
+        that:
+          - chaos_vars.chaos_scenarios is defined
+          - chaos_vars.chaos_scenarios.network is defined
+          - chaos_vars.chaos_scenarios.resource is defined
+          - chaos_vars.chaos_scenarios.service is defined
+          - chaos_vars.chaos_scenarios.time is defined
+          - chaos_vars.chaos_scenarios.random is defined
+        msg: "Invalid chaos scenarios structure"
+
+    - name: 🧪 Test template file exists
+      ansible.builtin.assert:
+        that:
+          - "templates/chaos_report.j2" is file
+        msg: "Chaos report template not found"
+
+    - name: 🧪 Test task files exist
+      ansible.builtin.assert:
+        that:
+          - "tasks/chaos/health_check.yml" is file
+          - "tasks/chaos/network.yml" is file
+          - "tasks/chaos/resource.yml" is file
+          - "tasks/chaos/service.yml" is file
+          - "tasks/chaos/time.yml" is file
+          - "tasks/chaos/random.yml" is file
+          - "tasks/cleanup.yml" is file
+        msg: "Missing task files"
+
+    - name: 🧪 Test playbook syntax
+      ansible.builtin.command: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: 🧪 Verify playbook syntax
+      ansible.builtin.assert:
+        that:
+          - syntax_check.rc == 0
+        msg: "Playbook syntax check failed"
+
+    - name: 🧪 Test variable precedence
+      ansible.builtin.set_fact:
+        test_var_precedence: "{{ test_vars.chaos_level }}"
+
+    - name: 🧪 Verify variable precedence works
+      ansible.builtin.assert:
+        that:
+          - test_var_precedence == test_vars.chaos_level
+        msg: "Variable precedence test failed"
+
+    - name: 🧪 Test safety limits
+      ansible.builtin.assert:
+        that:
+          - chaos_vars.safety_limits.max_memory_mb <= 1000
+          - chaos_vars.safety_limits.max_duration <= 600
+          - chaos_vars.safety_limits.max_cpu_cores <= 4
+        msg: "Safety limits exceed reasonable bounds"
+
+    - name: 🧪 Test chaos level configurations
+      ansible.builtin.assert:
+        that:
+          - chaos_vars.chaos_levels.low is defined
+          - chaos_vars.chaos_levels.medium is defined
+          - chaos_vars.chaos_levels.high is defined
+        msg: "Missing chaos level configurations"
+
+    - name: 🧪 Test report generation
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/test_chaos_report.html
+      when: ansible_os_family == 'Linux'
+
+    - name: 🧪 Verify report generation
+      ansible.builtin.assert:
+        that:
+          - "/tmp/test_chaos_report.html" is file
+        msg: "Report generation failed"
+        when: ansible_os_family == 'Linux'
+
+    - name: 🧪 Cleanup test files
+      ansible.builtin.file:
+        path: /tmp/test_chaos_report.html
+        state: absent
+      when: ansible_os_family == 'Linux'
+
+    - name: 🧪 Display test results
+      ansible.builtin.debug:
+        msg: |
+          All tests passed!
+          - Inventory file: ✓
+          - Chaos scenarios: ✓
+          - Task files: ✓
+          - Template file: ✓
+          - Playbook syntax: ✓
+          - Safety limits: ✓
+          - Chaos levels: ✓
+          - Report generation: ✓

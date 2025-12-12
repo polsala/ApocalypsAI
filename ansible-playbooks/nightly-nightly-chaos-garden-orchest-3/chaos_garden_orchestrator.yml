@@ -1,0 +1,57 @@
+---
+- name: Nightly Chaos Garden Orchestrator
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/chaos_scenarios.yml
+  tasks:
+    - name: 🌱 Plant the chaos seeds
+      ansible.builtin.debug:
+        msg: "Starting chaos garden orchestration on {{ inventory_hostname }}"
+
+    - name: 🌸 Check garden health before chaos
+      ansible.builtin.include_tasks: tasks/chaos/health_check.yml
+
+    - name: 🐛 Introduce garden pests (network chaos)
+      ansible.builtin.include_tasks: tasks/chaos/network.yml
+      when: chaos_enabled and chaos_scenarios.network.enabled
+
+    - name: 🌿 Let weeds grow (resource chaos)
+      ansible.builtin.include_tasks: tasks/chaos/resource.yml
+      when: chaos_enabled and chaos_scenarios.resource.enabled
+
+    - name: 🌺 Make flowers wilt (service chaos)
+      ansible.builtin.include_tasks: tasks/chaos/service.yml
+      when: chaos_enabled and chaos_scenarios.service.enabled
+
+    - name: ⏰ Shift seasons (time chaos)
+      ansible.builtin.include_tasks: tasks/chaos/time.yml
+      when: chaos_enabled and chaos_scenarios.time.enabled
+
+    - name: 🎲 Add random garden surprises
+      ansible.builtin.include_tasks: tasks/chaos/random.yml
+      when: chaos_enabled and chaos_scenarios.random.enabled
+
+    - name: 🌈 Generate chaos report
+      ansible.builtin.template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_garden_report_{{ inventory_hostname }}.html
+        mode: '0644'
+
+    - name: 📊 Display chaos summary
+      ansible.builtin.debug:
+        msg: |
+          Chaos garden orchestration completed on {{ inventory_hostname }}
+          Report saved to: /tmp/chaos_garden_report_{{ inventory_hostname }}.html
+          Chaos level: {{ chaos_level }}
+          Duration: {{ chaos_duration }} seconds
+
+    - name: 🧹 Clean up the garden
+      ansible.builtin.include_tasks: tasks/cleanup.yml
+      when: cleanup_enabled
+
+    - name: 🌟 Send chaos report to gardener
+      ansible.builtin.copy:
+        src: /tmp/chaos_garden_report_{{ inventory_hostname }}.html
+        dest: "{{ chaos_reports_dir }}/chaos_garden_report_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.html"
+      when: chaos_reports_dir is defined

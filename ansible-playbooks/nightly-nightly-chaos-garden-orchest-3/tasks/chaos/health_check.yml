@@ -1,0 +1,38 @@
+- name: 🌱 Check system health
+  ansible.builtin.shell: |
+    echo "=== System Health Check ==="
+    echo "Hostname: $(hostname)"
+    echo "Uptime: $(uptime)"
+    echo "Load Average: $(cat /proc/loadavg)"
+    echo "Memory Usage: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%"
+    echo "Disk Usage: $(df -h / | tail -1 | awk '{print $5}')"
+    echo "Network Interfaces: $(ip link show | grep '^[0-9]' | wc -l)"
+  register: health_check
+  changed_when: false
+
+- name: 📊 Display health check results
+  ansible.builtin.debug:
+    msg: "{{ health_check.stdout }}"
+
+- name: 🌸 Verify chaos prerequisites
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family is defined
+      - ansible_distribution is defined
+    msg: "System prerequisites not met for chaos experiments"
+
+- name: 🌿 Create chaos log directory
+  ansible.builtin.file:
+    path: /tmp/chaos_logs
+    state: directory
+    mode: '0755'
+  when: chaos_enabled
+
+- name: 🌺 Log chaos session start
+  ansible.builtin.shell: |
+    echo "=== Chaos Session Started ===" > /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Timestamp: {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Host: {{ inventory_hostname }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Chaos Level: {{ chaos_level }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Duration: {{ chaos_duration }} seconds" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: chaos_enabled

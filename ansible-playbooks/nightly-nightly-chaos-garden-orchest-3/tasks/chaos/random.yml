@@ -1,0 +1,33 @@
+- name: 🎲 Check if random chaos should run
+  ansible.builtin.set_fact:
+    run_random_chaos: "{{ (chaos_scenarios.random.probability | default(random_chaos_probability)) | random < chaos_scenarios.random.probability | default(random_chaos_probability) }}"
+  when: chaos_enabled
+
+- name: 🎲 Select random chaos type
+  ansible.builtin.set_fact:
+    random_chaos_type: "{{ ['disk', 'process', 'network'] | random }}"
+  when: run_random_chaos
+
+- name: 🎲 Execute disk space chaos (sudden garden growth)
+  ansible.builtin.shell: |
+    dd if=/dev/zero of=/tmp/chaos_disk_filler_{{ ansible_date_time.epoch }} bs=1M count=100
+  when: run_random_chaos and random_chaos_type == 'disk' and chaos_level == 'high'
+  ignore_errors: true
+
+- name: 🎲 Execute process chaos (garden gnomes running amok)
+  ansible.builtin.shell: |
+    for i in {1..10}; do sleep 1 & done; wait
+  when: run_random_chaos and random_chaos_type == 'process'
+  ignore_errors: true
+
+- name: 🎲 Execute network chaos (butterfly effect)
+  ansible.builtin.shell: |
+    ping -c 5 8.8.8.8 > /dev/null 2>&1
+  when: run_random_chaos and random_chaos_type == 'network'
+  ignore_errors: true
+
+- name: 🎲 Log random chaos
+  ansible.builtin.shell: |
+    echo "Random chaos applied at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Chaos type: {{ random_chaos_type | default('unknown') }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: run_random_chaos

@@ -1,0 +1,28 @@
+- name: 🐛 Check if network chaos should run
+  ansible.builtin.set_fact:
+    run_network_chaos: "{{ (chaos_scenarios.network.probability | default(network_chaos_probability)) | random < chaos_scenarios.network.probability | default(network_chaos_probability) }}"
+  when: chaos_enabled
+
+- name: 🌿 Introduce network latency (garden pests chewing cables)
+  ansible.builtin.shell: |
+    tc qdisc add dev lo root netem delay {{ chaos_scenarios.network.latency_ms | default(network_latency_ms) }}ms
+  when: run_network_chaos and chaos_level in ['medium', 'high']
+  ignore_errors: true
+
+- name: 🌺 Add packet loss (pests eating packets)
+  ansible.builtin.shell: |
+    tc qdisc add dev lo root netem loss {{ chaos_scenarios.network.packet_loss | default(network_packet_loss) }}%
+  when: run_network_chaos and chaos_level == 'high'
+  ignore_errors: true
+
+- name: 🐞 Log network chaos
+  ansible.builtin.shell: |
+    echo "Network chaos applied at {{ ansible_date_time.iso8601 }}" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Latency: {{ chaos_scenarios.network.latency_ms | default(network_latency_ms) }}ms" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+    echo "Packet Loss: {{ chaos_scenarios.network.packet_loss | default(network_packet_loss) }}%" >> /tmp/chaos_logs/chaos_session_{{ ansible_date_time.epoch }}.log
+  when: run_network_chaos
+
+- name: 🌈 Wait for network chaos duration
+  ansible.builtin.pause:
+    seconds: "{{ chaos_duration }}"
+  when: run_network_chaos
