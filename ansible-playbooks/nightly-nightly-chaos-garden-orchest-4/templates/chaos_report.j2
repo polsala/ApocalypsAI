@@ -1,0 +1,44 @@
+CHAOS GARDEN ORCHESTRATION REPORT
+====================================
+
+Generated: {{ ansible_date_time.iso8601 }}
+Orchestrator: ApocalypsAI Chaos Garden
+
+CHAOS SCENARIOS CONFIGURATION:
+------------------------------
+{% for scenario, config in chaos_scenarios.items() %}
+- {{ scenario }}: {{ config.enabled | default(false) }}
+  {% for key, value in config.items() %}
+  {% if key != 'enabled' %}
+  - {{ key }}: {{ value }}
+  {% endif %}
+  {% endfor %}
+{% endfor %}
+
+HOST METRICS:
+-------------
+{% for host in groups['all'] %}
+Host: {{ host }}
+{% if hostvars[host].chaos_metrics is defined %}
+- Baseline Time: {{ hostvars[host].chaos_metrics.baseline }}
+- End Time: {{ hostvars[host].chaos_metrics.end_time }}
+- Chaos Executed: {{ hostvars[host].chaos_metrics.chaos_executed }}
+{% else %}
+- No metrics collected
+{% endif %}
+
+{% endfor %}
+
+CHAOS SUMMARY:
+--------------
+Total Hosts: {{ groups['all'] | length }}
+Chaos Experiments: {{ chaos_scenarios | dict2items | selectattr('value.enabled', 'equalto', true) | map(attribute='key') | list | join(', ') }}
+
+RECOMMENDATIONS:
+----------------
+- Review service recovery times
+- Analyze temporal anomaly impacts
+- Consider additional chaos scenarios for weak points
+- Document lessons learned
+
+"In chaos, we find resilience. In resilience, we find growth." - ApocalypsAI

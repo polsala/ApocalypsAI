@@ -1,0 +1,35 @@
+chaos_scenarios:
+  network:
+    enabled: true
+    latency: true
+    packet_loss: false
+    bandwidth_limit: false
+
+  resource:
+    enabled: true
+    cpu_stress: true
+    memory_stress: false
+    disk_stress: false
+
+  service:
+    enabled: false
+    stop_web: false
+    restart_db: false
+    kill_process: false
+
+  time:
+    enabled: false
+    ntp_stop: false
+    clock_skew: false
+
+  random:
+    enabled: false
+    random_reboot: false
+    random_cleanup: false
+
+  health_check:
+    enabled: true
+    high_load: true
+    disk_warning: false
+
+chaos_cleanup: true

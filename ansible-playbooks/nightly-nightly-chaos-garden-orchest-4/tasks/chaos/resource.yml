@@ -1,0 +1,27 @@
+- name: Resource Chaos - CPU stress
+  ansible.builtin.shell: |
+    stress --cpu 4 --timeout 60s
+  when: chaos_scenarios.resource.cpu_stress | default(true)
+  async: 65
+  poll: 0
+  ignore_errors: true
+
+- name: Resource Chaos - Memory stress
+  ansible.builtin.shell: |
+    stress --vm 2 --vm-bytes 512M --timeout 60s
+  when: chaos_scenarios.resource.memory_stress | default(false)
+  async: 65
+  poll: 0
+  ignore_errors: true
+
+- name: Resource Chaos - Disk I/O stress
+  ansible.builtin.shell: |
+    stress --io 2 --timeout 60s
+  when: chaos_scenarios.resource.disk_stress | default(false)
+  async: 65
+  poll: 0
+  ignore_errors: true
+
+- name: Record resource chaos execution
+  ansible.builtin.set_fact:
+    chaos_executed: "{{ (chaos_executed | default([])) + ['resource'] }}"

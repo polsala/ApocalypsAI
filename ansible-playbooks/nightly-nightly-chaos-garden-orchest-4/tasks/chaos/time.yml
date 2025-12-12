@@ -1,0 +1,16 @@
+- name: Time Chaos - NTP stop
+  ansible.builtin.systemd:
+    name: ntp
+    state: stopped
+  when: chaos_scenarios.time.ntp_stop | default(false)
+  ignore_errors: true
+
+- name: Time Chaos - System clock skew
+  ansible.builtin.shell: |
+    date -s "+1 hour"
+  when: chaos_scenarios.time.clock_skew | default(false)
+  ignore_errors: true
+
+- name: Record time chaos execution
+  ansible.builtin.set_fact:
+    chaos_executed: "{{ (chaos_executed | default([])) + ['time'] }}"
