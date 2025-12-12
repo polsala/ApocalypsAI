@@ -1,0 +1,96 @@
+---
+- name: Broadcast Ephemeral Message
+  hosts: all
+  become: true
+  vars:
+    ephemeral_message: "\n\n=== APOCALYPSAI Ephemeral Broadcast ===\n\nThis message will self-destruct in {{ message_ttl }} seconds.\n\nRemember to hydrate, stretch, and check your backups!\n\n========================================\n"
+    message_ttl: 300  # seconds
+    self_destruct: false
+    message_file: "/tmp/apocalypsai_ephemeral_message"
+    cleanup_script: "/tmp/apocalypsai_cleanup.sh"
+
+  tasks:
+    - name: Display ephemeral message
+      copy:
+        content: "{{ ephemeral_message }}"
+        dest: "{{ message_file }}"
+        mode: '0644'
+
+    - name: Show message to users
+      shell: |
+        echo "{{ ephemeral_message }}" | wall
+        echo "{{ ephemeral_message }}"
+
+    - name: Create cleanup script
+      copy:
+        content: |
+          #!/bin/bash
+          sleep {{ message_ttl }}
+          rm -f {{ message_file }}
+          echo "Ephemeral message cleaned up at $(date)"
+        dest: "{{ cleanup_script }}"
+        mode: '0755'
+
+    - name: Schedule cleanup
+      shell: "nohup {{ cleanup_script }} > /dev/null 2>&1 & echo $! > /tmp/apocalypsai_cleanup.pid"
+
+    - name: Generate report
+      copy:
+        content: |
+          Ephemeral Message Broadcast Report
+          ==================================
+          
+          Message: {{ ephemeral_message }}
+          TTL: {{ message_ttl }} seconds
+          Broadcast Time: {{ ansible_date_time.iso8601 }}
+          Affected Host: {{ inventory_hostname }}
+          
+          Message file: {{ message_file }}
+          Cleanup script: {{ cleanup_script }}
+          
+          This message will be automatically removed after {{ message_ttl }} seconds.
+        dest: "/tmp/apocalypsai_report_{{ inventory_hostname }}.txt"
+        mode: '0644'
+
+    - name: Display completion message
+      debug:
+        msg: "Ephemeral message broadcast complete on {{ inventory_hostname }}. Message will self-destruct in {{ message_ttl }} seconds."
+
+  handlers:
+    - name: cleanup message
+      shell: "rm -f {{ message_file }}"
+      listen: "cleanup message"
+
+- name: Self-destruct playbook (optional)
+  hosts: localhost
+  vars:
+    self_destruct: false
+  tasks:
+    - name: Check self-destruct flag
+      debug:
+        msg: "Self-destruct is {{ 'ENABLED' if self_destruct else 'DISABLED' }}"
+
+    - name: Self-destruct playbook
+      file:
+        path: "{{ playbook_dir }}/broadcast.yml"
+        state: absent
+      when: self_destruct
+      ignore_errors: true
+
+    - name: Self-destruct inventory
+      file:
+        path: "{{ playbook_dir }}/inventory.ini"
+        state: absent
+      when: self_destruct
+      ignore_errors: true
+
+    - name: Self-destruct cleanup script
+      file:
+        path: "{{ playbook_dir }}/cleanup.sh"
+        state: absent
+      when: self_destruct
+      ignore_errors: true
+
+    - name: Display final message
+      debug:
+        msg: "{{ 'Playbook has self-destructed!' if self_destruct else 'Playbook preserved for next broadcast.' }}"
