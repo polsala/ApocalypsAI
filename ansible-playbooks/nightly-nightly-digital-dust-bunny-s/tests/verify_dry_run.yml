@@ -1,0 +1,45 @@
+---
+- name: Verify Dry Run Results
+  hosts: test_servers
+  gather_facts: no
+
+  vars:
+    report_path: "/tmp/dust_bunny_sweeper_report_localhost.txt"
+
+  tasks:
+    - name: Verify report content in dry-run
+      ansible.builtin.slurp:
+        src: "{{ report_path }}"
+      register: report_content_dry_run
+      delegate_to: localhost
+      # Mock rationale: Reads the generated report to verify its contents without external dependencies.
+
+    - name: Assert report contains expected old files
+      ansible.builtin.assert:
+        that:
+          - "'old_file_1.txt' in report_content_dry_run.content | b64decode"
+          - "'old_file_2.log' in report_content_dry_run.content | b64decode"
+          - "'old_dir/old_file_in_dir.tmp' in report_content_dry_run.content | b64decode"
+          - "'recent_file.txt' not in report_content_dry_run.content | b64decode"
+          - "'seven_day_old_file.txt' not in report_content_dry_run.content | b64decode"
+          - "'DRY RUN' in report_content_dry_run.content | b64decode"
+        msg: "Dry run report did not contain expected old files or indicated wrong mode."
+      # Mock rationale: Verifies the report accurately reflects the files that *should* be identified as dust bunnies.
+
+    - name: Verify files still exist after dry-run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "/tmp/digital_dust_bunnies_test/old_file_1.txt"
+        - "/tmp/digital_dust_bunnies_test/recent_file.txt"
+        - "/tmp/digital_dust_bunnies_test/seven_day_old_file.txt"
+      register: file_stats_dry_run
+      # Mock rationale: Confirms that dry_run mode correctly prevents deletion.
+
+    - name: Assert files exist after dry-run
+      ansible.builtin.assert:
+        that:
+          - "item.stat.exists"
+        msg: "File {{ item.path }} was unexpectedly deleted during dry run."
+      loop: "{{ file_stats_dry_run.results }}"
+      # Mock rationale: Confirms that dry_run mode correctly prevents deletion.
