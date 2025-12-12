@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+body {
+  margin: 0;
+  background-color: #1a1a1a;
+  color: #00ff00;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  font-size: 3em;
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+.App-header p {
+  font-size: 1.2em;
+  color: #00cc00;
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.anomaly-list {
+  background-color: #0a0a0a;
+  border: 2px solid #00ff00;
+  padding: 20px;
+  border-radius: 8px;
+  width: 300px;
+  text-align: left;
+}
+
+.anomaly-list h2 {
+  color: #00ff00;
+  text-shadow: 0 0 5px #00ff00;
+  margin-top: 0;
+}
+
+.anomaly-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.anomaly-list li {
+  margin-bottom: 10px;
+  padding: 8px;
+  border-left: 3px solid #ff0000;
+}
+
+.anomaly-list li.stabilized {
+  border-left-color: #00ff00;
+}
+
+.anomaly-list li.active {
+  border-left-color: #ff0000;
+}
+
+footer {
+  margin-top: 50px;
+  font-size: 0.8em;
+  color: #00cc00;
+}
