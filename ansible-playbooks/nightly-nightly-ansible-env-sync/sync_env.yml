@@ -1,0 +1,21 @@
+---
+- name: Synchronize Environment Variables
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/environment_vars.yml
+
+  tasks:
+    - name: Ensure environment variables are set
+      ansible.builtin.template:
+        src: templates/env_vars.sh.j2
+        dest: /etc/profile.d/apoc_env_vars.sh
+        mode: '0644'
+      notify:
+        - Reload Environment Variables
+
+  handlers:
+    - name: Reload Environment Variables
+      ansible.builtin.command: source /etc/profile.d/apoc_env_vars.sh
+      changed_when: false # This handler doesn't change state, it just reloads
+      listen: "Reload Environment Variables"

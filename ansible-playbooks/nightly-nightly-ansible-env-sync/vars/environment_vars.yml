@@ -1,0 +1,5 @@
+environment_variables:
+  APOC_UTILITY_NAME: "nightly-ansible-env-sync"
+  APOC_UTILITY_VERSION: "1.0.0"
+  APOC_AUTHOR: "ApocalypsAI Integrator"
+  APOC_LAST_RUN_DATE: "{{ ansible_date_time.iso8601 }}"
