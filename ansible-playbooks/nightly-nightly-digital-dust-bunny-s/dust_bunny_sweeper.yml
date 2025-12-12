@@ -1,0 +1,58 @@
+---
+- name: Digital Dust Bunny Sweeper
+  hosts: all
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure scan paths exist (if not already present)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ scan_paths }}"
+      # Mock rationale: Ensures target directories exist before scanning.
+      # In tests, mock_files_setup.sh creates the base test directory.
+
+    - name: Find old files (dust bunnies)
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ file_age_days }}d"
+        file_type: file
+      register: old_files_result
+      # Mock rationale: This task directly interacts with the filesystem on the target host.
+      # The test setup creates specific files with controlled ages for deterministic discovery.
+
+    - name: Generate Dust Bunny Report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "{{ report_path }}"
+      delegate_to: localhost # Report generated locally for easy access on the control machine
+      vars:
+        dust_bunnies: "{{ old_files_result.files }}"
+      # Mock rationale: Generates a report based on the 'find' results.
+      # The report content is then slurped and asserted in the test playbooks.
+
+    - name: Display found dust bunnies (dry run)
+      ansible.builtin.debug:
+        msg: "DRY RUN: Found {{ old_files_result.files | length }} dust bunnies. Report generated at {{ report_path }}"
+      when: dry_run
+      # Mock rationale: Provides console output for dry run, which is implicitly tested by report content.
+
+    - name: Delete dust bunnies
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_files_result.files }}"
+      when: not dry_run
+      # Mock rationale: This task directly interacts with the filesystem on the filesystem on the target host.
+      # In tests, we'll ensure dry_run is true for initial checks, then false for deletion verification.
+      # The test setup creates specific files to be deleted.
+
+    - name: Report actual cleanup
+      ansible.builtin.debug:
+        msg: "CLEANUP COMPLETE: {{ old_files_result.files | length }} dust bunnies swept away. Report at {{ report_path }}"
+      when: not dry_run
+      # Mock rationale: Provides console output for cleanup, implicitly tested by report content.

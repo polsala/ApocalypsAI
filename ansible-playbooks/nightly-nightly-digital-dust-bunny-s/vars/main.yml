@@ -1,0 +1,6 @@
+---
+scan_paths:
+  - "/tmp/digital_dust_bunnies" # Default path for scanning
+file_age_days: 7 # Files older than this will be considered dust bunnies
+dry_run: true # Set to false to actually delete files
+report_path: "/tmp/dust_bunny_sweeper_report_{{ ansible_hostname }}.txt"

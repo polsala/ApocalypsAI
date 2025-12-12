@@ -1,0 +1,21 @@
+Digital Dust Bunny Sweeper Report for {{ ansible_hostname }}
+Generated on {{ ansible_date_time.iso8601_micro }}
+
+Scan Paths: {{ scan_paths | join(', ') }}
+Files older than: {{ file_age_days }} days
+
+{% if dust_bunnies %}
+Found {{ dust_bunnies | length }} Digital Dust Bunnies:
+{% for file in dust_bunnies %}
+- {{ file.path }} (Modified: {{ file.mtime | to_datetime('%Y%m%d%H%M%S') | strftime('%Y-%m-%d %H:%M:%S') }})
+{% endfor %}
+{% else %}
+No Digital Dust Bunnies found! Your system is sparkling clean.
+{% endif %}
+
+{% if dry_run %}
+This was a DRY RUN. No files were deleted.
+To perform actual cleanup, set 'dry_run: false' in vars/main.yml.
+{% else %}
+Files listed above have been swept away.
+{% endif %}
