@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nightly Ansible Ephemeral Ghost Buster Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #8B0000; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Nightly Ansible Ephemeral Ghost Buster Report</h1>
+  <p>Generated on: {{ ansible_date_time.iso8601 }}</p>
+
+  <h2>Orphaned Resources Summary</h2>
+  <ul>
+    <li>Orphaned EC2 instances: {{ orphaned_ec2 | length if orphaned_ec2 is defined else 0 }}</li>
+    <li>Orphaned Azure VMs: {{ orphaned_azure_vms | length if orphaned_azure_vms is defined else 0 }}</li>
+    <li>Orphaned GCP instances: {{ orphaned_gcp_instances | length if orphaned_gcp_instances is defined else 0 }}</li>
+  </ul>
+
+  <h2>Orphaned EC2 Instances</h2>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Reason</th></tr>
+    {% for inst in orphaned_ec2 | default([]) %}
+    <tr><td>{{ inst.id }}</td><td>{{ inst.name }}</td><td>{{ inst.reason }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orphaned Azure VMs</h2>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Reason</th></tr>
+    {% for vm in orphaned_azure_vms | default([]) %}
+    <tr><td>{{ vm.id }}</td><td>{{ vm.name }}</td><td>{{ vm.reason }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orphaned GCP Instances</h2>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Reason</th></tr>
+    {% for inst in orphaned_gcp_instances | default([]) %}
+    <tr><td>{{ inst.id }}</td><td>{{ inst.name }}</td><td>{{ inst.reason }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <p><em>Mock rationale: This report is generated in mock mode for testing purposes.</em></p>
+</body>
+</html>

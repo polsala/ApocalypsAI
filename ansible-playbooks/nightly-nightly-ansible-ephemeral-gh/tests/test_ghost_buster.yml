@@ -1,0 +1,36 @@
+---
+- name: Test Nightly Ansible Ephemeral Ghost Buster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Include main playbook tasks
+      include_tasks: ../ghost_buster.yml
+
+    - name: Assert orphaned EC2 list is defined and non-empty
+      assert:
+        that:
+          - orphaned_ec2 is defined
+          - orphaned_ec2 | length == 2
+
+    - name: Assert orphaned Azure VMs list is defined and non-empty
+      assert:
+        that:
+          - orphaned_azure_vms is defined
+          - orphaned_azure_vms | length == 2
+
+    - name: Assert orphaned GCP instances list is defined and non-empty
+      assert:
+        that:
+          - orphaned_gcp_instances is defined
+          - orphaned_gcp_instances | length == 2
+
+    - name: Assert cleanup report was generated
+      stat:
+        path: "{{ report_dir }}/ghost_buster_report.html"
+      register: report_file
+
+    - name: Assert report file exists
+      assert:
+        that:
+          - report_file.stat.exists | bool

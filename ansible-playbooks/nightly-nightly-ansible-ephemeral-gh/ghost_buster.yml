@@ -1,0 +1,32 @@
+---
+- name: Nightly Ansible Ephemeral Ghost Buster
+  hosts: all
+  gather_facts: false
+  vars:
+    report_dir: "reports"
+    cleanup_report: "{{ report_dir }}/ghost_buster_report.html"
+    # Mock rationale: simulate detection without actual cloud calls
+    mock_mode: true
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+
+    - name: Detect orphaned resources
+      include_tasks: tasks/detect_orphans.yml
+
+    - name: Generate cleanup report
+      template:
+        src: templates/ghost_buster_report.j2
+        dest: "{{ cleanup_report }}"
+        mode: '0644'
+
+    - name: Display summary
+      debug:
+        msg: |
+          Ghost Buster Summary:
+          - Orphaned EC2 instances: {{ orphaned_ec2 | length }}
+          - Orphaned Azure VMs: {{ orphaned_azure_vms | length }}
+          - Orphaned GCP instances: {{ orphaned_gcp_instances | length }}
+          - Cleanup report: {{ cleanup_report }}

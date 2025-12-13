@@ -1,0 +1,26 @@
+- name: Detect orphaned AWS EC2 instances (mock)
+  set_fact:
+    orphaned_ec2: >
+      [{"id": "i-1234567890abcdef0", "name": "orphan-ec2-1", "reason": "No matching inventory entry"},
+       {"id": "i-0987654321fedcba0", "name": "orphan-ec2-2", "reason": "Tag 'managed_by' not found"}]
+  when: mock_mode | bool
+
+- name: Detect orphaned Azure VMs (mock)
+  set_fact:
+    orphaned_azure_vms: >
+      [{"id": "vm-12345", "name": "orphan-vm-1", "reason": "No inventory match"},
+       {"id": "vm-67890", "name": "orphan-vm-2", "reason": "Missing tag 'managed_by'"}]
+  when: mock_mode | bool
+
+- name: Detect orphaned GCP instances (mock)
+  set_fact:
+    orphaned_gcp_instances: >
+      [{"id": "inst-1111", "name": "orphan-gcp-1", "reason": "No inventory entry"},
+       {"id": "inst-2222", "name": "orphan-gcp-2", "reason": "Missing 'managed_by' tag"}]
+  when: mock_mode | bool
+
+- name: Cleanup orphaned resources (mock)
+  debug:
+    msg: "Would delete {{ item.name }} ({{ item.id }}) because {{ item.reason }}"
+  loop: "{{ (orphaned_ec2 | default([])) + (orphaned_azure_vms | default([])) + (orphaned_gcp_instances | default([])) }}"
+  when: mock_mode | bool
