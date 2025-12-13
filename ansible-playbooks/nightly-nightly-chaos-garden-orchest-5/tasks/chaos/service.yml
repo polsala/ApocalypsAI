@@ -1,0 +1,156 @@
+- name: Apply service chaos based on intensity
+  block:
+    - name: Discover running services
+      shell: |
+        systemctl list-units --type=service --state=running --no-pager --no-legend | \
+        awk '{print $1}' | grep -v "@" | head -20
+      register: running_services
+      changed_when: false
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Discover running services (SysV)
+      shell: |
+        service --status-all 2>/dev/null | grep '+' | awk '{print $4}' | head -20
+      register: running_services_sysv
+      changed_when: false
+      when: ansible_service_mgr != 'systemd'
+
+    - name: Set service list
+      set_fact:
+        target_services: >
+          {{ (running_services.stdout_lines | default([])) + 
+             (running_services_sysv.stdout_lines | default([])) }}
+
+    - name: Filter critical services to avoid
+      set_fact:
+        safe_services: >
+          {{ target_services | 
+             reject('match', '^(ssh|sshd|systemd|kernel|init)') | 
+             list }}
+
+    - name: Determine number of services to chaos
+      set_fact:
+        chaos_service_count: >
+          {% if chaos_intensity == 'low' %}
+            {{ [3, (safe_services | length)] | min }}
+          {% elif chaos_intensity == 'medium' %}
+            {{ [6, (safe_services | length)] | min }}
+          {% else %}
+            {{ [10, (safe_services | length)] | min }}
+          {% endif %}
+
+    - name: Select services for chaos
+      set_fact:
+        selected_services: >
+          {{ safe_services | shuffle | list | 
+             slice(chaos_service_count) | list }}
+      when: safe_services | length > 0
+
+    - name: Create service chaos script
+      copy:
+        content: |
+          #!/bin/bash
+          # Service Chaos Script - Part of Chaos Garden Orchestrator
+          
+          SERVICES=( {{ selected_services | join(' ') | default('') }} )
+          CHAOS_DURATION={{ chaos_duration }}
+          
+          echo "🔧 Applying service chaos..."
+          echo "   Services to chaos: ${#SERVICES[@]}"
+          echo "   Chaos duration: ${CHAOS_DURATION}s"
+          
+          # Function to restart a service
+          chaos_service() {
+            local service=$1
+            echo "   🔄 Restarting $service"
+            systemctl restart "$service" 2>&1 || echo "   ❌ Failed to restart $service"
+            sleep {{ (chaos_duration | int / (chaos_service_count | default(1) | int)) }}
+          }
+          
+          # Function to stop and start a service
+          chaos_service_hard() {
+            local service=$1
+            echo "   💥 Stopping $service"
+            systemctl stop "$service" 2>&1 || echo "   ❌ Failed to stop $service"
+            sleep 5
+            echo "   🚀 Starting $service"
+            systemctl start "$service" 2>&1 || echo "   ❌ Failed to start $service"
+            sleep {{ (chaos_duration | int / (chaos_service_count | default(1) | int)) }}
+          }
+          
+          # Chaos each selected service
+          for service in "${SERVICES[@]}"; do
+            if [ $((RANDOM % 3)) -eq 0 ]; then
+              chaos_service_hard "$service"
+            else
+              chaos_service "$service"
+            fi
+          done
+          
+          echo "✅ Service chaos complete!"
+        dest: /tmp/service_chaos.sh
+        owner: root
+        mode: '0755'
+      when: safe_services | length > 0
+
+    - name: Execute service chaos
+      shell: /tmp/service_chaos.sh
+      async: {{ chaos_duration | int + 60 }}
+      poll: 0
+      register: service_chaos_result
+      when: safe_services | length > 0
+
+    - name: Wait for service chaos to complete
+      async_status:
+        jid: "{{ service_chaos_result.ansible_job_id }}"
+      register: service_job_result
+      until: service_job_result.finished
+      retries: 30
+      delay: 10
+      when: safe_services | length > 0
+
+    - name: Clean up service chaos script
+      file:
+        path: /tmp/service_chaos.sh
+        state: absent
+      when: safe_services | length > 0
+
+    - name: Record service chaos metrics
+      set_fact:
+        service_chaos_metrics:
+          total_services: "{{ target_services | length }}"
+          chaos_services: "{{ selected_services | length | default(0) }}"
+          selected_services: "{{ selected_services | default([]) }}"
+          duration: "{{ chaos_duration }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+      when: safe_services | length > 0
+
+    - name: Display service chaos summary
+      debug:
+        msg: |
+          🔧 Service Chaos Applied!
+          
+          Metrics:
+          - Total running services: {{ target_services | length }}
+          - Services subjected to chaos: {{ selected_services | length | default(0) }}
+          {% if selected_services | length > 0 %}
+          - Chaotic services:
+            {% for service in selected_services %}
+            - {{ service }}
+            {% endfor %}
+          {% endif %}
+          - Duration: {{ chaos_duration }} seconds
+          
+          "A service that can't handle restarts is a service that can't handle reality." 🌱
+      when: safe_services | length > 0
+
+    - name: Display no services message
+      debug:
+        msg: |
+          ℹ️  No safe services found for chaos injection.
+          
+          All services are either critical or already stopped.
+          
+          "Sometimes the best chaos is the chaos you don't create." 🌱
+      when: safe_services | length == 0
+  when: chaos_scenarios.service.enabled | default(true)

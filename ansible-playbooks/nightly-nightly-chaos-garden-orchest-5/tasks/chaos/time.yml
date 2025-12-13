@@ -1,0 +1,140 @@
+- name: Apply time chaos based on intensity
+  block:
+    - name: Set time chaos parameters
+      set_fact:
+        time_chaos:
+          clock_skew_seconds: >
+            {% if chaos_intensity == 'low' %}
+              30
+            {% elif chaos_intensity == 'medium' %}
+              300
+            {% else %}
+              3600
+            {% endif %}
+          ntp_disable_duration: >
+            {% if chaos_intensity == 'low' %}
+              60
+            {% elif chaos_intensity == 'medium' %}
+              300
+            {% else %}
+              900
+            {% endif %}
+
+    - name: Record original system time
+      command: date '+%Y-%m-%d %H:%M:%S %Z'
+      register: original_time
+      changed_when: false
+
+    - name: Record original timezone
+      command: timedatectl show --property=Timezone --value
+      register: original_timezone
+      changed_when: false
+
+    - name: Stop NTP service to prevent auto-sync
+      service:
+        name: "{{ 'chronyd' if ansible_os_family == 'RedHat' else 'systemd-timesyncd' if ansible_service_mgr == 'systemd' else 'ntp' }}"
+        state: stopped
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Create time chaos script
+      copy:
+        content: |
+          #!/bin/bash
+          # Time Chaos Script - Part of Chaos Garden Orchestrator
+          
+          SKEW_SECONDS={{ time_chaos.clock_skew_seconds }}
+          NTP_DURATION={{ time_chaos.ntp_disable_duration }}
+          ORIGINAL_TIME="{{ original_time.stdout }}"
+          
+          echo "⏰ Applying time chaos..."
+          echo "   Original time: $ORIGINAL_TIME"
+          echo "   Clock skew: ${SKEW_SECONDS}s"
+          echo "   NTP disable duration: ${NTP_DURATION}s"
+          
+          # Get current timestamp
+          CURRENT_TIMESTAMP=$(date +%s)
+          
+          # Calculate new timestamp with skew
+          if [ $((RANDOM % 2)) -eq 0 ]; then
+            NEW_TIMESTAMP=$((CURRENT_TIMESTAMP + SKEW_SECONDS))
+            echo "   🕐 Moving clock FORWARD by ${SKEW_SECONDS}s"
+          else
+            NEW_TIMESTAMP=$((CURRENT_TIMESTAMP - SKEW_SECONDS))
+            echo "   🕐 Moving clock BACKWARD by ${SKEW_SECONDS}s"
+          fi
+          
+          # Apply time change
+          date -s "@$NEW_TIMESTAMP"
+          echo "   🕐 New system time: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+          
+          # Disable NTP for specified duration
+          if command -v timedatectl &> /dev/null; then
+            echo "   🚫 Disabling NTP sync"
+            timedatectl set-ntp false
+          fi
+          
+          # Wait for NTP disable duration
+          echo "   ⏳ Waiting ${NTP_DURATION}s with NTP disabled..."
+          sleep $NTP_DURATION
+          
+          # Re-enable NTP
+          if command -v timedatectl &> /dev/null; then
+            echo "   ✅ Re-enabling NTP sync"
+            timedatectl set-ntp true
+          fi
+          
+          # Restore original time
+          date -s "$ORIGINAL_TIME"
+          echo "   🕐 Restored time: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+          
+          echo "✅ Time chaos complete!"
+        dest: /tmp/time_chaos.sh
+        owner: root
+        mode: '0755'
+
+    - name: Execute time chaos
+      shell: /tmp/time_chaos.sh
+      async: {{ time_chaos.ntp_disable_duration | int + 120 }}
+      poll: 0
+      register: time_chaos_result
+
+    - name: Wait for time chaos to complete
+      async_status:
+        jid: "{{ time_chaos_result.ansible_job_id }}"
+      register: time_job_result
+      until: time_job_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Clean up time chaos script
+      file:
+        path: /tmp/time_chaos.sh
+        state: absent
+
+    - name: Verify time was restored
+      command: date '+%Y-%m-%d %H:%M:%S %Z'
+      register: final_time
+      changed_when: false
+
+    - name: Record time chaos metrics
+      set_fact:
+        time_chaos_metrics:
+          original_time: "{{ original_time.stdout }}"
+          final_time: "{{ final_time.stdout }}"
+          clock_skew_seconds: "{{ time_chaos.clock_skew_seconds }}"
+          ntp_disable_duration: "{{ time_chaos.ntp_disable_duration }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display time chaos summary
+      debug:
+        msg: |
+          ⏰ Time Chaos Applied!
+          
+          Parameters:
+          - Clock Skew: {{ time_chaos.clock_skew_seconds }} seconds
+          - NTP Disable Duration: {{ time_chaos.ntp_disable_duration }} seconds
+          - Original Time: {{ original_time.stdout }}
+          - Final Time: {{ final_time.stdout }}
+          
+          "Time is an illusion. Lunchtime doubly so." - Chaos Gardener 🌱
+  when: chaos_scenarios.time.enabled | default(true)

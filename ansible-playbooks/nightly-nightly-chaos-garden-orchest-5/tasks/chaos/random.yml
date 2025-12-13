@@ -1,0 +1,64 @@
+- name: Apply random chaos
+  block:
+    - name: Generate random chaos parameters
+      set_fact:
+        random_chaos:
+          chaos_type: >
+            {{ ['network', 'resource', 'service', 'time'] | random }}
+          chaos_intensity: >
+            {{ ['low', 'medium', 'high'] | random }}
+          chaos_duration: >
+            {{ [60, 120, 300, 600] | random }}
+          chaos_target: >
+            {{ ['all', 'random_subset', 'single_host'] | random }}
+
+    - name: Display random chaos selection
+      debug:
+        msg: |
+          🎲 Random Chaos Selection:
+          
+          - Chaos Type: {{ random_chaos.chaos_type }}
+          - Intensity: {{ random_chaos.chaos_intensity }}
+          - Duration: {{ random_chaos.chaos_duration }} seconds
+          - Target: {{ random_chaos.chaos_target }}
+          
+          "May the chaos be ever in your favor!" 🌱
+
+    - name: Apply random network chaos
+      include_tasks: tasks/chaos/network.yml
+      when: random_chaos.chaos_type == 'network'
+
+    - name: Apply random resource chaos
+      include_tasks: tasks/chaos/resource.yml
+      when: random_chaos.chaos_type == 'resource'
+
+    - name: Apply random service chaos
+      include_tasks: tasks/chaos/service.yml
+      when: random_chaos.chaos_type == 'service'
+
+    - name: Apply random time chaos
+      include_tasks: tasks/chaos/time.yml
+      when: random_chaos.chaos_type == 'time'
+
+    - name: Record random chaos metrics
+      set_fact:
+        random_chaos_metrics:
+          chaos_type: "{{ random_chaos.chaos_type }}"
+          intensity: "{{ random_chaos.chaos_intensity }}"
+          duration: "{{ random_chaos.chaos_duration }}"
+          target: "{{ random_chaos.chaos_target }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display random chaos summary
+      debug:
+        msg: |
+          🎲 Random Chaos Applied!
+          
+          Metrics:
+          - Chaos Type: {{ random_chaos.chaos_type }}
+          - Intensity: {{ random_chaos.chaos_intensity }}
+          - Duration: {{ random_chaos.chaos_duration }} seconds
+          - Target: {{ random_chaos.chaos_target }}
+          
+          "The best chaos is the chaos you didn't see coming." 🌱
+  when: chaos_scenarios.random.enabled | default(false)
