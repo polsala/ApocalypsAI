@@ -1,0 +1,60 @@
+- name: Perform post-chaos cleanup
+  block:
+    - name: Stop any running stress processes
+      shell: pkill -f stress-ng || true
+      changed_when: false
+
+    - name: Remove any network traffic control rules
+      shell: tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root 2>/dev/null || true
+      changed_when: false
+
+    - name: Clean up temporary files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/chaos_baseline_*.txt
+        - /tmp/network_chaos.sh
+        - /tmp/cpu_stress.sh
+        - /tmp/memory_stress.sh
+        - /tmp/disk_stress.sh
+        - /tmp/service_chaos.sh
+        - /tmp/time_chaos.sh
+        - /tmp/chaos_disk_test.dat
+
+    - name: Restart critical services if needed
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - ssh
+        - sshd
+        - systemd-timesyncd
+      ignore_errors: true
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Verify system is stable after cleanup
+      wait_for_connection:
+        connect_timeout: 5
+        sleep: 5
+        delay: 5
+        timeout: 60
+
+    - name: Perform post-chaos health check
+      include_tasks: tasks/chaos/health_check.yml
+
+    - name: Display cleanup summary
+      debug:
+        msg: |
+          🧹 Post-Chaos Cleanup Complete!
+          
+          Actions performed:
+          - Stopped stress processes
+          - Removed network impairments
+          - Cleaned temporary files
+          - Restarted critical services
+          - Verified system stability
+          
+          "A clean garden is a happy garden." 🌱
+  when: enable_cleanup | default(true)

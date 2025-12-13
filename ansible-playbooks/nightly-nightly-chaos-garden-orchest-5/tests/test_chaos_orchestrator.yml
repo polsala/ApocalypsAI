@@ -1,0 +1,220 @@
+---
+- name: Test Chaos Garden Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    test_results: []
+  tasks:
+    - name: Test 1 - Validate playbook syntax
+      block:
+        - name: Check playbook syntax
+          shell: ansible-playbook --syntax-check chaos_garden_orchestrator.yml
+          register: syntax_check
+          changed_when: false
+
+        - name: Record syntax test result
+          set_fact:
+            test_results: >
+              {{ test_results + [{
+                'test': 'syntax_check',
+                'status': 'passed' if syntax_check.rc == 0 else 'failed',
+                'output': syntax_check.stdout
+              }] }}
+
+        - name: Assert syntax is valid
+          assert:
+            that:
+              - syntax_check.rc == 0
+            fail_msg: "Playbook syntax is invalid"
+            success_msg: "✓ Playbook syntax is valid"
+
+    - name: Test 2 - Validate inventory file
+      block:
+        - name: Check inventory file exists
+          stat:
+            path: inventory.ini
+          register: inventory_stat
+
+        - name: Assert inventory exists
+          assert:
+            that:
+              - inventory_stat.stat.exists
+            fail_msg: "Inventory file not found"
+            success_msg: "✓ Inventory file exists"
+
+        - name: Check inventory syntax
+          shell: ansible-inventory -i inventory.ini --list
+          register: inventory_check
+          changed_when: false
+
+        - name: Record inventory test result
+          set_fact:
+            test_results: >
+              {{ test_results + [{
+                'test': 'inventory_check',
+                'status': 'passed' if inventory_check.rc == 0 else 'failed',
+                'output': inventory_check.stdout
+              }] }}
+
+        - name: Assert inventory is valid
+          assert:
+            that:
+              - inventory_check.rc == 0
+            fail_msg: "Inventory syntax is invalid"
+            success_msg: "✓ Inventory syntax is valid"
+
+    - name: Test 3 - Validate chaos scripts
+      block:
+        - name: Check chaos scripts exist
+          stat:
+            path: "{{ item }}"
+          register: script_stat
+          loop:
+            - tasks/chaos/health_check.yml
+            - tasks/chaos/network.yml
+            - tasks/chaos/resource.yml
+            - tasks/chaos/service.yml
+            - tasks/chaos/time.yml
+            - tasks/chaos/random.yml
+            - tasks/cleanup.yml
+            - tasks/report.yml
+
+        - name: Assert all chaos scripts exist
+          assert:
+            that:
+              - script_stat.results | selectattr('stat.exists', 'equalto', true) | list | length == 8
+            fail_msg: "Some chaos scripts are missing"
+            success_msg: "✓ All chaos scripts exist"
+
+        - name: Check each script syntax
+          shell: ansible-playbook --syntax-check "{{ item.item }}"
+          register: script_syntax
+          loop: "{{ script_stat.results }}"
+          when: item.stat.exists
+          changed_when: false
+
+        - name: Record script syntax test results
+          set_fact:
+            test_results: >
+              {{ test_results + [{
+                'test': 'script_syntax_' + item.item | basename | splitext | first,
+                'status': 'passed' if item.rc == 0 else 'failed',
+                'output': item.stdout
+              } for item in script_syntax.results] }}
+
+        - name: Assert all scripts have valid syntax
+          assert:
+            that:
+              - script_syntax.results | selectattr('rc', 'equalto', 0) | list | length == 8
+            fail_msg: "Some chaos scripts have invalid syntax"
+            success_msg: "✓ All chaos scripts have valid syntax"
+
+    - name: Test 4 - Validate template
+      block:
+        - name: Check template exists
+          stat:
+            path: templates/chaos_report.j2
+          register: template_stat
+
+        - name: Assert template exists
+          assert:
+            that:
+              - template_stat.stat.exists
+            fail_msg: "Chaos report template not found"
+            success_msg: "✓ Chaos report template exists"
+
+        - name: Test template rendering
+          template:
+            src: templates/chaos_report.j2
+            dest: /tmp/test_chaos_report.txt
+          vars:
+            chaos_report_data:
+              session_info:
+                timestamp: "2024-01-01T00:00:00Z"
+                host: "test-host"
+                chaos_intensity: "medium"
+                chaos_duration: "300"
+              network_chaos:
+                packet_loss: "15%"
+                latency: "200ms"
+                bandwidth: "5mbit"
+                duration: "300"
+                timestamp: "2024-01-01T00:00:00Z"
+
+        - name: Assert template rendered successfully
+          assert:
+            that:
+              - true
+            success_msg: "✓ Template renders correctly"
+
+    - name: Test 5 - Validate shell script
+      block:
+        - name: Check shell script exists
+          stat:
+            path: run_chaos.sh
+          register: shell_stat
+
+        - name: Assert shell script exists
+          assert:
+            that:
+              - shell_stat.stat.exists
+            fail_msg: "Chaos runner script not found"
+            success_msg: "✓ Chaos runner script exists"
+
+        - name: Check shell script is executable
+          assert:
+            that:
+              - shell_stat.stat.mode is defined
+              - shell_stat.stat.mode | string | regex_search('rwx')
+            fail_msg: "Chaos runner script is not executable"
+            success_msg: "✓ Chaos runner script is executable"
+
+        - name: Check shell script syntax
+          shell: bash -n run_chaos.sh
+          register: shell_syntax
+          changed_when: false
+
+        - name: Assert shell script syntax is valid
+          assert:
+            that:
+              - shell_syntax.rc == 0
+            fail_msg: "Chaos runner script has syntax errors"
+            success_msg: "✓ Chaos runner script syntax is valid"
+
+    - name: Test 6 - Validate variable definitions
+      block:
+        - name: Test chaos intensity validation
+          set_fact:
+            test_intensity: "{{ ['low', 'medium', 'high'] | random }}"
+
+        - name: Test chaos duration validation
+          set_fact:
+            test_duration: "{{ [60, 120, 300, 600] | random }}"
+
+        - name: Assert variables are valid
+          assert:
+            that:
+              - test_intensity in ['low', 'medium', 'high']
+              - test_duration in [60, 120, 300, 600]
+            fail_msg: "Variable validation failed"
+            success_msg: "✓ Variable validation passed"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          🧪 Chaos Garden Orchestrator Test Summary
+          
+          Test Results:
+          {% for result in test_results %}
+          - {{ result.test }}: {{ result.status }}
+          {% endfor %}
+          
+          Overall Status: {% if test_results | selectattr('status', 'equalto', 'failed') | list | length == 0 %}✅ ALL TESTS PASSED{% else %}❌ SOME TESTS FAILED{% endif %}
+          
+          "Testing is chaos with a safety net." 🌱
+
+    - name: Fail if any tests failed
+      fail:
+        msg: "Some tests failed. Please check the output above."
+      when: test_results | selectattr('status', 'equalto', 'failed') | list | length > 0

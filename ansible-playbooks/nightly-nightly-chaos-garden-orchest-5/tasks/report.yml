@@ -1,0 +1,32 @@
+- name: Generate chaos report
+  block:
+    - name: Gather all chaos metrics
+      set_fact:
+        chaos_report_data:
+          session_info:
+            timestamp: "{{ ansible_date_time.iso8601 }}"
+            host: "{{ inventory_hostname }}"
+            chaos_intensity: "{{ chaos_intensity }}"
+            chaos_duration: "{{ chaos_duration }}"
+          network_chaos: "{{ network_chaos_metrics | default({}) }}"
+          resource_chaos: "{{ resource_chaos_metrics | default({}) }}"
+          service_chaos: "{{ service_chaos_metrics | default({}) }}"
+          time_chaos: "{{ time_chaos_metrics | default({}) }}"
+          random_chaos: "{{ random_chaos_metrics | default({}) }}"
+
+    - name: Create chaos report using template
+      template:
+        src: templates/chaos_report.j2
+        dest: /tmp/chaos_report_{{ ansible_date_time.epoch }}.txt
+        owner: root
+        mode: '0644'
+
+    - name: Display chaos report location
+      debug:
+        msg: |
+          📊 Chaos Report Generated!
+          
+          Report saved to: /tmp/chaos_report_{{ ansible_date_time.epoch }}.txt
+          
+          "Knowledge is power, and chaos is knowledge." 🌱
+  when: enable_reporting | default(true)

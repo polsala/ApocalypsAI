@@ -1,0 +1,200 @@
+- name: Apply resource chaos based on intensity
+  block:
+    - name: Set resource chaos parameters
+      set_fact:
+        resource_chaos:
+          cpu_stress_duration: >
+            {% if chaos_intensity == 'low' %}
+              60
+            {% elif chaos_intensity == 'medium' %}
+              120
+            {% else %}
+              300
+            {% endif %}
+          memory_stress_mb: >
+            {% if chaos_intensity == 'low' %}
+              512
+            {% elif chaos_intensity == 'medium' %}
+              1024
+            {% else %}
+              2048
+            {% endif %}
+          disk_stress_duration: >
+            {% if chaos_intensity == 'low' %}
+              60
+            {% elif chaos_intensity == 'medium' %}
+              120
+            {% else %}
+              300
+            {% endif %}
+
+    - name: Install stress-ng if not present
+      package:
+        name: stress-ng
+        state: present
+      when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+    - name: Create CPU stress script
+      copy:
+        content: |
+          #!/bin/bash
+          # CPU Stress Script - Part of Chaos Garden Orchestrator
+          
+          CPU_CORES={{ ansible_processor_vcpus | default(1) }}
+          STRESS_DURATION={{ resource_chaos.cpu_stress_duration }}
+          
+          echo "🔥 Applying CPU stress..."
+          echo "   Cores: $CPU_CORES"
+          echo "   Duration: ${STRESS_DURATION}s"
+          
+          # Stress all CPU cores
+          stress-ng --cpu $CPU_CORES --timeout ${STRESS_DURATION}s &
+          STRESS_PID=$!
+          
+          # Monitor CPU usage during stress
+          for i in $(seq 1 $((STRESS_DURATION / 10))); do
+            echo "CPU Usage: $(top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1)%"
+            sleep 10
+          done
+          
+          # Wait for stress to complete
+          wait $STRESS_PID
+          
+          echo "✅ CPU stress complete!"
+        dest: /tmp/cpu_stress.sh
+        owner: root
+        mode: '0755'
+
+    - name: Execute CPU stress
+      shell: /tmp/cpu_stress.sh
+      async: {{ resource_chaos.cpu_stress_duration | int + 30 }}
+      poll: 0
+      register: cpu_stress_result
+
+    - name: Create memory stress script
+      copy:
+        content: |
+          #!/bin/bash
+          # Memory Stress Script - Part of Chaos Garden Orchestrator
+          
+          STRESS_MB={{ resource_chaos.memory_stress_mb }}
+          STRESS_DURATION={{ resource_chaos.cpu_stress_duration }}
+          
+          echo "🧠 Applying memory stress..."
+          echo "   Memory: ${STRESS_MB}MB"
+          echo "   Duration: ${STRESS_DURATION}s"
+          
+          # Stress memory
+          stress-ng --vm 1 --vm-bytes ${STRESS_MB}M --timeout ${STRESS_DURATION}s &
+          STRESS_PID=$!
+          
+          # Monitor memory usage during stress
+          for i in $(seq 1 $((STRESS_DURATION / 10))); do
+            echo "Memory Usage: $(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2 }')"
+            sleep 10
+          done
+          
+          # Wait for stress to complete
+          wait $STRESS_PID
+          
+          echo "✅ Memory stress complete!"
+        dest: /tmp/memory_stress.sh
+        owner: root
+        mode: '0755'
+
+    - name: Execute memory stress
+      shell: /tmp/memory_stress.sh
+      async: {{ resource_chaos.cpu_stress_duration | int + 30 }}
+      poll: 0
+      register: memory_stress_result
+
+    - name: Create disk I/O stress script
+      copy:
+        content: |
+          #!/bin/bash
+          # Disk I/O Stress Script - Part of Chaos Garden Orchestrator
+          
+          STRESS_DURATION={{ resource_chaos.disk_stress_duration }}
+          TEST_FILE=/tmp/chaos_disk_test.dat
+          
+          echo "💾 Applying disk I/O stress..."
+          echo "   Duration: ${STRESS_DURATION}s"
+          
+          # Create test file
+          dd if=/dev/zero of=$TEST_FILE bs=1M count=100
+          
+          # Stress disk with random reads/writes
+          for i in $(seq 1 $((STRESS_DURATION / 5))); do
+            dd if=$TEST_FILE of=/dev/null bs=1M count=10 iflag=direct
+            dd if=/dev/zero of=$TEST_FILE bs=1M count=10 oflag=direct
+            sleep 5
+          done
+          
+          # Clean up test file
+          rm -f $TEST_FILE
+          
+          echo "✅ Disk I/O stress complete!"
+        dest: /tmp/disk_stress.sh
+        owner: root
+        mode: '0755'
+
+    - name: Execute disk I/O stress
+      shell: /tmp/disk_stress.sh
+      async: {{ resource_chaos.disk_stress_duration | int + 30 }}
+      poll: 0
+      register: disk_stress_result
+
+    - name: Wait for CPU stress to complete
+      async_status:
+        jid: "{{ cpu_stress_result.ansible_job_id }}"
+      register: cpu_job_result
+      until: cpu_job_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Wait for memory stress to complete
+      async_status:
+        jid: "{{ memory_stress_result.ansible_job_id }}"
+      register: memory_job_result
+      until: memory_job_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Wait for disk stress to complete
+      async_status:
+        jid: "{{ disk_stress_result.ansible_job_id }}"
+      register: disk_job_result
+      until: disk_job_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Clean up stress scripts
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/cpu_stress.sh
+        - /tmp/memory_stress.sh
+        - /tmp/disk_stress.sh
+
+    - name: Record resource chaos metrics
+      set_fact:
+        resource_chaos_metrics:
+          cpu_cores: "{{ ansible_processor_vcpus | default(1) }}"
+          cpu_stress_duration: "{{ resource_chaos.cpu_stress_duration }}"
+          memory_stress_mb: "{{ resource_chaos.memory_stress_mb }}"
+          disk_stress_duration: "{{ resource_chaos.disk_stress_duration }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display resource chaos summary
+      debug:
+        msg: |
+          🔥 Resource Chaos Applied!
+          
+          Parameters:
+          - CPU Stress: {{ resource_chaos.cpu_stress_duration }} seconds on {{ ansible_processor_vcpus | default(1) }} cores
+          - Memory Stress: {{ resource_chaos.memory_stress_mb }}MB
+          - Disk I/O Stress: {{ resource_chaos.disk_stress_duration }} seconds
+          
+          "A system that can't handle resource stress is a system that can't handle growth." 🌱
+  when: chaos_scenarios.resource.enabled | default(true)

@@ -1,0 +1,117 @@
+- name: Apply network chaos based on intensity
+  block:
+    - name: Set network chaos parameters
+      set_fact:
+        network_chaos:
+          packet_loss: >
+            {% if chaos_intensity == 'low' %}
+              5%
+            {% elif chaos_intensity == 'medium' %}
+              15%
+            {% else %}
+              30%
+            {% endif %}
+          latency: >
+            {% if chaos_intensity == 'low' %}
+              50ms
+            {% elif chaos_intensity == 'medium' %}
+              200ms
+            {% else %}
+              500ms
+            {% endif %}
+          bandwidth: >
+            {% if chaos_intensity == 'low' %}
+              10mbit
+            {% elif chaos_intensity == 'medium' %}
+              5mbit
+            {% else %}
+              1mbit
+            {% endif %}
+
+    - name: Install tc (traffic control) if not present
+      package:
+        name: iproute2
+        state: present
+      when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+
+    - name: Create network chaos script
+      copy:
+        content: |
+          #!/bin/bash
+          # Network Chaos Script - Part of Chaos Garden Orchestrator
+          
+          INTERFACE={{ ansible_default_ipv4.interface | default('eth0') }}
+          PACKET_LOSS={{ network_chaos.packet_loss }}
+          LATENCY={{ network_chaos.latency }}
+          BANDWIDTH={{ network_chaos.bandwidth }}
+          DURATION={{ chaos_duration }}
+          
+          echo "🌪️  Applying network chaos..."
+          echo "   Interface: $INTERFACE"
+          echo "   Packet Loss: $PACKET_LOSS"
+          echo "   Latency: $LATENCY"
+          echo "   Bandwidth: $BANDWIDTH"
+          echo "   Duration: ${DURATION}s"
+          
+          # Add network impairments
+          tc qdisc add dev $INTERFACE root handle 1: prio
+          tc qdisc add dev $INTERFACE parent 1:3 handle 30: netem \
+            loss $PACKET_LOSS \
+            delay $LATENCY
+          tc qdisc add dev $INTERFACE parent 30: handle 31: tbf \
+            rate $BANDWIDTH \
+            burst 32k \
+            latency 400ms
+          
+          # Wait for chaos duration
+          sleep $DURATION
+          
+          # Remove network impairments
+          tc qdisc del dev $INTERFACE root
+          
+          echo "✅ Network chaos complete!"
+        dest: /tmp/network_chaos.sh
+        owner: root
+        mode: '0755'
+
+    - name: Execute network chaos
+      shell: /tmp/network_chaos.sh
+      async: {{ chaos_duration | int + 30 }}
+      poll: 0
+      register: network_chaos_result
+
+    - name: Wait for network chaos to complete
+      async_status:
+        jid: "{{ network_chaos_result.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 30
+      delay: 10
+
+    - name: Clean up network chaos script
+      file:
+        path: /tmp/network_chaos.sh
+        state: absent
+
+    - name: Record network chaos metrics
+      set_fact:
+        network_chaos_metrics:
+          packet_loss: "{{ network_chaos.packet_loss }}"
+          latency: "{{ network_chaos.latency }}"
+          bandwidth: "{{ network_chaos.bandwidth }}"
+          duration: "{{ chaos_duration }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display network chaos summary
+      debug:
+        msg: |
+          🌪️  Network Chaos Applied!
+          
+          Parameters:
+          - Packet Loss: {{ network_chaos.packet_loss }}
+          - Latency: {{ network_chaos.latency }}
+          - Bandwidth: {{ network_chaos.bandwidth }}
+          - Duration: {{ chaos_duration }} seconds
+          
+          "A network that can't handle chaos is a network that can't handle reality." 🌱
+  when: chaos_scenarios.network.enabled | default(true)

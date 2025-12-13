@@ -1,0 +1,101 @@
+- name: Perform pre-chaos health check
+  block:
+    - name: Check system uptime
+      command: uptime
+      register: uptime_check
+      changed_when: false
+
+    - name: Display system uptime
+      debug:
+        msg: "System uptime: {{ uptime_check.stdout }}"
+
+    - name: Check disk space
+      command: df -h
+      register: disk_check
+      changed_when: false
+
+    - name: Check memory usage
+      command: free -h
+      register: memory_check
+      changed_when: false
+
+    - name: Check network connectivity
+      command: ping -c 3 8.8.8.8
+      register: network_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Verify critical services are running
+      service_facts:
+
+    - name: List critical services status
+      debug:
+        msg: "{{ item }}: {{ ansible_facts.services[item].state }}"
+      loop: >
+        {{ ansible_facts.services.keys() | 
+           select('match', '^(ssh|sshd|nginx|apache|mysql|postgresql)') | 
+           list }}
+
+    - name: Record pre-chaos baseline
+      set_fact:
+        pre_chaos_baseline:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          uptime: "{{ uptime_check.stdout }}"
+          disk_usage: "{{ disk_check.stdout_lines }}"
+          memory_usage: "{{ memory_check.stdout_lines }}"
+          network_status: >
+            {% if network_check.rc == 0 %}
+              reachable
+            {% else %}
+              unreachable
+            {% endif %}
+
+    - name: Save pre-chaos baseline to file
+      copy:
+        content: |
+          Chaos Garden Baseline Report
+          ============================
+          
+          Timestamp: {{ pre_chaos_baseline.timestamp }}
+          
+          System Uptime:
+          {{ pre_chaos_baseline.uptime }}
+          
+          Disk Usage:
+          {% for line in pre_chaos_baseline.disk_usage %}
+          {{ line }}
+          {% endfor %}
+          
+          Memory Usage:
+          {% for line in pre_chaos_baseline.memory_usage %}
+          {{ line }}
+          {% endfor %}
+          
+          Network Status: {{ pre_chaos_baseline.network_status }}
+          
+          🌱 Pre-chaos baseline recorded successfully! 🌱
+        dest: /tmp/chaos_baseline_{{ ansible_date_time.epoch }}.txt
+        owner: root
+        mode: '0644'
+
+    - name: Display health check summary
+      debug:
+        msg: |
+          🌱 Pre-chaos health check complete!
+          
+          System Status:
+          - Uptime: {{ uptime_check.stdout.split(',')[0].split('up ')[1] }}
+          - Network: {{ '✓ Connected' if network_check.rc == 0 else '✗ Disconnected' }}
+          - Services: Critical services verified
+          
+          Proceeding with chaos injection... 🌪️
+  rescue:
+    - name: Health check failed - aborting chaos
+      debug:
+        msg: |
+          🚨 Health check failed! Aborting chaos injection.
+          
+          Please check your infrastructure and try again.
+          
+          "A garden cannot grow in barren soil." - Chaos Gardener
+      failed_when: true

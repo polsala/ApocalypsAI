@@ -1,0 +1,65 @@
+---
+- name: Chaos Garden Orchestrator
+  hosts: all
+  become: true
+  vars:
+    chaos_intensity: "{{ chaos_intensity | default('medium') }}"
+    chaos_duration: "{{ chaos_duration | default('300') }}"
+    enable_cleanup: "{{ enable_cleanup | default(true) }}"
+    enable_reporting: "{{ enable_reporting | default(true) }}"
+  pre_tasks:
+    - name: Display chaos garden welcome message
+      debug:
+        msg: |
+          🌱 Welcome to the Chaos Garden Orchestrator! 🌱
+          
+          Today's chaos forecast:
+          - Intensity: {{ chaos_intensity }}
+          - Duration: {{ chaos_duration }} seconds
+          - Cleanup enabled: {{ enable_cleanup }}
+          - Reporting enabled: {{ enable_reporting }}
+          
+          May your infrastructure be ever resilient! 🌪️
+
+    - name: Pre-chaos health check
+      include_tasks: tasks/chaos/health_check.yml
+
+  tasks:
+    - name: Apply network chaos
+      include_tasks: tasks/chaos/network.yml
+      when: chaos_scenarios.network.enabled | default(true)
+
+    - name: Apply resource chaos
+      include_tasks: tasks/chaos/resource.yml
+      when: chaos_scenarios.resource.enabled | default(true)
+
+    - name: Apply service chaos
+      include_tasks: tasks/chaos/service.yml
+      when: chaos_scenarios.service.enabled | default(true)
+
+    - name: Apply time chaos
+      include_tasks: tasks/chaos/time.yml
+      when: chaos_scenarios.time.enabled | default(true)
+
+    - name: Apply random chaos
+      include_tasks: tasks/chaos/random.yml
+      when: chaos_scenarios.random.enabled | default(false)
+
+  post_tasks:
+    - name: Cleanup chaos artifacts
+      include_tasks: tasks/cleanup.yml
+      when: enable_cleanup | default(true)
+
+    - name: Generate chaos report
+      include_tasks: tasks/report.yml
+      when: enable_reporting | default(true)
+
+    - name: Display chaos garden summary
+      debug:
+        msg: |
+          🌱 Chaos Garden Session Complete! 🌱
+          
+          Your infrastructure has been through the wringer.
+          Check the chaos report for details and recommendations.
+          
+          Remember: what doesn't break your systems makes them stronger! 💪

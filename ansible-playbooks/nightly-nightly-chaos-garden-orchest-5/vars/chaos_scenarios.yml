@@ -1,0 +1,126 @@
+# Chaos Garden Orchestrator - Default Scenario Configuration
+# 
+# This file defines the default configuration for chaos scenarios.
+# Override these values in your inventory or playbook variables.
+
+chaos_scenarios:
+  # Network Chaos - Packet loss, latency, bandwidth throttling
+  network:
+    enabled: true
+    description: "Network impairments (packet loss, latency, bandwidth)"
+    
+  # Resource Chaos - CPU, memory, disk I/O stress
+  resource:
+    enabled: true
+    description: "Resource stress (CPU, memory, disk I/O)"
+    
+  # Service Chaos - Service restarts and failures
+  service:
+    enabled: true
+    description: "Service disruptions (restarts, stops, starts)"
+    
+  # Time Chaos - Clock skew and time manipulation
+  time:
+    enabled: true
+    description: "Time manipulation (clock skew, NTP disruption)"
+    
+  # Random Chaos - Completely unpredictable chaos
+  random:
+    enabled: false
+    description: "Random chaos selection (use with caution!)"
+
+# Chaos intensity levels and their effects
+chaos_intensity_levels:
+  low:
+    network:
+      packet_loss: "5%"
+      latency: "50ms"
+      bandwidth: "10mbit"
+    resource:
+      cpu_stress_duration: 60
+      memory_stress_mb: 512
+      disk_stress_duration: 60
+    service:
+      chaos_service_count: 3
+    time:
+      clock_skew_seconds: 30
+      ntp_disable_duration: 60
+    
+  medium:
+    network:
+      packet_loss: "15%"
+      latency: "200ms"
+      bandwidth: "5mbit"
+    resource:
+      cpu_stress_duration: 120
+      memory_stress_mb: 1024
+      disk_stress_duration: 120
+    service:
+      chaos_service_count: 6
+    time:
+      clock_skew_seconds: 300
+      ntp_disable_duration: 300
+    
+  high:
+    network:
+      packet_loss: "30%"
+      latency: "500ms"
+      bandwidth: "1mbit"
+    resource:
+      cpu_stress_duration: 300
+      memory_stress_mb: 2048
+      disk_stress_duration: 300
+    service:
+      chaos_service_count: 10
+    time:
+      clock_skew_seconds: 3600
+      ntp_disable_duration: 900
+
+# Safety settings
+chaos_safety:
+  # Maximum duration for any chaos scenario (seconds)
+  max_chaos_duration: 3600
+  
+  # Services to never chaos (critical system services)
+  protected_services:
+    - ssh
+    - sshd
+    - systemd
+    - kernel
+    - init
+    - network
+    - networking
+    
+  # Maximum number of services to chaos simultaneously
+  max_chaos_services: 10
+  
+  # Enable/disable automatic cleanup
+  auto_cleanup: true
+  
+  # Enable/disable reporting
+  auto_reporting: true
+
+# Chaos scheduling (for future use)
+chaos_schedule:
+  # Enable scheduled chaos runs
+  enabled: false
+  
+  # Schedule in cron format (minute hour day month weekday)
+  schedule_time: "0 2 * * *"  # Daily at 2 AM
+  
+  # Days to run chaos (0=Sunday, 1=Monday, etc.)
+  run_days: [1, 3, 5]  # Monday, Wednesday, Friday
+
+# Logging configuration
+chaos_logging:
+  # Log level (debug, info, warning, error)
+  level: "info"
+  
+  # Log file location
+  file: "/var/log/chaos_garden.log"
+  
+  # Maximum log file size (MB)
+  max_size: 100
+  
+  # Number of log files to keep
+  max_files: 5
