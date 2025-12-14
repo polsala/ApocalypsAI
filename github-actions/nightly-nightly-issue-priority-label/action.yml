@@ -1,0 +1,16 @@
+name: Issue Priority Labeler
+description: Auto‑label issues based on title keywords.
+inputs:
+  title:
+    description: Issue title
+    required: true
+  priority_keywords:
+    description: JSON mapping of priority levels to keyword arrays
+    required: false
+    default: '{\"critical\":[\"crash\",\"down\"],\"high\":[\"error\",\"fail\"],\"medium\":[\"slow\",\"lag\"],\"low\":[\"typo\",\"suggestion\"]}'
+outputs:
+  label:
+    description: Determined priority label
+runs:
+  using: node12
+  main: src/index.js
