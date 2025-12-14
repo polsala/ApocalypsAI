@@ -1,0 +1,12 @@
+[package]
+name = "nightly-relic-sorter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+infer = "0.12"
+
+[dev-dependencies]
+tempfile = "3"
