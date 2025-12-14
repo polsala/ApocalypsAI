@@ -1,0 +1,28 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical utility that generates and verifies quantum entanglement pairs for fun and pseudo-scientific validation"
+authors = ["ApocalypsAI"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+dependencies = {
+    serde = { version = "1.0", features = ["derive"] },
+    serde_json = "1.0",
+    uuid = { version = "1.0", features = ["v4", "serde"] },
+    chrono = { version = "0.4", features = ["serde"] },
+}
+
+dev-dependencies = {
+    # Mock rationale: Using deterministic mock values for rand and chrono to ensure tests are deterministic and offline
+}
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
