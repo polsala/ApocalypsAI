@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasteland Almanac</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Nightly Wasteland Almanac</h1>
+            <p class="tagline">Your daily dose of survival wisdom, foraging tips, and forgotten lore.</p>
+        </header>
+
+        <main>
+            <section class="card">
+                <h2>Today's Wisdom</h2>
+                <p>{{ daily_wisdom }}</p>
+            </section>
+
+            <section class="card">
+                <h2>Foraging Tips</h2>
+                <ul>
+                    {% for tip in foraging_tips %}
+                        <li>{{ tip }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section class="card">
+                <h2>Wasteland Lore</h2>
+                <ul>
+                    {% for lore in lore_snippets %}
+                        <li>{{ lore }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; {{ now.year }} ApocalypsAI. Stay vigilant, wanderer.</p>
+        </footer>
+    </div>
+</body>
+</html>
