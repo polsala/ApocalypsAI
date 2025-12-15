@@ -1,0 +1,12 @@
+[package]
+name = "nightly-quick-ssh-keygen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rsa = "0.9"
+pem = "1.0"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
