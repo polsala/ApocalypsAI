@@ -1,0 +1,1 @@
+const assert = require('assert');\nconst { getForecast } = require('../src/forecast');\n\n// Expected output computed from the deterministic hash algorithm\nconst expected = 'Silent snowfall of ash with a temperature of 3°C';\nconst actual = getForecast('Radiated Ruins');\nassert.strictEqual(actual, expected);\nconsole.log('All tests passed');
