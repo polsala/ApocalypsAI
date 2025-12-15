@@ -1,0 +1,23 @@
+{
+  "name": "nightly-cosmic-nudge",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool that offers a random 'cosmic nudge' to help you make decisions when faced with too many choices.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "decision-making",
+    "whimsical",
+    "node-utils",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "bin": {
+    "cosmic-nudge": "src/index.js"
+  }
+}
