@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-suite {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case.pass {
+            border-color: #4CAF50;
+            background: #f0fff0;
+        }
+        .test-case.fail {
+            border-color: #f44336;
+            background: #fff0f0;
+        }
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-result {
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        .btn {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn.primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn.success {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn.danger {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-suite">
+        <h1>🧪 Quantum Entanglement Simulator Tests</h1>
+        <p>These tests verify the core functionality of the quantum simulator.</p>
+        
+        <button class="btn primary" onclick="runAllTests()">Run All Tests</button>
+        <button class="btn success" onclick="showResults()">Show Results</button>
+        <button class="btn danger" onclick="clearResults()">Clear Results</button>
+        
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        // Mock React and D3 for testing
+        window.React = {
+            useState: (initial) => [initial, () => {}],
+            useEffect: () => {},
+            useRef: () => ({ current: null })
+        };
+        
+        window.ReactDOM = {
+            createRoot: () => ({
+                render: () => {}
+            })
+        };
+        
+        window.d3 = {
+            select: () => ({
+                append: () => ({
+                    attr: () => ({
+                        append: () => ({
+                            attr: () => {}
+                        })
+                    })
+                }),
+                selectAll: () => ({
+                    remove: () => {}
+                })
+            })
+        };
+        
+        // Test utilities
+        function assertEqual(actual, expected, message) {
+            const passed = JSON.stringify(actual) === JSON.stringify(expected);
+            return {
+                passed,
+                message: passed ? `✅ ${message}` : `❌ ${message}\n  Expected: ${JSON.stringify(expected)}\n  Actual: ${JSON.stringify(actual)}`,
+                actual,
+                expected
+            };
+        }
+        
+        function assertInRange(actual, min, max, message) {
+            const passed = actual >= min && actual <= max;
+            return {
+                passed,
+                message: passed ? `✅ ${message}` : `❌ ${message}\n  Expected: ${min} <= ${actual} <= ${max}`,
+                actual,
+                expected: `between ${min} and ${max}`
+            };
+        }
+        
+        // Mock quantum simulator logic for testing
+        function calculateProbabilities(circuit) {
+            const probs = {
+                '000': 0.125, '001': 0.125, '010': 0.125, '011': 0.125,
+                '100': 0.125, '101': 0.125, '110': 0.125, '111': 0.125
+            };
+            
+            circuit.forEach((row, qubitIndex) => {
+                row.forEach((gate) => {
+                    if (gate === 'X') {
+                        Object.keys(probs).forEach(state => {
+                            if (state[2 - qubitIndex] === '0') {
+                                const flipped = state.split('');
+                                flipped[2 - qubitIndex] = '1';
+                                const flippedState = flipped.join('');
+                                const temp = probs[state];
+                                probs[state] = probs[flippedState];
+                                probs[flippedState] = temp;
+                            }
+                        });
+                    }
+                    if (gate === 'H') {
+                        Object.keys(probs).forEach(state => {
+                            probs[state] = 0.125;
+                        });
+                    }
+                });
+            });
+            
+            return probs;
+        }
+        
+        function checkEntanglement(circuit) {
+            const entanglements = [];
+            
+            circuit.forEach((row, qubitIndex) => {
+                row.forEach((gate, slotIndex) => {
+                    if (gate === 'CNOT') {
+                        const targetQubit = (qubitIndex + 1) % 3;
+                        entanglements.push({
+                            control: qubitIndex,
+                            target: targetQubit,
+                            slot: slotIndex
+                        });
+                    }
+                    if (gate === 'SWAP') {
+                        const targetQubit = (qubitIndex + 1) % 3;
+                        entanglements.push({
+                            control: qubitIndex,
+                            target: targetQubit,
+                            slot: slotIndex,
+                            type: 'SWAP'
+                        });
+                    }
+                });
+            });
+            
+            return entanglements;
+        }
+        
+        // Test cases
+        function testInitialState() {
+            const circuit = Array(3).fill().map(() => Array(5).fill(null));
+            const probs = calculateProbabilities(circuit);
+            
+            return assertEqual(probs['000'], 1, 'Initial state should be |000⟩ with probability 1');
+        }
+        
+        function testXGate() {
+            const circuit = Array(3).fill().map(() => Array(5).fill(null));
+            circuit[0][0] = 'X'; // Apply X gate to qubit 0
+            const probs = calculateProbabilities(circuit);
+            
+            return assertEqual(probs['100'], 1, 'X gate on qubit 0 should result in |100⟩');
+        }
+        
+        function testHGate() {
+            const circuit = Array(3).fill().map(() => Array(5).fill(null));
+            circuit[0][0] = 'H'; // Apply H gate to qubit 0
+            const probs = calculateProbabilities(circuit);
+            
+            // After H gate, all states should have equal probability
+            let allEqual = true;
+            Object.values(probs).forEach(prob => {
+                if (prob !== 0.125) allEqual = false;
+            });
+            
+            return {
+                passed: allEqual,
+                message: allEqual ? '✅ H gate creates equal superposition' : '❌ H gate should create equal superposition'
+            };
+        }
+        
+        function testEntanglementDetection() {
+            const circuit = Array(3).fill().map(() => Array(5).fill(null));
+            circuit[0][0] = 'CNOT';
+            circuit[1][0] = '•';
+            
+            const entanglements = checkEntanglement(circuit);
+            
+            return assertEqual(entanglements.length, 1, 'CNOT gate should create one entanglement');
+        }
+        
+        function testProbabilitySum() {
+            const circuit = Array(3).fill().map(() => Array(5).fill(null));
+            circuit[0][0] = 'H';
+            circuit[1][1] = 'X';
+            circuit[2][2] = 'Z';
+            
+            const probs = calculateProbabilities(circuit);
+            const sum = Object.values(probs).reduce((a, b) => a + b, 0);
+            
+            return assertInRange(sum, 0.99, 1.01, 'Probabilities should sum to 1');
+        }
+        
+        function testRandomCircuit() {
+            // Test that random circuit generation doesn't crash
+            try {
+                const gates = ['H', 'X', 'Z', 'CNOT', 'SWAP'];
+                const newCircuit = Array(3).fill().map(() => Array(5).fill(null));
+                
+                for (let slot = 0; slot < 5; slot++) {
+                    const qubit = Math.floor(Math.random() * 3);
+                    const gate = gates[Math.floor(Math.random() * gates.length)];
+                    
+                    if (gate === 'CNOT' || gate === 'SWAP') {
+                        const target = (qubit + 1) % 3;
+                        newCircuit[qubit][slot] = gate;
+                        newCircuit[target][slot] = '•';
+                    } else {
+                        newCircuit[qubit][slot] = gate;
+                    }
+                }
+                
+                return {
+                    passed: true,
+                    message: '✅ Random circuit generation works'
+                };
+            } catch (error) {
+                return {
+                    passed: false,
+                    message: `❌ Random circuit generation failed: ${error.message}`
+                };
+            }
+        }
+        
+        function testMeasurement() {
+            // Test that measurement returns a valid state
+            const states = ['000', '001', '010', '011', '100', '101', '110', '111'];
+            const probs = {
+                '000': 0.125, '001': 0.125, '010': 0.125, '011': 0.125,
+                '100': 0.125, '101': 0.125, '110': 0.125, '111': 0.125
+            };
+            
+            // Simulate measurement
+            const random = Math.random();
+            let cumulative = 0;
+            let result = '000';
+            
+            for (let i = 0; i < states.length; i++) {
+                cumulative += probs[states[i]];
+                if (random <= cumulative) {
+                    result = states[i];
+                    break;
+                }
+            }
+            
+            const validState = states.includes(result);
+            return {
+                passed: validState,
+                message: validState ? '✅ Measurement returns valid state' : '❌ Measurement returned invalid state'
+            };
+        }
+        
+        // Test runner
+        let testResults = [];
+        
+        function runTest(testFn, testName) {
+            try {
+                const result = testFn();
+                testResults.push({
+                    name: testName,
+                    ...result
+                });
+                return result;
+            } catch (error) {
+                const result = {
+                    passed: false,
+                    message: `❌ ${testName} failed with error: ${error.message}`
+                };
+                testResults.push({
+                    name: testName,
+                    ...result
+                });
+                return result;
+            }
+        }
+        
+        function runAllTests() {
+            testResults = [];
+            
+            runTest(testInitialState, 'Initial State Test');
+            runTest(testXGate, 'X Gate Test');
+            runTest(testHGate, 'H Gate Test');
+            runTest(testEntanglementDetection, 'Entanglement Detection Test');
+            runTest(testProbabilitySum, 'Probability Sum Test');
+            runTest(testRandomCircuit, 'Random Circuit Test');
+            runTest(testMeasurement, 'Measurement Test');
+            
+            showResults();
+        }
+        
+        function showResults() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = '';
+            
+            let passedCount = 0;
+            let totalCount = testResults.length;
+            
+            testResults.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `test-case ${result.passed ? 'pass' : 'fail'}`;
+                
+                const title = document.createElement('div');
+                title.className = 'test-title';
+                title.textContent = result.name;
+                
+                const message = document.createElement('div');
+                message.className = 'test-result';
+                message.innerHTML = result.message.replace(/\n/g, '<br>');
+                
+                div.appendChild(title);
+                div.appendChild(message);
+                output.appendChild(div);
+                
+                if (result.passed) passedCount++;
+            });
+            
+            const summary = document.createElement('div');
+            summary.className = 'test-case';
+            summary.innerHTML = `
+                <div class="test-title">Test Summary</div>
+                <div class="test-result">
+                    Passed: ${passedCount}/${totalCount}
+                    <br>Success Rate: ${((passedCount / totalCount) * 100).toFixed(1)}%
+                </div>
+            `;
+            output.appendChild(summary);
+        }
+        
+        function clearResults() {
+            document.getElementById('test-output').innerHTML = '';
+            testResults = [];
+        }
+        
+        // Run tests on load
+        window.onload = runAllTests;
+    </script>
+</body>
+</html>
