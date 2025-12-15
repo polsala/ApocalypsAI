@@ -1,0 +1,23 @@
+name: Nightly PR Branch Cleaner
+
+description: Delete stale merged branches with a friendly farewell.
+
+inputs:
+  github_token:
+    description: 'GitHub token with repo scope'
+    required: true
+  days_old:
+    description: 'Minimum age in days for a branch to be considered stale'
+    required: false
+    default: '30'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cleanup stale branches
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        DAYS_OLD: ${{ inputs.days_old }}
+      run: |
+        bash ${{ github.action_path }}/cleanup.sh
