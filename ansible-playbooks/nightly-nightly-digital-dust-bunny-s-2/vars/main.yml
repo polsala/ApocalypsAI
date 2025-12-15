@@ -1,0 +1,10 @@
+---
+# List of paths to scan for old files/directories
+scan_paths:
+  - /tmp/dust_bunnies_test
+
+# Age threshold in days. Files/directories older than this will be considered dust bunnies.
+age_threshold_days: 1
+
+# Set to 'true' for a dry run (only reports, no deletion), 'false' to actually delete.
+dry_run: true

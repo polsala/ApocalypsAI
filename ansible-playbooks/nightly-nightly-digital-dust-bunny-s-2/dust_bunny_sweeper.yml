@@ -1,0 +1,57 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure scan_paths are absolute
+      ansible.builtin.set_fact:
+        _absolute_scan_paths: "{{ scan_paths | map('regex_replace', '^~', ansible_facts.user_dir) | list }}"
+      when: scan_paths is defined and scan_paths | length > 0
+
+    - name: Find old files and directories
+      ansible.builtin.find:
+        paths: "{{ _absolute_scan_paths | default([]) }}"
+        age: "{{ age_threshold_days }}d"
+        age_stamp: atime # Access time, or mtime for modification time
+        file_type: any # Find both files and directories
+        recurse: yes
+      register: old_items_found
+      when: _absolute_scan_paths is defined and _absolute_scan_paths | length > 0
+
+    - name: Report on identified dust bunnies (Dry Run)
+      ansible.builtin.debug:
+        msg: |
+          DRY RUN: Would remove {{ old_items_found.files | length }} items on {{ inventory_hostname }}.
+          Identified dust bunnies:
+          {% for item in old_items_found.files %}
+          - {{ item.path }} (accessed {{ ((ansible_date_time.epoch | int - item.atime) / (60*60*24)) | int }} days ago)
+          {% endfor %}
+      when: dry_run | bool and old_items_found.files is defined and old_items_found.files | length > 0
+
+    - name: Remove old files and directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_items_found.files }}"
+      when: not dry_run | bool and old_items_found.files is defined and old_items_found.files | length > 0
+      register: removed_items
+
+    - name: Report on removed dust bunnies (Actual Run)
+      ansible.builtin.debug:
+        msg: |
+          Successfully removed {{ removed_items.results | selectattr('changed', 'equalto', true) | list | length }} items on {{ inventory_hostname }}.
+          Removed items:
+          {% for item in removed_items.results %}
+          {% if item.changed %}
+          - {{ item.path }}
+          {% endif %}
+          {% endfor %}
+      when: not dry_run | bool and removed_items is defined and removed_items.results | selectattr('changed', 'equalto', true) | list | length > 0
+
+    - name: Report no dust bunnies found
+      ansible.builtin.debug:
+        msg: "No digital dust bunnies found to sweep on {{ inventory_hostname }}."
+      when: old_items_found.files is defined and old_items_found.files | length == 0
