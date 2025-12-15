@@ -1,0 +1,159 @@
+name: Visualize Workflows
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    description: 'Manually trigger workflow visualization'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  visualize-workflows:
+    name: Generate Workflow Visualizations
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm install -g @mermaid-js/mermaid-cli
+        npm install yaml js-yaml
+
+    - name: Create visualization script
+      run: |
+        mkdir -p workflow-diagrams
+        cat > visualize.js << 'EOF'
+        const fs = require('fs');
+        const path = require('path');
+        const yaml = require('js-yaml');
+        
+        function extractWorkflowJobs(content) {
+          try {
+            const workflow = yaml.load(content);
+            const jobs = workflow.jobs || {};
+            const jobNames = Object.keys(jobs);
+            
+            let mermaid = 'graph TD\n';
+            
+            // Add all jobs as nodes
+            jobNames.forEach(jobName => {
+              const job = jobs[jobName];
+              const displayName = job.name || jobName;
+              mermaid += `  ${jobName}["${displayName}"]\n`;
+            });
+            
+            // Add dependencies
+            jobNames.forEach(jobName => {
+              const job = jobs[jobName];
+              if (job.needs) {
+                const needs = Array.isArray(job.needs) ? job.needs : [job.needs];
+                needs.forEach(dep => {
+                  mermaid += `  ${dep} --> ${jobName}\n`;
+                });
+              }
+            });
+            
+            return mermaid;
+          } catch (e) {
+            console.error('Error parsing workflow:', e.message);
+            return 'graph TD\n  error["Parse Error"]\n';
+          }
+        }
+        
+        function processWorkflows() {
+          const workflowsDir = '.github/workflows';
+          const outputDir = 'workflow-diagrams';
+          
+          if (!fs.existsSync(workflowsDir)) {
+            console.log('No workflows directory found');
+            return;
+          }
+          
+          const files = fs.readdirSync(workflowsDir)
+            .filter(file => file.endsWith('.yml') || file.endsWith('.yaml'));
+          
+          console.log(`Found ${files.length} workflow files`);
+          
+          files.forEach(file => {
+            const filePath = path.join(workflowsDir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            
+            console.log(`Processing ${file}...`);
+            
+            const mermaid = extractWorkflowJobs(content);
+            const baseName = path.basename(file, path.extname(file));
+            const mermaidFile = path.join(outputDir, `${baseName}.mmd`);
+            const svgFile = path.join(outputDir, `${baseName}.svg`);
+            
+            fs.writeFileSync(mermaidFile, mermaid);
+            console.log(`Generated ${mermaidFile}`);
+          });
+        }
+        
+        processWorkflows();
+        EOF
+
+    - name: Generate Mermaid diagrams
+      run: |
+        node visualize.js
+        
+        # Convert all mermaid files to SVG
+        for file in workflow-diagrams/*.mmd; do
+          if [ -f "$file" ]; then
+            base=$(basename "$file" .mmd)
+            echo "Converting $file to $base.svg"
+            mmdc -i "$file" -o "workflow-diagrams/$base.svg" \
+              -t neutral \
+              --backgroundColor transparent \
+              --scale 1
+          fi
+        done
+
+    - name: Create workflow summary
+      run: |
+        cat > workflow-diagrams/README.md << 'EOF'
+        # Workflow Visualizations
+        
+        This directory contains visual diagrams of all GitHub Actions workflows in this repository.
+        
+        Generated automatically by [nightly-gha-workflow-visualizer](https://github.com/polsala/ApocalypsAI/tree/main/.github/workflows/visualize-workflows.yml)
+        
+        ## Diagrams
+        EOF
+        
+        echo '' >> workflow-diagrams/README.md
+        for file in workflow-diagrams/*.svg; do
+          if [ -f "$file" ]; then
+            base=$(basename "$file" .svg)
+            echo "### $base" >> workflow-diagrams/README.md
+            echo "![${base}](${base}.svg)" >> workflow-diagrams/README.md
+            echo '' >> workflow-diagrams/README.md
+          fi
+        done
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add workflow-diagrams/
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: update workflow visualizations"
+          git push
+        fi
