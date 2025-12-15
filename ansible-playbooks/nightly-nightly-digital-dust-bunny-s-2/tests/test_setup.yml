@@ -1,0 +1,57 @@
+---
+- name: Setup test environment for Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  gather_facts: no
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: /tmp/dust_bunnies_test
+        state: directory
+        mode: '0755'
+
+    - name: Create old file 1 (2 days old)
+      ansible.builtin.copy:
+        content: "This is an old log file."
+        dest: /tmp/dust_bunnies_test/old_log_1.txt
+      register: old_file_1_created
+
+    - name: Set access time for old file 1
+      ansible.builtin.command: "touch -a -t {{ (ansible_date_time.epoch | int - (2 * 24 * 60 * 60)) | int | to_datetime('%s') | strftime('%Y%m%d%H%M.%S') }} /tmp/dust_bunnies_test/old_log_1.txt"
+      changed_when: true # Mock rationale: `touch` command always reports changed.
+
+    - name: Create old file 2 (3 days old)
+      ansible.builtin.copy:
+        content: "Another ancient artifact."
+        dest: /tmp/dust_bunnies_test/old_log_2.txt
+      register: old_file_2_created
+
+    - name: Set access time for old file 2
+      ansible.builtin.command: "touch -a -t {{ (ansible_date_time.epoch | int - (3 * 24 * 60 * 60)) | int | to_datetime('%s') | strftime('%Y%m%d%H%M.%S') }} /tmp/dust_bunnies_test/old_log_2.txt"
+      changed_when: true # Mock rationale: `touch` command always reports changed.
+
+    - name: Create a recent file (should not be deleted)
+      ansible.builtin.copy:
+        content: "This file is fresh."
+        dest: /tmp/dust_bunnies_test/recent_file.txt
+
+    - name: Create an old directory (4 days old)
+      ansible.builtin.file:
+        path: /tmp/dust_bunnies_test/old_dir
+        state: directory
+        mode: '0755'
+      register: old_dir_created
+
+    - name: Set access time for old directory
+      ansible.builtin.command: "touch -a -t {{ (ansible_date_time.epoch | int - (4 * 24 * 60 * 60)) | int | to_datetime('%s') | strftime('%Y%m%d%H%M.%S') }} /tmp/dust_bunnies_test/old_dir"
+      changed_when: true # Mock rationale: `touch` command always reports changed.
+
+    - name: Create a file inside the old directory
+      ansible.builtin.copy:
+        content: "Content of old dir file."
+        dest: /tmp/dust_bunnies_test/old_dir/nested_old_file.txt
+      register: nested_old_file_created
+
+    - name: Set access time for nested old file
+      ansible.builtin.command: "touch -a -t {{ (ansible_date_time.epoch | int - (4 * 24 * 60 * 60)) | int | to_datetime('%s') | strftime('%Y%m%d%H%M.%S') }} /tmp/dust_bunnies_test/old_dir/nested_old_file.txt"
+      changed_when: true # Mock rationale: `touch` command always reports changed.

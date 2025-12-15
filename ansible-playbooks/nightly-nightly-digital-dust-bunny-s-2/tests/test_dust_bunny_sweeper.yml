@@ -1,0 +1,106 @@
+---
+- name: Run Digital Dust Bunny Sweeper Tests
+  hosts: test_hosts
+  gather_facts: yes
+  vars:
+    test_dir: "/tmp/dust_bunnies_test"
+    old_file_1: "{{ test_dir }}/old_log_1.txt"
+    old_file_2: "{{ test_dir }}/old_log_2.txt"
+    recent_file: "{{ test_dir }}/recent_file.txt"
+    old_dir: "{{ test_dir }}/old_dir"
+    nested_old_file: "{{ test_dir }}/old_dir/nested_old_file.txt"
+
+  tasks:
+    - name: Include setup playbook
+      ansible.builtin.include_tasks: test_setup.yml
+
+    - name: Verify initial state - old files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ old_file_1 }}"
+        - "{{ old_file_2 }}"
+        - "{{ old_dir }}"
+        - "{{ nested_old_file }}"
+      register: old_files_exist
+      failed_when: not item.stat.exists
+      loop_control:
+        label: "Checking {{ item }}"
+
+    - name: Verify initial state - recent file exists
+      ansible.builtin.stat:
+        path: "{{ recent_file }}"
+      register: recent_file_exists
+      failed_when: not recent_file_exists.stat.exists
+
+    - name: Run sweeper in DRY RUN mode
+      ansible.builtin.command: "ansible-playbook -i {{ playbook_dir }}/inventory_test.ini {{ playbook_dir }}/../dust_bunny_sweeper.yml -e 'scan_paths={{ test_dir }} age_threshold_days=1 dry_run=true'"
+      register: dry_run_output
+      changed_when: false # Mock rationale: Dry run should not change system state.
+      # Mock rationale: The command module is used to simulate running the playbook.
+      # The output is captured to assert against.
+
+    - name: Assert dry run output identifies old files
+      ansible.builtin.assert:
+        that:
+          - "'DRY RUN: Would remove 4 items on localhost.' in dry_run_output.stdout"
+          - "'{{ old_file_1 }}' in dry_run_output.stdout"
+          - "'{{ old_file_2 }}' in dry_run_output.stdout"
+          - "'{{ old_dir }}' in dry_run_output.stdout"
+          - "'{{ nested_old_file }}' in dry_run_output.stdout"
+          - "'{{ recent_file }}' not in dry_run_output.stdout"
+        msg: "Dry run output did not correctly identify old files."
+
+    - name: Verify files still exist after dry run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ old_file_1 }}"
+        - "{{ old_file_2 }}"
+        - "{{ recent_file }}"
+        - "{{ old_dir }}"
+        - "{{ nested_old_file }}"
+      register: files_after_dry_run
+      failed_when: not item.stat.exists
+      loop_control:
+        label: "Checking {{ item }}"
+
+    - name: Run sweeper in ACTUAL mode
+      ansible.builtin.command: "ansible-playbook -i {{ playbook_dir }}/inventory_test.ini {{ playbook_dir }}/../dust_bunny_sweeper.yml -e 'scan_paths={{ test_dir }} age_threshold_days=1 dry_run=false'"
+      register: actual_run_output
+      changed_when: true # Mock rationale: Actual run should change system state.
+      # Mock rationale: The command module is used to simulate running the playbook.
+      # The output is captured to assert against.
+
+    - name: Assert actual run output reports removal
+      ansible.builtin.assert:
+        that:
+          - "'Successfully removed 4 items on localhost.' in actual_run_output.stdout"
+          - "'{{ old_file_1 }}' in actual_run_output.stdout"
+          - "'{{ old_file_2 }}' in actual_run_output.stdout"
+          - "'{{ old_dir }}' in actual_run_output.stdout"
+          - "'{{ nested_old_file }}' in actual_run_output.stdout"
+          - "'{{ recent_file }}' not in actual_run_output.stdout"
+        msg: "Actual run output did not correctly report removed files."
+
+    - name: Verify old files are removed after actual run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ old_file_1 }}"
+        - "{{ old_file_2 }}"
+        - "{{ old_dir }}"
+        - "{{ nested_old_file }}"
+      register: old_files_after_actual_run
+      failed_when: item.stat.exists
+      loop_control:
+        label: "Checking {{ item }}"
+
+    - name: Verify recent file still exists after actual run
+      ansible.builtin.stat:
+        path: "{{ recent_file }}"
+      register: recent_file_after_actual_run
+      failed_when: not recent_file_after_actual_run.stat.exists
+
+    - name: Include cleanup playbook
+      ansible.builtin.include_tasks: test_cleanup.yml

@@ -1,0 +1,10 @@
+---
+- name: Cleanup test environment for Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  gather_facts: no
+
+  tasks:
+    - name: Remove test directory
+      ansible.builtin.file:
+        path: /tmp/dust_bunnies_test
+        state: absent
