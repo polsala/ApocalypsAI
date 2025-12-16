@@ -1,0 +1,1 @@
+name: "Auto PR Labeler"\ndescription: "Add whimsical labels to PRs based on title keywords"\ninputs:\n  repo-token:\n    description: "GitHub token"\n    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"
