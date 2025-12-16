@@ -1,0 +1,1 @@
+export const moods = [\n  { phrase: "Radiant Ruins", color: "#ff7f7f" },\n  { phrase: "Dusty Dawn", color: "#ffd27f" },\n  { phrase: "Gleeful Grit", color: "#7fff7f" },\n  { phrase: "Mellow Mutant", color: "#7fd2ff" },\n  { phrase: "Serene Fallout", color: "#d27fff" },\n  { phrase: "Optimistic Oblivion", color: "#ff7fd2" }\n];
