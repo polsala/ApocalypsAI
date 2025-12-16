@@ -1,0 +1,39 @@
+---
+- name: Broadcast Whimsical Morale Boost
+  hosts: community_terminals
+  become: yes # Required to modify /etc/motd or other system files
+
+  vars_files:
+    - vars/morale_messages.yml
+
+  tasks:
+    - name: Select a random morale message
+      set_fact:
+        selected_message: "{{ morale_messages | random }}"
+      run_once: true # Select one message for all hosts in this run
+
+    - name: Ensure the morale message directory exists (if using a custom file)
+      ansible.builtin.file:
+        path: /etc/apocalypsai_morale
+        state: directory
+        mode: '0755'
+      when: morale_target_file is defined and morale_target_file != '/etc/motd'
+
+    - name: Update /etc/motd with the morale message
+      ansible.builtin.blockinfile:
+        path: "{{ morale_target_file | default('/etc/motd') }}"
+        block: |
+          \n--- ApocalypsAI Morale Booster ---\n
+          {{ selected_message }}\n
+          --- End Morale Booster ---\n
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - APOCALYPSAI MORALE"
+        create: yes
+        mode: '0644'
+      notify: Log motd update
+
+  handlers:
+    - name: Log motd update
+      # In most Linux systems, /etc/motd is read on login, no service restart needed.
+      # This handler serves as a notification or a placeholder for more complex scenarios.
+      ansible.builtin.debug:
+        msg: "Motd updated on {{ inventory_hostname }}. Users will see the new message on next login."

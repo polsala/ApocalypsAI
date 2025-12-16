@@ -1,0 +1,29 @@
+---
+- name: Test Morale Booster Broadcast Logic
+  hosts: test_hosts
+  gather_facts: no
+
+  vars_files:
+    - ../vars/morale_messages.yml
+
+  tasks:
+    - name: Simulate selecting a random morale message
+      set_fact:
+        test_selected_message: "{{ morale_messages | random }}"
+      run_once: true # Ensure one message is selected for the test run
+
+    - name: Assert that a message was selected
+      ansible.builtin.assert:
+        that:
+          - test_selected_message is defined
+          - test_selected_message | length > 0
+        fail_msg: "No morale message was selected."
+
+    - name: Assert that the selected message is one of the predefined messages
+      ansible.builtin.assert:
+        that:
+          - test_selected_message in morale_messages
+        fail_msg: "Selected message '{{ test_selected_message }}' is not in the predefined list."
+      # Mock rationale: This test verifies the logic of selecting a message from the list
+      # without actually modifying any system files. It ensures the `random` filter
+      # works as expected with the provided variable list, making the test deterministic and offline.
