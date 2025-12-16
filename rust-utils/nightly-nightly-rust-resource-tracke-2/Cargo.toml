@@ -1,0 +1,17 @@
+[package]
+name = "nightly-rust-resource-tracker"
+version = "1.0.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A high-performance CLI tool for tracking post-apocalyptic resources"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+csv = "1.1"
+colored = "2.0"
+
+[dev-dependencies]
+test-case = "3.0"
