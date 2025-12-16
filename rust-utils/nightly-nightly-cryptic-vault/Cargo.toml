@@ -1,0 +1,1 @@
+[package]\nname = "nightly-cryptic-vault"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\nclap = { version = "4.2", features = ["derive"] }\naes-gcm = "0.10"\nsha2 = "0.10"\nrand = "0.8"\nbase64 = "0.21"\n\n[dev-dependencies]\nassert_cmd = "2"\npredicates = "2"
