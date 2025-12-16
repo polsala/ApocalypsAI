@@ -1,0 +1,1 @@
+import {getKit} from "../src/kit.js";\n\ndescribe(\"getKit\", () => {\n  test(\"returns correct items for Desert\", () => {\n    const kit = getKit(\"Desert\");\n    expect(kit).toContain(\"Sun hat\");\n    expect(kit.length).toBe(5);\n  });\n\n  test(\"returns empty array for unknown environment\", () => {\n    expect(getKit(\"Space\")).toEqual([]);\n  });\n});
