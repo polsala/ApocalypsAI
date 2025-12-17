@@ -1,0 +1,1 @@
+resource "aws_s3_bucket" "safehouse" {\n  bucket = var.bucket_name\n\n  versioning {\n    enabled = true\n  }\n\n  lifecycle_rule {\n    id      = "expire-old"\n    enabled = true\n\n    expiration {\n      days = 365\n    }\n  }\n}\n
