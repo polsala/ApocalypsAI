@@ -1,0 +1,15 @@
+name: Issue Emoji Reaction
+description: Adds a random uplifting emoji reaction to newly opened issues.
+author: ApocalypsAI
+inputs:
+  token:
+    description: GitHub token
+    required: true
+    default: ${{ github.token }}
+  emojis:
+    description: Comma‑separated list of emojis
+    required: false
+    default: "👍,🎉,🚀,🌟,💡"
+runs:
+  using: node12
+  main: src/index.js
