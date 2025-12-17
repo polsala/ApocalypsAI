@@ -1,0 +1,167 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+  color: white;
+}
+
+h1 {
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.control-panel {
+  background: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-group {
+  background: rgba(255,255,255,0.2);
+  padding: 15px;
+  border-radius: 10px;
+  min-width: 200px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  font-size: 16px;
+}
+
+.quantum-button {
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.quantum-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.quantum-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quantum-status {
+  background: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.status-card {
+  background: rgba(255,255,255,0.2);
+  padding: 20px;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.status-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+}
+
+.metric-value {
+  font-size: 2.5em;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.quantum-state {
+  font-size: 1.1em;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 5px;
+}
+
+.sub-metrics {
+  font-size: 0.9em;
+  color: #ddd;
+  margin-top: 10px;
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.chart-card {
+  background: rgba(255,255,255,0.1);
+  padding: 20px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.chart-card h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+}
+
+.footer-note {
+  margin-top: 30px;
+  padding: 15px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.footer-note p {
+  margin: 0;
+  font-style: italic;
+  color: #ddd;
+}
+
+@media (max-width: 768px) {
+  .control-panel {
+    flex-direction: column;
+  }
+  
+  .input-group {
+    min-width: 100%;
+  }
+  
+  .charts-container {
+    grid-template-columns: 1fr;
+  }
+}
