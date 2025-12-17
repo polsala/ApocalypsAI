@@ -1,0 +1,31 @@
+[package]
+name = "nightly-cipher-canvas"
+version = "1.0.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical CLI tool that encrypts text into ASCII art ciphers using multiple algorithms."
+license = "MIT"
+repository = "<repo-url>"
+documentation = "<docs-url>"
+homepage = "<homepage-url>"
+keywords = ["cipher", "ascii", "cli", "encryption", "rust"]
+categories = ["command-line-utilities", "cryptography"]
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "nightly-cipher-canvas"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.test]
+opt-level = 1
