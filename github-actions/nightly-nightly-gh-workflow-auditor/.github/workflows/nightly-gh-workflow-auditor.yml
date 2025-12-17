@@ -1,0 +1,62 @@
+name: Nightly GitHub Actions Workflow Auditor
+
+on:
+  schedule:
+    # Runs daily at 3:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  audit_workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Audit GitHub Actions Workflows
+        id: workflow_audit
+        run: |
+          echo "::group::Starting GitHub Actions Workflow Audit"
+          echo "Checking .github/workflows/*.yml for potential issues..."
+
+          # --- Basic Security Checks ---
+          # Check for hardcoded secrets (simple pattern matching)
+          if grep -Hn -E 'secrets\.[a-zA-Z0-9_]+' .github/workflows/*.yml; then
+            echo "::warning::Potential hardcoded secrets found. Review workflow files carefully."
+          fi
+
+          # Check for overly broad permissions (e.g., 'permissions: write-all')
+          if grep -Hn -E 'permissions:.*write-all' .github/workflows/*.yml; then
+            echo "::warning::Overly broad permissions (write-all) detected. Consider restricting permissions."
+          fi
+
+          # Check for steps that might execute untrusted code without proper sanitization (e.g., 'run:' with complex commands)
+          # This is a very basic check and might have false positives/negatives.
+          if grep -Hn -E 'run:.*\$\{{.*\}}' .github/workflows/*.yml; then
+            echo "::warning::Potential use of untrusted input or complex shell commands in 'run:' steps. Ensure proper sanitization."
+          fi
+
+          # Check for common vulnerable actions (example: outdated checkout versions)
+          if grep -Hn 'actions/checkout@v1' .github/workflows/*.yml; then
+            echo "::warning::Using outdated 'actions/checkout@v1'. Consider upgrading to the latest version."
+          fi
+          if grep -Hn 'actions/checkout@v2' .github/workflows/*.yml; then
+            echo "::warning::Using outdated 'actions/checkout@v2'. Consider upgrading to the latest version."
+          fi
+          if grep -Hn 'actions/checkout@v3' .github/workflows/*.yml; then
+            echo "::warning::Using outdated 'actions/checkout@v3'. Consider upgrading to the latest version."
+          fi
+
+          # --- Best Practice Checks ---
+          # Check for missing 'pull_request' trigger for PR-related workflows (example)
+          if grep -L -E 'on:.*pull_request' .github/workflows/*.yml; then
+            echo "::notice::Some workflows might not be triggered by pull requests. Ensure appropriate triggers are set."
+          fi
+
+          echo "::endgroup::"
+        shell: bash
+
+      - name: Report Summary
+        if: steps.workflow_audit.outcome == 'failure' || steps.workflow_audit.outcome == 'always'
+        run: |
+          echo "Workflow audit completed. Please review the warnings and notices above."
