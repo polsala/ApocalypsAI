@@ -1,0 +1,1 @@
+package main\n\nimport (\n    \"fmt\"\n    \"net/http\"\n)\n\nfunc echoHandler(w http.ResponseWriter, r *http.Request) {\n    msg := r.URL.Query().Get(\"msg\")\n    if msg == \"\" {\n        msg = \"Hello, world!\"\n    }\n    fmt.Fprint(w, msg)\n}\n\nfunc main() {\n    http.HandleFunc(\"/echo\", echoHandler)\n    http.ListenAndServe(\":8080\", nil)\n}\n
