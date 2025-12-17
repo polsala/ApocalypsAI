@@ -1,0 +1,21 @@
+---
+- name: Test provision runners playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Set inventory file for test
+      set_fact:
+        test_inventory: "tests/inventory_test.ini"
+
+    - name: Run provision playbook
+      command: >
+        ansible-playbook -i {{ test_inventory }} provision_runners.yml
+        --extra-vars "github_runner_token=TEST_TOKEN"
+      register: provision_result
+      ignore_errors: true
+
+    - name: Assert playbook succeeded
+      assert:
+        that:
+          - provision_result.rc == 0
+        fail_msg: "Provision playbook failed"

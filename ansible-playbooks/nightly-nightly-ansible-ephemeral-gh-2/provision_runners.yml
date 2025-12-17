@@ -1,0 +1,80 @@
+---
+- name: Provision ephemeral GitHub runners
+  hosts: runners
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Install required packages (Debian/Ubuntu)
+      when: ansible_os_family == "Debian"
+      apt:
+        name:
+          - curl
+          - unzip
+          - systemd
+        update_cache: true
+
+    - name: Install required packages (RedHat/CentOS)
+      when: ansible_os_family == "RedHat"
+      yum:
+        name:
+          - curl
+          - unzip
+          - systemd
+        state: present
+
+    - name: Create runner user
+      user:
+        name: "{{ runner_user }}"
+        system: true
+        create_home: true
+        shell: /bin/bash
+        groups: docker
+        append: true
+      when: create_runner_user | bool
+
+    - name: Create runner directory
+      file:
+        path: "{{ runner_dir }}"
+        state: directory
+        owner: "{{ runner_user }}"
+        group: "{{ runner_user }}"
+        mode: '0755'
+
+    - name: Download runner package
+      get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+        dest: /tmp/actions-runner-linux-x64-{{ runner_version }}.tar.gz
+        mode: '0644'
+
+    - name: Extract runner package
+      unarchive:
+        src: /tmp/actions-runner-linux-x64-{{ runner_version }}.tar.gz
+        dest: "{{ runner_dir }}"
+        remote_src: true
+        extra_opts: ["--strip-components=1"]
+
+    - name: Register runner
+      command: "./config.sh --url {{ github_repo_url }} --token {{ github_runner_token }} --labels {{ runner_labels | join(',') }} --unattended --replace"
+      args:
+        chdir: "{{ runner_dir }}"
+      environment:
+        RUNNER_ALLOW_RUNASROOT: 1
+
+    - name: Create runner service
+      template:
+        src: templates/actions.runner.service.j2
+        dest: /etc/systemd/system/actions.runner.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: Start and enable runner service
+      systemd:
+        name: actions.runner
+        enabled: true
+        state: started

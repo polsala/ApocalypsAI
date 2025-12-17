@@ -1,0 +1,45 @@
+---
+- name: Cleanup ephemeral GitHub runners
+  hosts: runners
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Stop runner service
+      systemd:
+        name: actions.runner
+        state: stopped
+
+    - name: Disable runner service
+      systemd:
+        name: actions.runner
+        enabled: false
+
+    - name: Remove runner service file
+      file:
+        path: /etc/systemd/system/actions.runner.service
+        state: absent
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: Unregister runner
+      command: "./config.sh remove --unattended"
+      args:
+        chdir: "{{ runner_dir }}"
+      environment:
+        RUNNER_ALLOW_RUNASROOT: 1
+      ignore_errors: true
+
+    - name: Remove runner directory
+      file:
+        path: "{{ runner_dir }}"
+        state: absent
+
+    - name: Remove runner user
+      user:
+        name: "{{ runner_user }}"
+        state: absent
+        remove: true
+      when: create_runner_user | bool
