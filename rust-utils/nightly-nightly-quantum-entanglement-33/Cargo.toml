@@ -1,0 +1,30 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "1.0.0"
+edition = "2021"
+description = "A whimsical utility that checks if two code snippets are 'quantum entangled' by comparing their hash signatures with a probabilistic twist"
+authors = ["ApocalypsAI Collective"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+categories = ["command-line-utilities"]
+keywords = ["quantum", "entanglement", "hash", "cli", "rust"]
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+target-cpu = "native"
+lto = true
+codegen-units = 1
