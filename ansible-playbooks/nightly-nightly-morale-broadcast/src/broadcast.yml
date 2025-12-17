@@ -1,0 +1,41 @@
+---
+- name: Nightly Morale Broadcast
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  vars:
+    # The webhook URL must be supplied via extra vars or inventory vars
+    slack_webhook_url: "{{ slack_webhook_url | default('') }}"
+  tasks:
+    - name: Ensure webhook URL is provided
+      assert:
+        that:
+          - slack_webhook_url != ''
+        fail_msg: "slack_webhook_url variable is required"
+
+    - name: Pick a random quote
+      set_fact:
+        selected_quote: "{{ quote_list | random }}"
+
+    - name: Render the message template
+      template:
+        src: templates/message.j2
+        dest: /tmp/morale_message.txt
+        mode: '0644'
+
+    - name: Read rendered message
+      slurp:
+        src: /tmp/morale_message.txt
+      register: message_content
+
+    - name: Post message to Slack webhook
+      uri:
+        url: "{{ slack_webhook_url }}"
+        method: POST
+        body: "{{ message_content.content | b64decode }}"
+        body_format: json
+        headers:
+          Content-Type: "application/json"
+        status_code: 200
+      # In a real run this will send the message; during tests the uri module is mocked.

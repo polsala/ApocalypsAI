@@ -1,0 +1,41 @@
+---
+- name: Test Nightly Morale Broadcast
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../src/vars/main.yml
+  vars:
+    slack_webhook_url: "https://example.com/webhook"  # Dummy URL for test
+  tasks:
+    - name: Include the broadcast playbook (check mode to avoid real HTTP)
+      import_playbook: ../src/broadcast.yml
+      vars:
+        slack_webhook_url: "{{ slack_webhook_url }}"
+      check_mode: true
+
+    - name: Verify that the message file was created
+      stat:
+        path: /tmp/morale_message.txt
+      register: msg_file
+
+    - name: Assert message file exists
+      assert:
+        that:
+          - msg_file.stat.exists
+        fail_msg: "Message file was not created"
+
+    - name: Read the generated message
+      slurp:
+        src: /tmp/morale_message.txt
+      register: msg_content
+
+    - name: Decode message content
+      set_fact:
+        decoded_msg: "{{ msg_content.content | b64decode }}"
+
+    - name: Ensure the message contains one of the known quotes
+      assert:
+        that:
+          - "{{ decoded_msg }}" is search("{{ quote_list | join('|') }}")
+        fail_msg: "Generated message does not contain a valid quote"
+      # Mock rationale: The uri task is run in check mode, so no external HTTP request occurs.
