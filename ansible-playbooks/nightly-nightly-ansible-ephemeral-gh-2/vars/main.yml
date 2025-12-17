@@ -1,0 +1,10 @@
+---
+runner_version: "2.322.3"
+runner_dir: "/opt/actions-runner"
+runner_user: "runner"
+create_runner_user: true
+runner_labels:
+  - "ephemeral"
+  - "linux"
+github_repo_url: "https://github.com/your-org/your-repo"
+github_runner_token: "{{ lookup('env','GITHUB_RUNNER_TOKEN') }}"

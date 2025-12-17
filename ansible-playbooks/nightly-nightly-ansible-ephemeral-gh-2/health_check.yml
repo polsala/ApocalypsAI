@@ -1,0 +1,14 @@
+---
+- name: Health check for GitHub runners
+  hosts: runners
+  become: true
+  tasks:
+    - name: Check runner service status
+      systemd:
+        name: actions.runner
+        state: started
+      register: service_status
+
+    - name: Report health status
+      debug:
+        msg: "Runner {{ inventory_hostname }} is {{ 'healthy' if service_status is changed else 'unhealthy' }}"
