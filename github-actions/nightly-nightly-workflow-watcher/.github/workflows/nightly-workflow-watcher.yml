@@ -1,0 +1,38 @@
+name: Nightly Workflow Watcher
+
+on:
+  schedule:
+    # Runs daily at 3:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  watch_workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # Required to read workflow run data
+      contents: read # Required to read repo details
+      # If you want to post comments on runs, you might need 'issues: write' or 'pull-requests: write'
+
+    env:
+      REPO_OWNER: polsala
+      REPO_NAME: ApocalypsAI
+      FAILURE_THRESHOLD: 1
+      LONG_RUN_THRESHOLD_MINUTES: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests PyYAML rich
+
+      - name: Run Workflow Watcher Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/nightly_workflow_watcher.py
