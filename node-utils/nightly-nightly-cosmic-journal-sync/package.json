@@ -1,0 +1,26 @@
+{
+  "name": "nightly-cosmic-journal-sync",
+  "version": "1.0.0",
+  "description": "Synchronizes local cosmic event observations with a remote, whimsical 'Starlight Logbook' API.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "apocalypsai",
+    "nightly",
+    "utility",
+    "cosmic",
+    "sync",
+    "node"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.1" 
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
