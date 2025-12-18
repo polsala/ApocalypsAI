@@ -1,0 +1,49 @@
+---
+- name: Test Environment Variable Synchronization
+  hosts: test_servers
+  become: yes
+  vars_files:
+    - ../vars/environment_vars.yml
+
+  tasks:
+    - name: Ensure the environment script exists
+      ansible.builtin.stat:
+        path: /etc/profile.d/apoc_env_vars.sh
+      register: script_stat
+
+    - name: Assert that the environment script exists
+      ansible.builtin.assert:
+        that:
+          - script_stat.stat.exists
+        fail_msg: "Environment script /etc/profile.d/apoc_env_vars.sh does not exist."
+
+    - name: Read the content of the environment script
+      ansible.builtin.command: cat /etc/profile.d/apoc_env_vars.sh
+      register: script_content
+
+    - name: Assert that APOC_API_KEY is set correctly
+      ansible.builtin.assert:
+        that:
+          - "'export APOC_API_KEY="super_secret_apocalypse_key_123"' in script_content.stdout"
+        fail_msg: "APOC_API_KEY not set correctly."
+
+    - name: Assert that APOC_LOG_LEVEL is set correctly
+      ansible.builtin.assert:
+        that:
+          - "'export APOC_LOG_LEVEL="INFO"' in script_content.stdout"
+        fail_msg: "APOC_LOG_LEVEL not set correctly."
+
+    - name: Assert that APOC_MAX_RETRIES is set correctly
+      ansible.builtin.assert:
+        that:
+          - "'export APOC_MAX_RETRIES="5"' in script_content.stdout"
+        fail_msg: "APOC_MAX_RETRIES not set correctly."
+
+    - name: Assert that APOC_SERVICE_URL is set correctly
+      ansible.builtin.assert:
+        that:
+          - "'export APOC_SERVICE_URL="https://api.apoc.local/v1"' in script_content.stdout"
+        fail_msg: "APOC_SERVICE_URL not set correctly."
+
+    # Mock rationale: This test verifies that the script content matches the expected output based on the vars/environment_vars.yml. 
+    # It doesn't require actual execution of the sourced script, as the Jinja2 template rendering is deterministic.
