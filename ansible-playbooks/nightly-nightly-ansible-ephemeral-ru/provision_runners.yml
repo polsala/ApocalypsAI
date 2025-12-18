@@ -1,0 +1,78 @@
+---
+- name: Provision Ephemeral GitHub Runners
+  hosts: runners
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Install Docker
+      package:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create runner directory
+      file:
+        path: "{{ runner_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download runner
+      get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+        dest: "{{ runner_install_dir }}/actions-runner.tar.gz"
+        mode: '0644'
+
+    - name: Extract runner
+      unarchive:
+        src: "{{ runner_install_dir }}/actions-runner.tar.gz"
+        dest: "{{ runner_install_dir }}"
+        remote_src: true
+        creates: "{{ runner_install_dir }}/bin/Runner.Listener"
+
+    - name: Configure runner
+      shell: |
+        ./config.sh \
+          --url "https://github.com/{{ github_org }}/{{ github_repo }}" \
+          --token {{ github_runner_token }} \
+          --name "{{ inventory_hostname }}-{{ ansible_date_time.epoch }}" \
+          --work "_work" \
+          --labels "{{ runner_labels | join(',') }}" \
+          --unattended
+      args:
+        chdir: "{{ runner_install_dir }}"
+      no_log: true
+
+    - name: Create runner service
+      template:
+        src: templates/actions.runner.service.j2
+        dest: /etc/systemd/system/actions.runner.{{ inventory_hostname }}.service
+        mode: '0644'
+
+    - name: Start runner service
+      systemd:
+        name: "actions.runner.{{ inventory_hostname }}"
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Tag runner as managed
+      set_fact:
+        managed_runner: true
+
+    - name: Store runner info
+      copy:
+        content: |
+          runner_name={{ inventory_hostname }}-{{ ansible_date_time.epoch }}
+          runner_host={{ inventory_hostname }}
+          runner_ip={{ ansible_host | default(inventory_hostname) }}
+          provisioned_at={{ ansible_date_time.iso8601 }}
+        dest: "{{ runner_install_dir }}/runner_info"
+        mode: '0644'

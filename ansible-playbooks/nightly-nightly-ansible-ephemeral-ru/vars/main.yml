@@ -1,0 +1,10 @@
+---
+github_org: "your-org"
+github_repo: "your-repo"
+github_runner_token: "{{ lookup('env', 'GITHUB_RUNNER_TOKEN') }}"
+runner_version: "2.315.0"
+runner_install_dir: "/opt/actions-runner"
+runner_labels:
+  - "ephemeral"
+  - "linux"
+  - "x64"
