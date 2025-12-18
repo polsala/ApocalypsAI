@@ -1,0 +1,29 @@
+name: 'Nightly GHA Workflow Linter'
+description: 'Lints GitHub Actions workflow files for syntax and security issues'
+branding:
+  icon: 'shield-check'
+  color: 'green'
+inputs:
+  workflows-dir:
+    description: 'Path to workflows directory'
+    required: false
+    default: '.github/workflows'
+  fail-on-warning:
+    description: 'Exit with non-zero code if warnings are found'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: pip install pyyaml
+      shell: bash
+    
+    - name: Run workflow linter
+      run: python ${{ github.action_path }}/workflow_linter.py --workflows-dir ${{ inputs.workflows-dir }} ${{ inputs.fail-on-warning == 'true' && '--fail-on-warning' || '' }}
+      shell: bash
