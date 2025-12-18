@@ -1,0 +1,30 @@
+---
+- name: Test Provision Runners Playbook
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Check playbook syntax
+      command: ansible-playbook --syntax-check provision_runners.yml
+
+    - name: Check inventory syntax
+      command: ansible-inventory -i inventory.ini --list
+
+    - name: Check template syntax
+      command: ansible-playbook -i inventory.ini --check --list-tasks provision_runners.yml
+
+    - name: Verify required files exist
+      stat:
+        path: "{{ item }}"
+      with_items:
+        - provision_runners.yml
+        - inventory.ini
+        - vars/main.yml
+        - templates/actions.runner.service.j2
+      register: file_checks
+
+    - name: All required files should exist
+      assert:
+        that:
+          - item.stat.exists
+        msg: "File {{ item.item }} should exist"
+      loop: "{{ file_checks.results }}"

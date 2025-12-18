@@ -1,0 +1,63 @@
+---
+- name: Health Check Ephemeral Runners
+  hosts: runners
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Check runner service status
+      systemd:
+        name: "actions.runner.{{ inventory_hostname }}"
+        state: started
+      register: runner_service
+      ignore_errors: true
+
+    - name: Check Docker status
+      systemd:
+        name: docker
+        state: started
+      register: docker_service
+      ignore_errors: true
+
+    - name: Check runner process
+      shell: ps aux | grep -v grep | grep Runner.Listener
+      register: runner_process
+      ignore_errors: true
+
+    - name: Check disk space
+      shell: df -h {{ runner_install_dir }}
+      register: disk_space
+      ignore_errors: true
+
+    - name: Check memory usage
+      shell: free -h
+      register: memory_usage
+      ignore_errors: true
+
+    - name: Set health status
+      set_fact:
+        runner_healthy: >
+          {{ runner_service.status.ActiveState == 'active' and
+             docker_service.status.ActiveState == 'active' and
+             runner_process.rc == 0 and
+             disk_space.rc == 0 and
+             memory_usage.rc == 0 }}
+
+    - name: Store health check results
+      copy:
+        content: |
+          runner_host={{ inventory_hostname }}
+          service_status={{ runner_service.status.ActiveState }}
+          docker_status={{ docker_service.status.ActiveState }}
+          process_running={{ runner_process.rc == 0 }}
+          disk_ok={{ disk_space.rc == 0 }}
+          memory_ok={{ memory_usage.rc == 0 }}
+          healthy={{ runner_healthy }}
+          checked_at={{ ansible_date_time.iso8601 }}
+        dest: "{{ runner_install_dir }}/health_check"
+        mode: '0644'
+
+    - name: Report unhealthy runners
+      debug:
+        msg: "Runner {{ inventory_hostname }} is unhealthy!"
+      when: not runner_healthy

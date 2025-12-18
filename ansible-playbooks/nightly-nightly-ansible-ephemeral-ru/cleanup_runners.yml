@@ -1,0 +1,55 @@
+---
+- name: Cleanup Ephemeral Runners
+  hosts: runners
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Check if runner info exists
+      stat:
+        path: "{{ runner_install_dir }}/runner_info"
+      register: runner_info_file
+
+    - name: Read runner info
+      slurp:
+        src: "{{ runner_install_dir }}/runner_info"
+      register: runner_info_content
+      when: runner_info_file.stat.exists
+
+    - name: Parse runner info
+      set_fact:
+        runner_info: >
+          {{ runner_info_content.content | b64decode | splitlines() | map('split', '=') | map('list') | map('zip', ['key', 'value']) | map('map', 'list') | map('items') | map('join', ':') | join('\n') | from_yaml }}
+      when: runner_info_file.stat.exists
+
+    - name: Check runner age
+      set_fact:
+        runner_age_hours: >
+          {{ ((ansible_date_time.epoch | int) - (runner_info.provisioned_at | to_datetime('%Y-%m-%dT%H:%M:%S%z').timestamp() | int)) // 3600 }}
+      when: runner_info_file.stat.exists
+
+    - name: Stop and disable runner service
+      systemd:
+        name: "actions.runner.{{ inventory_hostname }}"
+        state: stopped
+        enabled: false
+      when: runner_info_file.stat.exists
+
+    - name: Remove runner from GitHub
+      shell: |
+        ./config.sh remove --token {{ github_runner_token }}
+      args:
+        chdir: "{{ runner_install_dir }}"
+      no_log: true
+      when: runner_info_file.stat.exists
+
+    - name: Remove runner directory
+      file:
+        path: "{{ runner_install_dir }}"
+        state: absent
+      when: runner_info_file.stat.exists
+
+    - name: Report cleanup
+      debug:
+        msg: "Cleaned up runner {{ runner_info.runner_name }} ({{ runner_age_hours }} hours old)"
+      when: runner_info_file.stat.exists

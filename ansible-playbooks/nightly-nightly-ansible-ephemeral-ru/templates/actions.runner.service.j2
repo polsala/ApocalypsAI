@@ -1,0 +1,15 @@
+[Unit]
+Description=GitHub Actions Runner ({{ inventory_hostname }})
+After=network.target
+
+[Service]
+ExecStart={{ runner_install_dir }}/bin/Runner.Listener run
+WorkingDirectory={{ runner_install_dir }}
+User=root
+Group=root
+Type=simple
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
