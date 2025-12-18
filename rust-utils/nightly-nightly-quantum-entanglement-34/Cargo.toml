@@ -1,0 +1,12 @@
+[package]
+name = "quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sha256 = "1.4"
+tempfile = "3.8"
+
+[[bin]]
+name = "quantum-entanglement-checker"
+path = "src/main.rs"
