@@ -1,0 +1,22 @@
+name: Lint Workflows
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint GitHub Actions Workflows
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Lint Workflows
+      uses: polsala/ApocalypsAI/nightly-gha-workflow-linter@main
+      with:
+        workflows-dir: '.github/workflows'
+        fail-on-warning: true
