@@ -1,0 +1,3 @@
+const path = require('path');\nconst HtmlWebpackPlugin = require('html-webpack-plugin');\n\nmodule.exports = {\n  entry: './src/index.jsx',\n  output: {\n    path: path.resolve(__dirname, 'dist'),\n    filename: 'bundle.js',\n    clean: true,\n  },\n  resolve: {\n    extensions: ['.js', '.jsx'],\n  },\n  module: {\n    rules: [\n      {\n        test: /\\.jsx?$/,
+        exclude: /node_modules/,\n        use: {\n          loader: 'babel-loader',\n        },\n      },\n      {\n        test: /\\.css$/,
+        use: ['style-loader', 'css-loader'],\n      },\n    ],\n  },\n  plugins: [\n    new HtmlWebpackPlugin({\n      template: './public/index.html',\n    }),\n  ],\n  devServer: {\n    static: './dist',\n    hot: true,\n    port: 3000,\n  },\n};\n
