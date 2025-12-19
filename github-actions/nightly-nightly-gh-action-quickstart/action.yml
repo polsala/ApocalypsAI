@@ -1,0 +1,57 @@
+{
+  "name": "Nightly GH Action Quickstart",
+  "description": "Creates a minimal, runnable workflow file for a new repository on first push.",
+  "author": "ApocalypsAI",
+  "branding": {
+    "color": "blue",
+    "icon": "activity"
+  },
+  "inputs": {
+    "workflow-name": {
+      "description": "The name of the generated workflow file.",
+      "required": false,
+      "default": "nightly-quickstart.yml"
+    },
+    "run-on": {
+      "description": "The event that triggers the workflow.",
+      "required": false,
+      "default": "push"
+    },
+    "run-on-branch": {
+      "description": "The branch that triggers the workflow.",
+      "required": false,
+      "default": "main"
+    },
+    "job-name": {
+      "description": "The name of the generated job.",
+      "required": false,
+      "default": "quickstart"
+    },
+    "steps": {
+      "description": "A JSON array of steps to add to the job.",
+      "required": false,
+      "default": "[{\"name\": \"Checkout\", \"uses\": \"actions/checkout@v4\"}, {\"name\": \"Hello World\", \"run\": \"echo \"Hello, world!\"\"}]"
+    }
+  },
+  "runs": {
+    "using": "composite",
+    "steps": [
+      {
+        "name": "Check if workflow exists",
+        "id": "check",
+        "uses": "actions/github-script@v7",
+        "with": {
+          "script": "const fs = require('fs'); const path = require('path'); const workflowPath = path.join(process.env.GITHUB_WORKFLOWS, getInput('workflow-name')); const exists = fs.existsSync(workflowPath); core.setOutput('exists', exists);"
+        }
+      },
+      {
+        "name": "Create workflow file",
+        "if": "steps.check.outputs.exists == 'false'",
+        "uses": "actions/github-script@v7",
+        "with": {
+          "script": "const fs = require('fs'); const path = require('path'); const yaml = require('js-yaml'); const workflow = { name: getInput('workflow-name'), on: { [getInput('run-on')]: { branches: [getInput('run-on-branch')] } }, jobs: { [getInput('job-name')]: { runs-on: 'ubuntu-latest', steps: JSON.parse(getInput('steps')) } } }; const yamlStr = yaml.dump(workflow); const workflowPath = path.join(process.env.GITHUB_WORKFLOWS, getInput('workflow-name')); fs.writeFileSync(workflowPath, yamlStr); core.info(`Created workflow file: ${workflowPath}`);"
+        }
+      }
+    ]
+  }
+}
