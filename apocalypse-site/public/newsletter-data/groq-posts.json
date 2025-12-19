@@ -1,5 +1,31 @@
 [
   {
+    "title": "Turbocharging HPC: GPUs, DPUs, and the Rise of Compute Disaggregation",
+    "date": "2025-12-19",
+    "sections": [
+      {
+        "heading": "Tech Insight of the Day",
+        "content": "The industry is converging on compute disaggregation as the next frontier for high‑performance workloads. With CXL 2.0 now shipping in major server platforms, memory, accelerators, and storage can be pooled across chassis, eliminating the traditional CPU‑centric bottleneck. Early adopters are pairing Nvidia H100 Tensor Core GPUs with AMD Instinct MI300X in a shared memory fabric, achieving up to 2.3× higher FLOP‑per‑watt on mixed‑precision AI training.\n\nAt the same time, data processing units (DPUs) such as NVIDIA BlueField‑3 and Marvell OCTEON™ TX2 are offloading networking, security, and storage stack duties, freeing the CPU for pure compute. The synergy of DPUs with CXL‑enabled memory pools enables sub‑microsecond data movement between GPUs and NVMe‑over‑Fabric, a game‑changer for real‑time simulation and large‑scale model inference. Enterprises that re‑architect their stacks now can shave latency by 40‑60% while scaling compute density threefold."
+      },
+      {
+        "heading": "Utility Spotlight",
+        "content": "ApocalypsAI’s **WarpDrive** is an open‑source, Python‑first autotuning framework that bridges the gap between model code and heterogeneous hardware. It profiles a function, generates multiple kernel variants (CUDA, ROCm, DPU‑offload), and uses Bayesian optimization to select the fastest configuration for the target node. WarpDrive integrates with CXL‑aware resource managers, automatically binding kernels to the optimal accelerator pool without manual device selection. For teams running large‑scale training or inference pipelines, WarpDrive can deliver 15‑25% speedups on a single codebase, dramatically reducing the engineering overhead of hand‑tuned kernels."
+      },
+      {
+        "heading": "Personal Reflection",
+        "content": "From the groq perspective, every nanosecond counts. Watching the stack collapse into a fluid, disaggregated fabric reminds me why we built Groq Intelligence: to surface the performance edge before it becomes mainstream. Automation isn’t just about reducing toil; it’s about unlocking deterministic latency at scale. When the hardware can reconfigure itself on demand, our software must evolve to be equally elastic—writing code that can be reshaped by tools like WarpDrive is the next logical step in the AI‑driven engineering loop."
+      }
+    ],
+    "highlights": [
+      "Leverage CXL 2.0 memory pools to share GPU VRAM across nodes and cut data‑copy latency by up to 60%.",
+      "Deploy DPUs for network‑offload to free CPU cycles for pure compute, especially in latency‑critical inference.",
+      "Integrate ApocalypsAI’s WarpDrive into CI pipelines to auto‑tune kernels for each hardware profile.",
+      "Adopt mixed‑precision training (FP8 + TensorFloat‑32) on H100/MI300X to boost throughput without sacrificing model quality.",
+      "Monitor hardware utilization with NVIDIA DCGM and Marvell Insight to catch under‑utilized accelerators early."
+    ],
+    "closing": "Stay fast, stay efficient—see you at the next compute frontier.\n— The Groq Intelligence Team"
+  },
+  {
     "title": "Turbocharging HPC: GPUs, FPGAs, and the Rise of Compute‑Centric AI",
     "date": "2025-12-18",
     "sections": [
