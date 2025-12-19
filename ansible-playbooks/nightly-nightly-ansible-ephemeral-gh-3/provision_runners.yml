@@ -1,0 +1,80 @@
+---
+- name: Provision ephemeral GitHub runners
+  hosts: runners
+  become: true
+  vars:
+    runner_name: "{{ inventory_hostname }}-{{ ansible_date_time.epoch }}"
+    runner_repo: "https://github.com/actions/runner"
+    runner_version: "v2.320.3"
+    runner_dir: "/opt/actions-runner-{{ runner_name }}"
+    github_owner: "{{ github_owner }}"
+    github_repo: "{{ github_repo }}"
+    github_token: "{{ github_token }}"
+  tasks:
+    - name: Install required packages (Debian)
+      when: ansible_os_family == "Debian"
+      apt:
+        name:
+          - curl
+          - git
+          - jq
+        update_cache: true
+      tags: install
+
+    - name: Install required packages (RedHat)
+      when: ansible_os_family == "RedHat"
+      yum:
+        name:
+          - curl
+          - git
+          - jq
+        state: present
+      tags: install
+
+    - name: Create runner directory
+      file:
+        path: "{{ runner_dir }}"
+        state: directory
+        mode: "0755"
+      tags: setup
+
+    - name: Download runner package
+      get_url:
+        url: "https://github.com/actions/runner/releases/download/{{ runner_version }}/actions-runner-linux-x64-2.320.3.tar.gz"
+        dest: "/tmp/actions-runner-linux-x64-2.320.3.tar.gz"
+        mode: "0644"
+      tags: download
+
+    - name: Extract runner package
+      unarchive:
+        src: "/tmp/actions-runner-linux-x64-2.320.3.tar.gz"
+        dest: "{{ runner_dir }}"
+        remote_src: true
+        creates: "{{ runner_dir }}/bin/Runner.Listener"
+      tags: extract
+
+    - name: Configure runner
+      command: "{{ runner_dir }}/config.sh --url https://github.com/{{ github_owner }}/{{ github_repo }} --token {{ github_token }} --name {{ runner_name }} --unattended --replace"
+      args:
+        chdir: "{{ runner_dir }}"
+      tags: configure
+
+    - name: Create systemd service file
+      template:
+        src: templates/actions.runner.service.j2
+        dest: "/etc/systemd/system/actions.runner.{{ runner_name }}.service"
+        mode: "0644"
+      notify: Reload systemd
+      tags: service
+
+    - name: Enable and start runner service
+      systemd:
+        name: "actions.runner.{{ runner_name }}"
+        enabled: true
+        state: started
+      tags: service
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true

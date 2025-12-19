@@ -1,0 +1,23 @@
+---
+- name: Health-check GitHub runners
+  hosts: runners
+  become: true
+  tasks:
+    - name: List runner services
+      command: systemctl list-units --type=service --state=running --no-pager --plain | grep actions.runner
+      register: runner_services
+      changed_when: false
+      tags: health
+
+    - name: Show running services
+      debug:
+        msg: "{{ runner_services.stdout_lines }}"
+      tags: health
+
+    - name: Restart failed services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop: "{{ runner_services.stdout_lines | map('split', ' ')[0] | list }}"
+      when: runner_services.stdout_lines | length > 0
+      tags: health
