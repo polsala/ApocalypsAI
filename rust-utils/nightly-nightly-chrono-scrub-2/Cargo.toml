@@ -1,0 +1,15 @@
+[package]
+name = "chrono-scrub"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+filetime = "0.2"
+assert_cmd = "2"
+predicates = "3"
