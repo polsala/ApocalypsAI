@@ -1,0 +1,15 @@
+---
+- name: Test provision runners
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Ensure runner directory exists
+      stat:
+        path: "/opt/actions-runner-{{ inventory_hostname }}-{{ ansible_date_time.epoch }}"
+      register: runner_dir_stat
+
+    - name: Assert runner directory exists
+      assert:
+        that:
+          - runner_dir_stat.stat.exists
+          - runner_dir_stat.stat.isdir
