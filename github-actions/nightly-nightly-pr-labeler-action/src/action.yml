@@ -1,0 +1,9 @@
+name: "PR Title Labeler"
+description: "Suggests labels for a PR based on its title."
+inputs:
+  title:
+    description: "Pull request title"
+    required: true
+runs:
+  using: "node12"
+  main: "src/labeler.js"
