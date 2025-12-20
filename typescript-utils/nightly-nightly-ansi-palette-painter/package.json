@@ -1,0 +1,15 @@
+{
+  "name": "nightly-ansi-palette-painter",
+  "version": "0.1.0",
+  "bin": {
+    "ansi-palette-painter": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node tests/test_index.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.4.2"
+  }
+}
