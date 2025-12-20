@@ -1,0 +1,29 @@
+---
+# Example of a poorly-structured Ansible playbook
+- hosts: all
+  # Missing play name
+  
+  tasks:
+    - debug:
+        msg: "This task has no name"
+    
+    - name: Use deprecated with_items
+      debug:
+        msg: "{{ item }}"
+      with_items: ["item1", "item2", "item3"]
+    
+    - name: Complex when condition
+      debug:
+        msg: "Complex logic"
+      when: >
+        (ansible_os_family == "Debian" and ansible_distribution_version >= "18.04") or 
+        (ansible_os_family == "RedHat" and ansible_distribution_major_version >= "7") or 
+        (ansible_os_family == "Suse" and ansible_distribution_version >= "15")
+    
+    - name: Use copy instead of template
+      copy:
+        src: config.j2
+        dest: /etc/app/config
+        owner: root
+        group: root
+        mode: '0644'
