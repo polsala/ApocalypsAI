@@ -1,0 +1,44 @@
+{
+  "name": "nightly-quantum-quip-generator",
+  "version": "1.0.0",
+  "description": "A whimsical utility that generates quantum computing jokes and explanations for developers",
+  "main": "src/main.js",
+  "bin": {
+    "quantum-quip": "src/main.js"
+  },
+  "scripts": {
+    "test": "node tests/test_main.js",
+    "start": "node src/main.js",
+    "interactive": "node src/main.js interactive"
+  },
+  "keywords": [
+    "quantum",
+    "jokes",
+    "humor",
+    "cli",
+    "developer-tools",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI Community",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.5",
+    "commander": "^9.4.1"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/polsala/ApocalypsAI.git",
+    "directory": "node-utils/nightly-quantum-quip-generator"
+  },
+  "bugs": {
+    "url": "https://github.com/polsala/ApocalypsAI/issues"
+  },
+  "homepage": "https://github.com/polsala/ApocalypsAI#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
