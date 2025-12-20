@@ -1,0 +1,12 @@
+name: Nightly PR Labeler
+description: Add whimsical labels to PRs based on title keywords
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
+permissions:
+  pull-requests: write
+  contents: read
