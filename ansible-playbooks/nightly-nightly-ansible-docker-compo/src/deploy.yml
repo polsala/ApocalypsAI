@@ -1,0 +1,36 @@
+- hosts: all
+  become: true
+  vars:
+    compose_path: "{{ compose_path | default('docker-compose.yml') }}"
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure docker-compose is installed
+      get_url:
+        url: https://github.com/docker/compose/releases/download/2.27.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+      when: ansible_os_family == "Debian"
+
+    - name: Copy docker-compose file
+      copy:
+        src: "{{ compose_path }}"
+        dest: /opt/docker-compose.yml
+
+    - name: Bring up Docker Compose stack
+      command: docker-compose -f /opt/docker-compose.yml up -d
+      args:
+        chdir: /opt
+
+    - name: Wait for services to be healthy
+      wait_for:
+        port: "{{ item.port }}"
+        host: "127.0.0.1"
+        timeout: 30
+      loop: "{{ services }}"
+      when: services is defined
