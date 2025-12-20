@@ -1,0 +1,36 @@
+---
+# Example of a well-structured Ansible playbook
+- name: Configure web server
+  hosts: webservers
+  become: true
+  vars:
+    http_port: 80
+    max_clients: 200
+  
+  tasks:
+    - name: Install Apache
+      package:
+        name: apache2
+        state: present
+    
+    - name: Configure Apache port
+      lineinfile:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen '
+        line: "Listen {{ http_port }}"
+        state: present
+    
+    - name: Start Apache service
+      service:
+        name: apache2
+        state: started
+        enabled: true
+    
+    - name: Verify Apache is running
+      uri:
+        url: "http://localhost:{{ http_port }}"
+        status_code: 200
+      register: apache_test
+      until: apache_test.status_code == 200
+      retries: 5
+      delay: 2
