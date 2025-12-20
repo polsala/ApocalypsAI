@@ -1,0 +1,11 @@
+# AWS Lambda runtime dependencies
+# Note: boto3 and json are included in the Lambda runtime
+
+# For enhanced logging (optional)
+python-json-logger>=2.0.0
+
+# For structured logging (optional)
+structlog>=23.0.0
+
+# For date/time handling (optional)
+dateutil>=2.8.0
