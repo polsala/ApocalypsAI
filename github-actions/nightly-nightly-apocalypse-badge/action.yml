@@ -1,0 +1,12 @@
+name: 'Nightly Apocalypse Badge'
+description: 'Posts an apocalypse badge comment when a PR has the `apocalypse` label.'
+inputs:
+  github-token:
+    description: 'GitHub token with repo scope'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
+permissions:
+  pull-requests: write
+  contents: read
