@@ -1,0 +1,1 @@
+#!/usr/bin/env sh\n# Read quotes from quotes.txt\nQUOTES=$(cat quotes.txt | grep -v '^#' | grep -v '^$')\n# Count lines\nCOUNT=$(echo "$QUOTES" | wc -l | tr -d ' ')\n# Determine index\nif [ -n "$QUOTE_INDEX" ]; then\n  INDEX=$((QUOTE_INDEX % COUNT))\nelse\n  INDEX=$((RANDOM % COUNT))\nfi\n# Get the quote\nQUOTE=$(echo "$QUOTES" | sed -n "$((INDEX+1))p")\necho "$QUOTE"
