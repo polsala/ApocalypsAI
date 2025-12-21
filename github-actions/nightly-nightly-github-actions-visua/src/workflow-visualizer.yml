@@ -1,0 +1,152 @@
+name: GitHub Actions Workflow Visualizer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  visualize-workflows:
+    name: Generate Workflow Diagrams
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml graphviz
+
+    - name: Create output directory
+      run: mkdir -p workflow-diagrams
+
+    - name: Generate workflow diagrams
+      env:
+        WORKFLOW_DIR: .github/workflows
+        OUTPUT_DIR: workflow-diagrams
+      run: |
+        python << 'EOF'
+        import os
+        import yaml
+        import glob
+        from graphviz import Digraph
+        
+        def parse_workflow(file_path):
+            with open(file_path, 'r') as f:
+                try:
+                    workflow = yaml.safe_load(f)
+                    if not workflow:
+                        return None
+                    
+                    workflow_name = os.path.basename(file_path).replace('.yml', '').replace('.yaml', '')
+                    jobs = workflow.get('jobs', {})
+                    
+                    return {
+                        'name': workflow_name,
+                        'jobs': jobs,
+                        'file_path': file_path
+                    }
+                except yaml.YAMLError as e:
+                    print(f"Error parsing {file_path}: {e}")
+                    return None
+        
+        def generate_diagram(workflow_data, output_path):
+            if not workflow_data:
+                return
+                
+            dot = Digraph(comment=f"Workflow: {workflow_data['name']}")
+            dot.attr(rankdir='LR', size='8,5', dpi='300')
+            dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue')
+            
+            # Add jobs as nodes
+            for job_name, job_config in workflow_data['jobs'].items():
+                job_label = f"{job_name}\n{job_config.get('name', job_name)}"
+                dot.node(job_name, job_label)
+                
+                # Add dependencies
+                if 'needs' in job_config:
+                    needs = job_config['needs']
+                    if isinstance(needs, str):
+                        needs = [needs]
+                    for dep in needs:
+                        dot.edge(dep, job_name)
+            
+            # Render to SVG
+            dot.render(output_path, format='svg', cleanup=True)
+            print(f"Generated diagram: {output_path}.svg")
+        
+        # Find all workflow files
+        workflow_files = glob.glob(f"{os.environ['WORKFLOW_DIR']}/*.yml") + \
+                          glob.glob(f"{os.environ['WORKFLOW_DIR']}/*.yaml")
+        
+        print(f"Found {len(workflow_files)} workflow files")
+        
+        for workflow_file in workflow_files:
+            print(f"Processing {workflow_file}...")
+            workflow_data = parse_workflow(workflow_file)
+            if workflow_data:
+                output_name = os.path.basename(workflow_file).replace('.yml', '').replace('.yaml', '')
+                output_path = f"{os.environ['OUTPUT_DIR']}/{output_name}"
+                generate_diagram(workflow_data, output_path)
+        
+        # Generate combined diagram
+        combined_dot = Digraph(comment="All Workflows")
+        combined_dot.attr(rankdir='TB', size='12,8', dpi='300')
+        combined_dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightgreen')
+        
+        for workflow_file in workflow_files:
+            workflow_data = parse_workflow(workflow_file)
+            if workflow_data:
+                workflow_name = workflow_data['name']
+                combined_dot.subgraph()
+                with combined_dot.subgraph(name=f'cluster_{workflow_name}') as c:
+                    c.attr(label=workflow_name, color='blue')
+                    for job_name, job_config in workflow_data['jobs'].items():
+                        job_label = f"{job_name}\n{job_config.get('name', job_name)}"
+                        c.node(f"{workflow_name}_{job_name}", job_label)
+                        
+                        if 'needs' in job_config:
+                            needs = job_config['needs']
+                            if isinstance(needs, str):
+                                needs = [needs]
+                            for dep in needs:
+                                c.edge(f"{workflow_name}_{dep}", f"{workflow_name}_{job_name}")
+        
+        combined_output_path = f"{os.environ['OUTPUT_DIR']}/all_workflows"
+        combined_dot.render(combined_output_path, format='svg', cleanup=True)
+        print(f"Generated combined diagram: {combined_output_path}.svg")
+        EOF
+
+    - name: Upload workflow diagrams
+      uses: actions/upload-artifact@v4
+      with:
+        name: workflow-diagrams
+        path: workflow-diagrams/*.svg
+        retention-days: 30
+
+    - name: Commit diagrams to repository
+      if: github.ref == 'refs/heads/main' && env.COMMIT_DIAGRAMS == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add workflow-diagrams/*.svg
+        if ! git diff --cached --quiet; then
+          git commit -m "Update workflow diagrams [skip ci]"
+          git push
+        fi
+      env:
+        COMMIT_DIAGRAMS: false
