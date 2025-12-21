@@ -1,0 +1,14 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+authors = ["ApocalypsAI"]
+edition = "2021"
+description = "A whimsical-yet-useful CLI tool that simulates quantum entanglement verification using Bell's inequality tests"
+license = "MIT"
+
+[dependencies]
+rand = "0.8"
+structopt = "0.3"
+
+[dev-dependencies]
+test-case = "3.1"
