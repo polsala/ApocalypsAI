@@ -1,0 +1,90 @@
+---
+- name: Read scroll content
+  slurp:
+    src: "{{ current_scroll }}"
+  register: scroll_content_b64
+  delegate_to: localhost
+
+- name: Decode scroll content
+  set_fact:
+    scroll_content: "{{ scroll_content_b64.content | b64decode }}"
+  delegate_to: localhost
+
+- name: Extract front matter
+  set_fact:
+    front_matter_raw: |
+      {% set lines = scroll_content.split('\n') %}
+      {% set in_front_matter = false %}
+      {% set fm_lines = [] %}
+      {% for line in lines %}
+        {% if line == '---' and not in_front_matter %}
+          {% set in_front_matter = true %}
+          {% continue %}
+        {% elif line == '---' and in_front_matter %}
+          {% set in_front_matter = false %}
+          {% break %}
+        {% endif %}
+        {% if in_front_matter %}
+          {% set _ = fm_lines.append(line) %}
+        {% endif %}
+      {% endfor %}
+      {{ fm_lines | join('\n') }}
+  delegate_to: localhost
+
+- name: Parse front matter YAML
+  set_fact:
+    front_matter: "{{ front_matter_raw | from_yaml(default={}) }}"
+  delegate_to: localhost
+  ignore_errors: true # Handle cases where from_yaml fails (no front matter or malformed)
+
+- name: Validate scroll initialization
+  set_fact:
+    is_compliant: true
+    current_scroll_issues: []
+  delegate_to: localhost
+
+- name: Check for front matter presence
+  set_fact:
+    is_compliant: false
+    current_scroll_issues: "{{ current_scroll_issues + ['Missing or malformed YAML front matter'] }}"
+  when: front_matter_raw | trim == "" or front_matter is not defined or front_matter == {}
+  delegate_to: localhost
+
+- name: Check for required front matter keys
+  set_fact:
+    is_compliant: false
+    current_scroll_issues: "{{ current_scroll_issues + ['Missing required key: ' + missing_key] }}"
+  loop: "{{ required_front_matter_keys }}"
+  loop_control:
+    loop_var: missing_key
+  when:
+    - is_compliant # Only check if still compliant
+    - missing_key not in front_matter
+  delegate_to: localhost
+
+- name: Check for required tags
+  set_fact:
+    is_compliant: false
+    current_scroll_issues: "{{ current_scroll_issues + ['Missing required tag: ' + missing_tag] }}"
+  loop: "{{ required_tags }}"
+  loop_control:
+    loop_var: missing_tag
+  when:
+    - is_compliant # Only check if still compliant
+    - 'front_matter.tags is defined'
+    - 'front_matter.tags is iterable'
+    - missing_tag not in front_matter.tags
+  delegate_to: localhost
+
+- name: Add scroll to compliant list
+  set_fact:
+    compliant_scrolls: "{{ compliant_scrolls + [current_scroll] }}"
+  when: is_compliant
+  delegate_to: localhost
+
+- name: Add scroll to non-compliant list and record issues
+  set_fact:
+    non_compliant_scrolls: "{{ non_compliant_scrolls + [current_scroll] }}"
+    scroll_issues: "{{ scroll_issues | combine({current_scroll: current_scroll_issues}) }}"
+  when: not is_compliant
+  delegate_to: localhost

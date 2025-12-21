@@ -1,0 +1,40 @@
+---
+- name: Ensure digital scrolls are properly formatted
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Initialize compliance lists
+      set_fact:
+        compliant_scrolls: []
+        non_compliant_scrolls: []
+        scroll_issues: {}
+
+    - name: Find all markdown scrolls
+      find:
+        paths: "{{ scroll_directory }}"
+        patterns: "*.md"
+        recurse: yes
+      register: found_scrolls
+
+    - name: Check front matter and tags for each scroll
+      include_tasks: tasks/check_scroll.yml
+      loop: "{{ found_scrolls.files | map(attribute='path') | list }}"
+      loop_control:
+        loop_var: current_scroll
+
+    - name: Report compliant scrolls
+      debug:
+        msg: "COMPLIANT SCROLLS: {{ compliant_scrolls }}"
+
+    - name: Report non-compliant scrolls
+      debug:
+        msg: "NON-COMPLIANT SCROLLS: {{ non_compliant_scrolls }}"
+
+    - name: Display detailed issues for non-compliant scrolls
+      debug:
+        msg: "ISSUES FOR {{ item.key }}: {{ item.value }}"
+      loop: "{{ scroll_issues | dict2items }}"
+      when: scroll_issues | length > 0
