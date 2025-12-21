@@ -1,0 +1,39 @@
+Digital Dust Bunny Report for {{ ansible_hostname | default('localhost') }}
+
+Scan Date: {{ ansible_date_time.iso8601_micro }}
+
+{% if cleanup_performed %}
+Cleanup Mode: ACTIVE - Digital Dust Bunnies have been swept away!
+{% else %}
+Cleanup Mode: DRY RUN - No files were actually removed.
+{% endif %}
+
+--- Old Files (older than {{ old_file_age_days }} days) ---
+{% if report_old_files %}
+{% for file in report_old_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No ancient digital relics found.
+{% endif %}
+
+--- Empty Directories ---
+{% if report_empty_dirs %}
+{% for dir in report_empty_dirs %}
+- {{ dir }}
+{% endfor %}
+{% else %}
+No cavernous empty folders detected.
+{% endif %}
+
+--- Broken Symlinks ---
+{% if report_broken_symlinks %}
+{% for link in report_broken_symlinks %}
+- {{ link }}
+{% endfor %}
+{% else %}
+All digital pathways seem intact.
+{% endif %}
+
+---
+May your digital realm remain sparkling clean!
