@@ -1,0 +1,61 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Find old files
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ old_file_age_days }}d"
+        file_type: file
+      register: old_files_result
+      ignore_errors: true
+
+    - name: Find empty directories
+      ansible.builtin.shell: "find {{ scan_paths | join(' ') }} -type d -empty"
+      register: empty_dirs_result
+      changed_when: false
+      ignore_errors: true
+
+    - name: Find broken symlinks
+      ansible.builtin.shell: "find {{ scan_paths | join(' ') }} -xtype l"
+      register: broken_symlinks_result
+      changed_when: false
+      ignore_errors: true
+
+    - name: Remove old files (Dry Run: {{ dry_run }})
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_files_result.files }}"
+      when: not dry_run and old_files_result.files is defined and old_files_result.files | length > 0
+      ignore_errors: true
+
+    - name: Remove empty directories (Dry Run: {{ dry_run }})
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ empty_dirs_result.stdout_lines }}"
+      when: not dry_run and empty_dirs_result.stdout_lines is defined and empty_dirs_result.stdout_lines | length > 0
+      ignore_errors: true
+
+    - name: Remove broken symlinks (Dry Run: {{ dry_run }})
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ broken_symlinks_result.stdout_lines }}"
+      when: not dry_run and broken_symlinks_result.stdout_lines is defined and broken_symlinks_result.stdout_lines | length > 0
+      ignore_errors: true
+
+    - name: Generate Dust Bunny Report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "/tmp/dust_bunny_report_{{ ansible_hostname | default('localhost') }}.txt"
+      vars:
+        report_old_files: "{{ old_files_result.files | map(attribute='path') | list if old_files_result.files is defined else [] }}"
+        report_empty_dirs: "{{ empty_dirs_result.stdout_lines if empty_dirs_result.stdout_lines is defined else [] }}"
+        report_broken_symlinks: "{{ broken_symlinks_result.stdout_lines if broken_symlinks_result.stdout_lines is defined else [] }}"
+        cleanup_performed: "{{ not dry_run }}"

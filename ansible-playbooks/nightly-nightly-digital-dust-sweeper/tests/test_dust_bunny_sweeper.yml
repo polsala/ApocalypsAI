@@ -1,0 +1,204 @@
+---
+- name: Test Digital Dust Bunny Sweeper - Setup
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+
+  tasks:
+    - name: Ensure test directory is clean before starting
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create an old file
+      ansible.builtin.copy:
+        content: "This is an old file."
+        dest: "{{ test_dir }}/old_file.txt"
+      # Mock rationale: We create a file and then use 'touch' to set its modification time
+      # to ensure it's older than our 'old_file_age_days' threshold for testing.
+    - name: Make old_file.txt truly old
+      ansible.builtin.command: "touch -d '2000-01-01 00:00:00' {{ test_dir }}/old_file.txt"
+      changed_when: false
+
+    - name: Create an empty directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}/empty_dir"
+        state: directory
+        mode: '0755'
+
+    - name: Create a file in a nested directory (should not be removed as empty)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/not_empty_parent/not_empty_child/file.txt"
+        state: touch
+        mode: '0644'
+        create_parents: true
+
+    - name: Create a broken symlink
+      ansible.builtin.file:
+        src: "{{ test_dir }}/non_existent_target.txt"
+        dest: "{{ test_dir }}/broken_link.txt"
+        state: link
+      # Mock rationale: We create a symlink pointing to a non-existent file,
+      # which will be detected as broken by the 'find -xtype l' command.
+
+- name: Test Digital Dust Bunny Sweeper - Dry Run
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+    old_file_age_days: 0 # Make all created files "old" for testing
+    dry_run: true # Test dry run first
+
+  tasks:
+    - name: Run the main playbook in dry-run mode
+      ansible.builtin.include_playbook: ../dust_bunny_sweeper.yml
+      vars:
+        scan_paths: "{{ [test_dir] }}"
+        old_file_age_days: "{{ old_file_age_days }}"
+        dry_run: "{{ dry_run }}"
+
+    - name: Assert old file is still present after dry run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/old_file.txt"
+      register: old_file_stat
+      # Mock rationale: We check for file existence after a dry run.
+    - name: Verify old file exists
+      ansible.builtin.assert:
+        that:
+          - old_file_stat.stat.exists
+        fail_msg: "Old file was removed during dry run!"
+
+    - name: Assert empty directory is still present after dry run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/empty_dir"
+      register: empty_dir_stat
+      # Mock rationale: We check for directory existence after a dry run.
+    - name: Verify empty directory exists
+      ansible.builtin.assert:
+        that:
+          - empty_dir_stat.stat.exists
+        fail_msg: "Empty directory was removed during dry run!"
+
+    - name: Assert broken symlink is still present after dry run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/broken_link.txt"
+      register: broken_link_stat
+      # Mock rationale: We check for symlink existence after a dry run.
+    - name: Verify broken symlink exists
+      ansible.builtin.assert:
+        that:
+          - broken_link_stat.stat.exists
+          - broken_link_stat.stat.islnk
+        fail_msg: "Broken symlink was removed during dry run!"
+
+    - name: Assert report file was generated
+      ansible.builtin.stat:
+        path: "/tmp/dust_bunny_report_localhost.txt"
+      register: report_stat
+      # Mock rationale: We check for report file existence.
+    - name: Verify report file exists
+      ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists
+        fail_msg: "Report file was not generated!"
+
+    - name: Assert report content for dry run
+      ansible.builtin.slurp:
+        src: "/tmp/dust_bunny_report_localhost.txt"
+      register: report_content_b64
+      # Mock rationale: We read the generated report to verify its content.
+    - name: Verify report content indicates dry run
+      ansible.builtin.assert:
+        that:
+          - "'Cleanup Mode: DRY RUN' in (report_content_b64.content | b64decode)"
+          - "'old_file.txt' in (report_content_b64.content | b64decode)"
+          - "'empty_dir' in (report_content_b64.content | b64decode)"
+          - "'broken_link.txt' in (report_content_b64.content | b64decode)"
+        fail_msg: "Report content is incorrect for dry run!"
+
+- name: Test Digital Dust Bunny Sweeper - Cleanup Run
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+    old_file_age_days: 0 # Make all created files "old" for testing
+    dry_run: false # Enable actual cleanup
+
+  tasks:
+    - name: Run the main playbook in cleanup mode
+      ansible.builtin.include_playbook: ../dust_bunny_sweeper.yml
+      vars:
+        scan_paths: "{{ [test_dir] }}"
+        old_file_age_days: "{{ old_file_age_days }}"
+        dry_run: "{{ dry_run }}"
+
+    - name: Assert old file is removed after cleanup run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/old_file.txt"
+      register: old_file_stat
+      # Mock rationale: We check for file non-existence after cleanup.
+    - name: Verify old file is removed
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old file was NOT removed during cleanup run!"
+
+    - name: Assert empty directory is removed after cleanup run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/empty_dir"
+      register: empty_dir_stat
+      # Mock rationale: We check for directory non-existence after cleanup.
+    - name: Verify empty directory is removed
+      ansible.builtin.assert:
+        that:
+          - not empty_dir_stat.stat.exists
+        fail_msg: "Empty directory was NOT removed during cleanup run!"
+
+    - name: Assert broken symlink is removed after cleanup run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/broken_link.txt"
+      register: broken_link_stat
+      # Mock rationale: We check for symlink non-existence after cleanup.
+    - name: Verify broken symlink is removed
+      ansible.builtin.assert:
+        that:
+          - not broken_link_stat.stat.exists
+        fail_msg: "Broken symlink was NOT removed during cleanup run!"
+
+    - name: Assert report content for cleanup run
+      ansible.builtin.slurp:
+        src: "/tmp/dust_bunny_report_localhost.txt"
+      register: report_content_b64
+      # Mock rationale: We read the generated report to verify its content.
+    - name: Verify report content indicates cleanup
+      ansible.builtin.assert:
+        that:
+          - "'Cleanup Mode: ACTIVE' in (report_content_b64.content | b64decode)"
+        fail_msg: "Report content is incorrect for cleanup run!"
+
+- name: Test Digital Dust Bunny Sweeper - Teardown
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+
+  tasks:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Clean up report file
+      ansible.builtin.file:
+        path: "/tmp/dust_bunny_report_localhost.txt"
+        state: absent
+      ignore_errors: true

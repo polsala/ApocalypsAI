@@ -1,0 +1,12 @@
+---
+# Paths to scan for digital dust bunnies
+scan_paths:
+  - "/tmp"
+  # - "/var/log"
+  # - "{{ ansible_env.HOME }}/Downloads"
+
+# Age threshold for "old" files (in days)
+old_file_age_days: 30
+
+# Whether to actually remove files or just report (true for dry run, false for cleanup)
+dry_run: true
