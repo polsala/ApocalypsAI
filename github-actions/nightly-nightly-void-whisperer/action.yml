@@ -1,0 +1,31 @@
+name: 'Nightly Void Whisperer'
+description: 'Adds whimsical, encouraging comments to pull requests to foster community engagement.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication.'
+    required: true
+  messages:
+    description: 'A multiline string of whimsical messages to choose from. One will be randomly selected.'
+    required: false
+    default: |
+      "The void whispers: 'You're doing great, cosmic traveler!'"
+      "A faint echo from beyond: 'Keep up the stellar work!'"
+      "The stars align for your pull request. Magnificent!"
+      "Even in the darkest void, your code shines bright."
+      "May your merges be swift and your conflicts few."
+      "The universe observes your progress with keen interest."
+      "A ripple in the spacetime continuum confirms: this PR is awesome."
+      "Your efforts resonate through the cosmos. Well done!"
+      "The fabric of reality applauds your contribution."
+      "Another step towards cosmic harmony. Excellent!"
+  trigger-on-first-pr:
+    description: 'Set to true to only whisper on a user\'s first ever PR to the repo.'
+    required: false
+    default: 'false'
+  trigger-on-no-comments:
+    description: 'Set to true to only whisper if the PR has no existing comments (excluding bot comments).'
+    required: false
+    default: 'true'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
