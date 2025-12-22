@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  ephemeral-runner:
+    build: .
+    environment:
+      - GITHUB_OWNER=${GITHUB_OWNER}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - RUNNER_NAME=ephemeral-runner-${BUILD_NUMBER}
+    restart: "no"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker-host.sock:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
