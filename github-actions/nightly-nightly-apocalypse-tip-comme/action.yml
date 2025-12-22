@@ -1,0 +1,10 @@
+name: "Apocalypse Tip Generator"
+description: "Generates a random post‑apocalyptic survival tip"
+author: "ApocalypsAI"
+inputs: {}
+outputs:
+  tip:
+    description: "The generated tip"
+runs:
+  using: "node12"
+  main: "src/main.js"
