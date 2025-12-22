@@ -1,0 +1,38 @@
+---
+- name: Ensure ntpdate is installed (for time synchronization)
+  ansible.builtin.package:
+    name: ntpdate
+    state: present
+  register: ntpdate_install_status
+  # Mock rationale: In a real scenario, this would install ntpdate. For testing, we assume
+  # it's already "installed" or mock the package manager's behavior. The test playbook
+  # ensures this task reports success by mocking the environment.
+
+- name: Perform Temporal Drift Correction (Synchronize system clock)
+  ansible.builtin.command: "ntpdate -s {{ ntp_server }}"
+  changed_when: true # Always report change for time sync, as it's an external command
+  # Mock rationale: This command would contact an NTP server. In tests, we mock its
+  # success by replacing the `ntpdate` executable with a dummy script that always succeeds.
+
+- name: Ensure Beacon Signal Emitter service is running and enabled
+  ansible.builtin.service:
+    name: "{{ beacon_service_name }}"
+    state: started
+    enabled: yes
+  # Mock rationale: This task interacts with systemd/sysvinit. For testing, we create a
+  # dummy service file in a mock /etc directory and configure Ansible's service module
+  # to look there, ensuring it reports success when attempting to manage it.
+
+- name: Check Signal Integrity (Verify beacon signal log presence)
+  ansible.builtin.stat:
+    path: "/var/log/beacon_signal.log"
+  register: signal_log_status
+  # Mock rationale: This checks for a file. For testing, we create this file in a mock
+  # /var/log directory.
+
+- name: Fail if beacon signal log is not found
+  ansible.builtin.fail:
+    msg: "Temporal anomaly detected! Beacon signal log '/var/log/beacon_signal.log' is missing. Signal integrity compromised!"
+  when: not signal_log_status.stat.exists
+  # Mock rationale: This task asserts the presence of the mock log file, failing the
+  # playbook if it's not found, thus verifying the 'stat' module's success in the test.
