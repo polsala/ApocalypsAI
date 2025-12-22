@@ -1,0 +1,16 @@
+name: "Emoji PR Labeler"
+description: "Automatically adds labels to a PR based on emojis in its title."
+inputs:
+  pr_title:
+    description: "Pull request title"
+    required: true
+outputs:
+  labels:
+    description: "Comma‑separated list of labels derived from emojis"
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler script
+      shell: bash
+      run: |
+        ./src/labeler.sh "${{ inputs.pr_title }}"
