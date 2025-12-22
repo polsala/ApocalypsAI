@@ -1,0 +1,90 @@
+---
+- name: Test Beacon Network Synchronizer Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: yes # Required for service management and file operations in /etc, /var
+  vars:
+    test_base_dir: "/tmp/ansible_beacon_test_{{ lookup('pipe', 'date +%s') }}" # Unique dir for each run
+    mock_etc_dir: "{{ test_base_dir }}/etc"
+    mock_var_log_dir: "{{ test_base_dir }}/var/log"
+    mock_service_file_path: "{{ mock_etc_dir }}/systemd/system/beacon_signal_emitter.service"
+    mock_log_file_path: "{{ mock_var_log_dir }}/beacon_signal.log"
+    mock_ntpdate_bin_dir: "{{ test_base_dir }}/usr/sbin"
+    ntp_server_for_test: "127.0.0.1" # Mock NTP server, command will still run
+
+  pre_tasks:
+    - name: Create mock directories for testing
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        recurse: yes
+      loop:
+        - "{{ mock_etc_dir }}/systemd/system"
+        - "{{ mock_var_log_dir }}"
+        - "{{ mock_ntpdate_bin_dir }}"
+      # Mock rationale: Creates a temporary, isolated environment for the test to prevent
+      # interference with the actual system and ensure deterministic results.
+
+    - name: Create mock beacon service file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Mock Beacon Signal Emitter
+          [Service]
+          ExecStart=/bin/true
+          [Install]
+          WantedBy=multi-user.target
+        dest: "{{ mock_service_file_path }}"
+        mode: '0644'
+      # Mock rationale: Simulates the presence of the service file that the main playbook
+      # expects to manage. This allows the 'service' module to find a target.
+
+    - name: Create mock beacon signal log file
+      ansible.builtin.file:
+        path: "{{ mock_log_file_path }}"
+        state: touch
+        mode: '0644'
+      # Mock rationale: Simulates the presence of the log file for the signal integrity
+      # check, ensuring the 'stat' module finds it and the 'fail' task is not triggered.
+
+    - name: Set up environment for service module to find mock service
+      ansible.builtin.set_fact:
+        ansible_service_mgr_path: "{{ mock_etc_dir }}"
+      # Mock rationale: This is a critical mock. Ansible's service module usually looks
+      # in standard systemd paths. By setting `ansible_service_mgr_path`, we tell it to
+      # look in our mock /etc directory for service files, allowing it to "find" and
+      # "manage" our mock service within the isolated test environment.
+
+    - name: Create mock ntpdate executable
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          echo "Mock ntpdate -s {{ ntp_server_for_test }}"
+          exit 0
+        dest: "{{ mock_ntpdate_bin_dir }}/ntpdate"
+        mode: '0755'
+      # Mock rationale: Replaces the actual `ntpdate` command with a dummy script that
+      # always succeeds. This prevents the test from relying on external network access
+      # or actual time synchronization, making it deterministic and offline.
+
+    - name: Prepend mock bin directory to PATH for command module
+      ansible.builtin.set_fact:
+        ansible_env_PATH: "{{ mock_ntpdate_bin_dir }}:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+      # Mock rationale: Ensures our mock `ntpdate` executable is found by the `command`
+      # module before the real one, guaranteeing the mocked behavior is used during the test.
+
+  tasks:
+    - name: Run the actual beacon synchronization playbook
+      ansible.builtin.include_playbook: ../beacon_sync.yml
+      vars:
+        ntp_server: "{{ ntp_server_for_test }}" # Pass mock NTP server to the main playbook
+
+  always:
+    - name: Clean up mock directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Ensures a clean state after each test run, removing all temporary
+      # files and directories created during the test.
