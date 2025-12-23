@@ -1,0 +1,27 @@
+{
+  "repository": "{{ report_data.repo }}",
+  "timestamp": "{{ ansible_date_time.iso8601 }}",
+  "cleanup_summary": {
+    "total_runners": {{ report_data.total_runners }},
+    "orphaned_runners_found": {{ report_data.orphaned_count }},
+    "runners_successfully_removed": {{ report_data.removed_count }},
+    "removal_failures": {{ report_data.failed_count }}
+  },
+  "details": {
+    "orphaned_runners": [
+      {% for runner in report_data.orphaned_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "removed_runners": [
+      {% for runner in report_data.removed_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "failed_runners": [
+      {% for runner in report_data.failed_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}

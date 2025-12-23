@@ -1,0 +1,72 @@
+---
+- name: GitHub Actions Runner Health Check
+  hosts: github_repos
+  gather_facts: false
+  vars:
+    github_api_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+    health_check_timeout: 30
+  tasks:
+    - name: Validate GitHub API token
+      assert:
+        that:
+          - github_api_token is defined
+          - github_api_token | length > 0
+        fail_msg: "GITHUB_TOKEN environment variable must be set"
+
+    - name: Get repository runners list
+      uri:
+        url: "https://api.github.com/repos/{{ org }}/{{ repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: runners_response
+
+    - name: Parse runners data
+      set_fact:
+        runners: "{{ runners_response.json.runners }}"
+        total_runners: "{{ runners_response.json.total_count }}"
+
+    - name: Check runner health status
+      set_fact:
+        healthy_runners: >
+          {{ runners | selectattr('status', 'equalto', 'online') | list }}
+        offline_runners: >
+          {{ runners | selectattr('status', 'equalto', 'offline') | list }}
+        busy_runners: >
+          {{ runners | selectattr('busy', 'equalto', true) | list }}
+
+    - name: Debug - Runner health status
+      debug:
+        msg:
+          - "Repository: {{ org }}/{{ repo }}"
+          - "Total runners: {{ total_runners }}"
+          - "Healthy runners: {{ healthy_runners | length }}"
+          - "Offline runners: {{ offline_runners | length }}"
+          - "Busy runners: {{ busy_runners | length }}"
+
+    - name: Generate health check report
+      template:
+        src: templates/health_check_report.j2
+        dest: "health_check_report_{{ org }}_{{ repo }}.json"
+      vars:
+        report_data: >
+          {{ {
+            'repo': org + '/' + repo,
+            'total_runners': total_runners,
+            'healthy_count': healthy_runners | length,
+            'offline_count': offline_runners | length,
+            'busy_count': busy_runners | length,
+            'healthy_runners': healthy_runners | map(attribute='name') | list,
+            'offline_runners': offline_runners | map(attribute='name') | list,
+            'busy_runners': busy_runners | map(attribute='name') | list,
+            'timestamp': ansible_date_time.iso8601
+          } }}
+
+    - name: Upload health check report as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: health-check-report-{{ org }}-{{ repo }}
+        path: "health_check_report_{{ org }}_{{ repo }}.json"
+        retention-days: 7

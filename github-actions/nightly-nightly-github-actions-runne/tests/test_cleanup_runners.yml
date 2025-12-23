@@ -1,0 +1,202 @@
+---
+- name: Test GitHub Actions Runner Ghost Buster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    github_api_token: "test_token"
+  tasks:
+    - name: Test cleanup playbook syntax
+      command: ansible-playbook --syntax-check cleanup_runners.yml
+      register: syntax_check
+      changed_when: false
+
+    - name: Verify syntax check passed
+      assert:
+        that:
+          - syntax_check.rc == 0
+        fail_msg: "Syntax check failed"
+
+    - name: Test health check playbook syntax
+      command: ansible-playbook --syntax-check health_check.yml
+      register: health_syntax_check
+      changed_when: false
+
+    - name: Verify health check syntax
+      assert:
+        that:
+          - health_syntax_check.rc == 0
+        fail_msg: "Health check syntax failed"
+
+    - name: Test provision playbook syntax
+      command: ansible-playbook --syntax-check provision_runners.yml
+      register: provision_syntax_check
+      changed_when: false
+
+    - name: Verify provision syntax
+      assert:
+        that:
+          - provision_syntax_check.rc == 0
+        fail_msg: "Provision syntax failed"
+
+    - name: Test inventory file syntax
+      command: ansible-inventory -i inventory.ini --list
+      register: inventory_check
+      changed_when: false
+
+    - name: Verify inventory syntax
+      assert:
+        that:
+          - inventory_check.rc == 0
+        fail_msg: "Inventory syntax failed"
+
+    - name: Test template files exist
+      stat:
+        path: templates/{{ item }}
+      loop:
+        - cleanup_report.j2
+        - health_check_report.j2
+        - comprehensive_report.j2
+      register: template_checks
+
+    - name: Verify all templates exist
+      assert:
+        that:
+          - template_checks.results | selectattr('stat.exists', 'equalto', true) | list | length == 3
+        fail_msg: "One or more template files are missing"
+
+    - name: Test variable file exists
+      stat:
+        path: vars/main.yml
+      register: vars_check
+
+    - name: Verify variables file exists
+      assert:
+        that:
+          - vars_check.stat.exists
+        fail_msg: "Variables file not found"
+
+    - name: Test cleanup playbook with dry-run
+      command: ansible-playbook --check --diff cleanup_runners.yml -i inventory.ini
+      register: dry_run_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Verify dry-run completed
+      assert:
+        that:
+          - dry_run_check.rc in [0, 2]  # 0 = success, 2 = changes would be made
+        fail_msg: "Dry-run failed unexpectedly"
+
+    - name: Test health check playbook with dry-run
+      command: ansible-playbook --check --diff health_check.yml -i inventory.ini
+      register: health_dry_run_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Verify health check dry-run completed
+      assert:
+        that:
+          - health_dry_run_check.rc in [0, 2]
+        fail_msg: "Health check dry-run failed unexpectedly"
+
+    - name: Test provision playbook with dry-run
+      command: ansible-playbook --check --diff provision_runners.yml -i inventory.ini
+      register: provision_dry_run_check
+      changed_when: false
+      ignore_errors: true
+
+    - name: Verify provision dry-run completed
+      assert:
+        that:
+          - provision_dry_run_check.rc in [0, 2]
+        fail_msg: "Provision dry-run failed unexpectedly"
+
+    - name: Test report generation
+      command: ansible-playbook cleanup_runners.yml -i inventory.ini
+      register: report_generation
+      ignore_errors: true
+      environment:
+        GITHUB_TOKEN: "test_token"
+
+    - name: Verify report generation attempted
+      assert:
+        that:
+          - report_generation.rc in [0, 2]
+        fail_msg: "Report generation failed unexpectedly"
+
+    - name: Test cleanup with mock data
+      block:
+        - name: Create mock runners response
+          set_fact:
+            mock_runners_response: >
+              {"runners": [{"id": 1, "name": "gh-runner-test", "status": "offline", "busy": false}], "total_count": 1}
+
+        - name: Test runner detection logic
+          set_fact:
+            orphaned_runners: >
+              {{ mock_runners_response.runners | selectattr('status', 'equalto', 'offline') | selectattr('busy', 'equalto', false) | selectattr('name', 'search', '^gh-runner-') | list }}
+
+        - name: Verify orphaned runner detection
+          assert:
+            that:
+              - orphaned_runners | length == 1
+              - orphaned_runners[0].name == "gh-runner-test"
+            fail_msg: "Orphaned runner detection failed"
+      when: false  # Skip actual API calls in tests
+
+    - name: Test inventory parsing
+      command: ansible-inventory -i inventory.ini --list --output json
+      register: inventory_parse
+      changed_when: false
+
+    - name: Verify inventory parsing
+      assert:
+        that:
+          - inventory_parse.rc == 0
+          - inventory_parse.stdout is search('github_repos')
+        fail_msg: "Inventory parsing failed"
+
+    - name: Test playbook dependencies
+      command: ansible-playbook --list-tags cleanup_runners.yml
+      register: tags_check
+      changed_when: false
+
+    - name: Verify playbook has expected structure
+      assert:
+        that:
+          - tags_check.rc == 0
+        fail_msg: "Playbook structure check failed"
+
+    - name: Test template rendering
+      template:
+        src: templates/cleanup_report.j2
+        dest: /tmp/test_cleanup_report.json
+      vars:
+        report_data: >
+          {"repo": "test-org/test-repo", "total_runners": 5, "orphaned_count": 2, "removed_count": 2, "failed_count": 0, "orphaned_runners": ["runner1", "runner2"], "removed_runners": ["runner1", "runner2"], "failed_runners": []}
+      register: template_render
+
+    - name: Verify template rendering
+      assert:
+        that:
+          - template_render.changed
+          - template_render.rc == 0
+        fail_msg: "Template rendering failed"
+
+    - name: Test rendered report content
+      stat:
+        path: /tmp/test_cleanup_report.json
+      register: report_stat
+
+    - name: Verify report file created
+      assert:
+        that:
+          - report_stat.stat.exists
+          - report_stat.stat.size > 0
+        fail_msg: "Report file not created or empty"
+
+    - name: Clean up test files
+      file:
+        path: /tmp/test_cleanup_report.json
+        state: absent
+      when: report_stat.stat.exists

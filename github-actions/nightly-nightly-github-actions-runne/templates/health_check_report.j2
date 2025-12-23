@@ -1,0 +1,27 @@
+{
+  "repository": "{{ report_data.repo }}",
+  "timestamp": "{{ report_data.timestamp }}",
+  "health_summary": {
+    "total_runners": {{ report_data.total_runners }},
+    "healthy_runners": {{ report_data.healthy_count }},
+    "offline_runners": {{ report_data.offline_count }},
+    "busy_runners": {{ report_data.busy_count }}
+  },
+  "details": {
+    "healthy_runners": [
+      {% for runner in report_data.healthy_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "offline_runners": [
+      {% for runner in report_data.offline_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "busy_runners": [
+      {% for runner in report_data.busy_runners %}
+      "{{ runner }}"{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}

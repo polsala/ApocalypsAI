@@ -1,0 +1,51 @@
+---
+- name: GitHub Actions Runner Provisioning Suite
+  hosts: localhost
+  gather_facts: false
+  vars:
+    github_api_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+    max_runner_age_hours: 24
+    health_check_timeout: 30
+    generate_report: true
+    report_format: "json"
+  tasks:
+    - name: Validate GitHub API token
+      assert:
+        that:
+          - github_api_token is defined
+          - github_api_token | length > 0
+        fail_msg: "GITHUB_TOKEN environment variable must be set"
+
+    - name: Include cleanup tasks
+      include_tasks: cleanup_runners.yml
+
+    - name: Include health check tasks
+      include_tasks: health_check.yml
+
+    - name: Generate comprehensive report
+      template:
+        src: templates/comprehensive_report.j2
+        dest: "comprehensive_report.json"
+      vars:
+        cleanup_data: "{{ all_cleanup_results | default([]) }}"
+        health_data: "{{ all_health_results | default([]) }}"
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Upload comprehensive report as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: comprehensive-report
+        path: "comprehensive_report.json"
+        retention-days: 7
+
+    - name: Summary of all operations
+      debug:
+        msg: >
+          {{ "Cleanup completed: " + (all_cleanup_results | default([]) | map(attribute='removed_count') | sum | string) + " runners removed" }}
+      when: all_cleanup_results is defined
+
+    - name: Summary of health check operations
+      debug:
+        msg: >
+          {{ "Health check completed: " + (all_health_results | default([]) | map(attribute='healthy_count') | sum | string) + " healthy runners" }}
+      when: all_health_results is defined

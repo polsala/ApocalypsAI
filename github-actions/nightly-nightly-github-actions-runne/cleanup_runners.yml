@@ -1,0 +1,112 @@
+---
+- name: GitHub Actions Runner Ghost Buster
+  hosts: github_repos
+  gather_facts: false
+  vars:
+    github_api_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+    max_runner_age_hours: 24
+    health_check_timeout: 30
+    generate_report: true
+    report_format: "json"
+  tasks:
+    - name: Validate GitHub API token
+      assert:
+        that:
+          - github_api_token is defined
+          - github_api_token | length > 0
+        fail_msg: "GITHUB_TOKEN environment variable must be set"
+
+    - name: Get repository runners list
+      uri:
+        url: "https://api.github.com/repos/{{ org }}/{{ repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: runners_response
+
+    - name: Parse runners data
+      set_fact:
+        runners: "{{ runners_response.json.runners }}"
+        total_runners: "{{ runners_response.json.total_count }}"
+
+    - name: Debug - Found runners
+      debug:
+        msg:
+          - "Repository: {{ org }}/{{ repo }}"
+          - "Total runners: {{ total_runners }}"
+          - "Runners: {{ runners | map(attribute='name') | list }}"
+
+    - name: Detect orphaned runners
+      set_fact:
+        orphaned_runners: >
+          {{ runners | selectattr('status', 'equalto', 'offline') | 
+             selectattr('busy', 'equalto', false) | 
+             selectattr('name', 'search', '^gh-runner-') | 
+             list }}
+
+    - name: Debug - Orphaned runners
+      debug:
+        msg:
+          - "Orphaned runners: {{ orphaned_runners | map(attribute='name') | list }}"
+
+    - name: Remove orphaned runners
+      uri:
+        url: "https://api.github.com/repos/{{ org }}/{{ repo }}/actions/runners/{{ item.id }}"
+        method: DELETE
+        headers:
+          Authorization: "token {{ github_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 204
+      loop: "{{ orphaned_runners }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: delete_results
+      ignore_errors: true
+
+    - name: Collect cleanup results
+      set_fact:
+        cleanup_results: >
+          {{ {
+            'repo': org + '/' + repo,
+            'total_runners': total_runners,
+            'orphaned_count': orphaned_runners | length,
+            'removed_count': delete_results.results | selectattr('failed', 'equalto', false) | list | length,
+            'failed_count': delete_results.results | selectattr('failed', 'equalto', true) | list | length,
+            'orphaned_runners': orphaned_runners | map(attribute='name') | list,
+            'removed_runners': delete_results.results | selectattr('failed', 'equalto', false) | map(attribute='item') | map(attribute='name') | list,
+            'failed_runners': delete_results.results | selectattr('failed', 'equalto', true) | map(attribute='item') | map(attribute='name') | list
+          } }}
+
+    - name: Store cleanup results for report
+      set_fact:
+        all_cleanup_results: >
+          {{ (all_cleanup_results | default([])) + [cleanup_results] }}
+
+    - name: Generate cleanup report
+      when: generate_report
+      template:
+        src: templates/cleanup_report.j2
+        dest: "cleanup_report_{{ org }}_{{ repo }}.{{ report_format }}"
+      vars:
+        report_data: "{{ cleanup_results }}"
+
+    - name: Upload cleanup report as artifact
+      when: generate_report
+      uses: actions/upload-artifact@v4
+      with:
+        name: cleanup-report-{{ org }}-{{ repo }}
+        path: "cleanup_report_{{ org }}_{{ repo }}.{{ report_format }}"
+        retention-days: 7
+
+  post_tasks:
+    - name: Summary of cleanup operations
+      debug:
+        msg: >
+          {{ all_cleanup_results | map(attribute='repo') | list | zip(
+               all_cleanup_results | map(attribute='orphaned_count') | list,
+               all_cleanup_results | map(attribute='removed_count') | list,
+               all_cleanup_results | map(attribute='failed_count') | list
+             ) | map('join', ': ') | list }}
+      when: all_cleanup_results is defined
