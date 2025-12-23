@@ -1,0 +1,17 @@
+---
+# Default validation settings
+validation_settings:
+  strict_mode: true
+  check_idempotency: true
+  generate_report: true
+  report_format: "html"
+  report_dir: "reports"
+
+# Example playbook to validate (can be overridden via extra-vars)
+playbook_to_validate: ""
+
+# Validation thresholds
+validation_thresholds:
+  max_lint_violations: 10
+  require_idempotency: true
+  fail_on_syntax_error: true

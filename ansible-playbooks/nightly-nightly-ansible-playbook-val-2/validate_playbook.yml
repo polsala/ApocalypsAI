@@ -1,0 +1,146 @@
+---
+# Nightly Ansible Playbook Validator
+# Validates syntax, idempotency, and best practices
+
+- name: Validate Ansible Playbook
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    validation_settings:
+      strict_mode: "{{ strict_mode | default(true) }}"
+      check_idempotency: "{{ check_idempotency | default(true) }}"
+      generate_report: "{{ generate_report | default(false) }}"
+      report_format: "{{ report_format | default('html') }}"
+      report_dir: "{{ report_dir | default('reports') }}"
+    
+    # Validation results
+    validation_results: {}
+    
+  tasks:
+    - name: Ensure validation directory exists
+      file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Check Ansible version
+      command: ansible --version
+      register: ansible_version
+      changed_when: false
+
+    - name: Display Ansible version
+      debug:
+        msg: "Using Ansible {{ ansible_version.stdout_lines[0] }}"
+
+    - name: Validate playbook syntax
+      command: >
+        ansible-playbook --syntax-check
+        {{ playbook_to_validate | default('') }}
+      when: playbook_to_validate is defined
+      register: syntax_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Store syntax validation result
+      set_fact:
+        validation_results: >
+          {{ validation_results | combine({
+            'syntax_check': {
+              'status': syntax_check.rc == 0,
+              'output': syntax_check.stdout,
+              'errors': syntax_check.stderr
+            }
+          }) }}
+
+    - name: Run Ansible Lint
+      command: >
+        ansible-lint
+        {{ playbook_to_validate | default('') }}
+        --format json
+      when: playbook_to_validate is defined
+      register: lint_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Parse lint results
+      set_fact:
+        lint_results: "{{ lint_check.stdout | from_json | default([]) }}"
+      when: lint_check.stdout | length > 0
+
+    - name: Store lint validation result
+      set_fact:
+        validation_results: >
+          {{ validation_results | combine({
+            'lint_check': {
+              'status': lint_check.rc == 0,
+              'violations': lint_results | length,
+              'details': lint_results
+            }
+          }) }}
+      when: lint_results is defined
+
+    - name: Test idempotency (if enabled)
+      block:
+        - name: Run playbook in check mode
+          command: >
+            ansible-playbook --check --diff
+            {{ playbook_to_validate | default('') }}
+          when: playbook_to_validate is defined
+          register: check_mode_run
+          ignore_errors: true
+          changed_when: false
+
+        - name: Run playbook normally
+          command: >
+            ansible-playbook
+            {{ playbook_to_validate | default('') }}
+          when: playbook_to_validate is defined
+          register: normal_run
+          ignore_errors: true
+          changed_when: false
+
+        - name: Compare results for idempotency
+          set_fact:
+            idempotency_result: >
+              {{ {
+                'status': check_mode_run.rc == normal_run.rc,
+                'check_output': check_mode_run.stdout,
+                'normal_output': normal_run.stdout,
+                'check_errors': check_mode_run.stderr,
+                'normal_errors': normal_run.stderr
+              } }}
+
+        - name: Store idempotency validation result
+          set_fact:
+            validation_results: >
+              {{ validation_results | combine({
+                'idempotency_check': idempotency_result
+              }) }}
+
+      when: validation_settings.check_idempotency | bool
+
+    - name: Generate validation report
+      template:
+        src: templates/validation_report.j2
+        dest: "{{ report_dir }}/validation_report.{{ validation_settings.report_format }}"
+      when: validation_settings.generate_report | bool
+
+    - name: Display validation summary
+      debug:
+        msg: >
+          Validation Summary:
+          - Syntax Check: {{ 'PASSED' if validation_results.syntax_check.status else 'FAILED' }}
+          - Lint Check: {{ 'PASSED' if validation_results.lint_check.status else 'FAILED' }}
+          {% if validation_settings.check_idempotency | bool %}
+          - Idempotency: {{ 'PASSED' if validation_results.idempotency_check.status else 'FAILED' }}
+          {% endif %}
+          - Report: {{ report_dir }}/validation_report.{{ validation_settings.report_format }}
+
+    - name: Fail if validation failed
+      fail:
+        msg: "Validation failed. Check the report for details."
+      when: >
+        not validation_results.syntax_check.status or
+        not validation_results.lint_check.status or
+        (validation_settings.check_idempotency | bool and not validation_results.idempotency_check.status)
