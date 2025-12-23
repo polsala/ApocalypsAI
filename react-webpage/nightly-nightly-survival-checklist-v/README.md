@@ -1,0 +1,1 @@
+Nightly Survival Checklist Viewer\n\nA whimsical React app that displays a survival checklist with a post-apocalyptic theme. Toggle items to track progress.\n\n### Usage\n\n```bash\nnpm install\nnpm start\n```\n\n### Testing\n\n```bash\nnpm test\n```\n
