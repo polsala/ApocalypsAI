@@ -1,0 +1,36 @@
+# GitHub API configuration
+github_api_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+
+# Cleanup configuration
+max_runner_age_hours: 24
+health_check_timeout: 30
+
+# Reporting
+generate_report: true
+report_format: "json"
+
+# Runner naming patterns
+orphaned_runner_pattern: "^gh-runner-"
+
+# API timeouts
+api_timeout: 30
+api_retries: 3
+api_retry_delay: 5
+
+# Health check thresholds
+max_offline_duration_hours: 1
+min_healthy_runners: 1
+
+# Cleanup policies
+remove_offline_runners: true
+remove_busy_runners: false
+remove_idle_runners: true
+
+# Notification settings
+notify_on_cleanup: true
+notify_on_health_check: true
+notification_webhook: ""
+
+# Debug settings
+debug_mode: false
+verbose_logging: false

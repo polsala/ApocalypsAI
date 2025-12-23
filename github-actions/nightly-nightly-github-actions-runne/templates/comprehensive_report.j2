@@ -1,0 +1,11 @@
+{
+  "timestamp": "{{ timestamp }}",
+  "summary": {
+    "total_repositories": {{ cleanup_data | length + health_data | length }},
+    "total_runners_cleaned": {{ cleanup_data | map(attribute='removed_count') | sum }},
+    "total_healthy_runners": {{ health_data | map(attribute='healthy_count') | sum }},
+    "total_offline_runners": {{ health_data | map(attribute='offline_count') | sum }}
+  },
+  "cleanup_results": {{ cleanup_data | to_json }},
+  "health_check_results": {{ health_data | to_json }}
+}
