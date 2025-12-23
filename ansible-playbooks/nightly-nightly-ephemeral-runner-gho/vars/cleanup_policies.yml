@@ -1,0 +1,48 @@
+---
+# Cleanup Policy Configurations
+
+cleanup_policies:
+  conservative:
+    max_age_hours: 48
+    remove_inactive: false
+    remove_offline: false
+    remove_orphaned: true
+    confirmation_required: true
+
+  moderate:
+    max_age_hours: 24
+    remove_inactive: true
+    remove_offline: false
+    remove_orphaned: true
+    confirmation_required: false
+
+  aggressive:
+    max_age_hours: 6
+    remove_inactive: true
+    remove_offline: true
+    remove_orphaned: true
+    confirmation_required: false
+
+# Policy-specific rules
+cleanup_rules:
+  conservative:
+    - "Only remove runners older than 48 hours"
+    - "Require manual confirmation for cleanup"
+    - "Preserve all active and recently active runners"
+
+  moderate:
+    - "Remove runners older than 24 hours"
+    - "Automated cleanup without confirmation"
+    - "Remove orphaned runners immediately"
+
+  aggressive:
+    - "Remove runners older than 6 hours"
+    - "Remove all inactive and offline runners"
+    - "Maximum cleanup with minimal preservation"
+
+# Safety thresholds
+safety_thresholds:
+  min_active_runners: 1
+  max_cleanup_per_run: 10
+  require_confirmation_for_large_cleanup: true
+  large_cleanup_threshold: 5

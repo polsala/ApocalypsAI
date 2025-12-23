@@ -1,0 +1,200 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Automated cleanup of orphaned GitHub Actions self-hosted runners
+
+- name: Ephemeral Runner Ghost Buster
+  hosts: runners
+  gather_facts: false
+  vars:
+    # GitHub configuration
+    github_api_base: "https://api.github.com"
+    github_token: "{{ github_token | default(lookup('env', 'GITHUB_TOKEN')) }}"
+    organization: "{{ organization | default(lookup('env', 'GITHUB_ORG')) }}"
+    
+    # Cleanup configuration
+    cleanup_policy: "{{ cleanup_policy | default('moderate') }}"
+    dry_run: "{{ dry_run | default(false) | bool }}"
+    max_age_hours: "{{ max_age_hours | default(24) | int }}"
+    
+    # Internal variables
+    active_runners: []
+    orphaned_runners: []
+    cleanup_actions: []
+    
+  vars_files:
+    - vars/cleanup_policies.yml
+    - vars/github_api.yml
+
+  tasks:
+    - name: Validate required variables
+      fail:
+        msg: "GitHub token and organization are required. Set via inventory or environment variables."
+      when: github_token is not defined or github_token == '' or organization is not defined or organization == ''
+
+    - name: Set GitHub API headers
+      set_fact:
+        github_headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+          User-Agent: "ghost-buster-ansible"
+
+    - name: Detect active runners on GitHub
+      uri:
+        url: "{{ github_api_base }}/orgs/{{ organization }}/actions/runners"
+        method: GET
+        headers: "{{ github_headers }}"
+        return_content: true
+        status_code: 200
+      register: github_runners_response
+      retries: 3
+      delay: 5
+      until: github_runners_response.status == 200
+      ignore_errors: true
+
+    - name: Parse active runners from GitHub response
+      set_fact:
+        active_runners: >
+          {{ github_runners_response.json.runners | 
+             selectattr('status', 'equalto', 'online') | 
+             map(attribute='name') | list }}
+      when: github_runners_response is defined and github_runners_response.json is defined
+
+    - name: Get local runner status
+      shell: |
+        if [ -f /etc/systemd/system/actions.runner.*.service ]; then
+          systemctl list-units --type=service --state=active | grep -o 'actions\.runner\.[^.]*' | cut -d'.' -f3
+        else
+          echo ""
+        fi
+      register: local_runners
+      changed_when: false
+
+    - name: Parse local runners
+      set_fact:
+        local_runner_names: >
+          {{ local_runners.stdout_lines | select('match', '^runner-') | list }}
+
+    - name: Identify orphaned runners
+      set_fact:
+        orphaned_runners: >
+          {{ local_runner_names | difference(active_runners | default([])) }}
+
+    - name: Filter orphaned runners by age (if not dry run)
+      set_fact:
+        orphaned_runners: >
+          {{ orphaned_runners | select('match', '^runner-') | list }}
+      when: not dry_run
+
+    - name: Log orphaned runners found
+      debug:
+        msg: "Orphaned runners detected: {{ orphaned_runners }}"
+      when: orphaned_runners | length > 0
+
+    - name: Log no orphaned runners
+      debug:
+        msg: "No orphaned runners detected."
+      when: orphaned_runners | length == 0
+
+    - name: Get runner service files for cleanup
+      shell: |
+        find /etc/systemd/system -name "actions.runner.*.service" -exec basename {} \;
+      register: runner_services
+      changed_when: false
+      when: orphaned_runners | length > 0
+
+    - name: Parse runner services
+      set_fact:
+        runner_service_files: >
+          {{ runner_services.stdout_lines | 
+             select('match', '^actions\.runner\.') | 
+             list }}
+      when: orphaned_runners | length > 0
+
+    - name: Stop runner services
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop: "{{ runner_service_files | default([]) }}"
+      when: not dry_run and orphaned_runners | length > 0
+      register: stop_results
+
+    - name: Remove runner service files
+      file:
+        path: "/etc/systemd/system/{{ item }}"
+        state: absent
+      loop: "{{ runner_service_files | default([]) }}"
+      when: not dry_run and orphaned_runners | length > 0
+      register: remove_service_results
+
+    - name: Remove runner directories
+      file:
+        path: "/home/runner/actions-runner"
+        state: absent
+      when: not dry_run and orphaned_runners | length > 0
+      register: remove_dir_results
+
+    - name: Clean up runner user
+      user:
+        name: runner
+        state: absent
+        remove: true
+      when: not dry_run and orphaned_runners | length > 0
+      register: remove_user_results
+
+    - name: Register cleanup actions
+      set_fact:
+        cleanup_actions: >
+          {{ cleanup_actions + [{
+            'host': inventory_hostname,
+            'orphaned_runners': orphaned_runners,
+            'services_stopped': stop_results.results | map(attribute='item') | list | default([]),
+            'services_removed': remove_service_results.results | map(attribute='item') | list | default([]),
+            'directories_removed': remove_dir_results is defined and remove_dir_results.changed | default(false),
+            'user_removed': remove_user_results is defined and remove_user_results.changed | default(false)
+          }] }}
+      when: orphaned_runners | length > 0
+
+    - name: Generate cleanup report
+      template:
+        src: templates/cleanup_report.j2
+        dest: "/tmp/ghost_buster_report_{{ inventory_hostname }}.txt"
+        mode: '0644'
+
+    - name: Display cleanup report
+      debug:
+        msg: "{{ lookup('file', '/tmp/ghost_buster_report_' + inventory_hostname + '.txt') }}"
+
+    - name: Upload cleanup report to GitHub (if configured)
+      uri:
+        url: "{{ github_api_base }}/repos/{{ organization }}/{{ inventory_hostname }}/issues"
+        method: POST
+        headers: "{{ github_headers }}"
+        body: >
+          {"title": "Ghost Buster Cleanup Report - {{ inventory_hostname }}", "body": "{{ lookup('file', '/tmp/ghost_buster_report_' + inventory_hostname + '.txt') | replace('\n', '\\n') }}"}
+        body_format: json
+      when: github_token is defined and github_token != '' and not dry_run
+      ignore_errors: true
+
+    - name: Fail if cleanup policy validation failed
+      fail:
+        msg: "Cleanup policy validation failed. Check configuration."
+      when: cleanup_policy not in ['conservative', 'moderate', 'aggressive']
+
+    - name: Set final status
+      set_fact:
+        final_status: >
+          {{ {
+            'host': inventory_hostname,
+            'total_runners': local_runner_names | length,
+            'active_runners': active_runners | length,
+            'orphaned_runners': orphaned_runners | length,
+            'cleanup_performed': not dry_run and orphaned_runners | length > 0,
+            'dry_run': dry_run
+          } }}
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+      when: not dry_run

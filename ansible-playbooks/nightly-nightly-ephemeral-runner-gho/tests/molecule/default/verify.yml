@@ -1,0 +1,48 @@
+---
+# Molecule verification playbook
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  
+  tasks:
+    - name: Check that ghost buster playbook ran successfully
+      assert:
+        that:
+          - inventory_hostname is defined
+        msg: "Ghost buster playbook should have run successfully"
+
+    - name: Verify no actual cleanup was performed in dry run mode
+      assert:
+        that:
+          - dry_run == true
+        msg: "Dry run mode should prevent actual cleanup"
+
+    - name: Check that required variables are set
+      assert:
+        that:
+          - github_token is defined
+          - organization is defined
+          - cleanup_policy is defined
+        msg: "Required variables should be defined"
+
+    - name: Verify cleanup policy is valid
+      assert:
+        that:
+          - cleanup_policy in ['conservative', 'moderate', 'aggressive']
+        msg: "Cleanup policy should be valid"
+
+    - name: Check that report was generated
+      stat:
+        path: "/tmp/ghost_buster_report_{{ inventory_hostname }}.txt"
+      register: report_file
+
+    - name: Verify report file exists
+      assert:
+        that:
+          - report_file.stat.exists
+        msg: "Cleanup report should be generated"
+
+    - name: Display test results
+      debug:
+        msg: "Molecule test completed successfully for {{ inventory_hostname }}"

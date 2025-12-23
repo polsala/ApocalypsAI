@@ -1,0 +1,32 @@
+---
+# Molecule test configuration
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: ubuntu-test
+    image: ubuntu:22.04
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    tmpfs:
+      - /run
+      - /tmp
+    command: "/sbin/init"
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ../../ghost_buster.yml
+
+verifier:
+  name: ansible
+
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
