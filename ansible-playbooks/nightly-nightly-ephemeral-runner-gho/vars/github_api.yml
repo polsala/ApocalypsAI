@@ -1,0 +1,41 @@
+---
+# GitHub API Configuration
+
+github_api:
+  base_url: "https://api.github.com"
+  rate_limit: 5000
+  timeout: 30
+  retries: 3
+  retry_delay: 5
+
+# API endpoints
+github_endpoints:
+  list_runners: "/orgs/{{ organization }}/actions/runners"
+  get_runner: "/orgs/{{ organization }}/actions/runners/{{ runner_id }}"
+  remove_runner: "/orgs/{{ organization }}/actions/runners/{{ runner_id }}"
+  list_repos: "/orgs/{{ organization }}/repos"
+  get_repo_runners: "/repos/{{ organization }}/{{ repo }}/actions/runners"
+
+# Authentication
+github_auth:
+  required_scopes:
+    - "repo"
+    - "admin:org"
+  token_validation:
+    check_scopes: true
+    check_expiration: true
+    warn_on_low_rate_limit: true
+    rate_limit_warning_threshold: 1000
+
+# Response handling
+github_response:
+  expected_status_codes:
+    list_runners: [200]
+    get_runner: [200]
+    remove_runner: [204]
+    list_repos: [200]
+  
+  pagination:
+    enabled: true
+    per_page: 100
+    max_pages: 10

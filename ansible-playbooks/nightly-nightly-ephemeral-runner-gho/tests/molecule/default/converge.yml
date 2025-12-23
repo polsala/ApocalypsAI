@@ -1,0 +1,15 @@
+---
+# Molecule converge playbook for testing
+
+- name: Converge
+  hosts: all
+  gather_facts: false
+  vars:
+    github_token: "test-token"
+    organization: "test-org"
+    cleanup_policy: "conservative"
+    dry_run: true
+  
+  tasks:
+    - name: Include ghost buster playbook
+      include_tasks: ../../ghost_buster.yml
