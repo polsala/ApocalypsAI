@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #e2e8f0;
+            --accent-color: #38bdf8;
+            --particle-color-1: #f472b6;
+            --particle-color-2: #a78bfa;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            max-width: 300px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 0 0 15px 0;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(56, 189, 248, 0.3);
+            font-size: 0.8rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .entanglement-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, var(--particle-color-1), var(--particle-color-2));
+            transform-origin: left center;
+            pointer-events: none;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .entanglement-line.active {
+            opacity: 0.8;
+            box-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #64748b;
+            font-size: 0.8rem;
+            pointer-events: none;
+        }
+
+        .particle-label {
+            position: absolute;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .measured {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-panel">
+        <h1>Quantum Entanglement</h1>
+        <p>Click to create entangled particle pairs. Measure one to instantly affect its partner!</p>
+        <div class="controls">
+            <button onclick="simulator.createEntangledPair()">Create Entangled Pair</button>
+            <button onclick="simulator.clearAll()">Clear All</button>
+            <button onclick="simulator.toggleGuides()">Toggle Guides</button>
+        </div>
+        <div class="stats">
+            <div class="stat-item">
+                <span>Particles:</span>
+                <span id="particle-count">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Entangled Pairs:</span>
+                <span id="pair-count">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Measured:</span>
+                <span id="measured-count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="instructions">
+        Drag particles to move them • Click to measure • Watch entanglement effects
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        class QuantumEntanglementSimulator {
+            constructor() {
+                this.container = document.getElementById('canvas-container');
+                this.particles = [];
+                this.entanglements = [];
+                this.measuredParticles = new Set();
+                this.dragging = null;
+                this.showGuides = true;
+                this.animationId = null;
+
+                this.init();
+            }
+
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.container.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.container.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                window.addEventListener('mouseup', () => this.handleMouseUp());
+                this.container.addEventListener('click', (e) => this.handleCanvasClick(e));
+
+                this.animate();
+            }
+
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.container.style.width = this.width + 'px';
+                this.container.style.height = this.height + 'px';
+            }
+
+            createEntangledPair() {
+                const x1 = Math.random() * (this.width - 100) + 50;
+                const y1 = Math.random() * (this.height - 100) + 50;
+                const x2 = Math.random() * (this.width - 100) + 50;
+                const y2 = Math.random() * (this.height - 100) + 50;
+
+                const particle1 = this.createParticle(x1, y1, '#f472b6');
+                const particle2 = this.createParticle(x2, y2, '#a78bfa');
+
+                // Create entanglement
+                const entanglement = {
+                    id: Date.now() + Math.random(),
+                    particle1: particle1,
+                    particle2: particle2,
+                    strength: 1.0
+                };
+
+                this.entanglements.push(entanglement);
+                this.updateStats();
+
+                // Add visual connection
+                this.createEntanglementLine(entanglement);
+
+                // Create a brief animation effect
+                this.createEntanglementEffect(particle1, particle2);
+            }
+
+            createParticle(x, y, color) {
+                const particle = {
+                    id: Date.now() + Math.random(),
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    color: color,
+                    radius: 15,
+                    measured: false,
+                    measurementResult: null,
+                    spin: Math.random() * 360,
+                    oscillation: Math.random() * Math.PI * 2
+                };
+
+                this.particles.push(particle);
+                this.createParticleElement(particle);
+                return particle;
+            }
+
+            createParticleElement(particle) {
+                const element = document.createElement('div');
+                element.className = 'particle';
+                element.style.position = 'absolute';
+                element.style.left = (particle.x - particle.radius) + 'px';
+                element.style.top = (particle.y - particle.radius) + 'px';
+                element.style.width = (particle.radius * 2) + 'px';
+                element.style.height = (particle.radius * 2) + 'px';
+                element.style.borderRadius = '50%';
+                element.style.background = particle.color;
+                element.style.boxShadow = `0 0 15px ${particle.color}`;
+                element.style.cursor = 'pointer';
+                element.style.transition = 'all 0.3s ease';
+                element.dataset.id = particle.id;
+
+                // Add label
+                const label = document.createElement('div');
+                label.className = 'particle-label';
+                label.textContent = 'Quantum State';
+                label.style.top = '-25px';
+                label.style.left = '50%';
+                label.style.transform = 'translateX(-50%)';
+
+                element.appendChild(label);
+                this.container.appendChild(element);
+
+                // Add click event
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.measureParticle(particle);
+                });
+
+                // Add drag events
+                element.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    this.startDrag(particle, e);
+                });
+            }
+
+            createEntanglementLine(entanglement) {
+                const line = document.createElement('div');
+                line.className = 'entanglement-line';
+                line.dataset.id = entanglement.id;
+                this.container.appendChild(line);
+                entanglement.lineElement = line;
+            }
+
+            createEntanglementEffect(p1, p2) {
+                const effect = document.createElement('div');
+                effect.style.position = 'absolute';
+                effect.style.left = '50%';
+                effect.style.top = '50%';
+                effect.style.width = '0px';
+                effect.style.height = '0px';
+                effect.style.border = '2px solid var(--accent-color)';
+                effect.style.borderRadius = '50%';
+                effect.style.transform = 'translate(-50%, -50%)';
+                effect.style.transition = 'all 1s ease';
+                effect.style.pointerEvents = 'none';
+                this.container.appendChild(effect);
+
+                // Animate
+                setTimeout(() => {
+                    effect.style.width = '200px';
+                    effect.style.height = '200px';
+                    effect.style.opacity = '0';
+                }, 10);
+
+                setTimeout(() => {
+                    effect.remove();
+                }, 1000);
+            }
+
+            measureParticle(particle) {
+                if (particle.measured) return;
+
+                // Collapse the wave function
+                particle.measured = true;
+                particle.measurementResult = Math.random() > 0.5 ? 'UP' : 'DOWN';
+                this.measuredParticles.add(particle.id);
+
+                // Visual feedback
+                const element = this.container.querySelector(`.particle[data-id="${particle.id}"]`);
+                if (element) {
+                    element.style.transform = 'scale(1.5)';
+                    element.style.boxShadow = '0 0 30px #fbbf24';
+                    element.querySelector('.particle-label').textContent = 
+                        `MEASURED: ${particle.measurementResult}`;
+                    element.querySelector('.particle-label').classList.add('measured');
+
+                    setTimeout(() => {
+                        element.style.transform = 'scale(1)';
+                    }, 500);
+                }
+
+                // Find entangled partners and collapse their states
+                this.entanglements.forEach(entanglement => {
+                    if (entanglement.particle1.id === particle.id) {
+                        this.collapseEntangledState(entanglement.particle2, particle.measurementResult);
+                    } else if (entanglement.particle2.id === particle.id) {
+                        this.collapseEntangledState(entanglement.particle1, particle.measurementResult);
+                    }
+                });
+
+                this.updateStats();
+            }
+
+            collapseEntangledState(particle, result) {
+                if (particle.measured) return;
+
+                particle.measured = true;
+                particle.measurementResult = result === 'UP' ? 'DOWN' : 'UP'; // Opposite state
+                this.measuredParticles.add(particle.id);
+
+                // Visual feedback for entangled collapse
+                const element = this.container.querySelector(`.particle[data-id="${particle.id}"]`);
+                if (element) {
+                    element.style.transform = 'scale(1.3) rotate(180deg)';
+                    element.style.boxShadow = '0 0 30px #fbbf24';
+                    element.querySelector('.particle-label').textContent = 
+                        `ENTANGLED: ${particle.measurementResult}`;
+                    element.querySelector('.particle-label').classList.add('measured');
+
+                    setTimeout(() => {
+                        element.style.transform = 'scale(1) rotate(0deg)';
+                    }, 500);
+                }
+            }
+
+            handleMouseDown(e) {
+                // Only handle if clicking on empty space
+                if (e.target.classList.contains('particle') || e.target.closest('.particle')) {
+                    return;
+                }
+            }
+
+            startDrag(particle, e) {
+                this.dragging = {
+                    particle: particle,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    originalX: particle.x,
+                    originalY: particle.y
+                };
+            }
+
+            handleMouseMove(e) {
+                if (!this.dragging) return;
+
+                const dx = e.clientX - this.dragging.startX;
+                const dy = e.clientY - this.dragging.startY;
+
+                this.dragging.particle.x = this.dragging.originalX + dx;
+                this.dragging.particle.y = this.dragging.originalY + dy;
+
+                // Keep within bounds
+                this.dragging.particle.x = Math.max(50, Math.min(this.width - 50, this.dragging.particle.x));
+                this.dragging.particle.y = Math.max(50, Math.min(this.height - 50, this.dragging.particle.y));
+            }
+
+            handleMouseUp() {
+                this.dragging = null;
+            }
+
+            handleCanvasClick(e) {
+                // If clicked on empty space, create a new entangled pair
+                if (!e.target.classList.contains('particle') && !e.target.closest('.particle')) {
+                    this.createEntangledPair();
+                }
+            }
+
+            updateStats() {
+                document.getElementById('particle-count').textContent = this.particles.length;
+                document.getElementById('pair-count').textContent = this.entanglements.length;
+                document.getElementById('measured-count').textContent = this.measuredParticles.size;
+            }
+
+            toggleGuides() {
+                this.showGuides = !this.showGuides;
+                const lines = document.querySelectorAll('.entanglement-line');
+                lines.forEach(line => {
+                    line.style.opacity = this.showGuides ? '0.3' : '0';
+                });
+            }
+
+            clearAll() {
+                // Remove all DOM elements
+                const particles = document.querySelectorAll('.particle');
+                particles.forEach(p => p.remove());
+
+                const lines = document.querySelectorAll('.entanglement-line');
+                lines.forEach(l => l.remove());
+
+                // Clear data
+                this.particles = [];
+                this.entanglements = [];
+                this.measuredParticles.clear();
+                this.updateStats();
+            }
+
+            animate() {
+                // Update particle positions
+                this.particles.forEach(particle => {
+                    if (!particle.measured) {
+                        // Gentle random movement
+                        particle.x += particle.vx;
+                        particle.y += particle.vy;
+
+                        // Bounce off walls
+                        if (particle.x < particle.radius || particle.x > this.width - particle.radius) {
+                            particle.vx *= -1;
+                        }
+                        if (particle.y < particle.radius || particle.y > this.height - particle.radius) {
+                            particle.vy *= -1;
+                        }
+
+                        // Update visual position
+                        const element = this.container.querySelector(`.particle[data-id="${particle.id}"]`);
+                        if (element) {
+                            element.style.left = (particle.x - particle.radius) + 'px';
+                            element.style.top = (particle.y - particle.radius) + 'px';
+                            element.style.opacity = '1';
+                        }
+                    }
+                });
+
+                // Update entanglement lines
+                this.entanglements.forEach(entanglement => {
+                    const p1 = entanglement.particle1;
+                    const p2 = entanglement.particle2;
+                    const line = entanglement.lineElement;
+
+                    if (line && p1 && p2) {
+                        const x1 = p1.x;
+                        const y1 = p1.y;
+                        const x2 = p2.x;
+                        const y2 = p2.y;
+
+                        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                        const angle = Math.atan2(y2 - y1, x2 - x1);
+
+                        line.style.width = length + 'px';
+                        line.style.left = x1 + 'px';
+                        line.style.top = y1 + 'px';
+                        line.style.transform = `rotate(${angle}rad)`;
+
+                        // Make line more visible when particles are close
+                        const opacity = Math.max(0.1, Math.min(1, 1 - (length / 500)));
+                        line.style.opacity = this.showGuides ? opacity : '0';
+                    }
+                });
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize simulator when DOM is ready
+        let simulator;
+        document.addEventListener('DOMContentLoaded', () => {
+            simulator = new QuantumEntanglementSimulator();
+        });
+    </script>
+</body>
+</html>
