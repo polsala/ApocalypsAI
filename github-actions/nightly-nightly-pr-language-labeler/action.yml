@@ -1,0 +1,17 @@
+name: "PR Language Labeler"
+description: "Automatically generate language labels for a PR based on changed file extensions."
+inputs:
+  label-prefix:
+    description: "Prefix for generated labels"
+    required: false
+    default: "lang-"
+  github-token:
+    description: "GitHub token (optional, not used in this demo)"
+    required: false
+    default: ""
+runs:
+  using: "node12"
+  main: "src/index.js"
+outputs:
+  labels:
+    description: "Comma‑separated list of generated labels"
