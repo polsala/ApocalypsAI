@@ -1,0 +1,38 @@
+---
+# Molecule test configuration for Ansible Playbook Validator
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: validator-test
+    image: quay.io/ansible/ansible-runner:latest
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    command: /lib/systemd/systemd
+    tmpfs:
+      - /run
+      - /tmp
+      - /run/lock
+      - /var/log/journal
+    privileged: true
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ../validate_playbook.yml
+  env:
+    ANSIBLE_FORCE_COLOR: "1"
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+
+verifier:
+  name: ansible
+
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
