@@ -1,0 +1,14 @@
+# Nightly Ansible Playbook Validator Requirements
+# Core dependencies for validation functionality
+
+# Ansible ecosystem
+ansible>=2.10.0
+ansible-lint>=5.0.0
+molecule[lint]>=3.0.0
+
+# Additional utilities
+pyyaml>=5.4.0
+jinja2>=3.0.0
+
+# Optional: For enhanced reporting
+rich>=10.0.0  # Pretty terminal output
