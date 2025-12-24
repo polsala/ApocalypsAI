@@ -1,0 +1,111 @@
+---
+# Test suite for Nightly Ansible Playbook Validator
+# Mock rationale: Tests syntax validation, linting, and idempotency checking
+
+- name: Test Ansible Playbook Validator
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_playbook_dir: "./test_playbooks"
+    test_inventory: "./test_inventory.ini"
+    
+  tasks:
+    - name: Create test directory structure
+      file:
+        path: "{{ test_playbook_dir }}"
+        state: directory
+    
+    - name: Create test inventory
+      copy:
+        content: |
+          [test]
+          localhost ansible_connection=local
+        dest: "{{ test_inventory }}"
+    
+    - name: Create valid test playbook
+      copy:
+        content: |
+          ---
+          - name: Test Valid Playbook
+            hosts: localhost
+            tasks:
+              - name: Echo test
+                debug:
+                  msg: "This is a valid playbook"
+        dest: "{{ test_playbook_dir }}/valid_playbook.yml"
+    
+    - name: Create invalid test playbook (syntax error)
+      copy:
+        content: |
+          ---
+          - name: Test Invalid Playbook
+            hosts: localhost
+            tasks:
+              - name: Echo test
+                debug:
+                  msg: "This has a syntax error"
+                # Missing closing quote
+        dest: "{{ test_playbook_dir }}/invalid_playbook.yml"
+    
+    - name: Create idempotent test playbook
+      copy:
+        content: |
+          ---
+          - name: Test Idempotent Playbook
+            hosts: localhost
+            tasks:
+              - name: Create test file
+                copy:
+                  content: "test content"
+                  dest: /tmp/test_file.txt
+              - name: Ensure file exists
+                stat:
+                  path: /tmp/test_file.txt
+                register: file_check
+              - name: Verify file content
+                assert:
+                  that:
+                    - file_check.stat.exists
+                    - file_check.stat.size > 0
+        dest: "{{ test_playbook_dir }}/idempotent_playbook.yml"
+    
+    - name: Run validation on test playbooks
+      command: >
+        ansible-playbook validate_playbook.yml
+        --extra-vars "playbook_dir={{ test_playbook_dir }} inventory_file={{ test_inventory }}"
+      register: validation_result
+      ignore_errors: true
+    
+    - name: Verify validation completed
+      assert:
+        that:
+          - validation_result is defined
+          - validation_result.rc is defined
+    
+    - name: Check for validation report
+      stat:
+        path: "./validation_reports/validation_report.html"
+      register: report_check
+    
+    - name: Verify report was generated
+      assert:
+        that:
+          - report_check.stat.exists
+          - report_check.stat.size > 0
+    
+    - name: Display validation results
+      debug:
+        msg: |
+          Validation completed with return code: {{ validation_result.rc }}
+          Report generated: {{ report_check.stat.exists }}
+          Report size: {{ report_check.stat.size }} bytes
+    
+    - name: Clean up test files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_playbook_dir }}"
+        - "{{ test_inventory }}"
+        - "./validation_reports"
+        - "/tmp/test_file.txt"

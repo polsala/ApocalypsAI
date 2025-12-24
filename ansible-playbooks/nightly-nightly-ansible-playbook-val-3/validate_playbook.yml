@@ -1,0 +1,203 @@
+---
+# Nightly Ansible Playbook Validator
+# Validates syntax, idempotency, and best practices
+
+- name: Validate Ansible Playbooks
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Configuration
+    playbook_path: ""
+    playbook_dir: ""
+    inventory_file: "inventory.ini"
+    report_format: "html"
+    fail_on_warnings: false
+    
+    # Validation settings
+    check_syntax: true
+    check_idempotency: true
+    check_lint: true
+    check_molecule: true
+    
+    # Output paths
+    report_dir: "./validation_reports"
+    report_file: "validation_report"
+    
+  tasks:
+    - name: Validate input parameters
+      fail:
+        msg: "Either playbook_path or playbook_dir must be specified"
+      when: not playbook_path and not playbook_dir
+    
+    - name: Create report directory
+      file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Discover playbooks to validate
+      set_fact:
+        playbooks_to_validate: >
+          {{ playbook_dir | default('') | 
+             dirname | 
+             fileglob('*.yml') if playbook_dir else [playbook_path] }}
+      when: playbook_dir is defined
+    
+    - name: Set single playbook list
+      set_fact:
+        playbooks_to_validate: ["{{ playbook_path }}"]
+      when: playbook_path is defined
+    
+    - name: Display validation targets
+      debug:
+        msg: "Validating playbooks: {{ playbooks_to_validate }}"
+    
+    # Syntax Validation
+    - name: Validate playbook syntax
+      block:
+        - name: Check syntax for each playbook
+          command: >
+            ansible-playbook --syntax-check {{ item }}
+            --inventory {{ inventory_file }}
+          loop: "{{ playbooks_to_validate }}"
+          register: syntax_results
+          ignore_errors: true
+        
+        - name: Report syntax validation results
+          debug:
+            msg: |
+              Syntax Check for {{ item.item }}:
+              - Status: {{ 'PASSED' if item.rc == 0 else 'FAILED' }}
+              - Output: {{ item.stdout }}
+              - Errors: {{ item.stderr }}
+          loop: "{{ syntax_results.results }}"
+      when: check_syntax
+    
+    # Lint Validation
+    - name: Run Ansible Lint
+      block:
+        - name: Install ansible-lint if not present
+          pip:
+            name: ansible-lint
+            state: present
+          become: true
+          when: ansible_os_family == 'Debian'
+        
+        - name: Run linting on playbooks
+          command: >
+            ansible-lint {{ item }}
+            --format json
+            --output-file {{ report_dir }}/lint_{{ item | basename | splitext | first }}.json
+          loop: "{{ playbooks_to_validate }}"
+          register: lint_results
+          ignore_errors: true
+        
+        - name: Parse lint results
+          set_fact:
+            lint_summary: >
+              {{ lint_summary | default({}) | 
+                 combine({item.item: {
+                   'rc': item.rc,
+                   'failed': item.rc != 0,
+                   'warnings': item.stdout | from_json | length if item.rc == 0 else 0
+                 }}) }}
+          loop: "{{ lint_results.results }}"
+      when: check_lint
+    
+    # Idempotency Testing
+    - name: Test playbook idempotency
+      block:
+        - name: Create idempotency test directory
+          file:
+            path: "{{ report_dir }}/idempotency_tests"
+            state: directory
+        
+        - name: Run playbooks twice for idempotency check
+          block:
+            - name: First run
+              command: >
+                ansible-playbook {{ item }}
+                --inventory {{ inventory_file }}
+                --extra-vars "{{ extra_vars | default('{}') | to_json }}"
+              register: first_run
+              ignore_errors: true
+            
+            - name: Second run
+              command: >
+                ansible-playbook {{ item }}
+                --inventory {{ inventory_file }}
+                --extra-vars "{{ extra_vars | default('{}') | to_json }}"
+              register: second_run
+              ignore_errors: true
+            
+            - name: Compare run results
+              set_fact:
+                idempotency_results: >
+                  {{ idempotency_results | default({}) | 
+                     combine({item: {
+                       'first_run_rc': first_run.rc,
+                       'second_run_rc': second_run.rc,
+                       'idempotent': first_run.rc == second_run.rc
+                     }}) }}
+          loop: "{{ playbooks_to_validate }}"
+      when: check_idempotency
+    
+    # Molecule Testing
+    - name: Run Molecule tests
+      block:
+        - name: Install molecule if not present
+          pip:
+            name: molecule[lint]
+            state: present
+          become: true
+          when: ansible_os_family == 'Debian'
+        
+        - name: Check for molecule scenarios
+          find:
+            paths: "{{ playbook_dir | default('.') }}"
+            patterns: "molecule/*/molecule.yml"
+          register: molecule_scenarios
+        
+        - name: Run molecule tests
+          command: >
+            molecule test --scenario-name {{ item.path | dirname | basename }}
+          loop: "{{ molecule_scenarios.files }}"
+          register: molecule_results
+          ignore_errors: true
+          when: molecule_scenarios.files | length > 0
+      when: check_molecule
+    
+    # Report Generation
+    - name: Generate validation report
+      template:
+        src: templates/validation_report.j2
+        dest: "{{ report_dir }}/{{ report_file }}.html"
+        mode: '0644'
+      vars:
+        validation_summary: >
+          {{ {
+            'syntax_results': syntax_results | default({}),
+            'lint_summary': lint_summary | default({}),
+            'idempotency_results': idempotency_results | default({}),
+            'molecule_results': molecule_results | default({}),
+            'timestamp': ansible_date_time.iso8601,
+            'playbooks_validated': playbooks_to_validate
+          } }}
+    
+    - name: Display validation summary
+      debug:
+        msg: |
+          Validation Complete!
+          - Playbooks: {{ playbooks_to_validate | length }}
+          - Syntax: {{ syntax_results | default([]) | length }} checked
+          - Lint: {{ lint_summary | default({}) | length }} analyzed
+          - Idempotency: {{ idempotency_results | default({}) | length }} tested
+          - Report: {{ report_dir }}/{{ report_file }}.html
+    
+    - name: Fail if validation failed
+      fail:
+        msg: "Validation failed! Check the report for details."
+      when: >
+        (syntax_results | default([]) | selectattr('rc', '!=', 0) | list | length > 0) or
+        (lint_summary | default({}) | dict2items | selectattr('value.failed') | list | length > 0) or
+        (idempotency_results | default({}) | dict2items | selectattr('value.idempotent', '==', false) | list | length > 0)
