@@ -1,0 +1,119 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #16213e;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.App-header h1 {
+  color: #e94560;
+  margin: 0;
+}
+
+.workflow-graph {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  justify-content: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.workflow-node {
+  background-color: #0f3460;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-node:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.workflow-node h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #bae8e8;
+  font-size: 1.2em;
+}
+
+.workflow-node p {
+  margin: 5px 0;
+  font-size: 0.9em;
+  color: #a0a0a0;
+}
+
+.status-indicator {
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.8em;
+  margin-top: 8px;
+}
+
+.status-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-failure {
+  background-color: #dc3545;
+  color: white;
+}
+
+.status-running {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.status-unknown {
+  background-color: #6c757d;
+  color: white;
+}
+
+.mood-emoji {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.loading-message,
+.error-message {
+  font-size: 1.2em;
+  color: #e94560;
+  margin-top: 50px;
+}
+
+.loading-message {
+  color: #bae8e8;
+}
