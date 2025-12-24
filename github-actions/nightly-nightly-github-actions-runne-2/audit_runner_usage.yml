@@ -1,0 +1,422 @@
+name: GitHub Actions Runner Auditor
+
+on:
+  workflow_call:
+    inputs:
+      github-token:
+        description: 'GitHub token with repo access'
+        required: true
+        type: string
+      organization:
+        description: 'Organization name to audit'
+        required: true
+        type: string
+      include-private:
+        description: 'Include private repositories'
+        required: false
+        type: boolean
+        default: false
+      cost-analysis:
+        description: 'Enable cost analysis features'
+        required: false
+        type: boolean
+        default: false
+      days-to-analyze:
+        description: 'Number of days to analyze'
+        required: false
+        type: number
+        default: 30
+      output-format:
+        description: 'Output format (json, markdown)'
+        required: false
+        type: string
+        default: 'markdown'
+    secrets:
+      github-token:
+        description: 'GitHub token with repo access'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  security-events: read
+
+jobs:
+  audit-runners:
+    runs-on: ubuntu-latest
+    name: Audit GitHub Actions Runner Usage
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pyyaml
+
+      - name: Run runner audit
+        id: audit
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
+          ORGANIZATION: ${{ inputs.organization }}
+          INCLUDE_PRIVATE: ${{ inputs.include-private }}
+          COST_ANALYSIS: ${{ inputs.cost-analysis }}
+          DAYS_TO_ANALYZE: ${{ inputs.days-to-analyze }}
+          OUTPUT_FORMAT: ${{ inputs.output-format }}
+        run: |
+          python <<'EOF'
+          import os
+          import json
+          import requests
+          import yaml
+          from datetime import datetime, timedelta
+          from collections import defaultdict
+          
+          # Configuration
+          GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
+          ORGANIZATION = os.environ['ORGANIZATION']
+          INCLUDE_PRIVATE = os.environ.get('INCLUDE_PRIVATE', 'false').lower() == 'true'
+          COST_ANALYSIS = os.environ.get('COST_ANALYSIS', 'false').lower() == 'true'
+          DAYS_TO_ANALYZE = int(os.environ.get('DAYS_TO_ANALYZE', '30'))
+          OUTPUT_FORMAT = os.environ.get('OUTPUT_FORMAT', 'markdown')
+          
+          headers = {
+              'Authorization': f'token {GITHUB_TOKEN}',
+              'Accept': 'application/vnd.github.v3+json'
+          }
+          
+          def get_repositories():
+              """Get all repositories in the organization"""
+              repos = []
+              page = 1
+              per_page = 100
+              
+              while True:
+                  url = f'https://api.github.com/orgs/{ORGANIZATION}/repos'
+                  params = {
+                      'page': page,
+                      'per_page': per_page,
+                      'type': 'all' if INCLUDE_PRIVATE else 'public'
+                  }
+                  
+                  response = requests.get(url, headers=headers, params=params)
+                  response.raise_for_status()
+                  
+                  page_repos = response.json()
+                  if not page_repos:
+                      break
+                  
+                  repos.extend(page_repos)
+                  page += 1
+              
+              return repos
+          
+          def get_workflows(repo_full_name):
+              """Get all workflows for a repository"""
+              workflows = []
+              page = 1
+              per_page = 100
+              
+              while True:
+                  url = f'https://api.github.com/repos/{repo_full_name}/actions/workflows'
+                  params = {
+                      'page': page,
+                      'per_page': per_page
+                  }
+                  
+                  response = requests.get(url, headers=headers, params=params)
+                  if response.status_code == 404:
+                      # Repository might be archived or inaccessible
+                      return []
+                  response.raise_for_status()
+                  
+                  page_workflows = response.json().get('workflows', [])
+                  if not page_workflows:
+                      break
+                  
+                  workflows.extend(page_workflows)
+                  page += 1
+              
+              return workflows
+          
+          def analyze_workflow_file(repo_full_name, workflow_path):
+              """Analyze a workflow file to extract runner information"""
+              url = f'https://api.github.com/repos/{repo_full_name}/contents/{workflow_path}'
+              
+              response = requests.get(url, headers=headers)
+              if response.status_code == 404:
+                  return None
+              response.raise_for_status()
+              
+              content = response.json().get('content', '')
+              import base64
+              workflow_content = base64.b64decode(content).decode('utf-8')
+              
+              try:
+                  workflow_data = yaml.safe_load(workflow_content)
+              except yaml.YAMLError:
+                  return None
+              
+              runners = set()
+              jobs_with_self_hosted = set()
+              
+              if 'jobs' in workflow_data:
+                  for job_name, job_config in workflow_data['jobs'].items():
+                      if 'runs-on' in job_config:
+                          runner = job_config['runs-on']
+                          if isinstance(runner, list):
+                              runners.update(runner)
+                          else:
+                              runners.add(runner)
+                          
+                          # Check for self-hosted runners
+                          if 'self-hosted' in str(runner).lower():
+                              jobs_with_self_hosted.add(job_name)
+              
+              return {
+                  'path': workflow_path,
+                  'runners': list(runners),
+                  'self_hosted_jobs': list(jobs_with_self_hosted)
+              }
+          
+          def get_workflow_runs(repo_full_name, workflow_id, days):
+              """Get workflow runs for analysis"""
+              runs = []
+              page = 1
+              per_page = 100
+              since = (datetime.utcnow() - timedelta(days=days)).isoformat() + 'Z'
+              
+              while True:
+                  url = f'https://api.github.com/repos/{repo_full_name}/actions/workflows/{workflow_id}/runs'
+                  params = {
+                      'page': page,
+                      'per_page': per_page,
+                      'created': f'>{since}'
+                  }
+                  
+                  response = requests.get(url, headers=headers, params=params)
+                  if response.status_code == 404:
+                      return []
+                  response.raise_for_status()
+                  
+                  page_runs = response.json().get('workflow_runs', [])
+                  if not page_runs:
+                      break
+                  
+                  runs.extend(page_runs)
+                  page += 1
+              
+              return runs
+          
+          def calculate_cost_estimate(runner_type, duration_seconds):
+              """Calculate estimated cost for a workflow run"""
+              # Cost estimates per hour (USD)
+              cost_rates = {
+                  'ubuntu-latest': 0.008,
+                  'ubuntu-22.04': 0.008,
+                  'ubuntu-20.04': 0.008,
+                  'windows-latest': 0.008,
+                  'windows-2022': 0.008,
+                  'windows-2019': 0.008,
+                  'macos-latest': 0.08,
+                  'macos-14': 0.08,
+                  'macos-13': 0.08,
+                  'self-hosted': 0.0  # Self-hosted costs vary
+              }
+              
+              hours = duration_seconds / 3600
+              rate = cost_rates.get(runner_type, 0.01)  # Default to $0.01/hour
+              return hours * rate
+          
+          # Main execution
+          print(f"Auditing runner usage for organization: {ORGANIZATION}")
+          print(f"Including private repositories: {INCLUDE_PRIVATE}")
+          print(f"Analyzing {DAYS_TO_ANALYZE} days of data")
+          
+          repos = get_repositories()
+          print(f"Found {len(repos)} repositories")
+          
+          audit_data = {
+              'organization': ORGANIZATION,
+              'audit_date': datetime.utcnow().isoformat() + 'Z',
+              'repositories': [],
+              'runner_usage': defaultdict(lambda: {
+                  'count': 0,
+                  'repositories': [],
+                  'total_cost': 0.0,
+                  'avg_duration': 0.0,
+                  'self_hosted_jobs': 0
+              }),
+              'summary': {
+                  'total_workflows': 0,
+                  'total_repositories_with_workflows': 0,
+                  'total_cost_estimate': 0.0
+              }
+          }
+          
+          for repo in repos:
+              repo_data = {
+                  'name': repo['name'],
+                  'full_name': repo['full_name'],
+                  'private': repo['private'],
+                  'workflows': [],
+                  'cost_estimate': 0.0
+              }
+              
+              try:
+                  workflows = get_workflows(repo['full_name'])
+                  
+                  for workflow in workflows:
+                      workflow_data = {
+                          'name': workflow['name'],
+                          'path': workflow['path'],
+                          'state': workflow['state'],
+                          'runners': [],
+                          'self_hosted_jobs': [],
+                          'usage_stats': {
+                              'total_runs': 0,
+                              'avg_duration': 0.0,
+                              'cost_estimate': 0.0
+                          }
+                      }
+                      
+                      # Analyze workflow file
+                      file_analysis = analyze_workflow_file(repo['full_name'], workflow['path'])
+                      if file_analysis:
+                          workflow_data['runners'] = file_analysis['runners']
+                          workflow_data['self_hosted_jobs'] = file_analysis['self_hosted_jobs']
+                      
+                      # Get workflow runs for statistics
+                      if COST_ANALYSIS:
+                          runs = get_workflow_runs(repo['full_name'], workflow['id'], DAYS_TO_ANALYZE)
+                          
+                          total_duration = 0
+                          successful_runs = 0
+                          
+                          for run in runs:
+                              if run['status'] == 'completed' and run['conclusion'] == 'success':
+                                  duration = run['updated_at'] != run['created_at']
+                                  # Calculate duration in seconds (simplified)
+                                  total_duration += 600  # Default 10 minutes for estimation
+                                  successful_runs += 1
+                          
+                          if successful_runs > 0:
+                              workflow_data['usage_stats']['total_runs'] = successful_runs
+                              workflow_data['usage_stats']['avg_duration'] = total_duration / successful_runs
+                              
+                              # Calculate cost for each runner type used
+                              for runner in workflow_data['runners']:
+                                  cost = calculate_cost_estimate(runner, workflow_data['usage_stats']['avg_duration'])
+                                  workflow_data['usage_stats']['cost_estimate'] += cost
+                                  
+                                  # Update global runner statistics
+                                  audit_data['runner_usage'][runner]['count'] += 1
+                                  if repo['full_name'] not in audit_data['runner_usage'][runner]['repositories']:
+                                      audit_data['runner_usage'][runner]['repositories'].append(repo['full_name'])
+                                  audit_data['runner_usage'][runner]['total_cost'] += cost
+                                  if file_analysis and runner in file_analysis['self_hosted_jobs']:
+                                      audit_data['runner_usage'][runner]['self_hosted_jobs'] += 1
+                          
+                      repo_data['workflows'].append(workflow_data)
+                      audit_data['summary']['total_workflows'] += 1
+                  
+                  if repo_data['workflows']:
+                      audit_data['repositories'].append(repo_data)
+                      audit_data['summary']['total_repositories_with_workflows'] += 1
+                      
+              except Exception as e:
+                  print(f"Error processing repository {repo['full_name']}: {e}")
+          
+          # Calculate summary statistics
+          for runner_type, stats in audit_data['runner_usage'].items():
+              audit_data['summary']['total_cost_estimate'] += stats['total_cost']
+          
+          # Generate output
+          if OUTPUT_FORMAT == 'json':
+              output_file = 'runner_audit_report.json'
+              with open(output_file, 'w') as f:
+                  json.dump(audit_data, f, indent=2)
+          else:
+              output_file = 'runner_audit_report.md'
+              with open(output_file, 'w') as f:
+                  f.write(f"# GitHub Actions Runner Audit Report\n")
+                  f.write(f"**Organization:** {ORGANIZATION}\n")
+                  f.write(f"**Audit Date:** {audit_data['audit_date']}\n")
+                  f.write(f"**Analysis Period:** Last {DAYS_TO_ANALYZE} days\n\n")
+                  
+                  f.write(f"## Summary\n")
+                  f.write(f"- **Total Repositories:** {len(repos)}\n")
+                  f.write(f"- **Repositories with Workflows:** {audit_data['summary']['total_repositories_with_workflows']}\n")
+                  f.write(f"- **Total Workflows:** {audit_data['summary']['total_workflows']}\n")
+                  f.write(f"- **Estimated Cost:** ${audit_data['summary']['total_cost_estimate']:.2f}\n\n")
+                  
+                  f.write(f"## Runner Usage\n")
+                  for runner_type, stats in sorted(audit_data['runner_usage'].items()):
+                      f.write(f"### {runner_type}\n")
+                      f.write(f"- **Usage Count:** {stats['count']}\n")
+                      f.write(f"- **Repositories:** {len(stats['repositories'])}\n")
+                      f.write(f"- **Estimated Cost:** ${stats['total_cost']:.2f}\n")
+                      if stats['self_hosted_jobs'] > 0:
+                          f.write(f"- **Self-hosted Jobs:** {stats['self_hosted_jobs']}\n")
+                      f.write(f"\n")
+                  
+                  f.write(f"## Recommendations\n")
+                  if audit_data['summary']['total_cost_estimate'] > 100:
+                      f.write("- Consider reviewing expensive runner usage to optimize costs\n")
+                  if any(stats['self_hosted_jobs'] > 0 for stats in audit_data['runner_usage'].values()):
+                      f.write("- Review self-hosted runner security configurations\n")
+                  f.write("- Archive unused workflows to reduce complexity\n")
+          
+          print(f"Audit complete. Report saved to {output_file}")
+          print(f"Total estimated cost: ${audit_data['summary']['total_cost_estimate']:.2f}")
+          
+          # Set outputs for GitHub Actions
+          print(f"::set-output name=report-file::{output_file}")
+          print(f"::set-output name=total-cost::{audit_data['summary']['total_cost_estimate']:.2f}")
+          print(f"::set-output name=total-workflows::{audit_data['summary']['total_workflows']}")
+          EOF
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-audit-report
+          path: runner_audit_report.*
+
+      - name: Comment on workflow run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportFile = '${{ steps.audit.outputs.report-file }}';
+            
+            if (fs.existsSync(reportFile)) {
+              const report = fs.readFileSync(reportFile, 'utf8');
+              const totalCost = '${{ steps.audit.outputs.total-cost }}';
+              const totalWorkflows = '${{ steps.audit.outputs.total-workflows }}';
+              
+              const body = `## GitHub Actions Runner Audit Complete
+
+**Organization:** ${{ inputs.organization }}
+**Total Workflows Analyzed:** ${totalWorkflows}
+**Estimated Cost:** $${totalCost}
+
+<details>
+<summary>View Full Report</summary>
+
+${report}
+
+</details>`;
+              
+              github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: context.workflow,
+                ref: context.ref
+              });
+            }
+  
