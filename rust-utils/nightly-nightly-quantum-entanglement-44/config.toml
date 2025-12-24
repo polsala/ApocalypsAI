@@ -1,0 +1,16 @@
+[node_a]
+name = "primary-node"
+address = "192.168.1.100"
+
+[node_b]
+name = "secondary-node"
+address = "192.168.1.101"
+
+[quantum]
+strength = 0.95
+decoherence = 0.05
+measurement_precision = 0.001
+
+[output]
+format = "json"
+verbose = true
