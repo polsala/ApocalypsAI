@@ -1,0 +1,16 @@
+[package]
+name = "nightly-dust-bunny-sweeper"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+chrono = { version = "0.4", features = ["std"] }
+
+[dev-dependencies]
+tempfile = "3"
+gag = "1"
+filetime = "0.2"
