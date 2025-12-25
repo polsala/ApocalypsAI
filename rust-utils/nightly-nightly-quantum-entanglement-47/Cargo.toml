@@ -1,0 +1,24 @@
+[package]
+name = "nightly-quantum-entanglement-simulator"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical quantum entanglement simulator that generates entangled particle pairs and visualizes their spooky action at a distance"
+authors = ["ApocalypsAI"]
+license = "MIT"
+
+[dependencies]
+rand = "0.8.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+test = "0.1"
+
+[[bin]]
+name = "nightly-quantum-entanglement-simulator"
+path = "src/main.rs"
+
+[lib]
+name = "nightly_quantum_entanglement_simulator"
+path = "src/lib.rs"
