@@ -1,0 +1,38 @@
+---
+- name: Synchronize Environment Variables with Age
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/environment_vars.yml
+
+  tasks:
+    - name: Ensure temporary environment variables are removed if expired
+      ansible.builtin.command: "sh -c 'for var in $(env | cut -d= -f1); do echo "\"$var\""; done | grep -v -E "^("{{ (environment_vars | map(attribute='name') | join('|')) | default('^$') }}")"' | xargs -I {} sh -c 'echo "$var" >> /tmp/expired_vars.txt' ""
+      changed_when: false
+      register: expired_vars_check
+      when: environment_vars is defined and environment_vars | length > 0
+
+    - name: Remove expired environment variables
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        state: absent
+        regexp: "^export {{ item.name }}=".*"
+      loop:
+        - { name: 'TEMPORARY_TOKEN', age_days: 7 }
+        - { name: 'ANOTHER_VAR', age_days: 1 }
+      when: item.age_days is defined and item.age_days < 7 # Simplified logic for demo, actual logic would involve date checks
+
+    - name: Set environment variables
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        line: "export {{ item.name }}={{ item.value }}"
+        state: present
+        create: yes
+      loop: "{{ environment_vars }}"
+      when: item.name is defined and item.value is defined
+
+    - name: Reload environment variables (for current session, requires manual re-login or sourcing)
+      ansible.builtin.command: "source /etc/profile"
+      changed_when: false
+      ignore_errors: yes
+      when: environment_vars is defined and environment_vars | length > 0
