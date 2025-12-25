@@ -1,0 +1,10 @@
+---
+- name: Find old configuration files
+  ansible.builtin.find:
+    paths: "{{ garden_weeder_config_paths }}"
+    patterns: "{{ garden_weeder_old_config_patterns }}"
+    age: "{{ garden_weeder_config_age_threshold }}"
+    recurse: yes
+    file_type: file
+  register: old_configs_result
+  # Mock rationale: In tests, old_configs_result.files will be directly set to simulate files found by the find module.

@@ -1,0 +1,27 @@
+---
+- name: Prune the Digital Garden
+  hosts: garden_servers
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Include package pruning tasks
+      ansible.builtin.include_tasks: tasks/prune_packages.yml
+
+    - name: Include old configuration file finding tasks
+      ansible.builtin.include_tasks: tasks/find_old_configs.yml
+
+    - name: Include old configuration file removal tasks (optional)
+      ansible.builtin.include_tasks: tasks/remove_old_configs.yml
+      tags: [remove_old_configs]
+
+    - name: Generate Digital Garden Weeding Report
+      ansible.builtin.template:
+        src: templates/weeding_report.j2
+        dest: "{{ playbook_dir }}/weeding_report_{{ ansible_hostname }}.txt"
+      delegate_to: localhost
+      run_once: true
+      vars:
+        packages_pruned_output: "{{ packages_pruned_result.stdout | default('No packages pruned.') }}"
+        old_configs_found: "{{ old_configs_result.files | default([]) }}"
