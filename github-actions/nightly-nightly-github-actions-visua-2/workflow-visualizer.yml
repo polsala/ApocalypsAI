@@ -1,0 +1,480 @@
+name: GitHub Actions Workflow Visualizer
+
+on:
+  workflow_dispatch:
+    inputs:
+      output_format:
+        description: 'Output format (svg, png, html)'
+        required: false
+        default: 'svg'
+        type: choice
+        options:
+          - svg
+          - png
+          - html
+      theme:
+        description: 'Color theme (light, dark, colorful)'
+        required: false
+        default: 'dark'
+        type: choice
+        options:
+          - light
+          - dark
+          - colorful
+      include_metrics:
+        description: 'Include performance metrics'
+        required: false
+        default: true
+        type: boolean
+      max_depth:
+        description: 'Maximum dependency depth'
+        required: false
+        default: '5'
+        type: string
+      exclude_workflows:
+        description: 'Comma-separated workflow names to exclude'
+        required: false
+        default: ''
+        type: string
+
+  push:
+    paths:
+      - '.github/workflows/**'
+
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  analyze-workflows:
+    name: Analyze GitHub Workflows
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml networkx matplotlib
+
+    - name: Analyze workflows
+      id: analyze
+      run: |
+        python << 'EOF'
+        import os
+        import yaml
+        import json
+        import networkx as nx
+        from pathlib import Path
+        
+        # Configuration from inputs
+        output_format = '${{ github.event.inputs.output_format || "svg" }}'
+        theme = '${{ github.event.inputs.theme || "dark" }}'
+        include_metrics = '${{ github.event.inputs.include_metrics || "true" }}' == 'true'
+        max_depth = int('${{ github.event.inputs.max_depth || "5" }}')
+        exclude_workflows = '${{ github.event.inputs.exclude_workflows || "" }}'
+        exclude_list = [w.strip() for w in exclude_workflows.split(',') if w.strip()]
+        
+        # Find all workflow files
+        workflows_dir = Path('.github/workflows')
+        workflow_files = list(workflows_dir.glob('*.yml')) + list(workflows_dir.glob('*.yaml'))
+        
+        # Build dependency graph
+        G = nx.DiGraph()
+        workflow_data = {}
+        
+        for workflow_file in workflow_files:
+            try:
+                with open(workflow_file, 'r') as f:
+                    workflow = yaml.safe_load(f)
+                
+                if not workflow or 'jobs' not in workflow:
+                    continue
+                
+                workflow_name = workflow.get('name', workflow_file.stem)
+                
+                if workflow_name in exclude_list:
+                    continue
+                
+                G.add_node(workflow_name, type='workflow')
+                workflow_data[workflow_name] = {
+                    'file': str(workflow_file),
+                    'triggers': list(workflow.get('on', {}).keys()) if isinstance(workflow.get('on'), dict) else [workflow.get('on')],
+                    'jobs': {},
+                    'dependencies': []
+                }
+                
+                # Analyze jobs
+                for job_name, job_config in workflow['jobs'].items():
+                    job_id = f"{workflow_name}:{job_name}"
+                    G.add_node(job_id, type='job', workflow=workflow_name)
+                    G.add_edge(workflow_name, job_id)
+                    
+                    workflow_data[workflow_name]['jobs'][job_name] = {
+                        'runs_on': job_config.get('runs-on', 'unknown'),
+                        'steps': len(job_config.get('steps', [])),
+                        'needs': job_config.get('needs', [])
+                    }
+                    
+                    # Add job dependencies
+                    if 'needs' in job_config:
+                        needs = job_config['needs']
+                        if isinstance(needs, str):
+                            needs = [needs]
+                        for need in needs:
+                            need_id = f"{workflow_name}:{need}"
+                            G.add_edge(need_id, job_id)
+                            workflow_data[workflow_name]['dependencies'].append({
+                                'from': need,
+                                'to': job_name
+                            })
+                
+            except Exception as e:
+                print(f"Error parsing {workflow_file}: {e}")
+        
+        # Generate metrics
+        metrics = {
+            'total_workflows': len([n for n, d in G.nodes(data=True) if d['type'] == 'workflow']),
+            'total_jobs': len([n for n, d in G.nodes(data=True) if d['type'] == 'job']),
+            'total_dependencies': G.number_of_edges(),
+            'avg_jobs_per_workflow': 0,
+            'most_complex_workflow': '',
+            'bottlenecks': []
+        }
+        
+        if metrics['total_workflows'] > 0:
+            metrics['avg_jobs_per_workflow'] = metrics['total_jobs'] / metrics['total_workflows']
+        
+        # Find most complex workflow
+        workflow_job_counts = {}
+        for workflow_name in [n for n, d in G.nodes(data=True) if d['type'] == 'workflow']:
+            job_count = len([n for n in G.successors(workflow_name) if G.nodes[n]['type'] == 'job'])
+            workflow_job_counts[workflow_name] = job_count
+        
+        if workflow_job_counts:
+            metrics['most_complex_workflow'] = max(workflow_job_counts, key=workflow_job_counts.get)
+        
+        # Find bottlenecks (jobs with many dependents)
+        for node in G.nodes():
+            if G.nodes[node]['type'] == 'job':
+                dependents = len(list(G.successors(node)))
+                if dependents > 2:  # Arbitrary threshold
+                    metrics['bottlenecks'].append({
+                        'job': node,
+                        'dependents': dependents
+                    })
+        
+        # Save analysis data
+        analysis_data = {
+            'graph': nx.node_link_data(G),
+            'workflows': workflow_data,
+            'metrics': metrics,
+            'config': {
+                'output_format': output_format,
+                'theme': theme,
+                'include_metrics': include_metrics,
+                'max_depth': max_depth
+            }
+        }
+        
+        with open('workflow-analysis.json', 'w') as f:
+            json.dump(analysis_data, f, indent=2)
+        
+        print(f"Analyzed {len(workflow_data)} workflows")
+        print(f"Found {metrics['total_dependencies']} dependencies")
+        EOF
+
+    - name: Generate visualization
+      id: visualize
+      run: |
+        python << 'EOF'
+        import json
+        import networkx as nx
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+        from pathlib import Path
+        
+        # Load analysis data
+        with open('workflow-analysis.json', 'r') as f:
+            data = json.load(f)
+        
+        G = nx.node_link_graph(data['graph'])
+        config = data['config']
+        metrics = data['metrics']
+        
+        # Set up the plot
+        plt.figure(figsize=(20, 12))
+        
+        # Choose theme
+        if config['theme'] == 'dark':
+            plt.style.use('dark_background')
+            node_color = '#2ecc71'
+            edge_color = '#95a5a6'
+            text_color = 'white'
+            bg_color = '#1a1a1a'
+        elif config['theme'] == 'colorful':
+            node_color = plt.cm.Set3(range(len(G.nodes())))
+            edge_color = '#34495e'
+            text_color = 'black'
+            bg_color = 'white'
+        else:  # light
+            node_color = '#3498db'
+            edge_color = '#7f8c8d'
+            text_color = 'black'
+            bg_color = 'white'
+        
+        # Layout
+        pos = nx.spring_layout(G, k=3, iterations=50)
+        
+        # Draw edges
+        nx.draw_networkx_edges(G, pos, edge_color=edge_color, arrows=True, 
+                               arrowsize=20, width=2, alpha=0.7)
+        
+        # Draw nodes
+        workflow_nodes = [n for n, d in G.nodes(data=True) if d['type'] == 'workflow']
+        job_nodes = [n for n, d in G.nodes(data=True) if d['type'] == 'job']
+        
+        nx.draw_networkx_nodes(G, pos, nodelist=workflow_nodes, node_color='#e74c3c', 
+                               node_size=3000, alpha=0.9, edgecolors='white', linewidths=2)
+        nx.draw_networkx_nodes(G, pos, nodelist=job_nodes, node_color=node_color, 
+                               node_size=1500, alpha=0.8)
+        
+        # Draw labels
+        labels = {}
+        for node in G.nodes():
+            if G.nodes[node]['type'] == 'workflow':
+                labels[node] = node
+            else:
+                # Truncate long job names
+                job_name = node.split(':')[-1]
+                labels[node] = job_name[:20] + '...' if len(job_name) > 20 else job_name
+        
+        nx.draw_networkx_labels(G, pos, labels, font_size=10, font_color=text_color)
+        
+        # Add title and metrics
+        plt.title('GitHub Actions Workflow Dependencies', fontsize=16, color=text_color, pad=20)
+        
+        if config['include_metrics']:
+            metrics_text = f"""
+Metrics:
+• Workflows: {metrics['total_workflows']}
+• Jobs: {metrics['total_jobs']}
+• Dependencies: {metrics['total_dependencies']}
+• Avg Jobs/Workflow: {metrics['avg_jobs_per_workflow']:.1f}
+• Most Complex: {metrics['most_complex_workflow']}
+"""
+            
+            # Add metrics box
+            props = dict(boxstyle='round,pad=0.5', facecolor='lightgray' if config['theme'] != 'dark' else '#2c3e50', alpha=0.8)
+            plt.text(0.02, 0.98, metrics_text, transform=plt.gca().transAxes, fontsize=10,
+                     verticalalignment='top', bbox=props, color=text_color)
+        
+        plt.axis('off')
+        plt.tight_layout()
+        
+        # Save in requested format
+        output_format = config['output_format']
+        if output_format == 'svg':
+            plt.savefig('workflow-graph.svg', format='svg', dpi=300, bbox_inches='tight')
+            print("Generated: workflow-graph.svg")
+        elif output_format == 'png':
+            plt.savefig('workflow-graph.png', format='png', dpi=300, bbox_inches='tight')
+            print("Generated: workflow-graph.png")
+        else:  # html
+            # Create interactive HTML using plotly
+            import plotly.graph_objects as go
+            
+            edge_x = []
+            edge_y = []
+            for edge in G.edges():
+                x0, y0 = pos[edge[0]]
+                x1, y1 = pos[edge[1]]
+                edge_x.extend([x0, x1, None])
+                edge_y.extend([y0, y1, None])
+            
+            edge_trace = go.Scatter(
+                x=edge_x, y=edge_y,
+                line=dict(width=2, color=edge_color),
+                hoverinfo='none',
+                mode='lines')
+            
+            node_x = []
+            node_y = []
+            node_text = []
+            node_color_list = []
+            
+            for node in G.nodes():
+                x, y = pos[node]
+                node_x.append(x)
+                node_y.append(y)
+                node_text.append(node)
+                
+                if G.nodes[node]['type'] == 'workflow':
+                    node_color_list.append('#e74c3c')
+                else:
+                    node_color_list.append('#3498db')
+            
+            node_trace = go.Scatter(
+                x=node_x, y=node_y,
+                mode='markers',
+                hoverinfo='text',
+                text=node_text,
+                marker=dict(
+                    size=20,
+                    color=node_color_list,
+                    line_width=2))
+            
+            fig = go.Figure(data=[edge_trace, node_trace],
+                           layout=go.Layout(
+                               title='GitHub Actions Workflow Dependencies',
+                               titlefont_size=16,
+                               showlegend=False,
+                               hovermode='closest',
+                               margin=dict(b=20,l=5,r=5,t=40),
+                               annotations=[ dict(
+                                   text=f"Metrics: {metrics['total_workflows']} workflows, {metrics['total_jobs']} jobs, {metrics['total_dependencies']} dependencies",
+                                   showarrow=False,
+                                   xref="paper", yref="paper",
+                                   x=0.005, y=-0.002 ) ],
+                               xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                               yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
+            
+            fig.write_html('workflow-graph.html')
+            print("Generated: workflow-graph.html")
+        
+        plt.close()
+        EOF
+
+    - name: Generate analysis report
+      run: |
+        python << 'EOF'
+        import json
+        
+        with open('workflow-analysis.json', 'r') as f:
+            data = json.load(f)
+        
+        metrics = data['metrics']
+        workflows = data['workflows']
+        
+        report = f"""# GitHub Actions Workflow Analysis Report
+
+Generated on: {data.get('generated_at', 'N/A')}
+
+## Summary
+
+- **Total Workflows**: {metrics['total_workflows']}
+- **Total Jobs**: {metrics['total_jobs']}
+- **Total Dependencies**: {metrics['total_dependencies']}
+- **Average Jobs per Workflow**: {metrics['avg_jobs_per_workflow']:.1f}
+
+## Most Complex Workflow
+
+**{metrics['most_complex_workflow']}**
+
+This workflow has the highest number of jobs and dependencies.
+
+## Bottlenecks
+
+"""
+        
+        if metrics['bottlenecks']:
+            for bottleneck in metrics['bottlenecks']:
+                report += f"- **{bottleneck['job']}**: {bottleneck['dependents']} dependents
+"
+        else:
+            report += "No significant bottlenecks detected."
+        
+        report += "\n## Workflow Details\n\n"
+        
+        for workflow_name, workflow_info in workflows.items():
+            report += f"### {workflow_name}\n\n"
+            report += f"**File**: {workflow_info['file']}\n"
+            report += f"**Triggers**: {', '.join(workflow_info['triggers'])}\n"
+            report += f"**Jobs**: {len(workflow_info['jobs'])}\n\n"
+            
+            for job_name, job_info in workflow_info['jobs'].items():
+                report += f"- **{job_name}**\n"
+                report += f"  - Runs on: {job_info['runs_on']}\n"
+                report += f"  - Steps: {job_info['steps']}\n"
+                if job_info['needs']:
+                    report += f"  - Needs: {', '.join(job_info['needs'])}\n"
+                report += "\n"
+        
+        with open('workflow-analysis.md', 'w') as f:
+            f.write(report)
+        
+        print("Generated: workflow-analysis.md")
+        EOF
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: workflow-visualization
+        path: |
+          workflow-graph.*
+          workflow-analysis.json
+          workflow-analysis.md
+        retention-days: 30
+
+    - name: Create issue with visualization
+      if: github.event_name == 'schedule'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let body = '## GitHub Actions Workflow Visualization\n\n';
+          body += 'This is an automated analysis of your repository\'s GitHub Actions workflows.\n\n';
+          
+          try {
+            const analysis = JSON.parse(fs.readFileSync('workflow-analysis.json', 'utf8'));
+            const metrics = analysis.metrics;
+            
+            body += `### Summary\n\n`;
+            body += `- **Workflows**: ${metrics.total_workflows}\n`;
+            body += `- **Jobs**: ${metrics.total_jobs}\n`;
+            body += `- **Dependencies**: ${metrics.total_dependencies}\n`;
+            body += `- **Most Complex**: ${metrics.most_complex_workflow}\n\n`;
+            
+            body += `### Download\n\n`;
+            body += `The full visualization and analysis are available as workflow artifacts.\n\n`;
+            
+            body += `### Recommendations\n\n`;
+            
+            if (metrics.bottlenecks.length > 0) {
+              body += `**⚠️ Bottlenecks Detected**: Consider optimizing jobs with many dependents.\n\n`;
+            }
+            
+            if (metrics.total_dependencies > metrics.total_jobs * 2) {
+              body += `**🔄 High Coupling**: Consider reducing job dependencies for better parallelization.\n\n`;
+            }
+            
+            if (metrics.avg_jobs_per_workflow > 10) {
+              body += `**📝 Complex Workflows**: Consider splitting large workflows into smaller, focused ones.\n\n`;
+            }
+            
+          } catch (error) {
+            body += `Error loading analysis data: ${error.message}\n\n`;
+          }
+          
+          body += `---\n\n*This issue was automatically generated by the GitHub Actions Workflow Visualizer.*`;
+          
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'GitHub Actions Workflow Visualization Report',
+            body: body,
+            labels: ['automation', 'workflow-analysis']
+          });
