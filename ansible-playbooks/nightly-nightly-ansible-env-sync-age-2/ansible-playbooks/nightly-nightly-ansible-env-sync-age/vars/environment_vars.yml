@@ -1,0 +1,9 @@
+environment_vars:
+  - name: "MY_APP_CONFIG"
+    value: "/etc/myapp/config.json"
+  - name: "TEMPORARY_TOKEN"
+    value: "supersecret123"
+    age_days: 7
+  - name: "ANOTHER_VAR"
+    value: "some_value"
+    age_days: 1
