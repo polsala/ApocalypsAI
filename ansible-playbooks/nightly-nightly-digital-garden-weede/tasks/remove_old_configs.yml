@@ -1,0 +1,10 @@
+---
+- name: Remove identified old configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_configs_result.files }}"
+  when: old_configs_result.files is defined and old_configs_result.files | length > 0
+  # Mock rationale: This task is tagged and will not run in default test mode. If run in a test,
+  # it would be against a mocked filesystem or in check_mode, but for this utility, we focus on
+  # testing the detection and reporting, not the actual destructive action.

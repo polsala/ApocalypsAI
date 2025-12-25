@@ -1,0 +1,18 @@
+---
+- name: Prune unused packages (Debian/Ubuntu)
+  ansible.builtin.apt:
+    autoremove: yes
+    purge: yes
+  when: ansible_os_family == "Debian"
+  register: packages_pruned_result
+  changed_when: packages_pruned_result.stdout is defined and ('removed' in packages_pruned_result.stdout or 'purged' in packages_pruned_result.stdout)
+  # Mock rationale: In tests, ansible_os_family will be set to "Debian" or "RedHat" to simulate OS.
+  # The register output (packages_pruned_result.stdout) will be directly mocked in tests to simulate package removal.
+
+- name: Prune unused packages (RedHat/CentOS)
+  ansible.builtin.yum:
+    autoremove: yes
+  when: ansible_os_family == "RedHat"
+  register: packages_pruned_result
+  changed_when: packages_pruned_result.stdout is defined and 'Removed' in packages_pruned_result.stdout
+  # Mock rationale: Same as above, for RedHat family.

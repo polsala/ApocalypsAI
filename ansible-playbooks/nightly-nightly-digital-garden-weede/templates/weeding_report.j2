@@ -1,0 +1,18 @@
+Digital Garden Weeding Report for {{ ansible_hostname }} ({{ ansible_date_time.iso8601_micro }})
+=================================================================================================
+
+Packages Pruned:
+----------------
+{{ packages_pruned_output }}
+
+Old Configuration Files Found (older than {{ garden_weeder_config_age_threshold }}):
+------------------------------------------------------------------------------------
+{% if old_configs_found %}
+{% for file in old_configs_found %}
+- {{ file.path }} (Last modified: {{ file.mtime | default('N/A') }})
+{% endfor %}
+{% else %}
+No old configuration files found.
+{% endif %}
+
+To remove these old configuration files, run the playbook with --tags remove_old_configs.

@@ -1,0 +1,11 @@
+---
+garden_weeder_config_paths:
+  - /etc
+  - /var/log
+  - /opt
+garden_weeder_old_config_patterns:
+  - "*.bak"
+  - "*.old"
+  - "*~"
+  - "*.tmp"
+garden_weeder_config_age_threshold: "30d" # Files older than 30 days

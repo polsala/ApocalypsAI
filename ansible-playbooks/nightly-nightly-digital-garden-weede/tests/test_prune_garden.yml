@@ -1,0 +1,93 @@
+---
+- name: Test Digital Garden Weeder Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no # We will mock facts
+
+  vars:
+    # Mock rationale: Simulate a Debian system for package pruning logic.
+    ansible_os_family: "Debian"
+    # Mock rationale: Simulate output from apt autoremove.
+    packages_pruned_result:
+      stdout: |
+        Reading package lists... Done
+        Building dependency tree... Done
+        Reading state information... Done
+        The following packages will be REMOVED:
+          old-package-1 old-package-2
+        0 upgraded, 0 newly installed, 2 to remove and 0 not upgraded.
+        After this operation, 10.2 MB disk space will be freed.
+        (Reading database ... 123456 files and directories currently installed.)
+        Removing old-package-1 (1.0.0-1) ...
+        Removing old-package-2 (2.0.0-1) ...
+    # Mock rationale: Simulate files found by the find module.
+    old_configs_result:
+      files:
+        - path: "/etc/nginx/nginx.conf.bak"
+          mtime: "2023-01-15T10:00:00Z"
+        - path: "/var/log/syslog.old"
+          mtime: "2023-02-20T14:30:00Z"
+    # Mock rationale: Provide variables that would normally come from vars/main.yml
+    garden_weeder_config_paths:
+      - /etc
+    garden_weeder_old_config_patterns:
+      - "*.bak"
+    garden_weeder_config_age_threshold: "30d"
+
+  tasks:
+    - name: Ensure test output directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/test_output"
+        state: directory
+      delegate_to: localhost
+
+    - name: Generate Digital Garden Weeding Report (Test)
+      ansible.builtin.template:
+        src: templates/weeding_report.j2
+        dest: "{{ playbook_dir }}/test_output/weeding_report_test_host.txt"
+      delegate_to: localhost
+      run_once: true
+      vars:
+        packages_pruned_output: "{{ packages_pruned_result.stdout }}"
+        old_configs_found: "{{ old_configs_result.files }}"
+        ansible_hostname: "test_host" # Mock rationale: Simulate hostname for report
+        ansible_date_time: # Mock rationale: Simulate date_time for report
+          iso8601_micro: "2024-07-20T12:34:56.789Z"
+
+    - name: Read generated report content
+      ansible.builtin.slurp:
+        src: "{{ playbook_dir }}/test_output/weeding_report_test_host.txt"
+      register: report_content_b64
+      delegate_to: localhost
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        decoded_report_content: "{{ report_content_b64.content | b64decode }}"
+
+    - name: Assert report content for packages pruned
+      ansible.builtin.assert:
+        that:
+          - "'Packages Pruned:' in decoded_report_content"
+          - "'old-package-1' in decoded_report_content"
+          - "'old-package-2' in decoded_report_content"
+        fail_msg: "Report does not contain expected package pruning details."
+
+    - name: Assert report content for old config files
+      ansible.builtin.assert:
+        that:
+          - "'Old Configuration Files Found' in decoded_report_content"
+          - "'/etc/nginx/nginx.conf.bak' in decoded_report_content"
+          - "'/var/log/syslog.old' in decoded_report_content"
+        fail_msg: "Report does not contain expected old config file details."
+
+    - name: Assert report content for age threshold
+      ansible.builtin.assert:
+        that:
+          - "'older than 30d' in decoded_report_content"
+        fail_msg: "Report does not contain expected age threshold."
+
+    - name: Clean up test output directory
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/test_output"
+        state: absent
+      delegate_to: localhost
