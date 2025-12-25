@@ -1,0 +1,61 @@
+---
+- name: Hunt for Digital Dust Bunnies
+  hosts: all
+  gather_facts: yes # Needed for ansible_hostname and ansible_date_time
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure archive path exists if archiving is enabled
+      ansible.builtin.file:
+        path: "{{ archive_path }}"
+        state: directory
+        mode: '0755'
+      when: archive_enabled
+      delegate_to: localhost # Archive path is local to the control machine or a designated host
+
+    - name: Scan for dust bunnies
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ age_threshold_days }}d"
+        file_type: any # 'f' for files, 'd' for directories, 'any' for both
+        recurse: yes
+      loop: "{{ scan_paths }}"
+      register: dust_bunnies_found
+      ignore_errors: yes # In case a path doesn't exist on a target host
+      loop_control:
+        label: "Scanning path: {{ item }}"
+
+    - name: Consolidate found dust bunnies
+      ansible.builtin.set_fact:
+        all_dust_bunnies: "{{ all_dust_bunnies | default([]) + item.files }}"
+      loop: "{{ dust_bunnies_found.results }}"
+      loop_control:
+        label: "Processing scan result for: {{ item.item }}"
+      when: item.files is defined and item.files | length > 0
+
+    - name: Report identified dust bunnies (debug)
+      ansible.builtin.debug:
+        msg: "Found {{ all_dust_bunnies | length | default(0) }} digital dust bunnies older than {{ age_threshold_days }} days."
+      when: all_dust_bunnies is defined
+
+    - name: Archive dust bunnies if enabled
+      ansible.builtin.archive:
+        path: "{{ item.path }}"
+        dest: "{{ archive_path }}/dust_bunny_{{ ansible_hostname }}_{{ item.filename | default('unknown') }}_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        format: gz
+        remove: yes # Remove original after archiving
+      loop: "{{ all_dust_bunnies | default([]) }}"
+      loop_control:
+        label: "Archiving {{ item.path }}"
+      when: archive_enabled and all_dust_bunnies is defined and all_dust_bunnies | length > 0
+      delegate_to: localhost # Archive locally on the control machine or a designated host
+
+    - name: Generate dust bunny report
+      ansible.builtin.template:
+        src: templates/dust_bunny_report.j2
+        dest: "{{ archive_path }}/dust_bunny_report_{{ ansible_hostname }}_{{ ansible_date_time.iso8601_basic_short }}.txt"
+      vars:
+        report_dust_bunnies: "{{ all_dust_bunnies | default([]) }}"
+      when: all_dust_bunnies is defined
+      delegate_to: localhost # Report locally on the control machine or a designated host

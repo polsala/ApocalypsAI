@@ -1,0 +1,19 @@
+Digital Dust Bunny Report for {{ ansible_hostname }}
+Generated on: {{ ansible_date_time.iso8601 }}
+
+Summary:
+Found {{ report_dust_bunnies | length }} digital dust bunnies older than {{ age_threshold_days }} days.
+Archiving was {{ "enabled" if archive_enabled else "disabled" }}.
+Archive path: {{ archive_path }}
+
+Identified Dust Bunnies:
+{% if report_dust_bunnies %}
+{% for bunny in report_dust_bunnies %}
+- Path: {{ bunny.path }}
+  Type: {{ "Directory" if bunny.isdir else "File" }}
+  Size: {{ bunny.size }} bytes
+  Modification Time: {{ bunny.mtime | to_datetime('%Y%m%d%H%M%S') | strftime('%Y-%m-%d %H:%M:%S') }}
+{% endfor %}
+{% else %}
+No dust bunnies found. The digital realm is sparkling clean!
+{% endif %}

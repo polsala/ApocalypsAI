@@ -1,0 +1,117 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  gather_facts: yes # Needed for ansible_date_time
+  vars:
+    test_base_dir: "/tmp/ansible_test_dust_bunnies"
+    test_archive_dir: "/tmp/ansible_test_dust_bunnies_archives"
+    test_scan_paths:
+      - "{{ test_base_dir }}/old_files"
+      - "{{ test_base_dir }}/new_files"
+    test_age_threshold_days: 7
+    test_archive_enabled: true
+
+  tasks:
+    - name: Clean up previous test run
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_base_dir }}"
+        - "{{ test_archive_dir }}"
+      # Mock rationale: Ensures a clean slate for deterministic testing by removing any artifacts from previous runs.
+
+    - name: Create test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_base_dir }}"
+        - "{{ test_base_dir }}/old_files"
+        - "{{ test_base_dir }}/new_files"
+        - "{{ test_archive_dir }}"
+      # Mock rationale: Sets up the necessary directory structure for the playbook to operate on during testing.
+
+    - name: Create old files (dust bunnies)
+      ansible.builtin.shell: |
+        touch -d "{{ ansible_date_time.date }} -{{ test_age_threshold_days + 1 }} days" "{{ test_base_dir }}/old_files/dust_bunny_1.txt"
+        echo "Old content" > "{{ test_base_dir }}/old_files/dust_bunny_2.log"
+        touch -d "{{ ansible_date_time.date }} -{{ test_age_threshold_days + 1 }} days" "{{ test_base_dir }}/old_files/dust_bunny_2.log"
+        mkdir -p "{{ test_base_dir }}/old_files/old_dir"
+        touch -d "{{ ansible_date_time.date }} -{{ test_age_threshold_days + 1 }} days" "{{ test_base_dir }}/old_files/old_dir/old_file_in_dir.txt"
+        touch -d "{{ ansible_date_time.date }} -{{ test_age_threshold_days + 1 }} days" "{{ test_base_dir }}/old_files/old_dir"
+      args:
+        creates: "{{ test_base_dir }}/old_files/dust_bunny_1.txt"
+      # Mock rationale: Creates files and directories with modification times older than the threshold, simulating "dust bunnies" for the playbook to find.
+
+    - name: Create new files (not dust bunnies)
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}/new_files/fresh_file.txt"
+        state: touch
+        mode: '0644'
+      # Mock rationale: Creates files with recent modification times to ensure they are not picked up by the sweeper, verifying correct filtering.
+
+    - name: Run the main dust bunny sweeper playbook
+      ansible.builtin.include_playbook: ../dust_bunny_sweeper.yml
+      vars:
+        scan_paths: "{{ test_scan_paths }}"
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        archive_enabled: "{{ test_archive_enabled }}"
+        archive_path: "{{ test_archive_dir }}"
+      # Mock rationale: Executes the target playbook with controlled test variables, isolating its execution for testing.
+
+    - name: Assert old files are archived and removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: file_stats
+      loop:
+        - "{{ test_base_dir }}/old_files/dust_bunny_1.txt"
+        - "{{ test_base_dir }}/old_files/dust_bunny_2.log"
+        - "{{ test_base_dir }}/old_files/old_dir"
+      # Mock rationale: Checks if the original "dust bunny" files/directories have been removed after archiving, verifying the 'remove' action.
+      failed_when: file_stats.results | selectattr('stat.exists', 'equalto', true) | list | length > 0
+
+    - name: Assert new files are untouched
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/new_files/fresh_file.txt"
+      register: new_file_stat
+      # Mock rationale: Verifies that files not meeting the "dust bunny" criteria are left undisturbed, confirming accurate filtering.
+      failed_when: not new_file_stat.stat.exists
+
+    - name: Assert archive files exist
+      ansible.builtin.find:
+        paths: "{{ test_archive_dir }}"
+        patterns: "dust_bunny_*.tar.gz"
+      register: archived_files
+      # Mock rationale: Confirms that archive files were created in the designated archive directory, verifying the archiving process.
+      failed_when: archived_files.files | length < 3 # Expecting 3 archives: 2 files + 1 directory
+
+    - name: Assert report file exists
+      ansible.builtin.find:
+        paths: "{{ test_archive_dir }}"
+        patterns: "dust_bunny_report_*.txt"
+      register: report_file
+      # Mock rationale: Checks for the presence of the generated report file, verifying report generation.
+      failed_when: report_file.files | length != 1
+
+    - name: Verify report content (basic check for count)
+      ansible.builtin.shell: cat "{{ report_file.files[0].path }}" | grep "Found 3 digital dust bunnies"
+      register: report_grep_count
+      # Mock rationale: Performs a basic content check on the report to ensure it reflects the expected number of archived items.
+      failed_when: report_grep_count.rc != 0
+
+    - name: Verify report content (basic check for archived path)
+      ansible.builtin.shell: cat "{{ report_file.files[0].path }}" | grep "Path: {{ test_base_dir }}/old_files/dust_bunny_1.txt"
+      register: report_grep_path
+      # Mock rationale: Ensures a specific archived path is mentioned in the report.
+      failed_when: report_grep_path.rc != 0
+
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_base_dir }}"
+        - "{{ test_archive_dir }}"
+      # Mock rationale: Removes all test artifacts to leave the system in its original state, ensuring test isolation.

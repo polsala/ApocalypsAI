@@ -1,0 +1,14 @@
+---
+# Paths to scan for old files and directories
+scan_paths:
+  - "/tmp"
+  - "/var/log"
+
+# Age threshold in days. Files/directories older than this will be considered dust bunnies.
+age_threshold_days: 7
+
+# Set to true to archive identified items before removing them. Set to false to only remove.
+archive_enabled: true
+
+# The local path on the control machine (or delegated host) where archives and reports will be stored.
+archive_path: "/tmp/digital_attic_archives"
