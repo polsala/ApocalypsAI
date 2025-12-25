@@ -1,0 +1,1 @@
+# Nightly Supply Dashboard\n\nAn interactive React web app that lets you track your post‑apocalypse supplies. Add items, adjust quantities, and see a live total.\n\n## Setup\n\n```sh\nnpm install\nnpm start\n```\n\nOpen http://localhost:3000.\n\n## Test\n\n```sh\nnpm test\n```\n\n## Features\n\n- Add new supply items\n- Increment/decrement quantity\n- Simple, zero‑dependency UI
