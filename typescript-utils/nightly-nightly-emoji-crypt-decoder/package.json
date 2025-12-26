@@ -1,0 +1,17 @@
+{
+  "name": "nightly-emoji-crypt-decoder",
+  "version": "1.0.0",
+  "description": "Encode/decode messages with an emoji substitution cipher",
+  "main": "dist/src/index.js",
+  "bin": {
+    "nightly-emoji-crypt-decoder": "./dist/src/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node ./dist/tests/test_main.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "license": "MIT"
+}
