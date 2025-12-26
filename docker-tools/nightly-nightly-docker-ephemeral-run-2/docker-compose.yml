@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  ephemeral-runner:
+    build: .
+    container_name: nightly-ephemeral-runner
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - RUNNER_NAME=${RUNNER_NAME:-ephemeral-runner-${HOSTNAME}}
+      - MAX_JOBS=${MAX_JOBS:-1}
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
+      - JOB_TIMEOUT=${JOB_TIMEOUT:-3600}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - runner-network
+
+networks:
+  runner-network:
+    driver: bridge
