@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  nightly-devbox:
+    build:
+      context: .
+      target: final
+    volumes:
+      - devbox_workspace:/workspace
+      - ~/.ssh:/root/.ssh:ro
+      - ~/.gitconfig:/root/.gitconfig:ro
+    environment:
+      - TERM=xterm-256color
+      - LANG=C.UTF-8
+    stdin_open: true
+    tty: true
+    ports:
+      - "8888:8888"  # Jupyter Notebook
+    command: /bin/bash
+
+volumes:
+  devbox_workspace:
+    driver: local
