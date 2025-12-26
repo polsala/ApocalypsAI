@@ -1,0 +1,11 @@
+name: "Apocalypse Survival Tip"
+description: "Outputs a random post‑apocalyptic survival tip"
+author: "ApocalypsAI"
+inputs: {}
+outputs:
+  tip:
+    description: "The selected survival tip"
+    value: ${{ steps.main.outputs.tip }}
+runs:
+  using: "node12"
+  main: "src/index.js"
