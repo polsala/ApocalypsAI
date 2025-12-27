@@ -1,0 +1,62 @@
+# Ghost Buster Cleanup Report
+
+**Generated:** {{ ansible_date_time.iso8601 }}
+**Host:** {{ inventory_hostname }}
+**Mode:** {{ cleanup_mode }}
+**Target:** {% if cleanup_mode == 'repository' %}{{ repo_owner }}/{{ repo_name }}{% else %}{{ org_name }}{% endif %}
+**Dry Run:** {{ dry_run }}
+
+## Summary
+
+- **Orphaned Runners Detected:** {{ orphaned_runners | length }}
+- **Runners Removed:** {{ cleanup_results.runners_removed }}
+- **Runners Skipped:** {{ cleanup_results.runners_skipped }}
+- **Cleanup Confirmed:** {% if confirm_cleanup and cleanup_confirmation is defined %}{{ cleanup_confirmation.user_input.lower() == 'y' }}{% else %}Automatic{% endif %}
+
+## Detected Orphaned Runners
+
+{% if orphaned_runners | length > 0 %}
+| Service Name | Runner Name | Status | Path |
+|--------------|-------------|--------|------|
+{% for runner in orphaned_runners %}| {{ runner.service }} | {{ runner.name }} | {{ runner.status }} | {{ runner.path }} |
+{% endfor %}
+{% else %}
+No orphaned runners were detected on this host.
+{% endif %}
+
+## Actions Taken
+
+{% if orphaned_runners | length > 0 %}
+{% if cleanup_results.runners_removed > 0 %}
+- Stopped {{ cleanup_results.runners_removed }} runner service(s)
+- Disabled {{ cleanup_results.runners_removed }} runner service(s)
+- Removed {{ cleanup_results.runners_removed }} runner installation(s)
+{% endif %}
+{% if cleanup_results.runners_skipped > 0 %}
+- Skipped cleanup of {{ cleanup_results.runners_skipped }} runner(s) (user declined)
+{% endif %}
+{% else %}
+No cleanup actions were necessary.
+{% endif %}
+
+## GitHub API Information
+
+- **API Endpoint:** {{ api_endpoint }}
+- **Registered Runners:** {{ github_runners | length }}
+- **API Status:** Success
+
+## System Information
+
+- **Hostname:** {{ ansible_hostname }}
+- **OS:** {{ ansible_os_family }} {{ ansible_distribution }} {{ ansible_distribution_version }}
+- **Architecture:** {{ ansible_architecture }}
+- **Ansible Version:** {{ ansible_version.full }}
+
+## Notes
+
+- This report was generated automatically by the Ghost Buster playbook
+- Review the actions taken to ensure they align with your expectations
+- Consider running this playbook regularly to maintain a clean runner environment
+
+---
+*End of Report*

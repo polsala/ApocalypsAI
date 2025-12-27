@@ -1,0 +1,236 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Automated cleanup of orphaned GitHub Actions self-hosted runners
+
+- name: Ghost Buster - Cleanup Orphaned Runners
+  hosts: runners
+  become: true
+  vars:
+    # GitHub API configuration
+    github_api_base: "https://api.github.com"
+    github_token: "{{ github_token | default(lookup('env', 'GITHUB_TOKEN')) }}"
+    
+    # Cleanup mode: 'repository' or 'organization'
+    cleanup_mode: "{{ cleanup_mode | default('repository') }}"
+    
+    # Repository/Organization settings
+    repo_owner: "{{ repo_owner | default('') }}"
+    repo_name: "{{ repo_name | default('') }}"
+    org_name: "{{ org_name | default('') }}"
+    
+    # Safety settings
+    confirm_cleanup: "{{ confirm_cleanup | default(true) }}"
+    dry_run: "{{ ansible_check_mode | default(false) }}"
+    
+    # Runner detection settings
+    runner_timeout: 30
+    runner_check_interval: 5
+  
+  vars_files:
+    - vars/main.yml
+  
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - github_token is defined and github_token != ''
+          - (cleanup_mode == 'repository' and repo_owner != '' and repo_name != '') or (cleanup_mode == 'organization' and org_name != '')
+        fail_msg: "Missing required variables. Please set github_token and either repo_owner+repo_name or org_name."
+    
+    - name: Set API endpoint based on cleanup mode
+      set_fact:
+        api_endpoint: >
+          {% if cleanup_mode == 'repository' %}
+          {{ github_api_base }}/repos/{{ repo_owner }}/{{ repo_name }}/actions/runners
+          {% else %}
+          {{ github_api_base }}/orgs/{{ org_name }}/actions/runners
+          {% endif %}
+    
+    - name: Display cleanup configuration
+      debug:
+        msg: |
+          Starting Ghost Buster cleanup
+          Mode: {{ cleanup_mode }}
+          Target: {% if cleanup_mode == 'repository' %}{{ repo_owner }}/{{ repo_name }}{% else %}{{ org_name }}{% endif %}
+          Dry run: {{ dry_run }}
+          Confirmation required: {{ confirm_cleanup }}
+  
+  tasks:
+    - name: Get list of registered runners from GitHub
+      uri:
+        url: "{{ api_endpoint }}"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+        return_content: true
+      register: github_runners_response
+    
+    - name: Parse GitHub runners response
+      set_fact:
+        github_runners: "{{ github_runners_response.json.runners | default([]) }}"
+    
+    - name: Get list of local runners
+      shell: |
+        if command -v systemctl >/dev/null 2>&1; then
+          systemctl list-units --type=service --state=active | grep -E 'actions\.runner\.|github-runner' | awk '{print $1}'
+        elif command -v service >/dev/null 2>&1; then
+          service --status-all 2>/dev/null | grep + | grep -E 'actions\.runner\.|github-runner' | awk '{print $1}'
+        else
+          echo "No service manager found"
+        fi
+      register: local_runners_raw
+      changed_when: false
+    
+    - name: Parse local runners
+      set_fact:
+        local_runners: >
+          {{ local_runners_raw.stdout_lines | map('trim') | reject('equalto', 'No service manager found') | list }}
+    
+    - name: Check runner status and details
+      shell: |
+        # Try to get runner status from various sources
+        if command -v systemctl >/dev/null 2>&1; then
+          for service in {{ local_runners | join(' ') }}; do
+            echo "=== $service ==="
+            systemctl is-active "$service" 2>/dev/null || echo "inactive"
+            systemctl show "$service" --property=ExecStart --value 2>/dev/null || echo ""
+            if [ -f /etc/systemd/system/$service ]; then
+              grep -E "^Environment=.*RUNNER_NAME" /etc/systemd/system/$service 2>/dev/null || echo ""
+            fi
+          done
+        fi
+      register: runner_details_raw
+      changed_when: false
+      when: local_runners | length > 0
+    
+    - name: Parse runner details
+      set_fact:
+        runner_details: >
+          {% set details = [] %}
+          {% for line in runner_details_raw.stdout_lines %}
+            {% if line.startswith('===') %}
+              {% set service = line.replace('===', '') | trim %}
+              {% set runner_info = {'service': service, 'status': 'unknown', 'name': '', 'path': ''} %}
+            {% elif line in ['active', 'inactive'] %}
+              {% set _ = runner_info.update({'status': line}) %}
+            {% elif line.startswith('Environment=') and 'RUNNER_NAME' in line %}
+              {% set name = line.split('RUNNER_NAME=')[1].split()[0] %}
+              {% set _ = runner_info.update({'name': name}) %}
+            {% elif line and not line.startswith('===') and 'RUNNER_NAME' not in line %}
+              {% set _ = runner_info.update({'path': line}) %}
+            {% elif line == '' and runner_info.service %}
+              {% set _ = details.append(runner_info) %}
+            {% endif %}
+          {% endfor %}
+          {{ details }}
+      when: local_runners | length > 0
+    
+    - name: Identify orphaned runners
+      set_fact:
+        orphaned_runners: >
+          {% set orphaned = [] %}
+          {% for runner in runner_details %}
+            {% set github_runner = github_runners | selectattr('name', 'equalto', runner.name) | list | first(None) %}
+            {% if github_runner is none %}
+              {% set _ = orphaned.append(runner) %}
+            {% endif %}
+          {% endfor %}
+          {{ orphaned }}
+    
+    - name: Display detected orphaned runners
+      debug:
+        msg: |
+          Detected {{ orphaned_runners | length }} orphaned runner(s):
+          {% for runner in orphaned_runners %}
+          - Service: {{ runner.service }}
+            Name: {{ runner.name }}
+            Status: {{ runner.status }}
+            Path: {{ runner.path }}
+          {% endfor %}
+      when: orphaned_runners | length > 0
+    
+    - name: Display no orphaned runners found
+      debug:
+        msg: "No orphaned runners detected on {{ inventory_hostname }}"
+      when: orphaned_runners | length == 0
+    
+    - name: Prompt for cleanup confirmation
+      pause:
+        prompt: |
+          Found {{ orphaned_runners | length }} orphaned runner(s) on {{ inventory_hostname }}.
+          Do you want to proceed with cleanup? (y/N)
+        echo: true
+      when: orphaned_runners | length > 0 and confirm_cleanup | bool and not dry_run
+      register: cleanup_confirmation
+    
+    - name: Skip cleanup due to user decision
+      debug:
+        msg: "Cleanup skipped by user on {{ inventory_hostname }}"
+      when: orphaned_runners | length > 0 and confirm_cleanup | bool and cleanup_confirmation.user_input.lower() != 'y'
+    
+    - name: Remove orphaned runners
+      block:
+        - name: Stop runner services
+          systemd:
+            name: "{{ runner.service }}"
+            state: stopped
+            enabled: no
+          loop: "{{ orphaned_runners }}"
+          loop_control:
+            loop_var: runner
+          when: not dry_run
+        
+        - name: Remove runner service files
+          file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ orphaned_runners }}"
+          loop_control:
+            loop_var: runner
+          when: item.path and not dry_run
+        
+        - name: Remove runner directories
+          file:
+            path: "{{ runner.path | dirname }}/runner"
+            state: absent
+          loop: "{{ orphaned_runners }}"
+          loop_control:
+            loop_var: runner
+          when: runner.path and not dry_run
+      when: orphaned_runners | length > 0 and (not confirm_cleanup or cleanup_confirmation.user_input.lower() == 'y')
+    
+    - name: Register cleanup results
+      set_fact:
+        cleanup_results: >
+          {
+            'hostname': '{{ inventory_hostname }}',
+            'orphaned_count': {{ orphaned_runners | length }},
+            'runners_removed': {{ orphaned_runners | length if (orphaned_runners | length > 0 and (not confirm_cleanup or (cleanup_confirmation is defined and cleanup_confirmation.user_input.lower() == 'y'))) else 0 }},
+            'runners_skipped': {{ orphaned_runners | length if (orphaned_runners | length > 0 and confirm_cleanup and cleanup_confirmation is defined and cleanup_confirmation.user_input.lower() != 'y') else 0 }},
+            'orphaned_details': {{ orphaned_runners }}
+          }
+    
+    - name: Add cleanup results to host facts
+      set_stats:
+        data:
+          ghost_buster_results: "{{ cleanup_results }}"
+  
+  post_tasks:
+    - name: Generate cleanup report
+      template:
+        src: templates/cleanup_report.j2
+        dest: "/tmp/ghost_buster_report_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+      when: orphaned_runners | length > 0
+    
+    - name: Display cleanup summary
+      debug:
+        msg: |
+          Cleanup completed on {{ inventory_hostname }}
+          Orphaned runners detected: {{ orphaned_runners | length }}
+          Runners removed: {{ cleanup_results.runners_removed }}
+          Runners skipped: {{ cleanup_results.runners_skipped }}
+          Report saved to: /tmp/ghost_buster_report_{{ inventory_hostname }}.txt
+      when: orphaned_runners | length > 0

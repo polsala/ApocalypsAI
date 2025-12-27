@@ -1,0 +1,48 @@
+# Default variables for Ghost Buster
+
+# GitHub API settings
+github_api_base: "https://api.github.com"
+
+# Default cleanup mode (can be overridden via command line)
+cleanup_mode: "repository"
+
+# Safety settings
+confirm_cleanup: true
+runner_timeout: 30
+runner_check_interval: 5
+
+# Logging settings
+log_level: "info"
+log_file: "/var/log/ghost_buster.log"
+
+# Retry settings for API calls
+api_retries: 3
+api_delay: 2
+
+# Runner detection patterns
+runner_service_patterns:
+  - "actions.runner.*"
+  - "github-runner.*"
+  - "runner.*"
+
+# Exclusion patterns (runners to never remove)
+runner_exclude_patterns:
+  - ".*-protected.*"
+  - ".*-critical.*"
+  - ".*-backup.*"
+
+# Notification settings (optional)
+notify_on_completion: false
+notification_webhook: ""
+
+# Backup settings
+create_backup: true
+backup_location: "/tmp/runner_backups"
+
+# Advanced settings
+parallel_execution: true
+max_concurrent_hosts: 10
+
+# Debug settings
+debug_mode: false
+verbose_logging: false
