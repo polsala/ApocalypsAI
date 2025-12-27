@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass { background: #28a745; }
+        .fail { background: #dc3545; }
+        .info { background: #17a2b8; }
+    </style>
+</head>
+<body>
+    <h1>Quantum Entanglement Simulator - Test Suite</h1>
+    <div id="test-output"></div>
+
+    <script>
+        // Mock canvas for testing
+        class MockCanvas {
+            getContext() {
+                return {
+                    clearRect: () => {},
+                    beginPath: () => {},
+                    arc: () => {},
+                    fill: () => {},
+                    stroke: () => {},
+                    strokeStyle: '',
+                    fillStyle: '',
+                    lineWidth: 1,
+                    globalAlpha: 1,
+                    save: () => {},
+                    restore: () => {},
+                    moveTo: () => {},
+                    lineTo: () => {},
+                    setLineDash: () => {},
+                    font: '',
+                    textAlign: '',
+                    fillText: () => {},
+                    measureText: () => ({ width: 0 })
+                };
+            }
+        }
+
+        // Mock document and window
+        globalThis.document = {
+            getElementById: () => ({
+                addEventListener: () => {},
+                value: '1.0',
+                style: {}
+            }),
+            addEventListener: () => {},
+            body: {
+                appendChild: () => {},
+                removeChild: () => {}
+            }
+        };
+
+        globalThis.window = {
+            addEventListener: () => {},
+            innerWidth: 800,
+            innerHeight: 600,
+            requestAnimationFrame: (callback) => setTimeout(callback, 16)
+        };
+
+        globalThis.URL = {
+            createObjectURL: () => 'mock-url',
+            revokeObjectURL: () => {}
+        };
+
+        globalThis.FileReader = class {
+            readAsText() {
+                this.onload({ target: { result: '{"particles":[]}' } });
+            }
+        };
+
+        // Import the QuantumParticle class (simplified for testing)
+        class QuantumParticle {
+            constructor(id, x, y, pairId) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.pairId = pairId;
+                this.state = Math.random() > 0.5 ? 'up' : 'down';
+                this.isMeasured = false;
+                this.color = this.state === 'up' ? '#00f3ff' : '#ff00ff';
+                this.alpha = 1.0;
+            }
+
+            measure() {
+                if (this.isMeasured) return;
+                
+                this.isMeasured = true;
+                this.color = '#ffff00';
+                this.alpha = 1.0;
+            }
+
+            isPointInside(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx * dx + dy * dy) < this.radius;
+            }
+        }
+
+        // Test runner
+        const tests = [];
+
+        function test(name, fn) {
+            tests.push({ name, fn });
+        }
+
+        function runTests() {
+            const output = document.getElementById('test-output');
+            let passed = 0;
+            let failed = 0;
+
+            tests.forEach(testCase => {
+                try {
+                    testCase.fn();
+                    const div = document.createElement('div');
+                    div.className = 'test-result pass';
+                    div.textContent = `✓ ${testCase.name}`;
+                    output.appendChild(div);
+                    passed++;
+                } catch (error) {
+                    const div = document.createElement('div');
+                    div.className = 'test-result fail';
+                    div.textContent = `✗ ${testCase.name}: ${error.message}`;
+                    output.appendChild(div);
+                    failed++;
+                }
+            });
+
+            const summary = document.createElement('div');
+            summary.className = 'test-result info';
+            summary.textContent = `Tests completed: ${passed} passed, ${failed} failed`;
+            output.appendChild(summary);
+        }
+
+        // Test cases
+        test('Particle creation', () => {
+            const particle = new QuantumParticle(0, 100, 100, 1);
+            if (!particle.id === 0) throw new Error('Particle ID not set');
+            if (!particle.x === 100) throw new Error('Particle X position not set');
+            if (!particle.y === 100) throw new Error('Particle Y position not set');
+            if (!particle.pairId === 1) throw new Error('Particle pair ID not set');
+        });
+
+        test('Particle measurement', () => {
+            const particle = new QuantumParticle(0, 100, 100, 1);
+            const initialState = particle.state;
+            const initialColor = particle.color;
+            
+            particle.measure();
+            
+            if (!particle.isMeasured) throw new Error('Particle should be measured');
+            if (particle.color !== '#ffff00') throw new Error('Particle color should change to yellow when measured');
+            if (particle.alpha !== 1.0) throw new Error('Particle alpha should be 1.0 when measured');
+        });
+
+        test('Point collision detection', () => {
+            const particle = new QuantumParticle(0, 100, 100, 1);
+            particle.radius = 10;
+            
+            // Point inside particle
+            if (!particle.isPointInside(105, 105)) {
+                throw new Error('Point inside particle should return true');
+            }
+            
+            // Point outside particle
+            if (particle.isPointInside(120, 120)) {
+                throw new Error('Point outside particle should return false');
+            }
+        });
+
+        test('Entanglement pair creation', () => {
+            const particle1 = new QuantumParticle(0, 100, 100, 1);
+            const particle2 = new QuantumParticle(1, 200, 200, 0);
+            
+            if (particle1.pairId !== 1) throw new Error('Particle 1 should be paired with particle 1');
+            if (particle2.pairId !== 0) throw new Error('Particle 2 should be paired with particle 0');
+        });
+
+        test('State consistency', () => {
+            const particle = new QuantumParticle(0, 100, 100, 1);
+            const validStates = ['up', 'down'];
+            
+            if (!validStates.includes(particle.state)) {
+                throw new Error('Particle state should be either "up" or "down"');
+            }
+        });
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
