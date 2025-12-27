@@ -1,0 +1,38 @@
+---
+# Molecule test configuration for Ghost Buster
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: ubuntu-test
+    image: ubuntu:22.04
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    tmpfs:
+      - /run
+      - /tmp
+    command: "/sbin/init"
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ../ghost_buster.yml
+  env:
+    ANSIBLE_ROLES_PATH: ../
+    ANSIBLE_FORCE_COLOR: "1"
+
+verifier:
+  name: ansible
+
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
