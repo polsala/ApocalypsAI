@@ -1,0 +1,28 @@
+- name: Nightly Apt Cleanup
+  hosts: all
+  become: true
+  vars:
+    report_path: "./apt_cleanup_report.txt"
+  tasks:
+    - name: Autoremove unused packages
+      apt:
+        autoremove: yes
+        purge: yes
+      register: autoremove_result
+
+    - name: Clean apt cache
+      apt:
+        clean: yes
+      register: clean_result
+
+    - name: Assemble report
+      copy:
+        dest: "{{ report_path }}"
+        content: |
+          Apt Cleanup Report
+          ==================
+          Autoremove changed: {{ autoremove_result.changed }}
+          Autoremove stdout: {{ autoremove_result.stdout }}
+          Clean changed: {{ clean_result.changed }}
+          Clean stdout: {{ clean_result.stdout }}
+      delegate_to: localhost
