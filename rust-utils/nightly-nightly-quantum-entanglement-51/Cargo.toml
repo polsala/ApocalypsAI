@@ -1,0 +1,19 @@
+[package]
+name = "nightly-quantum-entanglement-simulator"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical CLI tool that simulates quantum entanglement states for fun and educational purposes"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "nightly-quantum-entanglement-simulator"
+path = "src/main.rs"
