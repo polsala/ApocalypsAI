@@ -1,0 +1,117 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+.controls {
+  padding: 15px;
+  background-color: #16213e;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  border-bottom: 1px solid #0f3460;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.controls input[type="range"] {
+  width: 120px;
+  -webkit-appearance: none;
+  height: 8px;
+  background: #0f3460;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  border-radius: 4px;
+}
+
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e94560;
+  cursor: pointer;
+}
+
+.controls input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e94560;
+  cursor: pointer;
+}
+
+.controls button {
+  background-color: #e94560;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.controls button:hover {
+  background-color: #b8334a;
+}
+
+.chrono-weave-container {
+  flex-grow: 1;
+  background-color: #0f3460;
+  position: relative;
+  overflow: hidden;
+}
+
+.chrono-weave-container svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.chrono-thread {
+  stroke-width: 2;
+  fill: none;
+  transition: stroke 0.1s ease-out, transform 0.1s ease-out;
+}
+
+.chrono-thread.anomalous {
+  stroke: #ffeb3b;
+  stroke-width: 4;
+  animation: wiggle 0.2s infinite alternate;
+}
+
+@keyframes wiggle {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(2px, 2px); }
+  100% { transform: translate(-2px, -2px); }
+}
