@@ -1,0 +1,83 @@
+MIT License
+
+Copyright (c) 2024 Chaos Monkey Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Additional License Information
+
+### Third-Party Components
+
+This project may include third-party components with their own licenses:
+
+- **AWS SDK for Python (boto3)**: Apache License 2.0
+- **Terraform AWS Provider**: Mozilla Public License 2.0
+- **Python standard library**: PSF License
+
+### Usage Restrictions
+
+⚠️ **IMPORTANT**: This software is designed for chaos engineering and resource termination.
+
+**Prohibited Uses**:
+
+- Production environments without proper safeguards
+- Unauthorized resource termination
+- Malicious purposes
+- Any activity that violates AWS Terms of Service
+
+**Required Safeguards**:
+
+- Always use safe mode in non-testing environments
+- Configure appropriate excluded tags
+- Implement proper monitoring and alerting
+- Obtain necessary approvals before deployment
+- Follow organizational security policies
+
+### Liability Disclaimer
+
+The authors and contributors are not responsible for:
+
+- Data loss or service disruption caused by this software
+- Unauthorized use or misuse of this software
+- Any damages resulting from improper configuration
+- Violations of AWS Terms of Service or organizational policies
+
+Users assume full responsibility for:
+
+- Proper configuration and testing
+- Understanding the risks involved
+- Implementing adequate safety measures
+- Complying with all applicable laws and policies
+
+### Export Control
+
+This software may be subject to export control regulations.
+Users are responsible for compliance with all applicable export laws and regulations.
+
+### Contributing
+
+By contributing to this project, you agree that your contributions
+will be licensed under the MIT License as described above.
+
+---
+
+For more information about the MIT License, see:
+https://opensource.org/licenses/MIT

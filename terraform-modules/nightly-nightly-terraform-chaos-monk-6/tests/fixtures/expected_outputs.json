@@ -1,0 +1,403 @@
+{
+  "basic_example": {
+    "chaos_status": {
+      "enabled": true,
+      "intensity": 5,
+      "safe_mode": true,
+      "targets": ["aws_instance", "aws_rds_instance"],
+      "dashboard_url": "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=basic-chaos-dashboard"
+    }
+  },
+  "production_example": {
+    "production_chaos_status": {
+      "enabled": true,
+      "intensity": 2,
+      "safe_mode": false,
+      "dry_run_only": false,
+      "targets": ["aws_instance", "aws_rds_instance", "aws_ecs_service", "aws_autoscaling_group"],
+      "dashboard_url": "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=prod-chaos-dashboard",
+      "notification_emails": 2,
+      "excluded_tags": ["critical", "production-critical", "do-not-terminate", "database-primary", "load-balancer", "monitoring"]
+    },
+    "production_chaos_enhanced": {
+      "enhanced_dashboard_url": "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=prod-chaos-enhanced-dashboard",
+      "sns_subscriptions": [
+        "arn:aws:sns:us-east-1:123456789012:prod-chaos-notifications:subscription1",
+        "arn:aws:sns:us-east-1:123456789012:prod-chaos-notifications:subscription2"
+      ],
+      "error_alarm": "prod-chaos-high-error-rate"
+    }
+  },
+  "development_example": {
+    "development_chaos_status": {
+      "enabled": true,
+      "intensity": 20,
+      "safe_mode": true,
+      "dry_run_only": true,
+      "targets": ["aws_instance", "aws_rds_instance", "aws_ecs_service", "aws_autoscaling_group", "aws_elasticache_cluster"],
+      "dashboard_url": "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-chaos-dashboard",
+      "chaos_window": "0:00 - 23:00",
+      "max_terminations": 20
+    },
+    "development_dashboard_url": "https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=dev-chaos-dashboard"
+  },
+  "lambda_handler": {
+    "basic_execution": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 1,
+        "unprotected_resources": 1,
+        "selected_for_termination": 1,
+        "successful_terminations": 1,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1234567890abcdef0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "zero_intensity": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 1,
+        "unprotected_resources": 1,
+        "selected_for_termination": 1,
+        "successful_terminations": 1,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1234567890abcdef0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "excluded_tags": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 6,
+        "unprotected_resources": 3,
+        "selected_for_termination": 3,
+        "successful_terminations": 3,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-unprotected",
+            "resource_type": "aws_instance",
+            "resource_name": "unprotected-instance",
+            "action": "terminate",
+            "success": true
+          },
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-no-tags",
+            "resource_type": "aws_instance",
+            "resource_name": "no-tags-instance",
+            "action": "terminate",
+            "success": true
+          },
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-none-tags",
+            "resource_type": "aws_instance",
+            "resource_name": "none-tags-instance",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "safe_mode": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 1,
+        "unprotected_resources": 1,
+        "selected_for_termination": 1,
+        "successful_terminations": 1,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1234567890abcdef0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "actual_termination": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 1,
+        "unprotected_resources": 1,
+        "selected_for_termination": 1,
+        "successful_terminations": 1,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1234567890abcdef0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "mixed_results": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 10,
+        "unprotected_resources": 10,
+        "selected_for_termination": 10,
+        "successful_terminations": 5,
+        "failed_terminations": 5,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance-0",
+            "action": "terminate",
+            "success": true
+          },
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1",
+            "resource_type": "aws_instance",
+            "resource_name": "test-instance-1",
+            "action": "terminate",
+            "success": false
+          }
+          // ... additional events with alternating success/failure
+        ]
+      }
+    },
+    "multiple_resource_types": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 3,
+        "unprotected_resources": 3,
+        "selected_for_termination": 3,
+        "successful_terminations": 3,
+        "failed_terminations": 0,
+        "chaos_events": [
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "i-1234567890abcdef0",
+            "resource_type": "aws_instance",
+            "resource_name": "test-ec2",
+            "action": "terminate",
+            "success": true
+          },
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "test-rds-instance",
+            "resource_type": "aws_rds_instance",
+            "resource_name": "test-rds",
+            "action": "terminate",
+            "success": true
+          },
+          {
+            "timestamp": "2023-01-01T00:00:00.000000",
+            "resource_id": "test-ecs-service",
+            "resource_type": "aws_ecs_service",
+            "resource_name": "test-ecs",
+            "action": "terminate",
+            "success": true
+          }
+        ]
+      }
+    },
+    "empty_resources": {
+      "statusCode": 200,
+      "body": {
+        "timestamp": "2023-01-01T00:00:00.000000",
+        "total_resources": 0,
+        "unprotected_resources": 0,
+        "selected_for_termination": 0,
+        "successful_terminations": 0,
+        "failed_terminations": 0,
+        "chaos_events": []
+      }
+    }
+  },
+  "resource_functions": {
+    "get_ec2_instances": {
+      "success": [
+        {
+          "id": "i-1234567890abcdef0",
+          "type": "aws_instance",
+          "state": "running",
+          "tags": [{"Key": "Name", "Value": "test-instance"}],
+          "name": "test-instance"
+        }
+      ],
+      "error": [],
+      "empty": []
+    },
+    "get_rds_instances": {
+      "success": [
+        {
+          "id": "test-db-1",
+          "type": "aws_rds_instance",
+          "state": "available",
+          "tags": [{"Key": "Name", "Value": "test-db-1"}],
+          "name": "test-db-1"
+        }
+      ],
+      "error": [],
+      "empty": []
+    },
+    "get_ecs_services": {
+      "success": [
+        {
+          "id": "test-service",
+          "type": "aws_ecs_service",
+          "state": "ACTIVE",
+          "tags": [{"Key": "Name", "Value": "test-service"}],
+          "name": "test-service",
+          "clusterArn": "arn:aws:ecs:us-east-1:123456789012:cluster/test-cluster"
+        }
+      ],
+      "error": [],
+      "empty": []
+    },
+    "terminate_ec2_instance": {
+      "success": true,
+      "error": false,
+      "safe_mode": true
+    },
+    "delete_rds_instance": {
+      "success": true,
+      "error": false,
+      "safe_mode": true
+    },
+    "update_ecs_service": {
+      "success": true,
+      "error": false,
+      "safe_mode": true
+    },
+    "is_resource_protected": {
+      "protected": true,
+      "unprotected": false,
+      "no_tags": false,
+      "none_tags": false
+    }
+  },
+  "safety_features": {
+    "excluded_tags_protection": {
+      "total_resources": 6,
+      "unprotected_resources": 3,
+      "selected_for_termination": 3,
+      "successful_terminations": 3,
+      "failed_terminations": 0,
+      "protected_ids": ["i-protected", "i-production-protected", "i-do-not-terminate"]
+    },
+    "safe_mode_protection": {
+      "total_resources": 1,
+      "unprotected_resources": 1,
+      "selected_for_termination": 1,
+      "successful_terminations": 1,
+      "failed_terminations": 0,
+      "actual_termination_called": false
+    },
+    "actual_termination": {
+      "total_resources": 1,
+      "unprotected_resources": 1,
+      "selected_for_termination": 1,
+      "successful_terminations": 1,
+      "failed_terminations": 0,
+      "actual_termination_called": true
+    },
+    "combined_safety": {
+      "total_resources": 2,
+      "unprotected_resources": 1,
+      "selected_for_termination": 1,
+      "successful_terminations": 1,
+      "failed_terminations": 0,
+      "protected_ids": ["i-protected"]
+    },
+    "zero_intensity": {
+      "total_resources": 1,
+      "unprotected_resources": 1,
+      "selected_for_termination": 1,
+      "successful_terminations": 1,
+      "failed_terminations": 0
+    }
+  },
+  "monitoring": {
+    "sns_notification": {
+      "sns_publish_called": true,
+      "topic_arn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+      "subject_contains": "Chaos Monkey Execution Report",
+      "message_contains": "test-instance"
+    },
+    "sns_notification_failure": {
+      "sns_publish_called": true,
+      "topic_arn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+      "subject_contains": "Chaos Monkey Execution Report",
+      "message_contains": "FAILURE"
+    },
+    "timestamp_accuracy": {
+      "execution_timestamp_within_range": true,
+      "chaos_event_timestamps_within_range": true
+    },
+    "chaos_event_details": {
+      "required_fields_present": [
+        "timestamp",
+        "resource_id",
+        "resource_type",
+        "resource_name",
+        "action",
+        "success"
+      ],
+      "field_values_correct": true,
+      "timestamp_format_valid": true
+    },
+    "execution_summary": {
+      "summary_accuracy": true,
+      "math_verification": {
+        "total_equals_unprotected_plus_protected": true,
+        "successful_plus_failed_equals_selected": true
+      }
+    },
+    "partial_selection": {
+      "total_resources": 10,
+      "unprotected_resources": 10,
+      "selected_for_termination": 5,
+      "successful_terminations": 5,
+      "failed_terminations": 0,
+      "selected_less_than_total": true
+    },
+    "with_protection": {
+      "total_resources": 2,
+      "unprotected_resources": 1,
+      "selected_for_termination": 1,
+      "successful_terminations": 1,
+      "failed_terminations": 0,
+      "total_equals_unprotected_plus_one_protected": true
+    }
+  }
+}
