@@ -1,0 +1,89 @@
+---
+- name: Health Check and Monitoring
+  hosts: runners
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Check runner service status
+      systemd:
+        name: actions.runner.{{ inventory_hostname }}.service
+        state: started
+        enabled: true
+      register: service_status
+      ignore_errors: true
+
+    - name: Verify runner registration with GitHub
+      uri:
+        url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runners"
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        method: GET
+      register: runner_list_response
+      retries: 3
+      delay: 5
+      until: runner_list_response.status == 200
+
+    - name: Check if runner is registered
+      set_fact:
+        runner_registered: "{{ runner_list_response.json.runners | selectattr('name', 'equalto', inventory_hostname) | list | length > 0 }}"
+
+    - name: Restart runner if not registered
+      systemd:
+        name: actions.runner.{{ inventory_hostname }}.service
+        state: restarted
+      when: not runner_registered
+
+    - name: Check runner job status
+      uri:
+        url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runs"
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        method: GET
+      register: job_status_response
+      ignore_errors: true
+
+    - name: Check system resources
+      shell: |
+        echo "CPU: $(cat /proc/loadavg)"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3/$2 * 100}')%"
+        echo "Disk: $(df -h / | tail -1 | awk '{print $5}')"
+      register: system_status
+      changed_when: false
+
+    - name: Report health status
+      debug:
+        msg: |
+          Runner {{ inventory_hostname }}:
+          - Service Status: {{ 'Running' if service_status is succeeded else 'Failed' }}
+          - GitHub Registration: {{ 'Registered' if runner_registered else 'Not Registered' }}
+          - System Load: {{ system_status.stdout_lines | join(', ') }}
+
+    - name: Add health status to facts
+      set_fact:
+        health_status: "{{ 'healthy' if service_status is succeeded and runner_registered else 'unhealthy' }}"
+
+- name: Aggregate health report
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Gather health facts from all runners
+      add_host:
+        name: health_aggregator
+        healthy_runners: "{{ groups['runners'] | map('extract', hostvars, 'health_status') | select('equalto', 'healthy') | list | length }}"
+        total_runners: "{{ groups['runners'] | length }}"
+
+    - name: Generate health report
+      template:
+        src: templates/health_report.j2
+        dest: "{{ health_report_path | default('/tmp/health_report.html') }}"
+      when: generate_report | default(true)
+
+    - name: Display health summary
+      debug:
+        msg: |
+          Health Check Summary:
+          Healthy Runners: {{ hostvars['health_aggregator'].healthy_runners }}/{{ hostvars['health_aggregator'].total_runners }}
+          Health Report: {{ health_report_path | default('/tmp/health_report.html') }}

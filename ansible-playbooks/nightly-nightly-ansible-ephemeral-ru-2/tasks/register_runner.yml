@@ -1,0 +1,33 @@
+---
+- name: Wait for runner to be ready
+  wait_for_connection:
+    connect_timeout: 60
+    sleep: 10
+    delay: 30
+    timeout: 600
+  delegate_to: "{{ runner_instance.public_ip_address | default(runner_instance.network_interfaces[0].access_configs[0].nat_ip) }}"
+
+- name: Verify runner installation
+  shell: systemctl is-active actions.runner.{{ runner_instance.tags.Name | default(runner_instance.name) }}.service
+  register: runner_status
+  delegate_to: "{{ runner_instance.public_ip_address | default(runner_instance.network_interfaces[0].access_configs[0].nat_ip) }}"
+  retries: 10
+  delay: 30
+  until: runner_status.stdout == 'active'
+
+- name: Check runner registration status
+  uri:
+    url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runners"
+    headers:
+      Authorization: "token {{ github_token }}"
+      Accept: "application/vnd.github.v3+json"
+    method: GET
+  register: runner_list_response
+
+- name: Verify runner is registered
+  set_fact:
+    runner_registered: "{{ runner_list_response.json.runners | selectattr('name', 'equalto', runner_instance.tags.Name | default(runner_instance.name)) | list | length > 0 }}"
+
+- name: Display registration status
+  debug:
+    msg: "Runner {{ runner_instance.tags.Name | default(runner_instance.name) }} registration: {{ 'Success' if runner_registered else 'Failed' }}"

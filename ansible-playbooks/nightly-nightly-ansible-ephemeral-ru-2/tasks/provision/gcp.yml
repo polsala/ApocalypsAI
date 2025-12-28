@@ -1,0 +1,75 @@
+---
+- name: Launch GCP Compute Engine instances for runners
+  google.cloud.gcp_compute_instance:
+    name: "github-runner-{{ current_time }}-{{ item }}"
+    zone: "{{ gcp_zone }}"
+    machine_type: "{{ gcp_machine_type }}"
+    disks:
+      - auto_delete: true
+        boot: true
+        initialize_params:
+          source_image: "projects/ubuntu-os-cloud/global/images/{{ gcp_image }}"
+    network_interfaces:
+      - network: "{{ gcp_network }}"
+        subnetwork: "{{ gcp_subnetwork }}"
+        access_configs:
+          - name: External NAT
+            type: ONE_TO_ONE_NAT
+    service_accounts:
+      - email: "{{ gcp_service_account }}"
+        scopes:
+          - https://www.googleapis.com/auth/cloud-platform
+    metadata:
+      startup-script: |
+        #!/bin/bash
+        set -e
+        
+        # Install dependencies
+        apt-get update
+        apt-get install -y curl wget unzip
+        
+        # Download and install GitHub Actions runner
+        RUNNER_VERSION="2.315.0"
+        curl -L -o actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+        tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+        
+        # Configure runner
+        ./config.sh --url https://github.com/{{ github_org }}/{{ github_repo }} --token {{ github_token }} --name {{ inventory_hostname }} --unattended --replace
+        
+        # Create systemd service
+        ./svc.sh install
+        ./svc.sh start
+    labels:
+      project: "github-actions-runners"
+      environment: "ephemeral"
+      managed-by: "ansible-orchestrator"
+    tags:
+      items:
+        - github-runner
+        - ephemeral
+    state: present
+  register: gcp_instances
+  loop: "{{ range(scale_amount) | list }}"
+
+- name: Wait for GCP instances to be ready
+  wait_for:
+    host: "{{ item.network_interfaces[0].access_configs[0].nat_ip }}"
+    port: 22
+    delay: 30
+    timeout: 600
+  loop: "{{ gcp_instances.instances }}"
+  loop_control:
+    loop_var: instance
+
+- name: Add GCP instances to inventory
+  add_host:
+    name: "{{ item.network_interfaces[0].access_configs[0].nat_ip }}"
+    groups: runners
+    ansible_host: "{{ item.network_interfaces[0].access_configs[0].nat_ip }}"
+    runner_id: "{{ item.id }}"
+    runner_name: "{{ item.name }}"
+  loop: "{{ gcp_instances.instances }}"
+
+- name: Store new runner instances
+  set_fact:
+    new_runner_instances: "{{ gcp_instances.instances }}"

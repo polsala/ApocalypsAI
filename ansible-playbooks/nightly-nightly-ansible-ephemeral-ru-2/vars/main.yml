@@ -1,0 +1,73 @@
+---
+# Cloud Provider Configuration
+current_time: "{{ ansible_date_time.epoch }}"
+cloud_provider: "aws"  # Options: aws, azure, gcp
+
+# AWS Specific
+aws_region: "us-east-1"
+aws_instance_type: "t3.medium"
+aws_ami_id: "ami-0abcdef1234567890"
+aws_keypair: "github-runner-key"
+aws_security_group: "sg-0123456789abcdef0"
+aws_subnet_id: "subnet-0123456789abcdef0"
+aws_iam_role: "GitHubRunnerRole"
+
+# Azure Specific
+azure_location: "eastus"
+azure_vm_size: "Standard_B2s"
+azure_image: "Ubuntu2204"
+azure_resource_group: "github-runners-rg"
+azure_virtual_network: "github-vnet"
+azure_subnet: "github-subnet"
+azure_nsg: "github-nsg"
+
+# GCP Specific
+gcp_zone: "us-central1-a"
+gcp_machine_type: "e2-medium"
+gcp_image: "ubuntu-2204-lts"
+gcp_network: "default"
+gcp_subnetwork: "default"
+gcp_service_account: "github-runner-sa"
+
+# GitHub Actions Configuration
+github_org: "your-org"
+github_repo: "your-repo"
+github_token: ""
+
+# Scaling Configuration
+max_runners: 10
+min_runners: 1
+scale_up_threshold: 2  # Scale up if queue length > this
+scale_down_threshold: 0  # Scale down if queue length < this
+health_check_interval: 300  # Seconds between health checks
+cleanup_timeout: 2  # Hours before force cleanup
+
+# Monitoring and Reporting
+generate_report: true
+runner_report_path: "/tmp/runner_report.html"
+health_report_path: "/tmp/health_report.html"
+cleanup_report_path: "/tmp/cleanup_report.html"
+
+# Feature Flags
+enable_queue_check: true
+enable_health_check: true
+cleanup_by_age: true
+enable_cost_tracking: true
+
+# Security
+use_temporary_credentials: true
+network_isolation: true
+encrypt_communication: true
+
+# Advanced Options
+concurrent_provisioning: 3  # Number of runners to provision simultaneously
+retry_attempts: 3
+retry_delay: 30  # Seconds between retries
+
+# Tags for resource identification
+resource_tags:
+  Project: "GitHub-Actions-Runners"
+  Environment: "Ephemeral"
+  ManagedBy: "Ansible-Orchestrator"
+  CreatedBy: "{{ ansible_user_id }}"
+  CreatedAt: "{{ current_time }}"

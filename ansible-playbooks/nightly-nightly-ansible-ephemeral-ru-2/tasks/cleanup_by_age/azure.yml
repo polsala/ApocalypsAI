@@ -1,0 +1,14 @@
+---
+- name: Identify old Azure VMs
+  set_fact:
+    old_vms: "{{ cloud_instances | selectattr('time_created') | select('lt', (ansible_date_time.epoch | int - (cleanup_timeout | int * 3600))) | list }}"
+
+- name: Terminate old Azure VMs
+  azure.azcollection.azure_rm_virtualmachine:
+    resource_group: "{{ azure_resource_group }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ old_vms }}"
+  loop_control:
+    loop_var: vm
+  when: old_vms | length > 0

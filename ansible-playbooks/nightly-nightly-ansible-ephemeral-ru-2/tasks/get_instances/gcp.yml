@@ -1,0 +1,13 @@
+---
+- name: Get list of GCP instances
+  google.cloud.gcp_compute_instance_info:
+    zone: "{{ gcp_zone }}"
+    filters:
+      - labels.project = "github-actions-runners"
+      - labels.environment = "ephemeral"
+      - labels.managed-by = "ansible-orchestrator"
+  register: gcp_info
+
+- name: Set cloud instances fact
+  set_fact:
+    cloud_instances: "{{ gcp_info.instances | selectattr('status', 'equalto', 'RUNNING') | list }}"

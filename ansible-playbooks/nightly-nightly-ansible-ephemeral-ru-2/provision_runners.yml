@@ -1,0 +1,108 @@
+---
+- name: Ephemeral GitHub Actions Runner Orchestrator
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - github_token is defined
+          - github_token | length > 0
+          - cloud_provider in ['aws', 'azure', 'gcp']
+        fail_msg: "Missing required variables: github_token or invalid cloud_provider"
+
+    - name: Load existing runners inventory
+      include_vars:
+        file: inventory.ini
+        name: existing_runners
+      ignore_errors: true
+
+    - name: Check GitHub Actions queue length
+      uri:
+        url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runs"
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        method: GET
+      register: queue_response
+      retries: 3
+      delay: 5
+      until: queue_response.status == 200
+      when: enable_queue_check | default(true)
+
+    - name: Parse queue data
+      set_fact:
+        pending_jobs: "{{ (queue_response.json.workflow_runs | selectattr('status', 'equalto', 'queued') | list | length) + (queue_response.json.workflow_runs | selectattr('status', 'equalto', 'in_progress') | list | length) }}"
+      when: enable_queue_check | default(true)
+
+    - name: Display queue status
+      debug:
+        msg: "GitHub Actions queue has {{ pending_jobs }} pending jobs"
+      when: enable_queue_check | default(true)
+
+    - name: Calculate required runners
+      set_fact:
+        required_runners: "{{ [pending_jobs | int, max_runners | int] | min }}"
+      when: enable_queue_check | default(true)
+
+    - name: Use configured max runners when queue check disabled
+      set_fact:
+        required_runners: "{{ max_runners | int }}"
+      when: enable_queue_check | default(true) | invert
+
+    - name: Determine scaling action
+      set_fact:
+        current_runners: "{{ existing_runners | default({}) | dict2items | length }}"
+        scale_up: "{{ required_runners | int > current_runners | int }}"
+        scale_down: "{{ required_runners | int < current_runners | int }}"
+        scale_amount: "{{ (required_runners | int - current_runners | int) | abs }}"
+
+    - name: Display scaling decision
+      debug:
+        msg: "Current: {{ current_runners }}, Required: {{ required_runners }}. {{ 'Scaling up' if scale_up else 'Scaling down' if scale_down else 'No scaling needed' }} by {{ scale_amount }}"
+
+    - name: Provision new runners (AWS)
+      include_tasks: tasks/provision/aws.yml
+      when: cloud_provider == 'aws' and scale_up | bool
+
+    - name: Provision new runners (Azure)
+      include_tasks: tasks/provision/azure.yml
+      when: cloud_provider == 'azure' and scale_up | bool
+
+    - name: Provision new runners (GCP)
+      include_tasks: tasks/provision/gcp.yml
+      when: cloud_provider == 'gcp' and scale_up | bool
+
+    - name: Register runners with GitHub
+      include_tasks: tasks/register_runner.yml
+      loop: "{{ new_runner_instances | default([]) }}"
+      loop_control:
+        loop_var: runner_instance
+      when: new_runner_instances is defined
+
+    - name: Scale down runners (AWS)
+      include_tasks: tasks/scale_down/aws.yml
+      when: cloud_provider == 'aws' and scale_down | bool
+
+    - name: Scale down runners (Azure)
+      include_tasks: tasks/scale_down/azure.yml
+      when: cloud_provider == 'azure' and scale_down | bool
+
+    - name: Scale down runners (GCP)
+      include_tasks: tasks/scale_down/gcp.yml
+      when: cloud_provider == 'gcp' and scale_down | bool
+
+    - name: Generate runner report
+      template:
+        src: templates/runner_report.j2
+        dest: "{{ runner_report_path | default('/tmp/runner_report.html') }}"
+      when: generate_report | default(true)
+
+    - name: Display final status
+      debug:
+        msg: |
+          Runner orchestration completed.
+          Current runners: {{ (groups['runners'] | default([])) | length }}
+          Report generated at: {{ runner_report_path | default('/tmp/runner_report.html') }}

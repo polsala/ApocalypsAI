@@ -1,0 +1,9 @@
+---
+- name: Terminate orphaned Azure VMs
+  azure.azcollection.azure_rm_virtualmachine:
+    resource_group: "{{ azure_resource_group }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ cloud_instances | selectattr('name', 'in', orphaned_instances) | list }}"
+  loop_control:
+    loop_var: vm

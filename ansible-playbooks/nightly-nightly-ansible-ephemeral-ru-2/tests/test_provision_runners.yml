@@ -1,0 +1,118 @@
+---
+- name: Test Ephemeral Runner Provisioning
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_github_token: "test_token_12345"
+    test_cloud_provider: "aws"
+    test_github_org: "test-org"
+    test_github_repo: "test-repo"
+  tasks:
+    - name: Test variable validation
+      assert:
+        that:
+          - test_github_token is defined
+          - test_github_token | length > 0
+          - test_cloud_provider in ['aws', 'azure', 'gcp']
+        fail_msg: "Test variables validation failed"
+
+    - name: Test inventory file exists
+      stat:
+        path: inventory.ini
+      register: inventory_stat
+
+    - name: Assert inventory file exists
+      assert:
+        that:
+          - inventory_stat.stat.exists
+        fail_msg: "Inventory file should exist"
+
+    - name: Test vars file exists
+      stat:
+        path: vars/main.yml
+      register: vars_stat
+
+    - name: Assert vars file exists
+      assert:
+        that:
+          - vars_stat.stat.exists
+        fail_msg: "Vars file should exist"
+
+    - name: Test playbook syntax
+      command: ansible-playbook --syntax-check provision_runners.yml
+      register: syntax_check
+      ignore_errors: true
+
+    - name: Assert playbook syntax is valid
+      assert:
+        that:
+          - syntax_check.rc == 0
+        fail_msg: "Playbook syntax check failed"
+        success_msg: "Playbook syntax is valid"
+
+    - name: Test required files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - provision_runners.yml
+        - health_check.yml
+        - cleanup_runners.yml
+        - inventory.ini
+        - vars/main.yml
+      register: required_files
+
+    - name: Assert all required files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required file {{ item.item }} does not exist"
+      loop: "{{ required_files.results }}"
+
+    - name: Test template files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - templates/runner_report.j2
+        - templates/health_report.j2
+        - templates/cleanup_report.j2
+      register: template_files
+
+    - name: Assert template files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Template file {{ item.item }} does not exist"
+      loop: "{{ template_files.results }}"
+
+    - name: Test task files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - tasks/provision/aws.yml
+        - tasks/provision/azure.yml
+        - tasks/provision/gcp.yml
+        - tasks/register_runner.yml
+        - tasks/scale_down/aws.yml
+        - tasks/scale_down/azure.yml
+        - tasks/scale_down/gcp.yml
+        - tasks/get_instances/aws.yml
+        - tasks/get_instances/azure.yml
+        - tasks/get_instances/gcp.yml
+        - tasks/terminate_instances/aws.yml
+        - tasks/terminate_instances/azure.yml
+        - tasks/terminate_instances/gcp.yml
+        - tasks/cleanup_by_age/aws.yml
+        - tasks/cleanup_by_age/azure.yml
+        - tasks/cleanup_by_age/gcp.yml
+      register: task_files
+
+    - name: Assert task files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Task file {{ item.item }} does not exist"
+      loop: "{{ task_files.results }}"
+
+    - name: Display test results
+      debug:
+        msg: "All tests passed! The ephemeral runner orchestrator is ready for use."

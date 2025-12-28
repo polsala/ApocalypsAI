@@ -1,0 +1,14 @@
+---
+- name: Identify old EC2 instances
+  set_fact:
+    old_instances: "{{ cloud_instances | selectattr('launch_time') | select('lt', (ansible_date_time.epoch | int - (cleanup_timeout | int * 3600))) | list }}"
+
+- name: Terminate old EC2 instances
+  amazon.aws.ec2_instance:
+    instance_ids: "{{ item.id }}"
+    state: absent
+    wait: true
+  loop: "{{ old_instances }}"
+  loop_control:
+    loop_var: instance
+  when: old_instances | length > 0
