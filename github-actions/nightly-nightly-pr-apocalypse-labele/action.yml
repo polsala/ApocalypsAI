@@ -1,0 +1,14 @@
+name: "Nightly PR Apocalypse Labeler"
+description: "Automatically adds an 'apocalypse' label to PRs with end‑of‑world keywords."
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with issues:write permission"
+    required: true
+  keywords:
+    description: "Comma‑separated list of trigger keywords"
+    required: false
+    default: "apocalypse,doom,survival,end of the world,catastrophe"
+runs:
+  using: "node12"
+  main: "src/index.js"
