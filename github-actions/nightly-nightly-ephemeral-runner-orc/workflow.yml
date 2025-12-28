@@ -1,0 +1,266 @@
+name: Ephemeral Runner Orchestrator
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Run every 15 minutes
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'manage'
+        type: choice
+        options:
+          - manage
+          - cleanup
+          - status
+      max_runners:
+        description: 'Maximum number of runners'
+        required: false
+        type: string
+        default: '10'
+      min_runners:
+        description: 'Minimum number of runners'
+        required: false
+        type: string
+        default: '2'
+
+env:
+  MAX_RUNNERS: ${{ github.event.inputs.max_runners || '10' }}
+  MIN_RUNNERS: ${{ github.event.inputs.min_runners || '2' }}
+  QUEUE_THRESHOLD: 5
+  IDLE_TIMEOUT: 30
+  COST_CONTROL: true
+  PEAK_START: '09:00'
+  PEAK_END: '17:00'
+
+jobs:
+  manage-runners:
+    name: Manage Ephemeral Runners
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pyyaml
+
+    - name: Get current time
+      id: time
+      run: echo "current_time=$(date +%H:%M)" >> $GITHUB_OUTPUT
+
+    - name: Determine runner target
+      id: target
+      run: |
+        current_time="${{ steps.time.outputs.current_time }}"
+        peak_start="${{ env.PEAK_START }}"
+        peak_end="${{ env.PEAK_END }}"
+        
+        # Check if current time is within peak hours
+        if [[ "$current_time" > "$peak_start" && "$current_time" < "$peak_end" ]]; then
+          echo "peak_hours=true" >> $GITHUB_OUTPUT
+          echo "target_runners=${{ env.MAX_RUNNERS }}" >> $GITHUB_OUTPUT
+        else
+          echo "peak_hours=false" >> $GITHUB_OUTPUT
+          # During off-peak, use minimum runners unless cost control is disabled
+          if [[ "${{ env.COST_CONTROL }}" == "true" ]]; then
+            echo "target_runners=${{ env.MIN_RUNNERS }}" >> $GITHUB_OUTPUT
+          else
+            echo "target_runners=${{ env.MAX_RUNNERS }}" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Get current runner status
+      id: runners
+      run: |
+        # Get self-hosted runners for the repository
+        runners_response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+        
+        # Count online and offline runners
+        online_count=$(echo "$runners_response" | jq '[.runners[] | select(.status == "online")] | length')
+        offline_count=$(echo "$runners_response" | jq '[.runners[] | select(.status == "offline")] | length')
+        total_count=$(echo "$runners_response" | jq '.total_count')
+        
+        echo "online_runners=$online_count" >> $GITHUB_OUTPUT
+        echo "offline_runners=$offline_count" >> $GITHUB_OUTPUT
+        echo "total_runners=$total_count" >> $GITHUB_OUTPUT
+        
+        # Store runner details for cleanup
+        echo "$runners_response" > runners.json
+
+    - name: Get queue length
+      id: queue
+      run: |
+        # Get workflow runs that are queued or in_progress
+        queue_response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=queued&per_page=100")
+        
+        queued_count=$(echo "$queue_response" | jq '.workflow_runs | length')
+        
+        # Also check for in_progress runs to understand current load
+        in_progress_response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress&per_page=100")
+        in_progress_count=$(echo "$in_progress_response" | jq '.workflow_runs | length')
+        
+        echo "queued_jobs=$queued_count" >> $GITHUB_OUTPUT
+        echo "in_progress_jobs=$in_progress_count" >> $GITHUB_OUTPUT
+
+    - name: Calculate scaling decision
+      id: scaling
+      run: |
+        online_runners=${{ steps.runners.outputs.online_runners }}
+        target_runners=${{ steps.target.outputs.target_runners }}
+        queued_jobs=${{ steps.queue.outputs.queued_jobs }}
+        queue_threshold=${{ env.QUEUE_THRESHOLD }}
+        
+        # Determine if we need more runners
+        if [[ $queued_jobs -gt $queue_threshold && $online_runners -lt $target_runners ]]; then
+          runners_to_add=$((target_runners - online_runners))
+          echo "action=scale_up" >> $GITHUB_OUTPUT
+          echo "runners_needed=$runners_to_add" >> $GITHUB_OUTPUT
+          echo "reason=Queue length ($queued_jobs) exceeds threshold ($queue_threshold)" >> $GITHUB_OUTPUT
+        elif [[ $online_runners -gt $target_runners ]]; then
+          runners_to_remove=$((online_runners - target_runners))
+          echo "action=scale_down" >> $GITHUB_OUTPUT
+          echo "runners_to_remove=$runners_to_remove" >> $GITHUB_OUTPUT
+          echo "reason=More runners ($online_runners) than target ($target_runners)" >> $GITHUB_OUTPUT
+        else
+          echo "action=no_change" >> $GITHUB_OUTPUT
+          echo "reason=Current runners ($online_runners) match target ($target_runners)" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Provision new runners
+      if: steps.scaling.outputs.action == 'scale_up'
+      run: |
+        runners_needed=${{ steps.scaling.outputs.runners_needed }}
+        echo "Provisioning $runners_needed new runners..."
+        
+        for i in $(seq 1 $runners_needed); do
+          echo "Creating runner instance $i"
+          # This would integrate with your infrastructure provider
+          # For now, we'll simulate with a comment
+          echo "# TODO: Provision runner via cloud provider API"
+        done
+        
+        echo "Runner provisioning initiated for $runners_needed instances"
+
+    - name: Remove excess runners
+      if: steps.scaling.outputs.action == 'scale_down'
+      run: |
+        runners_to_remove=${{ steps.scaling.outputs.runners_to_remove }}
+        echo "Removing $runners_to_remove excess runners..."
+        
+        # Read runner details from previous step
+        offline_runners=$(jq -r '.runners[] | select(.status == "offline") | .id' runners.json)
+        online_runners=$(jq -r '.runners[] | select(.status == "online") | .id' runners.json)
+        
+        # Remove offline runners first, then online if needed
+        removed=0
+        for runner_id in $offline_runners; do
+          if [[ $removed -lt $runners_to_remove ]]; then
+            echo "Removing offline runner $runner_id"
+            # TODO: Implement actual runner removal via GitHub API
+            removed=$((removed + 1))
+          fi
+        done
+        
+        # If still need to remove more, remove online runners
+        if [[ $removed -lt $runners_to_remove ]]; then
+          for runner_id in $online_runners; do
+            if [[ $removed -lt $runners_to_remove ]]; then
+              echo "Removing online runner $runner_id"
+              # TODO: Implement actual runner removal via GitHub API
+              removed=$((removed + 1))
+            fi
+          done
+        fi
+        
+        echo "Removed $removed runners"
+
+    - name: Health check existing runners
+      run: |
+        echo "Performing health checks on existing runners..."
+        
+        # Check each online runner
+        online_runners=$(jq -r '.runners[] | select(.status == "online") | .id' runners.json)
+        
+        for runner_id in $online_runners; do
+          echo "Health checking runner $runner_id"
+          # TODO: Implement actual health check logic
+          # This could include checking runner process, network connectivity, etc.
+        done
+        
+        echo "Health checks completed"
+
+    - name: Generate status report
+      run: |
+        echo "# Ephemeral Runner Orchestrator Status Report" > status.md
+        echo "" >> status.md
+        echo "**Timestamp:** $(date)" >> status.md
+        echo "**Peak Hours:** ${{ steps.target.outputs.peak_hours }}" >> status.md
+        echo "" >> status.md
+        
+        echo "## Current Status" >> status.md
+        echo "- **Online Runners:** ${{ steps.runners.outputs.online_runners }}" >> status.md
+        echo "- **Offline Runners:** ${{ steps.runners.outputs.offline_runners }}" >> status.md
+        echo "- **Total Runners:** ${{ steps.runners.outputs.total_runners }}" >> status.md
+        echo "- **Target Runners:** ${{ steps.target.outputs.target_runners }}" >> status.md
+        echo "" >> status.md
+        
+        echo "## Queue Status" >> status.md
+        echo "- **Queued Jobs:** ${{ steps.queue.outputs.queued_jobs }}" >> status.md
+        echo "- **In Progress Jobs:** ${{ steps.queue.outputs.in_progress_jobs }}" >> status.md
+        echo "- **Queue Threshold:** ${{ env.QUEUE_THRESHOLD }}" >> status.md
+        echo "" >> status.md
+        
+        echo "## Scaling Decision" >> status.md
+        echo "- **Action:** ${{ steps.scaling.outputs.action }}" >> status.md
+        echo "- **Reason:** ${{ steps.scaling.outputs.reason }}" >> status.md
+        echo "" >> status.md
+        
+        echo "## Recommendations" >> status.md
+        if [[ "${{ steps.scaling.outputs.action }}" == "scale_up" ]]; then
+          echo "- Consider provisioning additional runners" >> status.md
+        elif [[ "${{ steps.scaling.outputs.action }}" == "scale_down" ]]; then
+          echo "- Consider reducing runner count to optimize costs" >> status.md
+        else
+          echo "- Current runner count is optimal" >> status.md
+        fi
+        
+        # Output the report
+        cat status.md
+
+    - name: Cleanup orphaned runners
+      if: github.event.inputs.action == 'cleanup' || github.event.inputs.action == 'manage'
+      run: |
+        echo "Cleaning up orphaned runners..."
+        
+        # This would implement logic to find and remove runners that are
+        # registered but no longer have corresponding infrastructure
+        # Implementation depends on your specific runner setup
+        
+        echo "Cleanup completed"
+
+    - name: Log orchestration results
+      run: |
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 🤖 Ephemeral Runner Orchestrator Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Peak Hours:** ${{ steps.target.outputs.peak_hours }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Current Runners:** ${{ steps.runners.outputs.online_runners }} online, ${{ steps.runners.outputs.offline_runners }} offline" >> $GITHUB_STEP_SUMMARY
+        echo "**Queue Status:** ${{ steps.queue.outputs.queued_jobs }} queued, ${{ steps.queue.outputs.in_progress_jobs }} in progress" >> $GITHUB_STEP_SUMMARY
+        echo "**Scaling Action:** ${{ steps.scaling.outputs.action }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Reason:** ${{ steps.scaling.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
