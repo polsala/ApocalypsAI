@@ -1,0 +1,13 @@
+---
+- name: Get list of EC2 instances
+  amazon.aws.ec2_instance_info:
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Project": "GitHub-Actions-Runners"
+      "tag:Environment": "Ephemeral"
+      "tag:ManagedBy": "Ansible-Orchestrator"
+  register: ec2_info
+
+- name: Set cloud instances fact
+  set_fact:
+    cloud_instances: "{{ ec2_info.instances | selectattr('state.name', 'equalto', 'running') | list }}"

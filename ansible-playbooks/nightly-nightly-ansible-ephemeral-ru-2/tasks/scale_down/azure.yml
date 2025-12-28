@@ -1,0 +1,20 @@
+---
+- name: Identify Azure VMs to terminate
+  set_fact:
+    vms_to_terminate: "{{ groups['runners'][required_runners | int:] }}"
+
+- name: Terminate excess Azure VMs
+  azure.azcollection.azure_rm_virtualmachine:
+    resource_group: "{{ azure_resource_group }}"
+    name: "{{ item.runner_name }}"
+    state: absent
+  loop: "{{ vms_to_terminate }}"
+  loop_control:
+    loop_var: vm_info
+
+- name: Remove terminated VMs from inventory
+  lineinfile:
+    path: inventory.ini
+    regexp: "^{{ item }}$"
+    state: absent
+  loop: "{{ vms_to_terminate }}"

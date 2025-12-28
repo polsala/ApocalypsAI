@@ -1,0 +1,9 @@
+---
+- name: Terminate orphaned EC2 instances
+  amazon.aws.ec2_instance:
+    instance_ids: "{{ item.id }}"
+    state: absent
+    wait: true
+  loop: "{{ cloud_instances | selectattr('name', 'in', orphaned_instances) | list }}"
+  loop_control:
+    loop_var: instance

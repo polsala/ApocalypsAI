@@ -1,0 +1,27 @@
+---
+- name: Get list of current runners from inventory
+  add_host:
+    name: inventory_checker
+    current_runners: "{{ groups['runners'] | length }}"
+    required_runners: "{{ required_runners }}"
+
+- name: Identify runners to terminate
+  set_fact:
+    runners_to_terminate: "{{ groups['runners'] | difference(groups['runners'][0:required_runners | int]) }}"
+
+- name: Terminate excess EC2 instances
+  amazon.aws.ec2_instance:
+    instance_ids: "{{ item.runner_id }}"
+    state: absent
+    wait: true
+  loop: "{{ groups['runners'] }}"
+  loop_control:
+    loop_var: runner_host
+  when: runner_host in runners_to_terminate
+
+- name: Remove terminated runners from inventory
+  lineinfile:
+    path: inventory.ini
+    regexp: "^{{ item }}$"
+    state: absent
+  loop: "{{ runners_to_terminate }}"

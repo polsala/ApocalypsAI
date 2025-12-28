@@ -1,0 +1,9 @@
+---
+- name: Terminate orphaned GCP instances
+  google.cloud.gcp_compute_instance:
+    name: "{{ item.name }}"
+    zone: "{{ gcp_zone }}"
+    state: absent
+  loop: "{{ cloud_instances | selectattr('name', 'in', orphaned_instances) | list }}"
+  loop_control:
+    loop_var: instance

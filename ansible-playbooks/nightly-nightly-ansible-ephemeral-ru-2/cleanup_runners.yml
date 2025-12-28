@@ -1,0 +1,68 @@
+---
+- name: Cleanup Orphaned Runners
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Get list of registered runners from GitHub
+      uri:
+        url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runners"
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        method: GET
+      register: github_runners_response
+      retries: 3
+      delay: 5
+      until: github_runners_response.status == 200
+
+    - name: Get list of active instances from cloud provider
+      include_tasks: tasks/get_instances/{{ cloud_provider }}.yml
+
+    - name: Identify orphaned runners
+      set_fact:
+        registered_runners: "{{ github_runners_response.json.runners | map(attribute='name') | list }}"
+        active_instances: "{{ cloud_instances | map(attribute='name') | list }}"
+        orphaned_runners: "{{ registered_runners | difference(active_instances) }}"
+        orphaned_instances: "{{ active_instances | difference(registered_runners) }}"
+
+    - name: Display orphaned resources
+      debug:
+        msg: |
+          Orphaned Runners (in GitHub but not in cloud): {{ orphaned_runners }}
+          Orphaned Instances (in cloud but not in GitHub): {{ orphaned_instances }}
+
+    - name: Remove orphaned runners from GitHub
+      uri:
+        url: "https://api.github.com/repos/{{ github_org }}/{{ github_repo }}/actions/runners/{{ item.id }}"
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        method: DELETE
+      loop: "{{ github_runners_response.json.runners | selectattr('name', 'in', orphaned_runners) | list }}"
+      loop_control:
+        loop_var: runner
+      when: orphaned_runners | length > 0
+
+    - name: Terminate orphaned instances
+      include_tasks: tasks/terminate_instances/{{ cloud_provider }}.yml
+      when: orphaned_instances | length > 0
+
+    - name: Check for old instances (cleanup by age)
+      include_tasks: tasks/cleanup_by_age/{{ cloud_provider }}.yml
+      when: cleanup_by_age | default(false)
+
+    - name: Generate cleanup report
+      template:
+        src: templates/cleanup_report.j2
+        dest: "{{ cleanup_report_path | default('/tmp/cleanup_report.html') }}"
+      when: generate_report | default(true)
+
+    - name: Display cleanup summary
+      debug:
+        msg: |
+          Cleanup completed:
+          Removed {{ orphaned_runners | length }} orphaned runners
+          Terminated {{ orphaned_instances | length }} orphaned instances
+          Cleanup report: {{ cleanup_report_path | default('/tmp/cleanup_report.html') }}

@@ -1,0 +1,20 @@
+---
+- name: Identify GCP instances to terminate
+  set_fact:
+    instances_to_terminate: "{{ groups['runners'][required_runners | int:] }}"
+
+- name: Terminate excess GCP instances
+  google.cloud.gcp_compute_instance:
+    name: "{{ item.runner_name }}"
+    zone: "{{ gcp_zone }}"
+    state: absent
+  loop: "{{ instances_to_terminate }}"
+  loop_control:
+    loop_var: instance_info
+
+- name: Remove terminated instances from inventory
+  lineinfile:
+    path: inventory.ini
+    regexp: "^{{ item }}$"
+    state: absent
+  loop: "{{ instances_to_terminate }}"

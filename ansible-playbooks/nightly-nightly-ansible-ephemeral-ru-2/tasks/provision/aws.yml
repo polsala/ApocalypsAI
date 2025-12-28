@@ -1,0 +1,59 @@
+---
+- name: Launch EC2 instances for runners
+  amazon.aws.ec2_instance:
+    name: "github-runner-{{ current_time }}-{{ item }}"
+    region: "{{ aws_region }}"
+    instance_type: "{{ aws_instance_type }}"
+    image_id: "{{ aws_ami_id }}"
+    key_name: "{{ aws_keypair }}"
+    security_group: "{{ aws_security_group }}"
+    subnet_id: "{{ aws_subnet_id }}"
+    iam_instance_profile: "{{ aws_iam_role }}"
+    user_data: |
+      #!/bin/bash
+      set -e
+      
+      # Install dependencies
+      apt-get update
+      apt-get install -y curl wget unzip
+      
+      # Download and install GitHub Actions runner
+      RUNNER_VERSION="2.315.0"
+      curl -L -o actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+      tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+      
+      # Configure runner
+      ./config.sh --url https://github.com/{{ github_org }}/{{ github_repo }} --token {{ github_token }} --name {{ inventory_hostname }} --unattended --replace
+      
+      # Create systemd service
+      ./svc.sh install
+      ./svc.sh start
+    
+    tags: "{{ resource_tags }}"
+    wait: true
+    count: "{{ scale_amount }}"
+  register: ec2_instances
+  loop: "{{ range(scale_amount) | list }}"
+
+- name: Wait for instances to be ready
+  wait_for_connection:
+    connect_timeout: 60
+    sleep: 10
+    delay: 30
+    timeout: 600
+  loop: "{{ ec2_instances.instances }}"
+  loop_control:
+    loop_var: instance
+
+- name: Add instances to inventory
+  add_host:
+    name: "{{ item.public_ip_address }}"
+    groups: runners
+    ansible_host: "{{ item.public_ip_address }}"
+    runner_id: "{{ item.id }}"
+    runner_name: "{{ item.tags.Name }}"
+  loop: "{{ ec2_instances.instances }}"
+
+- name: Store new runner instances
+  set_fact:
+    new_runner_instances: "{{ ec2_instances.instances }}"

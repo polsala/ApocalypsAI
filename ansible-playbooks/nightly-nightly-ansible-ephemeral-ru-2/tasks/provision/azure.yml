@@ -1,0 +1,83 @@
+---
+- name: Create resource group if not exists
+  azure.azcollection.azure_rm_resourcegroup:
+    name: "{{ azure_resource_group }}"
+    location: "{{ azure_location }}"
+
+- name: Create virtual network if not exists
+  azure.azcollection.azure_rm_virtualnetwork:
+    resource_group: "{{ azure_resource_group }}"
+    name: "{{ azure_virtual_network }}"
+    address_prefixes:
+      - "10.0.0.0/16"
+    subnet:
+      - name: "{{ azure_subnet }}"
+        address_prefix: "10.0.1.0/24"
+
+- name: Create network security group
+  azure.azcollection.azure_rm_securitygroup:
+    resource_group: "{{ azure_resource_group }}"
+    name: "{{ azure_nsg }}"
+    rules:
+      - name: SSH
+        protocol: Tcp
+        destination_port_range: 22
+        access: Allow
+        priority: 100
+        direction: Inbound
+      - name: HTTPS
+        protocol: Tcp
+        destination_port_range: 443
+        access: Allow
+        priority: 101
+        direction: Inbound
+
+- name: Launch Azure VM instances for runners
+  azure.azcollection.azure_rm_virtualmachine:
+    resource_group: "{{ azure_resource_group }}"
+    name: "github-runner-{{ current_time }}-{{ item }}"
+    vm_size: "{{ azure_vm_size }}"
+    admin_username: "ubuntu"
+    ssh_password_enabled: false
+    ssh_public_keys:
+      - path: /home/ubuntu/.ssh/authorized_keys
+        key_data: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    network_interfaces: "github-runner-nic-{{ current_time }}-{{ item }}"
+    storage_account_name: "githubrunnerstorage{{ current_time | replace('-', '') | lower | truncate(20, True, '') }}"
+    storage_container_name: "vhds"
+    storage_blob_name: "github-runner-{{ current_time }}-{{ item }}.vhd"
+    image:
+      offer: "UbuntuServer"
+      publisher: "Canonical"
+      sku: "18.04-LTS"
+      version: "latest"
+    custom_data: |
+      #cloud-config
+      package_update: true
+      packages:
+        - curl
+        - wget
+        - unzip
+      runcmd:
+        - RUNNER_VERSION="2.315.0"
+        - curl -L -o actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+        - tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+        - ./config.sh --url https://github.com/{{ github_org }}/{{ github_repo }} --token {{ github_token }} --name {{ inventory_hostname }} --unattended --replace
+        - ./svc.sh install
+        - ./svc.sh start
+    tags: "{{ resource_tags }}"
+  register: azure_vms
+  loop: "{{ range(scale_amount) | list }}"
+
+- name: Add Azure VMs to inventory
+  add_host:
+    name: "{{ item.public_ip_address }}"
+    groups: runners
+    ansible_host: "{{ item.public_ip_address }}"
+    runner_id: "{{ item.id }}"
+    runner_name: "{{ item.name }}"
+  loop: "{{ azure_vms.vms }}"
+
+- name: Store new runner instances
+  set_fact:
+    new_runner_instances: "{{ azure_vms.vms }}"
