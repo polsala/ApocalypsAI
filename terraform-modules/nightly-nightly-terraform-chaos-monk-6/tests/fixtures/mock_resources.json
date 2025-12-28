@@ -1,0 +1,854 @@
+{
+  "ec2_instances": [
+    {
+      "InstanceId": "i-1234567890abcdef0",
+      "ImageId": "ami-12345678",
+      "State": {
+        "Code": 16,
+        "Name": "running"
+      },
+      "PrivateDnsName": "ip-172-31-16-136.us-east-2.compute.internal",
+      "PublicDnsName": "ec2-18-222-227-63.us-east-2.compute.amazonaws.com",
+      "StateTransitionReason": "",
+      "KeyName": "my-key-pair",
+      "AmiLaunchIndex": 0,
+      "ProductCodes": [],
+      "InstanceId": "i-1234567890abcdef0",
+      "LaunchTime": "2023-01-01T00:00:00.000Z",
+      "Placement": {
+        "AvailabilityZone": "us-east-2a",
+        "GroupName": "",
+        "Tenancy": "default",
+        "PartitionNumber": 0,
+        "GroupId": ""
+      },
+      "Monitoring": {
+        "State": "disabled"
+      },
+      "SubnetId": "subnet-12345678",
+      "VpcId": "vpc-12345678",
+      "PrivateIpAddress": "172.31.16.136",
+      "PublicIpAddress": "18.222.227.63",
+      "StateReason": {
+        "Code": "Client.UserInitiatedShutdown",
+        "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+      },
+      "Architecture": "x86_64",
+      "RootDeviceType": "ebs",
+      "RootDeviceName": "/dev/xvda",
+      "BlockDeviceMappings": [
+        {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+            "AttachTime": "2023-01-01T00:00:00.000Z",
+            "DeleteOnTermination": true,
+            "Status": "attached",
+            "VolumeId": "vol-1234567890abcdef0"
+          }
+        }
+      ],
+      "VirtualizationType": "hvm",
+      "ClientToken": "abcdef01234567890",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "test-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "test"
+        },
+        {
+          "Key": "Project",
+          "Value": "chaos-monkey"
+        }
+      ],
+      "SecurityGroups": [
+        {
+          "GroupName": "default",
+          "GroupId": "sg-12345678"
+        }
+      ],
+      "SourceDestCheck": true,
+      "Hypervisor": "xen",
+      "NetworkInterfaces": [
+        {
+          "Association": {
+            "PublicIp": "18.222.227.63",
+            "PublicDnsName": "ec2-18-222-227-63.us-east-2.compute.amazonaws.com",
+            "IpOwnerId": "123456789012"
+          },
+          "Attachment": {
+            "AttachTime": "2023-01-01T00:00:00.000Z",
+            "AttachmentId": "eni-attach-1234567890abcdef0",
+            "DeleteOnTermination": true,
+            "DeviceIndex": 0,
+            "Status": "attached",
+            "NetworkCardIndex": 0
+          },
+          "Description": "",
+          "Groups": [
+            {
+              "GroupName": "default",
+              "GroupId": "sg-12345678"
+            }
+          ],
+          "Ipv6Addresses": [],
+          "MacAddress": "12:34:56:78:9a:bc",
+          "NetworkInterfaceId": "eni-1234567890abcdef0",
+          "OwnerId": "123456789012",
+          "PrivateDnsName": "ip-172-31-16-136.us-east-2.compute.internal",
+          "PrivateIpAddress": "172.31.16.136",
+          "PrivateIpAddresses": [
+            {
+              "Association": {
+                "PublicIp": "18.222.227.63",
+                "PublicDnsName": "ec2-18-222-227-63.us-east-2.compute.amazonaws.com",
+                "IpOwnerId": "123456789012"
+              },
+              "Primary": true,
+              "PrivateDnsName": "ip-172-31-16-136.us-east-2.compute.internal",
+              "PrivateIpAddress": "172.31.16.136"
+            }
+          ],
+          "SourceDestCheck": true,
+          "Status": "in-use",
+          "SubnetId": "subnet-12345678",
+          "VpcId": "vpc-12345678",
+          "InterfaceType": "interface"
+        }
+      ],
+      "IamInstanceProfile": {
+        "Arn": "arn:aws:iam::123456789012:instance-profile/my-instance-profile",
+        "Id": "AIP1234567890EXAMPLE"
+      },
+      "EbsOptimized": false,
+      "EnaSupport": true,
+      "PlatformDetails": "Linux/UNIX",
+      "UsageOperation": "RunInstances",
+      "CapacityReservationSpecification": {
+        "CapacityReservationTarget": {}
+      },
+      "CpuOptions": {
+        "CoreCount": 1,
+        "ThreadsPerCore": 1
+      },
+      "CapacityReservationId": "",
+      "HibernationOptions": {
+        "Configured": false
+      },
+      "Licenses": [],
+      "MetadataOptions": {
+        "State": "applied",
+        "HttpTokens": "optional",
+        "HttpPutResponseHopLimit": 1,
+        "HttpEndpoint": "enabled",
+        "HttpProtocolIpv6": "disabled"
+      },
+      "EnclaveOptions": {
+        "Enabled": false
+      },
+      "BootMode": "",
+      "Platform": "",
+      "PrivateDnsNameOptions": {
+        "HostnameType": "ip-name",
+        "EnableResourceNameDnsARecord": false,
+        "EnableResourceNameDnsAAAARecord": false
+      },
+      "MaintenanceOptions": {
+        "AutoRecovery": "default"
+      },
+      "CurrentInstanceBootMode": ""
+    },
+    {
+      "InstanceId": "i-0987654321fedcba0",
+      "ImageId": "ami-87654321",
+      "State": {
+        "Code": 80,
+        "Name": "stopped"
+      },
+      "PrivateDnsName": "ip-172-31-16-137.us-east-2.compute.internal",
+      "PublicDnsName": "",
+      "StateTransitionReason": "User initiated (2023-01-01T00:00:00.000Z)",
+      "KeyName": "my-key-pair",
+      "AmiLaunchIndex": 0,
+      "ProductCodes": [],
+      "InstanceId": "i-0987654321fedcba0",
+      "LaunchTime": "2023-01-01T00:00:00.000Z",
+      "Placement": {
+        "AvailabilityZone": "us-east-2a",
+        "GroupName": "",
+        "Tenancy": "default",
+        "PartitionNumber": 0,
+        "GroupId": ""
+      },
+      "Monitoring": {
+        "State": "disabled"
+      },
+      "SubnetId": "subnet-12345678",
+      "VpcId": "vpc-12345678",
+      "PrivateIpAddress": "172.31.16.137",
+      "PublicIpAddress": "",
+      "StateReason": {
+        "Code": "Client.UserInitiatedShutdown",
+        "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+      },
+      "Architecture": "x86_64",
+      "RootDeviceType": "ebs",
+      "RootDeviceName": "/dev/xvda",
+      "BlockDeviceMappings": [
+        {
+          "DeviceName": "/dev/xvda",
+          "Ebs": {
+            "AttachTime": "2023-01-01T00:00:00.000Z",
+            "DeleteOnTermination": true,
+            "Status": "attached",
+            "VolumeId": "vol-0987654321fedcba0"
+          }
+        }
+      ],
+      "VirtualizationType": "hvm",
+      "ClientToken": "fedcba09876543210",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "test-stopped-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "test"
+        },
+        {
+          "Key": "Status",
+          "Value": "stopped"
+        }
+      ],
+      "SecurityGroups": [
+        {
+          "GroupName": "default",
+          "GroupId": "sg-12345678"
+        }
+      ],
+      "SourceDestCheck": true,
+      "Hypervisor": "xen",
+      "NetworkInterfaces": [
+        {
+          "Association": {},
+          "Attachment": {
+            "AttachTime": "2023-01-01T00:00:00.000Z",
+            "AttachmentId": "eni-attach-0987654321fedcba0",
+            "DeleteOnTermination": true,
+            "DeviceIndex": 0,
+            "Status": "attached",
+            "NetworkCardIndex": 0
+          },
+          "Description": "",
+          "Groups": [
+            {
+              "GroupName": "default",
+              "GroupId": "sg-12345678"
+            }
+          ],
+          "Ipv6Addresses": [],
+          "MacAddress": "12:34:56:78:9a:bd",
+          "NetworkInterfaceId": "eni-0987654321fedcba0",
+          "OwnerId": "123456789012",
+          "PrivateDnsName": "ip-172-31-16-137.us-east-2.compute.internal",
+          "PrivateIpAddress": "172.31.16.137",
+          "PrivateIpAddresses": [
+            {
+              "Association": {},
+              "Primary": true,
+              "PrivateDnsName": "ip-172-31-16-137.us-east-2.compute.internal",
+              "PrivateIpAddress": "172.31.16.137"
+            }
+          ],
+          "SourceDestCheck": true,
+          "Status": "in-use",
+          "SubnetId": "subnet-12345678",
+          "VpcId": "vpc-12345678",
+          "InterfaceType": "interface"
+        }
+      ],
+      "IamInstanceProfile": {
+        "Arn": "arn:aws:iam::123456789012:instance-profile/my-instance-profile",
+        "Id": "AIP1234567890EXAMPLE"
+      },
+      "EbsOptimized": false,
+      "EnaSupport": true,
+      "PlatformDetails": "Linux/UNIX",
+      "UsageOperation": "RunInstances",
+      "CapacityReservationSpecification": {
+        "CapacityReservationTarget": {}
+      },
+      "CpuOptions": {
+        "CoreCount": 1,
+        "ThreadsPerCore": 1
+      },
+      "CapacityReservationId": "",
+      "HibernationOptions": {
+        "Configured": false
+      },
+      "Licenses": [],
+      "MetadataOptions": {
+        "State": "applied",
+        "HttpTokens": "optional",
+        "HttpPutResponseHopLimit": 1,
+        "HttpEndpoint": "enabled",
+        "HttpProtocolIpv6": "disabled"
+      },
+      "EnclaveOptions": {
+        "Enabled": false
+      },
+      "BootMode": "",
+      "Platform": "",
+      "PrivateDnsNameOptions": {
+        "HostnameType": "ip-name",
+        "EnableResourceNameDnsARecord": false,
+        "EnableResourceNameDnsAAAARecord": false
+      },
+      "MaintenanceOptions": {
+        "AutoRecovery": "default"
+      },
+      "CurrentInstanceBootMode": ""
+    }
+  ],
+  "rds_instances": [
+    {
+      "DBInstanceIdentifier": "test-db-instance",
+      "DBInstanceClass": "db.t3.micro",
+      "Engine": "mysql",
+      "DBInstanceStatus": "available",
+      "MasterUsername": "admin",
+      "DBName": "testdb",
+      "Endpoint": {
+        "Address": "test-db-instance.123456789012.us-east-1.rds.amazonaws.com",
+        "Port": 3306,
+        "HostedZoneId": "Z123456789012"
+      },
+      "AllocatedStorage": 20,
+      "InstanceCreateTime": "2023-01-01T00:00:00.000Z",
+      "PreferredBackupWindow": "03:00-04:00",
+      "BackupRetentionPeriod": 7,
+      "DBSecurityGroups": [],
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-12345678",
+          "Status": "active"
+        }
+      ],
+      "DBParameterGroups": [
+        {
+          "DBParameterGroupName": "default.mysql8.0",
+          "ParameterApplyStatus": "in-sync"
+        }
+      ],
+      "AvailabilityZone": "us-east-1a",
+      "DBSubnetGroup": {
+        "DBSubnetGroupName": "default-vpc-12345678",
+        "DBSubnetGroupDescription": "Created from the RDS Management Console",
+        "VpcId": "vpc-12345678",
+        "SubnetGroupStatus": "Complete",
+        "Subnets": [
+          {
+            "SubnetIdentifier": "subnet-12345678",
+            "SubnetAvailabilityZone": {
+              "Name": "us-east-1a"
+            },
+            "SubnetStatus": "Active"
+          }
+        ],
+        "DBSubnetGroupArn": "arn:aws:rds:us-east-1:123456789012:subgrp:default-vpc-12345678"
+      },
+      "PreferredMaintenanceWindow": "sun:05:00-sun:06:00",
+      "PendingModifiedValues": {},
+      "LatestRestorableTime": "2023-01-02T00:00:00.000Z",
+      "MultiAZ": false,
+      "EngineVersion": "8.0.31",
+      "AutoMinorVersionUpgrade": true,
+      "ReadReplicaDBInstanceIdentifiers": [],
+      "ReadReplicaDBClusterIdentifiers": [],
+      "LicenseModel": "general-public-license",
+      "Iops": 0,
+      "OptionGroupMemberships": [
+        {
+          "OptionGroupName": "default:mysql-8-0",
+          "Status": "in-sync"
+        }
+      ],
+      "CharacterSetName": "",
+      "NcharCharacterSetName": "",
+      "SecondaryAvailabilityZone": "",
+      "PubliclyAccessible": false,
+      "StatusInfos": [],
+      "StorageType": "gp2",
+      "TdeCredentialArn": "",
+      "DbInstancePort": 0,
+      "DBClusterIdentifier": "",
+      "StorageEncrypted": false,
+      "KmsKeyId": "",
+      "DbiResourceId": "db-1234567890123456789012345678",
+      "CACertificateIdentifier": "rds-ca-2019",
+      "DomainMemberships": [],
+      "CopyTagsToSnapshot": false,
+      "MonitoringInterval": 0,
+      "EnhancedMonitoringResourceArn": "",
+      "MonitoringRoleArn": "",
+      "PromotionTier": 1,
+      "DBInstanceArn": "arn:aws:rds:us-east-1:123456789012:db:test-db-instance",
+      "Timezone": "",
+      "IAMDatabaseAuthenticationEnabled": false,
+      "PerformanceInsightsEnabled": false,
+      "PerformanceInsightsKMSKeyId": "",
+      "PerformanceInsightsRetentionPeriod": 0,
+      "EnabledCloudwatchLogsExports": {},
+      "ProcessorFeatures": [],
+      "DeletionProtection": false,
+      "AssociatedRoles": [],
+      "ListenerEndpoint": {},
+      "MaxAllocatedStorage": 1000,
+      "TagList": [
+        {
+          "Key": "Name",
+          "Value": "test-db-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "test"
+        },
+        {
+          "Key": "Project",
+          "Value": "chaos-monkey"
+        }
+      ],
+      "EnableIAMDatabaseAuthentication": false,
+      "EnablePerformanceInsights": false,
+      "EnableCloudwatchLogsExports": {},
+      "ProcessorFeatures": [],
+      "DeletionProtection": false,
+      "SecondaryAvailabilityZone": "",
+      "AutoMinorVersionUpgrade": true,
+      "LicenseModel": "general-public-license",
+      "Iops": 0,
+      "OptionGroupMemberships": [
+        {
+          "OptionGroupName": "default:mysql-8-0",
+          "Status": "in-sync"
+        }
+      ],
+      "CharacterSetName": "",
+      "NcharCharacterSetName": "",
+      "PubliclyAccessible": false,
+      "StatusInfos": [],
+      "StorageType": "gp2",
+      "TdeCredentialArn": "",
+      "DbInstancePort": 0,
+      "DBClusterIdentifier": "",
+      "StorageEncrypted": false,
+      "KmsKeyId": "",
+      "DbiResourceId": "db-1234567890123456789012345678",
+      "CACertificateIdentifier": "rds-ca-2019",
+      "DomainMemberships": [],
+      "CopyTagsToSnapshot": false,
+      "MonitoringInterval": 0,
+      "EnhancedMonitoringResourceArn": "",
+      "MonitoringRoleArn": "",
+      "PromotionTier": 1,
+      "DBInstanceArn": "arn:aws:rds:us-east-1:123456789012:db:test-db-instance",
+      "Timezone": "",
+      "IAMDatabaseAuthenticationEnabled": false,
+      "PerformanceInsightsEnabled": false,
+      "PerformanceInsightsKMSKeyId": "",
+      "PerformanceInsightsRetentionPeriod": 0,
+      "EnabledCloudwatchLogsExports": {},
+      "ProcessorFeatures": [],
+      "DeletionProtection": false,
+      "AssociatedRoles": [],
+      "ListenerEndpoint": {},
+      "MaxAllocatedStorage": 1000,
+      "TagList": [
+        {
+          "Key": "Name",
+          "Value": "test-db-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "test"
+        },
+        {
+          "Key": "Project",
+          "Value": "chaos-monkey"
+        }
+      ],
+      "EnableIAMDatabaseAuthentication": false,
+      "EnablePerformanceInsights": false,
+      "EnableCloudwatchLogsExports": {},
+      "ProcessorFeatures": [],
+      "DeletionProtection": false
+    },
+    {
+      "DBInstanceIdentifier": "production-db-instance",
+      "DBInstanceClass": "db.t3.large",
+      "Engine": "postgres",
+      "DBInstanceStatus": "available",
+      "MasterUsername": "admin",
+      "DBName": "productiondb",
+      "Endpoint": {
+        "Address": "production-db-instance.123456789012.us-east-1.rds.amazonaws.com",
+        "Port": 5432,
+        "HostedZoneId": "Z123456789012"
+      },
+      "AllocatedStorage": 100,
+      "InstanceCreateTime": "2023-01-01T00:00:00.000Z",
+      "PreferredBackupWindow": "02:00-03:00",
+      "BackupRetentionPeriod": 30,
+      "DBSecurityGroups": [],
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-12345678",
+          "Status": "active"
+        }
+      ],
+      "DBParameterGroups": [
+        {
+          "DBParameterGroupName": "default.postgres13",
+          "ParameterApplyStatus": "in-sync"
+        }
+      ],
+      "AvailabilityZone": "us-east-1a",
+      "DBSubnetGroup": {
+        "DBSubnetGroupName": "default-vpc-12345678",
+        "DBSubnetGroupDescription": "Created from the RDS Management Console",
+        "VpcId": "vpc-12345678",
+        "SubnetGroupStatus": "Complete",
+        "Subnets": [
+          {
+            "SubnetIdentifier": "subnet-12345678",
+            "SubnetAvailabilityZone": {
+              "Name": "us-east-1a"
+            },
+            "SubnetStatus": "Active"
+          }
+        ],
+        "DBSubnetGroupArn": "arn:aws:rds:us-east-1:123456789012:subgrp:default-vpc-12345678"
+      },
+      "PreferredMaintenanceWindow": "sun:04:00-sun:05:00",
+      "PendingModifiedValues": {},
+      "LatestRestorableTime": "2023-01-02T00:00:00.000Z",
+      "MultiAZ": true,
+      "EngineVersion": "13.9",
+      "AutoMinorVersionUpgrade": true,
+      "ReadReplicaDBInstanceIdentifiers": [],
+      "ReadReplicaDBClusterIdentifiers": [],
+      "LicenseModel": "postgresql-license",
+      "Iops": 0,
+      "OptionGroupMemberships": [
+        {
+          "OptionGroupName": "default:postgres-13",
+          "Status": "in-sync"
+        }
+      ],
+      "CharacterSetName": "",
+      "NcharCharacterSetName": "",
+      "SecondaryAvailabilityZone": "us-east-1b",
+      "PubliclyAccessible": false,
+      "StatusInfos": [],
+      "StorageType": "gp2",
+      "TdeCredentialArn": "",
+      "DbInstancePort": 0,
+      "DBClusterIdentifier": "",
+      "StorageEncrypted": true,
+      "KmsKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "DbiResourceId": "db-8765432109876543210987654321",
+      "CACertificateIdentifier": "rds-ca-2019",
+      "DomainMemberships": [],
+      "CopyTagsToSnapshot": false,
+      "MonitoringInterval": 0,
+      "EnhancedMonitoringResourceArn": "",
+      "MonitoringRoleArn": "",
+      "PromotionTier": 1,
+      "DBInstanceArn": "arn:aws:rds:us-east-1:123456789012:db:production-db-instance",
+      "Timezone": "",
+      "IAMDatabaseAuthenticationEnabled": false,
+      "PerformanceInsightsEnabled": true,
+      "PerformanceInsightsKMSKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "PerformanceInsightsRetentionPeriod": 7,
+      "EnabledCloudwatchLogsExports": {
+        "postgresql": true,
+        "upgrade": true
+      },
+      "ProcessorFeatures": [],
+      "DeletionProtection": true,
+      "AssociatedRoles": [],
+      "ListenerEndpoint": {},
+      "MaxAllocatedStorage": 1000,
+      "TagList": [
+        {
+          "Key": "Name",
+          "Value": "production-db-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "production"
+        },
+        {
+          "Key": "Project",
+          "Value": "chaos-monkey"
+        },
+        {
+          "Key": "critical",
+          "Value": "true"
+        }
+      ],
+      "EnableIAMDatabaseAuthentication": false,
+      "EnablePerformanceInsights": true,
+      "EnableCloudwatchLogsExports": {
+        "postgresql": true,
+        "upgrade": true
+      },
+      "ProcessorFeatures": [],
+      "DeletionProtection": true,
+      "SecondaryAvailabilityZone": "us-east-1b",
+      "AutoMinorVersionUpgrade": true,
+      "LicenseModel": "postgresql-license",
+      "Iops": 0,
+      "OptionGroupMemberships": [
+        {
+          "OptionGroupName": "default:postgres-13",
+          "Status": "in-sync"
+        }
+      ],
+      "CharacterSetName": "",
+      "NcharCharacterSetName": "",
+      "PubliclyAccessible": false,
+      "StatusInfos": [],
+      "StorageType": "gp2",
+      "TdeCredentialArn": "",
+      "DbInstancePort": 0,
+      "DBClusterIdentifier": "",
+      "StorageEncrypted": true,
+      "KmsKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "DbiResourceId": "db-8765432109876543210987654321",
+      "CACertificateIdentifier": "rds-ca-2019",
+      "DomainMemberships": [],
+      "CopyTagsToSnapshot": false,
+      "MonitoringInterval": 0,
+      "EnhancedMonitoringResourceArn": "",
+      "MonitoringRoleArn": "",
+      "PromotionTier": 1,
+      "DBInstanceArn": "arn:aws:rds:us-east-1:123456789012:db:production-db-instance",
+      "Timezone": "",
+      "IAMDatabaseAuthenticationEnabled": false,
+      "PerformanceInsightsEnabled": true,
+      "PerformanceInsightsKMSKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012",
+      "PerformanceInsightsRetentionPeriod": 7,
+      "EnabledCloudwatchLogsExports": {
+        "postgresql": true,
+        "upgrade": true
+      },
+      "ProcessorFeatures": [],
+      "DeletionProtection": true,
+      "AssociatedRoles": [],
+      "ListenerEndpoint": {},
+      "MaxAllocatedStorage": 1000,
+      "TagList": [
+        {
+          "Key": "Name",
+          "Value": "production-db-instance"
+        },
+        {
+          "Key": "Environment",
+          "Value": "production"
+        },
+        {
+          "Key": "Project",
+          "Value": "chaos-monkey"
+        },
+        {
+          "Key": "critical",
+          "Value": "true"
+        }
+      ],
+      "EnableIAMDatabaseAuthentication": false,
+      "EnablePerformanceInsights": true,
+      "EnableCloudwatchLogsExports": {
+        "postgresql": true,
+        "upgrade": true
+      },
+      "ProcessorFeatures": [],
+      "DeletionProtection": true
+    }
+  ],
+  "ecs_services": [
+    {
+      "serviceArn": "arn:aws:ecs:us-east-1:123456789012:service/test-cluster/test-service",
+      "serviceName": "test-service",
+      "clusterArn": "arn:aws:ecs:us-east-1:123456789012:cluster/test-cluster",
+      "loadBalancers": [],
+      "serviceRegistries": [],
+      "status": "ACTIVE",
+      "desiredCount": 2,
+      "runningCount": 2,
+      "pendingCount": 0,
+      "launchType": "EC2",
+      "platformVersion": "",
+      "platformFamily": "",
+      "taskDefinition": "arn:aws:ecs:us-east-1:123456789012:task-definition/test-task:1",
+      "deploymentConfiguration": {
+        "maximumPercent": 200,
+        "minimumHealthyPercent": 100
+      },
+      "deployments": [
+        {
+          "id": "ecs-svc/12345678901234567890",
+          "status": "PRIMARY",
+          "taskDefinition": "arn:aws:ecs:us-east-1:123456789012:task-definition/test-task:1",
+          "desiredCount": 2,
+          "pendingCount": 0,
+          "runningCount": 2,
+          "createdAt": "2023-01-01T00:00:00.000Z",
+          "updatedAt": "2023-01-01T00:00:00.000Z",
+          "launchType": "EC2",
+          "platformVersion": "",
+          "platformFamily": ""
+        }
+      ],
+      "roleArn": "arn:aws:iam::123456789012:role/ecsServiceRole",
+      "events": [],
+      "createdAt": "2023-01-01T00:00:00.000Z",
+      "placementConstraints": [],
+      "placementStrategy": [],
+      "networkConfiguration": {
+        "awsvpcConfiguration": {
+          "subnets": [
+            "subnet-12345678"
+          ],
+          "securityGroups": [
+            "sg-12345678"
+          ],
+          "assignPublicIp": "DISABLED"
+        }
+      },
+      "healthCheckGracePeriodSeconds": 0,
+      "schedulingStrategy": "REPLICA",
+      "deploymentController": {
+        "type": "ECS"
+      },
+      "tags": [
+        {
+          "key": "Name",
+          "value": "test-service"
+        },
+        {
+          "key": "Environment",
+          "value": "test"
+        },
+        {
+          "key": "Project",
+          "value": "chaos-monkey"
+        }
+      ],
+      "createdBy": "arn:aws:iam::123456789012:user/test-user",
+      "enableECSManagedTags": false,
+      "propagateTags": "NONE",
+      "enableExecuteCommand": false
+    },
+    {
+      "serviceArn": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/production-service",
+      "serviceName": "production-service",
+      "clusterArn": "arn:aws:ecs:us-east-1:123456789012:cluster/production-cluster",
+      "loadBalancers": [
+        {
+          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/test-tg/1234567890123456",
+          "loadBalancerName": "test-lb",
+          "containerName": "web",
+          "containerPort": 80
+        }
+      ],
+      "serviceRegistries": [
+        {
+          "registryArn": "arn:aws:servicediscovery:us-east-1:123456789012:service/srv-1234567890123456",
+          "port": 80,
+          "containerName": "web",
+          "containerPort": 80
+        }
+      ],
+      "status": "ACTIVE",
+      "desiredCount": 5,
+      "runningCount": 5,
+      "pendingCount": 0,
+      "launchType": "FARGATE",
+      "platformVersion": "1.4.0",
+      "platformFamily": "linux",
+      "taskDefinition": "arn:aws:ecs:us-east-1:123456789012:task-definition/production-task:1",
+      "deploymentConfiguration": {
+        "maximumPercent": 200,
+        "minimumHealthyPercent": 100
+      },
+      "deployments": [
+        {
+          "id": "ecs-svc/01234567890123456789",
+          "status": "PRIMARY",
+          "taskDefinition": "arn:aws:ecs:us-east-1:123456789012:task-definition/production-task:1",
+          "desiredCount": 5,
+          "pendingCount": 0,
+          "runningCount": 5,
+          "createdAt": "2023-01-01T00:00:00.000Z",
+          "updatedAt": "2023-01-01T00:00:00.000Z",
+          "launchType": "FARGATE",
+          "platformVersion": "1.4.0",
+          "platformFamily": "linux"
+        }
+      ],
+      "roleArn": "arn:aws:iam::123456789012:role/ecsServiceRole",
+      "events": [],
+      "createdAt": "2023-01-01T00:00:00.000Z",
+      "placementConstraints": [],
+      "placementStrategy": [
+        {
+          "type": "spread",
+          "field": "attribute:ecs.instance-type"
+        }
+      ],
+      "networkConfiguration": {
+        "awsvpcConfiguration": {
+          "subnets": [
+            "subnet-12345678",
+            "subnet-87654321"
+          ],
+          "securityGroups": [
+            "sg-12345678"
+          ],
+          "assignPublicIp": "ENABLED"
+        }
+      },
+      "healthCheckGracePeriodSeconds": 300,
+      "schedulingStrategy": "REPLICA",
+      "deploymentController": {
+        "type": "ECS"
+      },
+      "tags": [
+        {
+          "key": "Name",
+          "value": "production-service"
+        },
+        {
+          "key": "Environment",
+          "value": "production"
+        },
+        {
+          "key": "Project",
+          "value": "chaos-monkey"
+        },
+        {
+          "key": "critical",
+          "value": "true"
+        }
+      ],
+      "createdBy": "arn:aws:iam::123456789012:user/production-user",
+      "enableECSManagedTags": true,
+      "propagateTags": "TASK_DEFINITION",
+      "enableExecuteCommand": true
+    }
+  ]
+}
