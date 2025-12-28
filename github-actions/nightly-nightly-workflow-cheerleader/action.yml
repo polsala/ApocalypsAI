@@ -1,0 +1,21 @@
+name: 'Nightly Workflow Cheerleader'
+description: 'Posts a whimsical, encouraging comment to a pull request or issue upon successful workflow completion.'
+inputs:
+  token:
+    description: 'GitHub token for authentication (e.g., secrets.GITHUB_TOKEN)'
+    required: true
+  message:
+    description: 'Custom cheer message. If empty, a random one will be chosen from a predefined list.'
+    required: false
+  issue-number:
+    description: 'Optional issue number to comment on. If not provided, the action attempts to find a PR or issue from the current GitHub context.'
+    required: false
+outputs:
+  comment-url:
+    description: 'The URL of the created comment.'
+runs:
+  using: 'node20' # Using a recent Node.js version
+  main: 'src/main.js'
+branding:
+  icon: 'star'
+  color: 'yellow'
