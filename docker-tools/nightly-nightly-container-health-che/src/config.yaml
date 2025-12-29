@@ -1,0 +1,14 @@
+monitoring:
+  interval: 5  # Check every 5 seconds
+  containers: []  # Empty means all containers
+
+alerts:
+  cpu_threshold: 80
+  memory_threshold: 85
+  disk_threshold: 90
+  network_threshold: 1000  # MB/s
+
+notifications:
+  console: true
+  file: "health_alerts.log"
+  # email: "admin@example.com"

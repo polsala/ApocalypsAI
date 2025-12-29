@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  health-checker:
+    build: .
+    container_name: nightly-container-health-checker
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import docker; docker.from_env().ping()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.github.apocalypsai.utility=container-health-checker"
+      - "com.github.apocalypsai.classifier=docker-tools"
+
+  # Example containers to monitor
+  web-server:
+    image: nginx:alpine
+    container_name: test-web-server
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+    labels:
+      - "com.github.apocalypsai.monitored=true"
+  
+  database:
+    image: postgres:13
+    container_name: test-database
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    labels:
+      - "com.github.apocalypsai.monitored=true"
+
+volumes:
+  postgres_data:
+    driver: local
