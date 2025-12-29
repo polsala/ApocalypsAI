@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Survival Bingo</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+    .cell { padding: 10px; background: #f0f0f0; text-align: center; cursor: pointer; }
+    .cell.checked { background: #4caf50; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Survival Bingo</h1>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script type="module" src="main.jsx"></script>
+</body>
+</html>
