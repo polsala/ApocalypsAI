@@ -1,0 +1,119 @@
+---
+- name: Test Nightly Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  gather_facts: yes # Needed for ansible_date_time in report template
+
+  vars:
+    test_base_dir: "/tmp/ansible_test_dust_bunny_{{ lookup('pipe', 'date +%s') }}"
+    test_target_directory: "{{ test_base_dir }}/my_digital_garden"
+    test_quarantine_directory: "{{ test_base_dir }}/digital_dust_bunnies_warren"
+    test_report_path: "{{ test_base_dir }}/test_dust_bunny_report.txt"
+    test_age_threshold_days: 30
+    test_size_threshold_bytes: 10
+    test_filename_pattern: "^[a-zA-Z0-9_.-]+\\.(md|txt|log)$"
+    test_quarantine_enabled: true
+
+    # Mock rationale: Fixed epoch for deterministic age calculation and report timestamp.
+    # This represents a "current time" for the test.
+    mock_current_epoch: 1672531200 # Jan 1, 2023 00:00:00 UTC
+
+  tasks:
+    - name: Create test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_target_directory }}"
+        - "{{ test_quarantine_directory }}"
+
+    - name: Create clean file (recent, non-empty, valid name)
+      ansible.builtin.copy:
+        content: "This is a clean, recent file."
+        dest: "{{ test_target_directory }}/clean_doc.md"
+        mode: '0644'
+
+    - name: Create stale file (old, non-empty, valid name)
+      ansible.builtin.copy:
+        content: "This file is old and neglected."
+        dest: "{{ test_target_directory }}/stale_note.txt"
+        mode: '0644'
+
+    - name: Set mtime for stale file (e.g., 60 days before mock_current_epoch)
+      ansible.builtin.command: "touch -d '@{{ mock_current_epoch - (test_age_threshold_days * 86400 * 2) }}' {{ test_target_directory }}/stale_note.txt"
+      args:
+        chdir: "{{ test_target_directory }}"
+      # Mock rationale: Manually setting mtime to simulate an old file for deterministic testing.
+
+    - name: Create empty file (recent, empty, valid name)
+      ansible.builtin.copy:
+        content: ""
+        dest: "{{ test_target_directory }}/empty_log.log"
+        mode: '0644'
+
+    - name: Create malformed name file (recent, non-empty, invalid name)
+      ansible.builtin.copy:
+        content: "This file has a weird name."
+        dest: "{{ test_target_directory }}/bad_name!.doc" # .doc is not in pattern, ! is bad char
+        mode: '0644'
+
+    - name: Run the main playbook in check_mode
+      ansible.builtin.include_tasks:
+        file: ../digital_dust_bunny_sweeper.yml
+      vars:
+        target_directory: "{{ test_target_directory }}"
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        size_threshold_bytes: "{{ test_size_threshold_bytes }}"
+        filename_pattern: "{{ test_filename_pattern }}"
+        quarantine_directory: "{{ test_quarantine_directory }}"
+        quarantine_enabled: "{{ test_quarantine_enabled }}"
+        report_path: "{{ test_report_path }}"
+        # Override current_epoch for deterministic testing
+        current_epoch: "{{ mock_current_epoch }}"
+        # Mock rationale: Override ansible_date_time for deterministic report generation.
+        ansible_date_time:
+          date: "2023-01-01"
+          time: "00:00:00"
+          epoch: "{{ mock_current_epoch }}"
+      # Note: The parent test playbook should be run with --check to ensure no actual file moves occur.
+      # The 'include_tasks' itself doesn't directly inherit check_mode for its tasks, but the 'command: mv' task
+      # will correctly report 'changed=false' in check_mode and not execute the move.
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content
+
+    - name: Assert report content for stale file
+      ansible.builtin.assert:
+        that:
+          - "'stale_note.txt' in (report_content.content | b64decode)"
+          - "'Stale (older than 30 days)' in (report_content.content | b64decode)"
+        msg: "Report should contain stale_note.txt and its reason"
+
+    - name: Assert report content for empty file
+      ansible.builtin.assert:
+        that:
+          - "'empty_log.log' in (report_content.content | b64decode)"
+          - "'Empty or too small (less than 10 bytes)' in (report_content.content | b64decode)"
+        msg: "Report should contain empty_log.log and its reason"
+
+    - name: Assert report content for malformed name file
+      ansible.builtin.assert:
+        that:
+          - "'bad_name!.doc' in (report_content.content | b64decode)"
+          - "'Malformed filename (does not match pattern \"^[a-zA-Z0-9_.-]+\\\\.(md|txt|log)$\")' in (report_content.content | b64decode)"
+        msg: "Report should contain bad_name!.doc and its reason"
+
+    - name: Assert clean file is NOT in report
+      ansible.builtin.assert:
+        that:
+          - "'clean_doc.md' not in (report_content.content | b64decode)"
+        msg: "Clean file should not be in the report"
+
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      when: not ansible_check_mode # Only clean up if not in check_mode for debugging

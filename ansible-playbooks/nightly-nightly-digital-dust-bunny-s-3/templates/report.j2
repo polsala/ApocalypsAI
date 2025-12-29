@@ -1,0 +1,33 @@
+Digital Dust Bunny Report - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+
+Scanned Directory: {{ target_directory }}
+Age Threshold: {{ age_threshold_days }} days
+Size Threshold: {{ size_threshold_bytes }} bytes
+Filename Pattern: {{ filename_pattern }}
+Quarantine Enabled: {{ quarantine_enabled }}
+Quarantine Directory: {{ quarantine_directory }}
+
+{% if digital_dust_bunnies | length > 0 %}
+Found {{ digital_dust_bunnies | length }} Digital Dust Bunnies:
+-------------------------------------------------------------------
+{% for bunny in digital_dust_bunnies %}
+- Path: {{ bunny.path }}
+  Size: {{ bunny.size }} bytes
+  Last Modified: {{ bunny.mtime | to_datetime('%s') | strftime('%Y-%m-%d %H:%M:%S') }}
+  Reason(s):
+    {% set reasons = [] %}
+    {% if (current_epoch - bunny.mtime) > (age_threshold_days * 86400) %}
+      {% set _ = reasons.append('Stale (older than ' + age_threshold_days | string + ' days)') %}
+    {% endif %}
+    {% if bunny.size < size_threshold_bytes %}
+      {% set _ = reasons.append('Empty or too small (less than ' + size_threshold_bytes | string + ' bytes)') %}
+    {% endif %}
+    {% if not (bunny.path | basename | regex_match(filename_pattern)) %}
+      {% set _ = reasons.append('Malformed filename (does not match pattern "' + filename_pattern + '")') %}
+    {% endif %}
+    {{ reasons | join(', ') }}
+-------------------------------------------------------------------
+{% endfor %}
+{% else %}
+No Digital Dust Bunnies found! Your digital garden is sparkling clean.
+{% endif %}
