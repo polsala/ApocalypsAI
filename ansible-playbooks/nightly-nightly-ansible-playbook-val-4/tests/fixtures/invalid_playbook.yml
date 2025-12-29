@@ -1,0 +1,25 @@
+- name: Invalid Playbook
+  hosts: localhost
+  # Missing tasks section
+  vars:
+    test_var: value
+  
+- name: Another Play
+  hosts: all
+  tasks:
+    - name: Task without name
+      debug:
+        msg: "This task is missing a name"
+    
+    - name: Shell command task
+      shell: echo "This is not idempotent"
+      register: shell_result
+    
+    - name: Task with password
+      debug:
+        msg: "password: secret123"
+    
+    - name: File without mode
+      copy:
+        content: "test"
+        dest: /tmp/testfile

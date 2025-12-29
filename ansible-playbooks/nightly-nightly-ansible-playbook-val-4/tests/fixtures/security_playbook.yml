@@ -1,0 +1,36 @@
+- name: Security Test Playbook
+  hosts: security_hosts
+  become: true
+  become_user: root
+  gather_facts: false
+  
+  tasks:
+    - name: Create secure directory
+      file:
+        path: /opt/secure
+        state: directory
+        mode: '0750'
+        owner: root
+        group: root
+    
+    - name: Set up firewall
+      ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+    
+    - name: Install security updates
+      package:
+        name: '*'
+        state: latest
+    
+    - name: Check for sensitive files
+      find:
+        paths: /etc
+        patterns: '*.key'
+        recurse: true
+      register: key_files
+    
+    - name: Report findings
+      debug:
+        msg: "Found {{ key_files.files|length }} key files"
