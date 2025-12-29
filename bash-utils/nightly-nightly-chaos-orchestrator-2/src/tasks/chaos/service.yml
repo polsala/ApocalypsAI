@@ -1,0 +1,168 @@
+# Service Chaos Scenarios
+# Simulate service disruptions for chaos engineering
+
+- name: Apply service restart chaos
+  when: chaos_scenarios.service_chaos.restart.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows service restart
+      set_fact:
+        apply_service_restart: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.service_chaos.restart.probability * 100) }}"
+
+    - name: Apply service restart chaos
+      when: apply_service_restart
+      block:
+        - name: Get list of services to restart
+          set_fact:
+            services_to_restart: "{{ chaos_scenarios.service_chaos.restart.services | default(['nginx', 'apache2']) }}"
+
+        - name: Log service restart chaos start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Service Restart: Started at {{ ansible_date_time.iso8601 }} (services: {{ services_to_restart | join(', ') }})"
+
+        - name: Restart services
+          service:
+            name: "{{ item }}"
+            state: restarted
+          loop: "{{ services_to_restart }}"
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.service_chaos.restart.duration | default(30) }}"
+
+        - name: Log service restart chaos end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Service Restart: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply service stop chaos
+  when: chaos_scenarios.service_chaos.stop.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows service stop
+      set_fact:
+        apply_service_stop: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.service_chaos.stop.probability * 100) }}"
+
+    - name: Apply service stop chaos
+      when: apply_service_stop
+      block:
+        - name: Get list of services to stop
+          set_fact:
+            services_to_stop: "{{ chaos_scenarios.service_chaos.stop.services | default(['nginx']) }}"
+
+        - name: Log service stop chaos start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Service Stop: Started at {{ ansible_date_time.iso8601 }} (services: {{ services_to_stop | join(', ') }})"
+
+        - name: Stop services
+          service:
+            name: "{{ item }}"
+            state: stopped
+          loop: "{{ services_to_stop }}"
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.service_chaos.stop.duration | default(60) }}"
+
+        - name: Restart services after chaos
+          service:
+            name: "{{ item }}"
+            state: started
+          loop: "{{ services_to_stop }}"
+          ignore_errors: yes
+
+        - name: Log service stop chaos end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Service Stop: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply process kill chaos
+  when: chaos_scenarios.service_chaos.process_kill.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows process kill
+      set_fact:
+        apply_process_kill: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.service_chaos.process_kill.probability * 100) }}"
+
+    - name: Apply process kill chaos
+      when: apply_process_kill
+      block:
+        - name: Get list of processes to kill
+          set_fact:
+            processes_to_kill: "{{ chaos_scenarios.service_chaos.process_kill.processes | default(['nginx', 'apache2']) }}"
+
+        - name: Log process kill chaos start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Process Kill: Started at {{ ansible_date_time.iso8601 }} (processes: {{ processes_to_kill | join(', ') }})"
+
+        - name: Kill processes
+          shell: >
+            for proc in {{ processes_to_kill | join(' ') }}; do
+              pkill -f $proc || true
+            done
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.service_chaos.process_kill.duration | default(45) }}"
+
+        - name: Log process kill chaos end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Process Kill: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply port exhaustion chaos
+  when: chaos_scenarios.service_chaos.port_exhaustion.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows port exhaustion
+      set_fact:
+        apply_port_exhaustion: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.service_chaos.port_exhaustion.probability * 100) }}"
+
+    - name: Apply port exhaustion chaos
+      when: apply_port_exhaustion
+      block:
+        - name: Log port exhaustion start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Port Exhaustion: Started at {{ ansible_date_time.iso8601 }}"
+
+        - name: Create port exhaustion script
+          copy:
+            content: |
+              #!/bin/bash
+              for i in {10000..20000}; do
+                (sleep 300 &)
+              done
+            dest: "/tmp/port_exhaustion.sh"
+            mode: '0755'
+
+        - name: Execute port exhaustion
+          shell: "/tmp/port_exhaustion.sh"
+          async: 0
+          poll: 0
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.service_chaos.port_exhaustion.duration | default(60) }}"
+
+        - name: Clean up port exhaustion
+          shell: >
+            pkill -f port_exhaustion.sh || true
+            rm -f /tmp/port_exhaustion.sh
+          ignore_errors: yes
+
+        - name: Log port exhaustion end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Port Exhaustion: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Cleanup service chaos
+  always:
+    - name: Ensure critical services are running
+      service:
+        name: "{{ item }}"
+        state: started
+      loop: ["ssh", "sshd"]
+      ignore_errors: yes

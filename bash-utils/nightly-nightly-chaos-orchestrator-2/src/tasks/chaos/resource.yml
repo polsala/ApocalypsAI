@@ -1,0 +1,146 @@
+# Resource Chaos Scenarios
+# Simulate resource exhaustion for chaos engineering
+
+- name: Apply CPU stress chaos
+  when: chaos_scenarios.resource_chaos.cpu.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows CPU stress
+      set_fact:
+        apply_cpu_stress: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.resource_chaos.cpu.probability * 100) }}"
+
+    - name: Apply CPU stress
+      when: apply_cpu_stress
+      block:
+        - name: Log CPU stress start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- CPU Stress: Started at {{ ansible_date_time.iso8601 }} ({{ chaos_scenarios.resource_chaos.cpu.workers | default(2) }} workers)"
+
+        - name: Start CPU stress process
+          shell: >
+            timeout {{ chaos_scenarios.resource_chaos.cpu.duration | default(60) }}s
+            stress --cpu {{ chaos_scenarios.resource_chaos.cpu.workers | default(2) }}
+            & echo $! > /tmp/cpu_stress.pid
+          async: 0
+          poll: 0
+
+        - name: Wait for CPU stress duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.resource_chaos.cpu.duration | default(60) }}"
+
+        - name: Stop CPU stress process
+          shell: >
+            if [ -f /tmp/cpu_stress.pid ]; then
+              kill $(cat /tmp/cpu_stress.pid) 2>/dev/null || true
+              rm -f /tmp/cpu_stress.pid
+            fi
+          ignore_errors: yes
+
+        - name: Log CPU stress end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- CPU Stress: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply memory stress chaos
+  when: chaos_scenarios.resource_chaos.memory.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows memory stress
+      set_fact:
+        apply_memory_stress: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.resource_chaos.memory.probability * 100) }}"
+
+    - name: Apply memory stress
+      when: apply_memory_stress
+      block:
+        - name: Log memory stress start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Memory Stress: Started at {{ ansible_date_time.iso8601 }} ({{ chaos_scenarios.resource_chaos.memory.size | default('100M') }})"
+
+        - name: Start memory stress process
+          shell: >
+            timeout {{ chaos_scenarios.resource_chaos.memory.duration | default(60) }}s
+            stress --vm 1 --vm-bytes {{ chaos_scenarios.resource_chaos.memory.size | default('100M') }}
+            & echo $! > /tmp/memory_stress.pid
+          async: 0
+          poll: 0
+
+        - name: Wait for memory stress duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.resource_chaos.memory.duration | default(60) }}"
+
+        - name: Stop memory stress process
+          shell: >
+            if [ -f /tmp/memory_stress.pid ]; then
+              kill $(cat /tmp/memory_stress.pid) 2>/dev/null || true
+              rm -f /tmp/memory_stress.pid
+            fi
+          ignore_errors: yes
+
+        - name: Log memory stress end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Memory Stress: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply disk I/O stress chaos
+  when: chaos_scenarios.resource_chaos.disk.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows disk stress
+      set_fact:
+        apply_disk_stress: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.resource_chaos.disk.probability * 100) }}"
+
+    - name: Apply disk I/O stress
+      when: apply_disk_stress
+      block:
+        - name: Log disk stress start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Disk I/O Stress: Started at {{ ansible_date_time.iso8601 }}"
+
+        - name: Create temporary directory for disk stress
+          file:
+            path: "/tmp/chaos_disk_test"
+            state: directory
+            mode: '0755'
+
+        - name: Start disk I/O stress process
+          shell: >
+            timeout {{ chaos_scenarios.resource_chaos.disk.duration | default(60) }}s
+            stress --io 1 --hdd 1 --hdd-bytes {{ chaos_scenarios.resource_chaos.disk.size | default('1G') }}
+            & echo $! > /tmp/disk_stress.pid
+          async: 0
+          poll: 0
+
+        - name: Wait for disk stress duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.resource_chaos.disk.duration | default(60) }}"
+
+        - name: Stop disk stress process
+          shell: >
+            if [ -f /tmp/disk_stress.pid ]; then
+              kill $(cat /tmp/disk_stress.pid) 2>/dev/null || true
+              rm -f /tmp/disk_stress.pid
+            fi
+          ignore_errors: yes
+
+        - name: Clean up disk stress test files
+          file:
+            path: "/tmp/chaos_disk_test"
+            state: absent
+
+        - name: Log disk stress end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Disk I/O Stress: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Cleanup resource chaos processes
+  always:
+    - name: Kill any remaining stress processes
+      shell: >
+        pkill -f stress || true
+      ignore_errors: yes
+
+    - name: Clean up temporary files
+      file:
+        path: "/tmp/chaos_*"
+        state: absent
+      ignore_errors: yes

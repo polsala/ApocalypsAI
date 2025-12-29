@@ -1,0 +1,94 @@
+# Random Chaos Scenarios
+# Apply completely random chaos for maximum unpredictability
+
+- name: Apply random chaos
+  when: chaos_scenarios.random_chaos.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows random chaos
+      set_fact:
+        apply_random_chaos: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.random_chaos.probability * 100) }}"
+
+    - name: Apply random chaos
+      when: apply_random_chaos
+      block:
+        - name: Generate random chaos parameters
+          set_fact:
+            random_chaos_type: "{{ ['network', 'resource', 'service', 'time'] | random }}"
+            random_duration: "{{ range(30, 120) | random }}"
+            random_target: "{{ ['localhost', '127.0.0.1', '::1'] | random }}"
+
+        - name: Log random chaos start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Random Chaos: Started at {{ ansible_date_time.iso8601 }} (type: {{ random_chaos_type }}, duration: {{ random_duration }}s)"
+
+        - name: Execute random chaos based on type
+          include_tasks: "chaos/{{ random_chaos_type }}.yml"
+          when: random_chaos_type in ['network', 'resource', 'service', 'time']
+
+        - name: Wait for random chaos duration
+          wait_for:
+            timeout: "{{ random_duration }}"
+
+        - name: Log random chaos end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Random Chaos: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply chaos monkey chaos
+  when: chaos_scenarios.chaos_monkey.enabled | default(false)
+  block:
+    - name: Check if chaos monkey should strike
+      set_fact:
+        chaos_monkey_strikes: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.chaos_monkey.probability * 100) }}"
+
+    - name: Chaos monkey strikes
+      when: chaos_monkey_strikes
+      block:
+        - name: Log chaos monkey strike
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Chaos Monkey: Struck at {{ ansible_date_time.iso8601 }}"
+
+        - name: Randomly select chaos scenario to apply
+          set_fact:
+            available_scenarios: []
+
+        - name: Build list of available scenarios
+          set_fact:
+            available_scenarios: >
+              {{ available_scenarios + ['network_partition'] if chaos_scenarios.network_chaos.partition.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['network_latency'] if chaos_scenarios.network_chaos.latency.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['network_packet_loss'] if chaos_scenarios.network_chaos.packet_loss.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['cpu_stress'] if chaos_scenarios.resource_chaos.cpu.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['memory_stress'] if chaos_scenarios.resource_chaos.memory.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['disk_stress'] if chaos_scenarios.resource_chaos.disk.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['service_restart'] if chaos_scenarios.service_chaos.restart.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['service_stop'] if chaos_scenarios.service_chaos.stop.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['process_kill'] if chaos_scenarios.service_chaos.process_kill.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['time_drift'] if chaos_scenarios.time_chaos.drift.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['ntp_disruption'] if chaos_scenarios.time_chaos.ntp_disruption.enabled | default(false) else available_scenarios }}
+              {{ available_scenarios + ['timezone_confusion'] if chaos_scenarios.time_chaos.timezone_confusion.enabled | default(false) else available_scenarios }}
+
+        - name: Select random scenario
+          set_fact:
+            selected_scenario: "{{ available_scenarios | random }}"
+
+        - name: Apply selected scenario
+          include_tasks: "chaos/{{ selected_scenario }}.yml"
+          when: selected_scenario is defined
+
+        - name: Log chaos monkey end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Chaos Monkey: Finished at {{ ansible_date_time.iso8601 }}"
+
+- name: Cleanup random chaos
+  always:
+    - name: Ensure system is in a stable state
+      shell: >
+        # Kill any remaining stress processes
+        pkill -f stress || true
+        # Clean up temporary files
+        rm -f /tmp/chaos_* /tmp/cpu_stress.pid /tmp/memory_stress.pid /tmp/disk_stress.pid
+      ignore_errors: yes

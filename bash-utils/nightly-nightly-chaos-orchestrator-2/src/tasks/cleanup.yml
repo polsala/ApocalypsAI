@@ -1,0 +1,108 @@
+# Cleanup Tasks
+# Ensure system is left in a clean state after chaos
+
+- name: Cleanup network rules
+  block:
+    - name: Remove any remaining tc rules
+      command: >
+        tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+      ignore_errors: yes
+
+    - name: Remove any remaining iptables rules
+      iptables:
+        chain: INPUT
+        jump: DROP
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove any remaining OUTPUT rules
+      iptables:
+        chain: OUTPUT
+        jump: DROP
+        state: absent
+      ignore_errors: yes
+
+- name: Cleanup resource stress processes
+  block:
+    - name: Kill any remaining stress processes
+      shell: >
+        pkill -f stress || true
+      ignore_errors: yes
+
+    - name: Clean up temporary files
+      file:
+        path: "/tmp/chaos_*"
+        state: absent
+      ignore_errors: yes
+
+- name: Cleanup service chaos
+  block:
+    - name: Ensure critical services are running
+      service:
+        name: "{{ item }}"
+        state: started
+      loop: ["ssh", "sshd"]
+      ignore_errors: yes
+
+    - name: Clean up process kill artifacts
+      shell: >
+        rm -f /tmp/port_exhaustion.sh
+      ignore_errors: yes
+
+- name: Cleanup time chaos
+  block:
+    - name: Ensure system time is synchronized
+      shell: >
+        if command -v ntpdate &> /dev/null; then
+          ntpdate -s pool.ntp.org
+        elif command -v chronyc &> /dev/null; then
+          chronyc makestep
+        fi
+      become: yes
+      ignore_errors: yes
+
+    - name: Clean up time artifacts
+      shell: >
+        rm -f /tmp/original_time /tmp/original_timezone
+      ignore_errors: yes
+
+- name: Final system health check
+  block:
+    - name: Check system load
+      shell: uptime
+      register: system_load
+      ignore_errors: yes
+
+    - name: Check disk space
+      shell: df -h
+      register: disk_space
+      ignore_errors: yes
+
+    - name: Check memory usage
+      shell: free -h
+      register: memory_usage
+      ignore_errors: yes
+
+    - name: Log system health status
+      lineinfile:
+        path: "{{ chaos_report_file }}"
+        line: "- System Health Check: {{ ansible_date_time.iso8601 }} - Load: {{ system_load.stdout | default('unknown') | trim }}"
+
+    - name: Display final system status
+      debug:
+        msg: |
+          System health after chaos:
+          Load: {{ system_load.stdout | default('unknown') | trim }}
+          Disk: {{ disk_space.stdout | default('unknown') | trim }}
+          Memory: {{ memory_usage.stdout | default('unknown') | trim }}
+
+- name: Final cleanup summary
+  always:
+    - name: Log cleanup completion
+      lineinfile:
+        path: "{{ chaos_report_file }}"
+        line: "- Cleanup: Completed at {{ ansible_date_time.iso8601 }}"
+
+    - name: Display cleanup summary
+      debug:
+        msg: "Chaos cleanup completed successfully on {{ inventory_hostname }}"

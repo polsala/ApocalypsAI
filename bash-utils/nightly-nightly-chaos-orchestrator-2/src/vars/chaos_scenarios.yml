@@ -1,0 +1,128 @@
+# Chaos Scenarios Configuration
+# Define the chaos scenarios to be applied during chaos engineering sessions
+
+chaos_scenarios:
+  # Network Chaos Scenarios
+  network_chaos:
+    partition:
+      enabled: true
+      description: "Simulate network partition by blocking ports"
+      probability: 0.3
+      duration: 30
+      ports:
+        - 80
+        - 443
+        - 22
+
+    latency:
+      enabled: true
+      description: "Add network latency to simulate slow connections"
+      probability: 0.4
+      duration: 60
+      delay: 100  # milliseconds
+
+    packet_loss:
+      enabled: true
+      description: "Simulate packet loss in network connections"
+      probability: 0.2
+      duration: 45
+      loss_percent: 10
+
+  # Resource Chaos Scenarios
+  resource_chaos:
+    cpu:
+      enabled: true
+      description: "Stress CPU with multiple workers"
+      probability: 0.3
+      duration: 60
+      workers: 2
+
+    memory:
+      enabled: true
+      description: "Consume system memory"
+      probability: 0.25
+      duration: 60
+      size: "100M"
+
+    disk:
+      enabled: true
+      description: "Perform intensive disk I/O operations"
+      probability: 0.2
+      duration: 60
+      size: "1G"
+
+  # Service Chaos Scenarios
+  service_chaos:
+    restart:
+      enabled: true
+      description: "Restart critical services"
+      probability: 0.3
+      duration: 30
+      services:
+        - nginx
+        - apache2
+        - ssh
+
+    stop:
+      enabled: true
+      description: "Stop and restart services"
+      probability: 0.2
+      duration: 60
+      services:
+        - nginx
+        - apache2
+
+    process_kill:
+      enabled: true
+      description: "Kill running processes"
+      probability: 0.3
+      duration: 45
+      processes:
+        - nginx
+        - apache2
+        - python
+
+    port_exhaustion:
+      enabled: true
+      description: "Exhaust available ports"
+      probability: 0.1
+      duration: 60
+
+  # Time Chaos Scenarios
+  time_chaos:
+    drift:
+      enabled: true
+      description: "Drift system time forward or backward"
+      probability: 0.2
+      duration: 60
+      offset: 300  # seconds
+
+    ntp_disruption:
+      enabled: true
+      description: "Disrupt NTP synchronization"
+      probability: 0.25
+      duration: 120
+
+    timezone_confusion:
+      enabled: true
+      description: "Randomly change system timezone"
+      probability: 0.15
+      duration: 90
+
+  # Random Chaos Scenarios
+  random_chaos:
+    enabled: true
+    description: "Apply completely random chaos scenarios"
+    probability: 0.1
+
+  chaos_monkey:
+    enabled: true
+    description: "The original chaos monkey - strikes randomly"
+    probability: 0.05
+
+# Global Configuration
+chaos_config:
+  max_concurrent_scenarios: 3
+  cleanup_after_each: true
+  log_level: "INFO"
+  dry_run: false
