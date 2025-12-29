@@ -1,0 +1,8 @@
+# vars/main.yml
+target_directory: "/tmp/digital_garden_to_sweep"
+age_threshold_days: 30
+size_threshold_bytes: 10 # Files smaller than 10 bytes are considered empty/too small
+filename_pattern: "^[a-zA-Z0-9_.-]+\\.(md|txt|log)$" # Validates filenames like 'my-doc.md', 'another_file.txt'
+quarantine_directory: "/tmp/digital_dust_bunnies_warren"
+quarantine_enabled: true
+report_path: "/tmp/digital_dust_bunny_report.txt"

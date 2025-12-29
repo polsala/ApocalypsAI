@@ -1,0 +1,61 @@
+---
+- name: Nightly Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  gather_facts: yes # Needed for ansible_date_time in report template
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure target directory exists
+      ansible.builtin.file:
+        path: "{{ target_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure quarantine directory exists if enabled
+      ansible.builtin.file:
+        path: "{{ quarantine_directory }}"
+        state: directory
+        mode: '0755'
+      when: quarantine_enabled | bool
+
+    - name: Get current epoch time for age comparison
+      ansible.builtin.set_fact:
+        current_epoch: "{{ ansible_date_time.epoch | int }}"
+      # Mock rationale: In tests, ansible_date_time will be mocked to a fixed value for deterministic age calculation.
+
+    - name: Find all files in the target directory
+      ansible.builtin.find:
+        paths: "{{ target_directory }}"
+        file_type: file
+        recurse: yes
+      register: all_files_in_target
+
+    - name: Identify digital dust bunnies based on criteria
+      ansible.builtin.set_fact:
+        digital_dust_bunnies: |
+          {% set found_bunnies = [] %}
+          {% for file in all_files_in_target.files %}
+            {% set is_stale = (current_epoch - file.mtime) > (age_threshold_days * 86400) %}
+            {% set is_empty = file.size < size_threshold_bytes %}
+            {% set is_malformed_name = not (file.path | basename | regex_match(filename_pattern)) %}
+            {% if is_stale or is_empty or is_malformed_name %}
+              {% set _ = found_bunnies.append(file) %}
+            {% endif %}
+          {% endfor %}
+          {{ found_bunnies | unique | list }}
+
+    - name: Generate Digital Dust Bunny Report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+
+    - name: Quarantine identified dust bunnies
+      ansible.builtin.command: "mv {{ item.path }} {{ quarantine_directory }}/{{ item.path | basename }}"
+      loop: "{{ digital_dust_bunnies }}"
+      when: quarantine_enabled | bool
+      args:
+        creates: "{{ quarantine_directory }}/{{ item.path | basename }}" # Idempotency check
