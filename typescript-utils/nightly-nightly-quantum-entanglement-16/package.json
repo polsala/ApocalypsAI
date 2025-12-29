@@ -1,0 +1,44 @@
+{
+  "name": "nightly-quantum-entanglement-checker",
+  "version": "1.0.0",
+  "description": "A whimsical TypeScript CLI tool that simulates quantum entanglement checks for code pairs",
+  "main": "dist/main.js",
+  "bin": {
+    "quantum-entangle": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts"
+  },
+  "keywords": [
+    "quantum",
+    "entanglement",
+    "cli",
+    "typescript",
+    "fun",
+    "whimsical",
+    "code-analysis"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ]
+  }
+}
