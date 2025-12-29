@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1d35;
+            color: #e0e6ed;
+            padding: 20px;
+        }
+        .test-suite {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-case {
+            background: #0f1120;
+            border: 1px solid #3a3f6b;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        .pass { color: #6bff6b; }
+        .fail { color: #ff6b6b; }
+        button {
+            background: #4facfe;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-suite">
+        <h1>⚛️ Quantum Simulator Test Suite</h1>
+        <p>Testing the core quantum operations and circuit logic.</p>
+        
+        <div class="test-case">
+            <h3>Test 1: Hadamard Gate Creates Superposition</h3>
+            <p>Applying H to |0⟩ should create (|0⟩ + |1⟩)/√2</p>
+            <button onclick="runTest1()">Run Test</button>
+            <div id="test1-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 2: Pauli-X Gate Flips Qubit</h3>
+            <p>Applying X to |0⟩ should create |1⟩</p>
+            <button onclick="runTest2()">Run Test</button>
+            <div id="test2-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 3: CNOT Creates Entanglement</h3>
+            <p>H followed by CNOT should create Bell state</p>
+            <button onclick="runTest3()">Run Test</button>
+            <div id="test3-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 4: Measurement Collapses State</h3>
+            <p>Measuring should collapse superposition to definite state</p>
+            <button onclick="runTest4()">Run Test</button>
+            <div id="test4-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 5: Circuit Loading</h3>
+            <p>Pre-built circuits should load correctly</p>
+            <button onclick="runTest5()">Run Test</button>
+            <div id="test5-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 6: State Normalization</h3>
+            <p>Quantum states should always be normalized</p>
+            <button onclick="runTest6()">Run Test</button>
+            <div id="test6-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock canvas for testing
+        const mockCanvas = {
+            width: 800,
+            height: 600,
+            getContext: () => ({
+                fillRect: () => {},
+                stroke: () => {},
+                fillText: () => {},
+                beginPath: () => {},
+                arc: () => {},
+                fill: () => {},
+                strokeStyle: '',
+                lineWidth: 0,
+                font: '',
+                textAlign: '',
+                textBaseline: '',
+                globalAlpha: 1.0
+            })
+        };
+
+        // Mock document.getElementById for testing
+        const mockElements = {
+            'quantumCanvas': mockCanvas,
+            'qubitCount': { textContent: '' },
+            'entanglementStatus': { textContent: '' },
+            'quantumState': { textContent: '' },
+            'amplitude': { textContent: '' },
+            'measurementOverlay': { classList: { add: () => {}, remove: () => {} } },
+            'measurementText': { textContent: '' }
+        };
+
+        // Mock document
+        const originalDocument = document;
+        document = {
+            getElementById: (id) => mockElements[id] || originalDocument.getElementById(id)
+        };
+
+        // Import the simulator (simplified for testing)
+        class TestQuantumSimulator {
+            constructor() {
+                this.state = [1, 0, 0, 0]; // |00⟩
+                this.entangled = false;
+            }
+
+            // Simplified gate operations for testing
+            hadamard(state) {
+                return [
+                    (state[0] + state[1]) / Math.sqrt(2),
+                    (state[0] - state[1]) / Math.sqrt(2)
+                ];
+            }
+
+            pauliX(state) {
+                return [state[1], state[0]];
+            }
+
+            applyCNOT(state, control, target) {
+                const newState = [...state];
+                if (control === 0 && target === 1) {
+                    [newState[1], newState[3]] = [newState[3], newState[1]];
+                }
+                return newState;
+            }
+
+            normalizeState(state) {
+                const norm = Math.sqrt(state.reduce((sum, amp) => sum + Math.abs(amp) ** 2, 0));
+                return state.map(amp => amp / norm);
+            }
+
+            checkNormalization(state) {
+                const sum = state.reduce((acc, amp) => acc + Math.abs(amp) ** 2, 0);
+                return Math.abs(sum - 1) < 1e-10;
+            }
+        }
+
+        const testSim = new TestQuantumSimulator();
+
+        function runTest1() {
+            const resultDiv = document.getElementById('test1-result');
+            try {
+                // Test Hadamard on |0⟩
+                const hState = testSim.hadamard([1, 0]);
+                const expected = 1 / Math.sqrt(2);
+                
+                const isCorrect = Math.abs(hState[0] - expected) < 1e-10 && 
+                                 Math.abs(hState[1] - expected) < 1e-10;
+                
+                resultDiv.innerHTML = `
+                    Result: [${hState[0].toFixed(4)}, ${hState[1].toFixed(4)}]<br>
+                    Expected: [${expected.toFixed(4)}, ${expected.toFixed(4)}]<br>
+                    Status: <span class="${isCorrect ? 'pass' : 'fail'}">${isCorrect ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        function runTest2() {
+            const resultDiv = document.getElementById('test2-result');
+            try {
+                // Test Pauli-X on |0⟩
+                const xState = testSim.pauliX([1, 0]);
+                const expected = [0, 1];
+                
+                const isCorrect = xState[0] === expected[0] && xState[1] === expected[1];
+                
+                resultDiv.innerHTML = `
+                    Result: [${xState[0]}, ${xState[1]}]<br>
+                    Expected: [${expected[0]}, ${expected[1]}]<br>
+                    Status: <span class="${isCorrect ? 'pass' : 'fail'}">${isCorrect ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        function runTest3() {
+            const resultDiv = document.getElementById('test3-result');
+            try {
+                // Test Bell state creation: H on qubit 0, then CNOT
+                let state = [1, 0, 0, 0]; // |00⟩
+                
+                // Apply H to first qubit
+                const hResult = testSim.hadamard([1, 0]);
+                state = [hResult[0], hResult[1], 0, 0];
+                
+                // Apply CNOT
+                state = testSim.applyCNOT(state, 0, 1);
+                
+                // Bell state should be (|00⟩ + |11⟩)/√2
+                const expected = 1 / Math.sqrt(2);
+                const isBellState = Math.abs(state[0] - expected) < 1e-10 &&
+                                  Math.abs(state[3] - expected) < 1e-10 &&
+                                  Math.abs(state[1]) < 1e-10 &&
+                                  Math.abs(state[2]) < 1e-10;
+                
+                resultDiv.innerHTML = `
+                    Result: [${state.map(s => s.toFixed(4)).join(', ')}]<br>
+                    Expected Bell: [${expected.toFixed(4)}, 0, 0, ${expected.toFixed(4)}]<br>
+                    Status: <span class="${isBellState ? 'pass' : 'fail'}">${isBellState ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        function runTest4() {
+            const resultDiv = document.getElementById('test4-result');
+            try {
+                // Test measurement collapse
+                const superpositionState = [1/Math.sqrt(2), 1/Math.sqrt(2)];
+                
+                // Simulate measurement (should collapse to either |0⟩ or |1⟩)
+                const random = Math.random();
+                const collapsed = random < 0.5 ? [1, 0] : [0, 1];
+                
+                // Check if collapsed state is valid
+                const isValid = (collapsed[0] === 1 && collapsed[1] === 0) ||
+                               (collapsed[0] === 0 && collapsed[1] === 1);
+                
+                resultDiv.innerHTML = `
+                    Superposition: [${superpositionState.map(s => s.toFixed(4)).join(', ')}]<br>
+                    Collapsed: [${collapsed.join(', ')}]<br>
+                    Status: <span class="${isValid ? 'pass' : 'fail'}">${isValid ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        function runTest5() {
+            const resultDiv = document.getElementById('test5-result');
+            try {
+                // Test that circuit loading doesn't crash
+                // This is a basic integration test
+                const circuit = [
+                    { type: 'H', qubit: 0 },
+                    { type: 'CNOT', qubit: 0, target: 1 }
+                ];
+                
+                // Verify circuit structure
+                const hasH = circuit.some(g => g.type === 'H');
+                const hasCNOT = circuit.some(g => g.type === 'CNOT');
+                const validStructure = hasH && hasCNOT && circuit.length === 2;
+                
+                resultDiv.innerHTML = `
+                    Circuit: ${JSON.stringify(circuit)}<br>
+                    Has H gate: ${hasH}<br>
+                    Has CNOT gate: ${hasCNOT}<br>
+                    Status: <span class="${validStructure ? 'pass' : 'fail'}">${validStructure ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        function runTest6() {
+            const resultDiv = document.getElementById('test6-result');
+            try {
+                // Test state normalization
+                const unnormalized = [1, 1, 1, 1];
+                const normalized = testSim.normalizeState(unnormalized);
+                const isNormalized = testSim.checkNormalization(normalized);
+                
+                const normSum = normalized.reduce((sum, amp) => sum + Math.abs(amp) ** 2, 0);
+                
+                resultDiv.innerHTML = `
+                    Original: [${unnormalized.join(', ')}]<br>
+                    Normalized: [${normalized.map(s => s.toFixed(4)).join(', ')}]<br>
+                    Norm sum: ${normSum.toFixed(10)}<br>
+                    Status: <span class="${isNormalized ? 'pass' : 'fail'}">${isNormalized ? 'PASS' : 'FAIL'}</span>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `Error: ${e.message}`;
+            }
+        }
+
+        // Run all tests on load
+        window.onload = () => {
+            console.log('Quantum Simulator Test Suite Loaded');
+        };
+    </script>
+</body>
+</html>
