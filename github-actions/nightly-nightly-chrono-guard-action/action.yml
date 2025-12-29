@@ -1,0 +1,17 @@
+name: 'Nightly Chrono-Guard Action'
+description: 'Scans PR titles and commit messages for temporal anomaly keywords and warns if detected.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+  keywords:
+    description: 'Comma-separated list of temporal anomaly keywords to detect.'
+    required: false
+    default: 'time travel,paradox,anachronism,future past,temporal rift,chronos,aevum,yester-tomorrow,pre-post-apocalypse,timey-wimey'
+outputs:
+  temporal-anomaly-detected:
+    description: 'Boolean indicating if a temporal anomaly keyword was detected.'
+    value: ${{ steps.check.outputs.detected }}
+runs:
+  using: 'node20'
+  main: 'src/main.js'
