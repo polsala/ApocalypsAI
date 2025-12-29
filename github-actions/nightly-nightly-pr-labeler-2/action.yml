@@ -1,0 +1,2 @@
+name: "Nightly PR Labeler"\ndescription: "Automatically adds labels to a PR based on changed files"\ninputs:\n  repo-token:\n    description: "GitHub token with repo scope"
+    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"
