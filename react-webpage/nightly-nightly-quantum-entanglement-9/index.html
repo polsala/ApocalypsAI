@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f1120;
+            --panel-bg: #1a1d35;
+            --accent: #4facfe;
+            --accent-2: #00f2fe;
+            --text: #e0e6ed;
+            --grid-line: #3a3f6b;
+            --qubit-color: #ff6b6b;
+            --entangle-color: #4facfe;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--panel-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--grid-line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        button {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(79, 172, 254, 0.3);
+        }
+
+        button:hover {
+            background: var(--accent-2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 242, 254, 0.4);
+        }
+
+        button.secondary {
+            background: var(--grid-line);
+            box-shadow: none;
+        }
+
+        button.secondary:hover {
+            background: #4a4f7b;
+            box-shadow: 0 4px 8px rgba(58, 63, 107, 0.3);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 70px);
+        }
+
+        .toolbox {
+            width: 250px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--grid-line);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        }
+
+        .gate-palette {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .gate-item {
+            background: var(--bg-color);
+            border: 1px solid var(--grid-line);
+            border-radius: 4px;
+            padding: 0.5rem;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .gate-item:hover {
+            border-color: var(--accent);
+            background: rgba(79, 172, 254, 0.1);
+        }
+
+        .gate-h {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: #ff6b6b;
+        }
+
+        .gate-x {
+            background: rgba(107, 255, 107, 0.2);
+            border-color: #6bff6b;
+        }
+
+        .gate-z {
+            background: rgba(255, 255, 107, 0.2);
+            border-color: #ffff6b;
+        }
+
+        .gate-cnot {
+            background: rgba(107, 107, 255, 0.2);
+            border-color: #6b6bff;
+        }
+
+        .workspace {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1d35 0%, #0f1120 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--grid-line);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            margin: 0.25rem 0;
+        }
+
+        .status-label {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .examples {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .example-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--grid-line);
+            color: var(--text);
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+
+        .example-btn:hover {
+            background: rgba(79, 172, 254, 0.1);
+            border-color: var(--accent);
+        }
+
+        .instructions {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #8892b0;
+            line-height: 1.4;
+        }
+
+        .entanglement-line {
+            stroke: var(--entangle-color);
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        .qubit-particle {
+            fill: var(--qubit-color);
+            filter: drop-shadow(0 0 5px var(--qubit-color));
+        }
+
+        .measurement-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .measurement-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .measurement-result {
+            background: var(--panel-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--accent);
+        }
+
+        .result-text {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>⚛️ Nightly Quantum Entanglement Simulator</h1>
+        <div class="controls">
+            <button onclick="simulator.clearCircuit()">Clear Circuit</button>
+            <button onclick="simulator.simulate()">Simulate</button>
+            <button onclick="simulator.measure()" style="background: #ff4757;">Measure</button>
+            <button onclick="simulator.reset()" class="secondary">Reset State</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="toolbox">
+            <h3>Quantum Gates</h3>
+            <div class="gate-palette">
+                <div class="gate-item gate-h" draggable="true" data-gate="H">H</div>
+                <div class="gate-item gate-x" draggable="true" data-gate="X">X</div>
+                <div class="gate-item gate-z" draggable="true" data-gate="Z">Z</div>
+                <div class="gate-item gate-cnot" draggable="true" data-gate="CNOT">●</div>
+                <div class="gate-item" draggable="true" data-gate="Y">Y</div>
+                <div class="gate-item" draggable="true" data-gate="S">S</div>
+                <div class="gate-item" draggable="true" data-gate="T">T</div>
+                <div class="gate-item" draggable="true" data-gate="I">I</div>
+            </div>
+
+            <div class="examples">
+                <h4>Examples</h4>
+                <button class="example-btn" onclick="simulator.loadBellState()">Bell State (Entanglement)</button>
+                <button class="example-btn" onclick="simulator.loadSuperposition()">Superposition Demo</button>
+                <button class="example-btn" onclick="simulator.loadQuantumTeleportation()">Quantum Teleportation</button>
+                <button class="example-btn" onclick="simulator.loadMeasurementParadox()">Measurement Paradox</button>
+            </div>
+
+            <div class="instructions">
+                <strong>How to Use:</strong><br>
+                1. Drag gates to the workspace<br>
+                2. Drop on qubit lines<br>
+                3. Connect CNOT gates between qubits<br>
+                4. Click Simulate to see evolution<br>
+                5. Click Measure to collapse state
+            </div>
+        </div>
+
+        <div class="workspace">
+            <canvas id="quantumCanvas"></canvas>
+            <div class="status-bar">
+                <div class="status-item"><span class="status-label">Qubits:</span> <span id="qubitCount">2</span></div>
+                <div class="status-item"><span class="status-label">Entangled:</span> <span id="entanglementStatus">No</span></div>
+                <div class="status-item"><span class="status-label">State:</span> <span id="quantumState">|00⟩</span></div>
+                <div class="status-item"><span class="status-label">Amplitude:</span> <span id="amplitude">1.0</span></div>
+            </div>
+
+            <div class="measurement-overlay" id="measurementOverlay">
+                <div class="measurement-result">
+                    <div class="result-text" id="measurementText">COLLAPSING...</div>
+                    <p>Quantum state collapsing...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/quantum-simulator.js"></script>
+</body>
+</html>
