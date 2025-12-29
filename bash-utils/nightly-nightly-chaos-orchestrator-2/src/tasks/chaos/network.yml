@@ -1,0 +1,142 @@
+# Network Chaos Scenarios
+# Simulate various network issues for chaos engineering
+
+- name: Apply network partition chaos
+  when: chaos_scenarios.network_chaos.partition.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows network partition
+      set_fact:
+        apply_network_partition: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.network_chaos.partition.probability * 100) }}"
+
+    - name: Apply network partition (iptables)
+      when: apply_network_partition
+      block:
+        - name: Log network partition start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Network Partition: Started at {{ ansible_date_time.iso8601 }}"
+
+        - name: Block incoming connections on port 80
+          iptables:
+            chain: INPUT
+            protocol: tcp
+            destination_port: 80
+            jump: DROP
+            state: present
+
+        - name: Block outgoing connections on port 443
+          iptables:
+            chain: OUTPUT
+            protocol: tcp
+            destination_port: 443
+            jump: DROP
+            state: present
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.network_chaos.partition.duration | default(30) }}"
+
+        - name: Remove network partition rules
+          iptables:
+            chain: INPUT
+            protocol: tcp
+            destination_port: 80
+            jump: DROP
+            state: absent
+
+        - name: Remove outgoing block rules
+          iptables:
+            chain: OUTPUT
+            protocol: tcp
+            destination_port: 443
+            jump: DROP
+            state: absent
+
+        - name: Log network partition end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Network Partition: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply network latency chaos
+  when: chaos_scenarios.network_chaos.latency.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows network latency
+      set_fact:
+        apply_network_latency: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.network_chaos.latency.probability * 100) }}"
+
+    - name: Apply network latency (tc)
+      when: apply_network_latency
+      block:
+        - name: Log network latency start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Network Latency: Started at {{ ansible_date_time.iso8601 }} ({{ chaos_scenarios.network_chaos.latency.delay }}ms)"
+
+        - name: Add network delay using tc
+          command: >
+            tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }}
+            root netem delay {{ chaos_scenarios.network_chaos.latency.delay | default(100) }}ms
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.network_chaos.latency.duration | default(60) }}"
+
+        - name: Remove network delay
+          command: >
+            tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+          ignore_errors: yes
+
+        - name: Log network latency end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Network Latency: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply packet loss chaos
+  when: chaos_scenarios.network_chaos.packet_loss.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows packet loss
+      set_fact:
+        apply_packet_loss: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.network_chaos.packet_loss.probability * 100) }}"
+
+    - name: Apply packet loss (tc)
+      when: apply_packet_loss
+      block:
+        - name: Log packet loss start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Packet Loss: Started at {{ ansible_date_time.iso8601 }} ({{ chaos_scenarios.network_chaos.packet_loss.loss_percent }}%)"
+
+        - name: Add packet loss using tc
+          command: >
+            tc qdisc add dev {{ ansible_default_ipv4.interface | default('eth0') }}
+            root netem loss {{ chaos_scenarios.network_chaos.packet_loss.loss_percent | default(10) }}%
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.network_chaos.packet_loss.duration | default(45) }}"
+
+        - name: Remove packet loss
+          command: >
+            tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+          ignore_errors: yes
+
+        - name: Log packet loss end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Packet Loss: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Cleanup network chaos rules
+  always:
+    - name: Remove any remaining tc rules
+      command: >
+        tc qdisc del dev {{ ansible_default_ipv4.interface | default('eth0') }} root
+      ignore_errors: yes
+
+    - name: Remove any remaining iptables rules
+      iptables:
+        chain: INPUT
+        jump: DROP
+        state: absent
+      ignore_errors: yes

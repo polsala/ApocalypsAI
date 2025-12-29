@@ -1,0 +1,63 @@
+---
+# Nightly Chaos Orchestrator
+# A whimsical chaos engineering tool for testing system resilience
+
+- name: Chaos Engineering Orchestrator
+  hosts: targets
+  become: yes
+  vars:
+    chaos_start_time: "{{ ansible_date_time.epoch }}"
+    chaos_log_dir: "/tmp/chaos_logs"
+    chaos_report_file: "{{ chaos_log_dir }}/chaos_report_{{ ansible_date_time.epoch }}.txt"
+
+  tasks:
+    - name: Ensure chaos log directory exists
+      file:
+        path: "{{ chaos_log_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Initialize chaos report
+      copy:
+        content: |
+          Chaos Engineering Report
+          ========================
+          Start Time: {{ ansible_date_time.iso8601 }}
+          Target: {{ inventory_hostname }}
+          Scenarios Applied:
+        dest: "{{ chaos_report_file }}"
+        mode: '0644'
+
+    - name: Load chaos scenarios
+      include_vars:
+        file: "vars/chaos_scenarios.yml"
+
+    - name: Apply network chaos scenarios
+      include_tasks: "tasks/chaos/network.yml"
+      when: chaos_scenarios.network_chaos is defined
+
+    - name: Apply resource chaos scenarios
+      include_tasks: "tasks/chaos/resource.yml"
+      when: chaos_scenarios.resource_chaos is defined
+
+    - name: Apply service chaos scenarios
+      include_tasks: "tasks/chaos/service.yml"
+      when: chaos_scenarios.service_chaos is defined
+
+    - name: Apply time chaos scenarios
+      include_tasks: "tasks/chaos/time.yml"
+      when: chaos_scenarios.time_chaos is defined
+
+    - name: Apply random chaos scenarios
+      include_tasks: "tasks/chaos/random.yml"
+      when: chaos_scenarios.random_chaos is defined
+
+    - name: Generate chaos summary
+      template:
+        src: "templates/chaos_report.j2"
+        dest: "{{ chaos_log_dir }}/chaos_summary_{{ ansible_date_time.epoch }}.html"
+        mode: '0644'
+
+    - name: Display chaos report
+      debug:
+        msg: "Chaos report generated at: {{ chaos_log_dir }}/chaos_summary_{{ ansible_date_time.epoch }}.html"

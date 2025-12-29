@@ -1,0 +1,139 @@
+---
+# Test suite for Nightly Chaos Orchestrator
+
+- name: Test Chaos Orchestrator
+  hosts: localhost
+  connection: local
+  become: false
+
+  tasks:
+    - name: Test inventory file exists
+      stat:
+        path: "{{ playbook_dir }}/inventory.ini"
+      register: inventory_stat
+
+    - name: Assert inventory file exists
+      assert:
+        that:
+          - inventory_stat.stat.exists
+          - inventory_stat.stat.isreg
+
+    - name: Test playbook file exists
+      stat:
+        path: "{{ playbook_dir }}/chaos_orchestrator.yml"
+      register: playbook_stat
+
+    - name: Assert playbook file exists
+      assert:
+        that:
+          - playbook_stat.stat.exists
+          - playbook_stat.stat.isreg
+
+    - name: Test scenarios configuration exists
+      stat:
+        path: "{{ playbook_dir }}/vars/chaos_scenarios.yml"
+      register: scenarios_stat
+
+    - name: Assert scenarios file exists
+      assert:
+        that:
+          - scenarios_stat.stat.exists
+          - scenarios_stat.stat.isreg
+
+    - name: Test template file exists
+      stat:
+        path: "{{ playbook_dir }}/templates/chaos_report.j2"
+      register: template_stat
+
+    - name: Assert template file exists
+      assert:
+        that:
+          - template_stat.stat.exists
+          - template_stat.stat.isreg
+
+    - name: Test script file exists
+      stat:
+        path: "{{ playbook_dir }}/run_chaos.sh"
+      register: script_stat
+
+    - name: Assert script file exists
+      assert:
+        that:
+          - script_stat.stat.exists
+          - script_stat.stat.isreg
+
+    - name: Test script is executable
+      stat:
+        path: "{{ playbook_dir }}/run_chaos.sh"
+      register: script_permissions
+
+    - name: Assert script is executable
+      assert:
+        that:
+          - script_permissions.stat.mode == '0755'
+
+    - name: Test chaos scenarios YAML syntax
+      include_vars:
+        file: "{{ playbook_dir }}/vars/chaos_scenarios.yml"
+
+    - name: Assert chaos scenarios structure
+      assert:
+        that:
+          - chaos_scenarios.network_chaos is defined
+          - chaos_scenarios.resource_chaos is defined
+          - chaos_scenarios.service_chaos is defined
+          - chaos_scenarios.time_chaos is defined
+
+    - name: Test network chaos scenarios
+      assert:
+        that:
+          - chaos_scenarios.network_chaos.partition.enabled is defined
+          - chaos_scenarios.network_chaos.latency.enabled is defined
+          - chaos_scenarios.network_chaos.packet_loss.enabled is defined
+
+    - name: Test resource chaos scenarios
+      assert:
+        that:
+          - chaos_scenarios.resource_chaos.cpu.enabled is defined
+          - chaos_scenarios.resource_chaos.memory.enabled is defined
+          - chaos_scenarios.resource_chaos.disk.enabled is defined
+
+    - name: Test service chaos scenarios
+      assert:
+        that:
+          - chaos_scenarios.service_chaos.restart.enabled is defined
+          - chaos_scenarios.service_chaos.stop.enabled is defined
+          - chaos_scenarios.service_chaos.process_kill.enabled is defined
+
+    - name: Test time chaos scenarios
+      assert:
+        that:
+          - chaos_scenarios.time_chaos.drift.enabled is defined
+          - chaos_scenarios.time_chaos.ntp_disruption.enabled is defined
+          - chaos_scenarios.time_chaos.timezone_confusion.enabled is defined
+
+    - name: Test required dependencies
+      command: which ansible
+      register: ansible_check
+      ignore_errors: true
+
+    - name: Assert Ansible is available
+      assert:
+        that:
+          - ansible_check.rc == 0
+      when: ansible_check.rc is defined
+
+    - name: Test Python availability
+      command: which python3
+      register: python_check
+      ignore_errors: true
+
+    - name: Assert Python 3 is available
+      assert:
+        that:
+          - python_check.rc == 0
+      when: python_check.rc is defined
+
+    - name: Display test results
+      debug:
+        msg: "All chaos orchestrator tests passed successfully!"

@@ -1,0 +1,138 @@
+# Time Chaos Scenarios
+# Simulate time-related issues for chaos engineering
+
+- name: Apply time drift chaos
+  when: chaos_scenarios.time_chaos.drift.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows time drift
+      set_fact:
+        apply_time_drift: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.time_chaos.drift.probability * 100) }}"
+
+    - name: Apply time drift chaos
+      when: apply_time_drift
+      block:
+        - name: Log time drift start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Time Drift: Started at {{ ansible_date_time.iso8601 }} ({{ chaos_scenarios.time_chaos.drift.offset | default('+300') }} seconds)"
+
+        - name: Backup original time
+          shell: date +%s > /tmp/original_time
+
+        - name: Apply time offset
+          shell: >
+            original_time=$(cat /tmp/original_time)
+            new_time=$(($original_time + {{ chaos_scenarios.time_chaos.drift.offset | default(300) }}))
+            date -s @$new_time
+          become: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.time_chaos.drift.duration | default(60) }}"
+
+        - name: Restore original time
+          shell: >
+            if [ -f /tmp/original_time ]; then
+              original_time=$(cat /tmp/original_time)
+              date -s @$original_time
+              rm -f /tmp/original_time
+            fi
+          become: yes
+
+        - name: Log time drift end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Time Drift: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply NTP service disruption
+  when: chaos_scenarios.time_chaos.ntp_disruption.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows NTP disruption
+      set_fact:
+        apply_ntp_disruption: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.time_chaos.ntp_disruption.probability * 100) }}"
+
+    - name: Apply NTP service disruption
+      when: apply_ntp_disruption
+      block:
+        - name: Log NTP disruption start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- NTP Disruption: Started at {{ ansible_date_time.iso8601 }}"
+
+        - name: Stop NTP service
+          service:
+            name: "{{ item }}"
+            state: stopped
+          loop: ["ntpd", "chronyd", "systemd-timesyncd"]
+          ignore_errors: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.time_chaos.ntp_disruption.duration | default(120) }}"
+
+        - name: Restart NTP service
+          service:
+            name: "{{ item }}"
+            state: started
+          loop: ["ntpd", "chronyd", "systemd-timesyncd"]
+          ignore_errors: yes
+
+        - name: Log NTP disruption end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- NTP Disruption: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Apply timezone confusion chaos
+  when: chaos_scenarios.time_chaos.timezone_confusion.enabled | default(false)
+  block:
+    - name: Check if chaos probability allows timezone confusion
+      set_fact:
+        apply_timezone_confusion: "{{ (100 * (ansible_date_time.epoch | int % 100)) <= (chaos_scenarios.time_chaos.timezone_confusion.probability * 100) }}"
+
+    - name: Apply timezone confusion chaos
+      when: apply_timezone_confusion
+      block:
+        - name: Log timezone confusion start
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Timezone Confusion: Started at {{ ansible_date_time.iso8601 }}"
+
+        - name: Backup original timezone
+          shell: timedatectl show --property=Timezone | cut -d= -f2 > /tmp/original_timezone
+
+        - name: Change timezone randomly
+          shell: >
+            timezones=("UTC" "America/New_York" "Europe/London" "Asia/Tokyo" "Australia/Sydney")
+            random_tz=${timezones[$RANDOM % ${#timezones[@]}]}
+            timedatectl set-timezone $random_tz
+          become: yes
+
+        - name: Wait for chaos duration
+          wait_for:
+            timeout: "{{ chaos_scenarios.time_chaos.timezone_confusion.duration | default(90) }}"
+
+        - name: Restore original timezone
+          shell: >
+            if [ -f /tmp/original_timezone ]; then
+              original_tz=$(cat /tmp/original_timezone)
+              timedatectl set-timezone $original_tz
+              rm -f /tmp/original_timezone
+            fi
+          become: yes
+
+        - name: Log timezone confusion end
+          lineinfile:
+            path: "{{ chaos_report_file }}"
+            line: "- Timezone Confusion: Ended at {{ ansible_date_time.iso8601 }}"
+
+- name: Cleanup time chaos
+  always:
+    - name: Ensure system time is synchronized
+      shell: >
+        if command -v ntpdate &> /dev/null; then
+          ntpdate -s pool.ntp.org
+        elif command -v chronyc &> /dev/null; then
+          chronyc makestep
+        fi
+      become: yes
+      ignore_errors: yes
