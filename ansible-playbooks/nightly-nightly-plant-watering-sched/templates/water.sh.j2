@@ -1,0 +1,12 @@
+#!/bin/bash
+# Toggle GPIO pin to activate water pump
+GPIO={{ pump_gpio }}
+
+# Export pin
+gpio -g mode $GPIO out
+# Turn on pump
+gpio -g write $GPIO 1
+# Keep pump on for 5 seconds
+sleep 5
+# Turn off pump
+gpio -g write $GPIO 0

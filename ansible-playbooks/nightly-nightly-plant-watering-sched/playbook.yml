@@ -1,0 +1,42 @@
+- name: Configure plant watering scheduler
+  hosts: all
+  become: true
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Ensure pump control script is present
+      template:
+        src: templates/water.sh.j2
+        dest: /usr/local/bin/water_plants.sh
+        mode: '0755'
+
+    - name: Create systemd service for watering
+      copy:
+        dest: /etc/systemd/system/water_plants.service
+        content: |
+          [Unit]
+          Description=Water houseplants
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/water_plants.sh
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    - name: Enable and start watering timer
+      copy:
+        dest: /etc/systemd/system/water_plants.timer
+        content: |
+          [Unit]
+          Description=Run water_plants.service daily
+
+          [Timer]
+          OnCalendar=*-*-* {{ watering_time }}
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable timer
+      command: systemctl enable --now water_plants.timer
