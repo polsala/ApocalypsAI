@@ -1,0 +1,107 @@
+name: Test Nightly Branch Temporal Drift Detector
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'github-actions/nightly-branch-temporal-drift/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure full history for branch operations
+
+      - name: Configure Git
+        run: |
+          git config user.name "ApocalypsAI Test Bot"
+          git config user.email "test@apocalypsai.com"
+
+      - name: Create fresh branch
+        run: |
+          git checkout -b fresh-branch
+          echo "Fresh content" > fresh.txt
+          git add fresh.txt
+          git commit -m "Add fresh content"
+          git push origin fresh-branch # Push to simulate remote branch
+
+      - name: Create stale branch (35 days old)
+        run: |
+          git checkout -b stale-branch-1
+          echo "Stale content 1" > stale1.txt
+          git add stale1.txt
+          # Mock rationale: Simulating an old commit date for testing purposes.
+          git commit --date="$(date -d '35 days ago' +'%Y-%m-%d %H:%M:%S')" -m "Add stale content 1"
+          git push origin stale-branch-1
+
+      - name: Create another stale branch (40 days old)
+        run: |
+          git checkout -b stale-branch-2
+          echo "Stale content 2" > stale2.txt
+          git add stale2.txt
+          # Mock rationale: Simulating an old commit date for testing purposes.
+          git commit --date="$(date -d '40 days ago' +'%Y-%m-%d %H:%M:%S')" -m "Add stale content 2"
+          git push origin stale-branch-2
+
+      - name: Create ignored branch (stale, but ignored by pattern)
+        run: |
+          git checkout -b feature/ignored-stale-branch
+          echo "Ignored stale content" > ignored.txt
+          git add ignored.txt
+          # Mock rationale: Simulating an old commit date for testing purposes.
+          git commit --date="$(date -d '50 days ago' +'%Y-%m-%d %H:%M:%S')" -m "Add ignored stale content"
+          git push origin feature/ignored-stale-branch
+
+      - name: Run Nightly Branch Temporal Drift Detector
+        id: detect_drift
+        uses: ./github-actions/nightly-branch-temporal-drift # Path to the action
+        with:
+          stale-days: 30
+          ignore-branches: "main,master,develop,feature/*" # Add the ignored branch pattern here
+
+      - name: Verify Stale Branches Output
+        run: |
+          STALE_OUTPUT="${{ steps.detect_drift.outputs.stale-branches }}"
+          echo "Detected stale branches: $STALE_OUTPUT"
+          
+          # Expected stale branches: stale-branch-1, stale-branch-2
+          # The order might vary, so check for presence.
+          if echo "$STALE_OUTPUT" | grep -q "stale-branch-1"; then
+            echo "stale-branch-1 found as expected."
+          else
+            echo "Error: stale-branch-1 not found in output." >&2
+            exit 1
+          fi
+          
+          if echo "$STALE_OUTPUT" | grep -q "stale-branch-2"; then
+            echo "stale-branch-2 found as expected."
+          else
+            echo "Error: stale-branch-2 not found in output." >&2
+            exit 1
+          fi
+          
+          if echo "$STALE_OUTPUT" | grep -q "fresh-branch"; then
+            echo "Error: fresh-branch found in output, but should not be stale." >&2
+            exit 1
+          fi
+          
+          if echo "$STALE_OUTPUT" | grep -q "feature/ignored-stale-branch"; then
+            echo "Error: feature/ignored-stale-branch found in output, but should be ignored." >&2
+            exit 1
+          fi
+          
+          # Check if only the expected branches are present (and no others)
+          EXPECTED_STALE_COUNT=2
+          ACTUAL_STALE_COUNT=$(echo "$STALE_OUTPUT" | jq '. | length')
+          
+          if [[ "$ACTUAL_STALE_COUNT" -ne "$EXPECTED_STALE_COUNT" ]]; then
+            echo "Error: Expected $EXPECTED_STALE_COUNT stale branches, but found $ACTUAL_STALE_COUNT." >&2
+            exit 1
+          fi
+          
+          echo "All checks passed for stale branches output."

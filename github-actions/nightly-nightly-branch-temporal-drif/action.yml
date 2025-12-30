@@ -1,0 +1,79 @@
+name: "Nightly Branch Temporal Drift Detector"
+description: "Detects and reports branches that haven't been updated in a specified number of days, helping to prevent repository 'temporal drift'."
+inputs:
+  stale-days:
+    description: "Number of days after which a branch is considered stale."
+    required: true
+    default: "30"
+  ignore-branches:
+    description: "Comma-separated list of branch names (or glob patterns) to ignore (e.g., main,master,develop,feature/*)."
+    required: false
+    default: "main,master,develop"
+outputs:
+  stale-branches:
+    description: "JSON array of stale branch names detected."
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Needed to get all branch history
+
+    - name: Detect Stale Branches
+      id: detect-stale
+      shell: bash
+      run: |
+        STALE_DAYS="${{ inputs.stale-days }}"
+        IGNORE_BRANCHES="${{ inputs.ignore-branches }}"
+        CURRENT_TIMESTAMP=$(date +%s)
+        THRESHOLD_TIMESTAMP=$((CURRENT_TIMESTAMP - (STALE_DAYS * 24 * 60 * 60)))
+        
+        # Convert ignore-branches string to a bash array for easier checking
+        IFS=',' read -r -a IGNORE_ARRAY <<< "$IGNORE_BRANCHES"
+        
+        STALE_BRANCHES=()
+        
+        # Fetch all remote branches and iterate
+        # Using 'git for-each-ref' is more robust for branch names than parsing 'git branch -r'
+        git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | while read -r branch_ref; do
+          # Remove 'origin/' prefix
+          CLEAN_BRANCH=$(echo "$branch_ref" | sed 's/^origin\///')
+          
+          # Skip if it's a HEAD pointer (e.g., origin/HEAD -> origin/main)
+          if [[ "$CLEAN_BRANCH" == "HEAD" ]]; then
+            continue
+          fi
+          
+          IS_IGNORED=false
+          for IGNORED_PATTERN in "${IGNORE_ARRAY[@]}"; do
+            # Use case-insensitive glob matching for ignore patterns
+            if [[ "$CLEAN_BRANCH" == $IGNORED_PATTERN ]]; then
+              IS_IGNORED=true
+              break
+            fi
+          done
+          
+          if $IS_IGNORED; then
+            continue
+          fi
+          
+          # Get the last committer date for the branch as a Unix timestamp
+          LAST_COMMIT_TIMESTAMP=$(git log -1 --format="%ct" "$branch_ref")
+          
+          if [[ -z "$LAST_COMMIT_TIMESTAMP" ]]; then
+            echo "Warning: Could not get last commit timestamp for branch: $CLEAN_BRANCH" >&2
+            continue
+          fi
+          
+          if (( LAST_COMMIT_TIMESTAMP < THRESHOLD_TIMESTAMP )); then
+            STALE_BRANCHES+=("$CLEAN_BRANCH")
+          fi
+        done
+        
+        # Format output as JSON array
+        # Use 'jq -R . | jq -s .' to convert each line to a JSON string and then collect into an array
+        JSON_OUTPUT=$(printf '%s\n' "${STALE_BRANCHES[@]}" | jq -R . | jq -s .)
+        
+        echo "Stale branches detected: $JSON_OUTPUT"
+        echo "stale-branches=$JSON_OUTPUT" >> "$GITHUB_OUTPUT"
