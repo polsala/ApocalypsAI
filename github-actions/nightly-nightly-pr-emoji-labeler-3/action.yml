@@ -1,0 +1,12 @@
+name: "PR Emoji Labeler"
+description: "Auto‑adds labels to PRs based on emojis in the title."
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
+permissions:
+  pull-requests: write
+  contents: read
