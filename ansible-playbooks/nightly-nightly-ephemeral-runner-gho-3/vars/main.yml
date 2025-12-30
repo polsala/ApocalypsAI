@@ -1,0 +1,40 @@
+---
+# Ghost Buster Configuration Variables
+
+# Maximum age in hours for runners to be considered for cleanup
+max_age_hours: 4
+
+# List of providers to check (aws, azure, gcp)
+providers:
+  - aws
+  - azure
+  - gcp
+
+# GitHub Actions runner labels to identify ephemeral runners
+runner_labels:
+  - "ephemeral"
+  - "self-hosted"
+
+# GitHub configuration (required for runner status checking)
+# github_org: "your-org-name"  # Uncomment and set for organization runners
+# github_repo: "owner/repo"   # Uncomment and set for repository runners
+# github_token: "ghp_..."      # Uncomment and set your GitHub token
+
+# Dry run mode (true/false)
+dry_run: false
+
+# Cloud provider specific settings
+aws:
+  region: "us-east-1"
+  tag_key: "Type"
+  tag_value: "github-runner"
+
+azure:
+  resource_group: "github-runners-rg"
+  tag_key: "Type"
+  tag_value: "github-runner"
+
+gcp:
+  project: "your-gcp-project"
+  label_key: "type"
+  label_value: "github-runner"

@@ -1,0 +1,106 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Detects and cleans up orphaned GitHub Actions self-hosted runners
+
+name: Ephemeral Runner Ghost Buster
+hosts: localhost
+connection: local
+gather_facts: false
+
+vars:
+  # Default configuration
+  max_age_hours: "{{ max_age_hours | default(4) }}"
+  providers: "{{ providers | default(['aws', 'azure', 'gcp']) }}"
+  runner_labels: "{{ runner_labels | default(['ephemeral', 'self-hosted']) }}"
+  dry_run: "{{ dry_run | default(false) | bool }}"
+  
+  # State tracking
+  found_runners: []
+  orphaned_runners: []
+  cleanup_actions: []
+
+  # GitHub API base URL
+  github_api_base: "https://api.github.com"
+
+pre_tasks:
+  - name: Display configuration
+    debug:
+      msg: |
+        Ghost Buster Configuration:
+        - Max age: {{ max_age_hours }} hours
+        - Providers: {{ providers | join(', ') }}
+        - Runner labels: {{ runner_labels | join(', ') }}
+        - Dry run: {{ dry_run }}
+
+  - name: Validate providers
+    assert:
+      that:
+        - item in ['aws', 'azure', 'gcp']
+      fail_msg: "Invalid provider: {{ item }}. Must be one of: aws, azure, gcp"
+    loop: "{{ providers }}"
+
+  - name: Check cloud CLI availability
+    command: >
+      {% if item == 'aws' %}aws sts get-caller-identity{% endif %}
+      {% if item == 'azure' %}az account show{% endif %}
+      {% if item == 'gcp' %}gcloud auth list --filter=status:ACTIVE --format='value(account)' | head -n1{% endif %}
+    args:
+      warn: false
+    register: cli_check
+    loop: "{{ providers }}"
+    ignore_errors: true
+
+  - name: Fail if cloud CLI not available
+    fail:
+      msg: "Cloud CLI not available or not authenticated for provider: {{ item.item }}"
+    when: item.rc != 0
+    loop: "{{ cli_check.results }}"
+
+  - name: Create temporary directory for reports
+    tempfile:
+      state: directory
+    register: temp_dir
+
+  - name: Set report file path
+    set_fact:
+      report_file: "{{ temp_dir.path }}/ghost_buster_report.txt"
+
+# Main detection and cleanup tasks
+tasks:
+  - name: Detect orphaned runners across all providers
+    include_tasks: detect_orphans.yml
+    loop: "{{ providers }}"
+    loop_control:
+      loop_var: current_provider
+
+  - name: Generate cleanup report
+    template:
+      src: templates/ghost_buster_report.j2
+      dest: "{{ report_file }}"
+    run_once: true
+
+  - name: Display summary
+    debug:
+      msg: |
+        Ghost Buster Summary:
+        - Total runners found: {{ found_runners | length }}
+        - Orphaned runners: {{ orphaned_runners | length }}
+        - Cleanup actions: {{ cleanup_actions | length }}
+        - Report saved to: {{ report_file }}
+
+  - name: Show detailed report
+    shell: cat "{{ report_file }}"
+    run_once: true
+
+  - name: Perform cleanup actions
+    include_tasks: perform_cleanup.yml
+    when: not dry_run
+    run_once: true
+
+  - name: Show dry run summary
+    debug:
+      msg: |
+        DRY RUN MODE - No changes made.
+        To perform actual cleanup, run with: --extra-vars "dry_run=false"
+    when: dry_run
+    run_once: true

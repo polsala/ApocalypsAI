@@ -1,0 +1,21 @@
+---
+# Azure-specific cleanup
+
+- name: Delete Azure VM
+  shell: >
+    az vm delete 
+    --resource-group {{ orphaned_azure_runner.resource_group }} 
+    --name {{ orphaned_azure_runner.name }} 
+    --yes --no-wait
+  register: azure_delete_result
+  changed_when: true
+
+- name: Add Azure cleanup action to report
+  set_fact:
+    cleanup_actions: "{{ cleanup_actions + [{
+      'provider': 'azure',
+      'action': 'delete_vm',
+      'name': orphaned_azure_runner.name,
+      'resource_group': orphaned_azure_runner.resource_group,
+      'result': azure_delete_result.stdout
+    }] }}"

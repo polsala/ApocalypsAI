@@ -1,0 +1,19 @@
+---
+# AWS-specific cleanup
+
+- name: Terminate AWS EC2 instance
+  shell: >
+    aws ec2 terminate-instances 
+    --instance-ids {{ orphaned_aws_runner.instance_id }}
+  register: aws_terminate_result
+  changed_when: true
+
+- name: Add AWS cleanup action to report
+  set_fact:
+    cleanup_actions: "{{ cleanup_actions + [{
+      'provider': 'aws',
+      'action': 'terminate_instance',
+      'instance_id': orphaned_aws_runner.instance_id,
+      'name': orphaned_aws_runner.name,
+      'result': aws_terminate_result.stdout
+    }] }}"

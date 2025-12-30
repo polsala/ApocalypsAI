@@ -1,0 +1,87 @@
+---
+# Azure-specific orphan detection
+
+- name: Get list of Azure VMs with runner tags
+  shell: >
+    az vm list 
+    --query "[?tags.Type=='github-runner' && powerState=='VM running'].[name,resourceGroup,location,provisioningState,osDisk.createOption]" 
+    --output tsv
+  register: azure_vms
+  changed_when: false
+
+- name: Parse Azure VMs
+  set_fact:
+    azure_runner_vms: >
+      {{ azure_vms.stdout_lines | map('split') | list | map('zip', ['name', 'resource_group', 'location', 'provisioning_state', 'os_disk_type']) | map('items2dict') | list }}
+  when: azure_vms.stdout_lines | length > 0
+
+- name: Set default empty list for Azure VMs
+  set_fact:
+    azure_runner_vms: []
+  when: azure_vms.stdout_lines | length == 0
+
+- name: Check GitHub Actions runner status for Azure VMs
+  block:
+    - name: Get GitHub organization runners
+      uri:
+        url: "{{ github_api_base }}/orgs/{{ github_org }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_org is defined
+
+    - name: Get GitHub repository runners
+      uri:
+        url: "{{ github_api_base }}/repos/{{ github_repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_repo is defined
+
+    - name: Parse GitHub runners
+      set_fact:
+        github_runners: "{{ github_runners_response.json.runners }}"
+
+    - name: Check each Azure VM for orphan status
+      set_fact:
+        found_runners: "{{ found_runners + [item] }}"
+      loop: "{{ azure_runner_vms }}"
+      loop_control:
+        loop_var: azure_vm
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', azure_vm.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', azure_vm.name) | list | first).status != 'online')
+
+    - name: Add orphaned Azure VMs to cleanup list
+      set_fact:
+        orphaned_runners: "{{ orphaned_runners + [{
+          'provider': 'azure',
+          'name': azure_vm.name,
+          'resource_group': azure_vm.resource_group,
+          'location': azure_vm.location,
+          'provisioning_state': azure_vm.provisioning_state,
+          'os_disk_type': azure_vm.os_disk_type,
+          'reason': 'not_found_in_github' if (github_runners | selectattr('name', 'equalto', azure_vm.name) | list | length == 0) else 'offline_in_github'
+        }] }}"
+      loop: "{{ azure_runner_vms }}"
+      loop_control:
+        loop_var: azure_vm
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', azure_vm.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', azure_vm.name) | list | first).status != 'online')
+
+  rescue:
+    - name: Handle GitHub API errors for Azure
+      debug:
+        msg: "Failed to check GitHub runners for Azure VM {{ azure_vm.name }}: {{ github_runners_response | default('Unknown error') }}"
+      loop: "{{ azure_runner_vms }}"
+      loop_control:
+        loop_var: azure_vm
