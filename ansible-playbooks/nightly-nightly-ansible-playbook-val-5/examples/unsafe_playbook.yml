@@ -1,0 +1,22 @@
+- name: Unsafe Playbook Example
+  hosts: all
+  tasks:
+    - name: Run shell command without idempotency
+      shell: echo "hello world" > /tmp/test.txt
+    
+    - name: Use hardcoded password
+      set_fact:
+        password: "secret123"
+    
+    - name: Debug sensitive info
+      debug:
+        msg: "Password is {{ password }}"
+    
+    - name: Create file with world-writable permissions
+      file:
+        path: /tmp/world_writable.txt
+        state: touch
+        mode: '0777'
+    
+    - name: Use raw module
+      raw: apt-get update

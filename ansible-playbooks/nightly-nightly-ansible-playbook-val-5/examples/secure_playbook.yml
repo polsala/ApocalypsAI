@@ -1,0 +1,42 @@
+- name: Secure Web Server Setup
+  hosts: webservers
+  become: true
+  become_user: root
+  vars:
+    web_user: www-data
+    web_group: www-data
+  tasks:
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+    
+    - name: Create web directory
+      file:
+        path: /var/www/html
+        state: directory
+        owner: "{{ web_user }}"
+        group: "{{ web_group }}"
+        mode: '0755'
+    
+    - name: Configure nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      notify: restart nginx
+    
+    - name: Start nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: true
+  
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
