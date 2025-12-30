@@ -1,0 +1,21 @@
+runner:
+  default_timeout: 600
+  enable_rollback: true
+  report_format: html
+  log_level: INFO
+
+validation:
+  check_syntax: true
+  check_idempotency: true
+  check_dependencies: true
+
+environments:
+  dev:
+    inventory: inventories/dev.ini
+    tags: ["development"]
+  test:
+    inventory: inventories/test.ini
+    tags: ["testing"]
+  prod:
+    inventory: inventories/prod.ini
+    tags: ["production"]
