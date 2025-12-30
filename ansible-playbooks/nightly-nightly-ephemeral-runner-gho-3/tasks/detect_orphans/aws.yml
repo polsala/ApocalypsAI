@@ -1,0 +1,88 @@
+---
+# AWS-specific orphan detection
+
+- name: Get list of AWS EC2 instances with runner tags
+  shell: >
+    aws ec2 describe-instances 
+    --filters "Name=tag:Type,Values=github-runner" "Name=instance-state-name,Values=running" 
+    --query 'Reservations[].Instances[].[InstanceId,Tags[?Key==`Name`].Value|[0],LaunchTime,PublicIpAddress,PrivateIpAddress]' 
+    --output text
+  register: aws_instances
+  changed_when: false
+
+- name: Parse AWS instances
+  set_fact:
+    aws_runner_instances: >
+      {{ aws_instances.stdout_lines | map('split') | list | map('zip', ['instance_id', 'name', 'launch_time', 'public_ip', 'private_ip']) | map('items2dict') | list }}
+  when: aws_instances.stdout_lines | length > 0
+
+- name: Set default empty list for AWS instances
+  set_fact:
+    aws_runner_instances: []
+  when: aws_instances.stdout_lines | length == 0
+
+- name: Check GitHub Actions runner status for AWS instances
+  block:
+    - name: Get GitHub organization runners
+      uri:
+        url: "{{ github_api_base }}/orgs/{{ github_org }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_org is defined
+
+    - name: Get GitHub repository runners
+      uri:
+        url: "{{ github_api_base }}/repos/{{ github_repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_repo is defined
+
+    - name: Parse GitHub runners
+      set_fact:
+        github_runners: "{{ github_runners_response.json.runners }}"
+
+    - name: Check each AWS instance for orphan status
+      set_fact:
+        found_runners: "{{ found_runners + [item] }}"
+      loop: "{{ aws_runner_instances }}"
+      loop_control:
+        loop_var: aws_instance
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', aws_instance.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', aws_instance.name) | list | first).status != 'online')
+
+    - name: Add orphaned AWS runners to cleanup list
+      set_fact:
+        orphaned_runners: "{{ orphaned_runners + [{
+          'provider': 'aws',
+          'instance_id': aws_instance.instance_id,
+          'name': aws_instance.name,
+          'launch_time': aws_instance.launch_time,
+          'public_ip': aws_instance.public_ip,
+          'private_ip': aws_instance.private_ip,
+          'reason': 'not_found_in_github' if (github_runners | selectattr('name', 'equalto', aws_instance.name) | list | length == 0) else 'offline_in_github'
+        }] }}"
+      loop: "{{ aws_runner_instances }}"
+      loop_control:
+        loop_var: aws_instance
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', aws_instance.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', aws_instance.name) | list | first).status != 'online')
+
+  rescue:
+    - name: Handle GitHub API errors for AWS
+      debug:
+        msg: "Failed to check GitHub runners for AWS instance {{ aws_instance.name }}: {{ github_runners_response | default('Unknown error') }}"
+      loop: "{{ aws_runner_instances }}"
+      loop_control:
+        loop_var: aws_instance

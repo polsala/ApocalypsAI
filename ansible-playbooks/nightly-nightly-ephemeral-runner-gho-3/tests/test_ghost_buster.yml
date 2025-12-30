@@ -1,0 +1,75 @@
+---
+# Test playbook for Ghost Buster
+
+- name: Test Ghost Buster Functionality
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    test_max_age_hours: 1
+    test_providers: ['aws', 'azure', 'gcp']
+    test_runner_labels: ['ephemeral', 'self-hosted']
+    test_dry_run: true
+
+  tasks:
+    - name: Test configuration validation
+      assert:
+        that:
+          - test_max_age_hours is number
+          - test_providers is list
+          - test_runner_labels is list
+          - test_dry_run is boolean
+        fail_msg: "Configuration validation failed"
+
+    - name: Test provider validation
+      assert:
+        that:
+          - item in ['aws', 'azure', 'gcp']
+        fail_msg: "Invalid provider in test configuration: {{ item }}"
+      loop: "{{ test_providers }}"
+
+    - name: Test dry run mode
+      debug:
+        msg: "Dry run mode is enabled for testing"
+      when: test_dry_run
+
+    - name: Test report generation
+      template:
+        src: templates/ghost_buster_report.j2
+        dest: "/tmp/test_ghost_buster_report.txt"
+      vars:
+        found_runners: []
+        orphaned_runners: []
+        cleanup_actions: []
+        max_age_hours: test_max_age_hours
+        providers: test_providers
+        runner_labels: test_runner_labels
+        dry_run: test_dry_run
+      run_once: true
+
+    - name: Verify test report was created
+      stat:
+        path: "/tmp/test_ghost_buster_report.txt"
+      register: test_report_stat
+
+    - name: Assert test report exists
+      assert:
+        that:
+          - test_report_stat.stat.exists
+        fail_msg: "Test report was not created"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          Ghost Buster Test Summary:
+          - Max age: {{ test_max_age_hours }} hours
+          - Providers: {{ test_providers | join(', ') }}
+          - Runner labels: {{ test_runner_labels | join(', ') }}
+          - Dry run: {{ test_dry_run }}
+          - Test report: /tmp/test_ghost_buster_report.txt
+
+    - name: Clean up test report
+      file:
+        path: "/tmp/test_ghost_buster_report.txt"
+        state: absent

@@ -1,0 +1,20 @@
+---
+# Perform cleanup actions for orphaned runners
+
+- name: Perform AWS instance cleanup
+  include_tasks: tasks/cleanup/aws.yml
+  loop: "{{ orphaned_runners | selectattr('provider', 'equalto', 'aws') | list }}"
+  loop_control:
+    loop_var: orphaned_aws_runner
+
+- name: Perform Azure VM cleanup
+  include_tasks: tasks/cleanup/azure.yml
+  loop: "{{ orphaned_runners | selectattr('provider', 'equalto', 'azure') | list }}"
+  loop_control:
+    loop_var: orphaned_azure_runner
+
+- name: Perform GCP instance cleanup
+  include_tasks: tasks/cleanup/gcp.yml
+  loop: "{{ orphaned_runners | selectattr('provider', 'equalto', 'gcp') | list }}"
+  loop_control:
+    loop_var: orphaned_gcp_runner

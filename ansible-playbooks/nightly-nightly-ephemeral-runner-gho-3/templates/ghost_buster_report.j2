@@ -1,0 +1,75 @@
+# Ephemeral Runner Ghost Buster Report
+
+**Generated:** {{ ansible_date_time.iso8601 }}
+**Configuration:**
+- Max age: {{ max_age_hours }} hours
+- Providers: {{ providers | join(', ') }}
+- Runner labels: {{ runner_labels | join(', ') }}
+- Dry run: {{ dry_run }}
+
+## Summary
+
+- **Total runners found:** {{ found_runners | length }}
+- **Orphaned runners detected:** {{ orphaned_runners | length }}
+- **Cleanup actions performed:** {{ cleanup_actions | length }}
+
+## Found Runners
+
+{% for runner in found_runners %}
+### {{ runner.provider | upper }} - {{ runner.name | default(runner.instance_id) }}
+- **Provider:** {{ runner.provider }}
+- **Name:** {{ runner.name | default('N/A') }}
+- **Status:** Found in cloud but {{ runner.reason }}
+{% if runner.provider == 'aws' %}
+- **Instance ID:** {{ runner.instance_id }}
+- **Launch Time:** {{ runner.launch_time }}
+- **Public IP:** {{ runner.public_ip | default('N/A') }}
+- **Private IP:** {{ runner.private_ip | default('N/A') }}
+{% elif runner.provider == 'azure' %}
+- **Resource Group:** {{ runner.resource_group }}
+- **Location:** {{ runner.location }}
+- **Provisioning State:** {{ runner.provisioning_state }}
+- **OS Disk Type:** {{ runner.os_disk_type }}
+{% elif runner.provider == 'gcp' %}
+- **Zone:** {{ runner.zone }}
+- **Creation Time:** {{ runner.creation_time }}
+- **Labels:** {{ runner.labels }}
+{% endif %}
+
+{% endfor %}
+
+## Cleanup Actions
+
+{% for action in cleanup_actions %}
+### {{ action.provider | upper }} - {{ action.action }}
+- **Provider:** {{ action.provider }}
+- **Action:** {{ action.action }}
+- **Target:** {{ action.name | default(action.instance_id) }}
+{% if action.provider == 'aws' %}
+- **Instance ID:** {{ action.instance_id }}
+{% elif action.provider == 'azure' %}
+- **Resource Group:** {{ action.resource_group }}
+{% elif action.provider == 'gcp' %}
+- **Zone:** {{ action.zone }}
+{% endif %}
+- **Result:** {{ action.result }}
+
+{% endfor %}
+
+## Recommendations
+
+{% if orphaned_runners | length == 0 %}
+✅ **No orphaned runners detected.** Your environment is clean!
+{% else %}
+⚠️  **Orphaned runners were found and cleaned up.** Consider:
+
+1. **Review cleanup scripts** - Ensure proper termination on job completion
+2. **Monitor network reliability** - Check for connectivity issues during shutdown
+3. **Implement health checks** - Add monitoring for runner status
+4. **Adjust age thresholds** - Consider shorter max_age_hours if needed
+{% endif %}
+
+{% if dry_run %}
+**Note:** This was a dry run. No actual cleanup was performed.
+To perform actual cleanup, run with: `--extra-vars "dry_run=false"`
+{% endif %}

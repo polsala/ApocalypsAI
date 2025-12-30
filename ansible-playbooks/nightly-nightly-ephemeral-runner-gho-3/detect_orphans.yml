@@ -1,0 +1,14 @@
+---
+# Detect orphaned runners for a specific provider
+
+- name: Detect orphaned AWS runners
+  include_tasks: tasks/detect_orphans/aws.yml
+  when: current_provider == 'aws'
+
+- name: Detect orphaned Azure runners
+  include_tasks: tasks/detect_orphans/azure.yml
+  when: current_provider == 'azure'
+
+- name: Detect orphaned GCP runners
+  include_tasks: tasks/detect_orphans/gcp.yml
+  when: current_provider == 'gcp'

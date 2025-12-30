@@ -1,0 +1,87 @@
+---
+# GCP-specific orphan detection
+
+- name: Get list of GCP Compute instances with runner labels
+  shell: >
+    gcloud compute instances list 
+    --filter="labels.type=github-runner AND status=RUNNING" 
+    --format="csv(name,zone,status,creationTimestamp,labels)"
+  register: gcp_instances
+  changed_when: false
+
+- name: Parse GCP instances
+  set_fact:
+    gcp_runner_instances: >
+      {{ gcp_instances.stdout_lines[1:] | map('split', ',') | list | map('zip', ['name', 'zone', 'status', 'creation_time', 'labels']) | map('items2dict') | list }}
+  when: gcp_instances.stdout_lines | length > 1
+
+- name: Set default empty list for GCP instances
+  set_fact:
+    gcp_runner_instances: []
+  when: gcp_instances.stdout_lines | length <= 1
+
+- name: Check GitHub Actions runner status for GCP instances
+  block:
+    - name: Get GitHub organization runners
+      uri:
+        url: "{{ github_api_base }}/orgs/{{ github_org }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_org is defined
+
+    - name: Get GitHub repository runners
+      uri:
+        url: "{{ github_api_base }}/repos/{{ github_repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      when: github_repo is defined
+
+    - name: Parse GitHub runners
+      set_fact:
+        github_runners: "{{ github_runners_response.json.runners }}"
+
+    - name: Check each GCP instance for orphan status
+      set_fact:
+        found_runners: "{{ found_runners + [item] }}"
+      loop: "{{ gcp_runner_instances }}"
+      loop_control:
+        loop_var: gcp_instance
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', gcp_instance.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', gcp_instance.name) | list | first).status != 'online')
+
+    - name: Add orphaned GCP instances to cleanup list
+      set_fact:
+        orphaned_runners: "{{ orphaned_runners + [{
+          'provider': 'gcp',
+          'name': gcp_instance.name,
+          'zone': gcp_instance.zone,
+          'status': gcp_instance.status,
+          'creation_time': gcp_instance.creation_time,
+          'labels': gcp_instance.labels,
+          'reason': 'not_found_in_github' if (github_runners | selectattr('name', 'equalto', gcp_instance.name) | list | length == 0) else 'offline_in_github'
+        }] }}"
+      loop: "{{ gcp_runner_instances }}"
+      loop_control:
+        loop_var: gcp_instance
+      when: >
+        (github_org is defined or github_repo is defined) and
+        (github_runners | selectattr('name', 'equalto', gcp_instance.name) | list | length == 0 or
+         (github_runners | selectattr('name', 'equalto', gcp_instance.name) | list | first).status != 'online')
+
+  rescue:
+    - name: Handle GitHub API errors for GCP
+      debug:
+        msg: "Failed to check GitHub runners for GCP instance {{ gcp_instance.name }}: {{ github_runners_response | default('Unknown error') }}"
+      loop: "{{ gcp_runner_instances }}"
+      loop_control:
+        loop_var: gcp_instance

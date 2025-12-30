@@ -1,0 +1,20 @@
+---
+# GCP-specific cleanup
+
+- name: Delete GCP Compute instance
+  shell: >
+    gcloud compute instances delete {{ orphaned_gcp_runner.name }} 
+    --zone={{ orphaned_gcp_runner.zone }} 
+    --quiet
+  register: gcp_delete_result
+  changed_when: true
+
+- name: Add GCP cleanup action to report
+  set_fact:
+    cleanup_actions: "{{ cleanup_actions + [{
+      'provider': 'gcp',
+      'action': 'delete_instance',
+      'name': orphaned_gcp_runner.name,
+      'zone': orphaned_gcp_runner.zone,
+      'result': gcp_delete_result.stdout
+    }] }}"
