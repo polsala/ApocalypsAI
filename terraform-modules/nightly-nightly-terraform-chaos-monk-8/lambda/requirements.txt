@@ -1,0 +1,11 @@
+# AWS Lambda compatible dependencies
+# Note: boto3 is included in AWS Lambda runtime
+# This file is for any additional dependencies
+
+# For this chaos monkey, we only use built-in libraries
+# boto3, json, random, os, logging, time are all built-in
+
+# If you need additional dependencies, add them here
+# Example:
+# requests==2.31.0
+# pyyaml==6.0.1
