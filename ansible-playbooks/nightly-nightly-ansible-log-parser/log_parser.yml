@@ -1,0 +1,60 @@
+---
+- name: Parse and analyze system logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/log_analysis.yml
+
+  tasks:
+    - name: Ensure log files exist
+      stat:
+        path: "{{ item }}"
+      loop: "{{ log_files }}"
+      register: log_file_stats
+      failed_when: "not item_stat.stat.exists"
+
+    - name: Read log files
+      slurp:
+        src: "{{ item.item }}"
+      loop: "{{ log_file_stats.results }}"
+      register: log_contents
+      when: item.item_stat.stat.exists
+
+    - name: Process log entries and find patterns
+      set_fact:
+        parsed_logs: "{{ parsed_logs | default({}) | combine({ item.item: { 'matches': [], 'anomalies': [] } }) }}"
+      loop: "{{ log_contents }}"
+      when: item.content is defined
+
+    - name: Extract patterns from log entries
+      set_fact:
+        parsed_logs: "{{ parsed_logs | combine({ item.item: { 'matches': parsed_logs[item.item].matches + [match.group(0)] } }) }}"
+      loop: "{{ log_contents }}"
+      when: item.content is defined
+      loop_control:
+        loop_var: item
+      vars:
+        log_content: "{{ item.content | b64decode }}"
+        matches: "{{ log_content.splitlines() | select('search', pattern_value) | list }}"
+      with_items: "{{ patterns.keys() | list }}"
+      vars:
+        pattern_name: "{{ item }}"
+        pattern_value: "{{ patterns[item] }}"
+        match: "{{ log_content.splitlines() | regex_search(pattern_value, '\n') }}"
+        matched_lines: "{{ log_content.splitlines() | select('regex', pattern_value) | list }}"
+      when: matched_lines | length > 0
+      set_fact:
+        parsed_logs: "{{ parsed_logs | combine({ item.item: { 'matches': parsed_logs[item.item].matches + matched_lines } }) }}"
+
+    - name: Detect anomalies based on threshold
+      set_fact:
+        parsed_logs: "{{ parsed_logs | combine({ item.item: { 'anomalies': parsed_logs[item.item].matches | groupby('self') | map('dict', {'key': 'value', 'count': 'length'}) | selectattr('count', '>', anomaly_threshold) | map(attribute='value') | list } }) }}"
+      loop: "{{ log_contents }}"
+      when: item.content is defined
+
+    - name: Generate report
+      template:
+        src: templates/log_report.j2
+        dest: "/tmp/log_analysis_report_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+      run_once: true

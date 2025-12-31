@@ -1,0 +1,14 @@
+# Default variables for log analysis
+
+log_files:
+  - /var/log/syslog
+  - /var/log/auth.log
+  - /var/log/kern.log
+
+patterns:
+  ssh_failed_login: "Failed password for invalid user"
+  kernel_panic: "Kernel panic - not syncing"
+  disk_full: "No space left on device"
+  sudo_privilege_escalation: "session opened for user root"
+
+anomaly_threshold: 10
