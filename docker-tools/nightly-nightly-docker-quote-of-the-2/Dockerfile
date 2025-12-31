@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Copy the quote script into the image\nCOPY src/quote.sh /usr/local/bin/quote.sh\n\n# Ensure the script is executable\nRUN chmod +x /usr/local/bin/quote.sh\n\n# Set the script as the container's entrypoint\nENTRYPOINT [\"/usr/local/bin/quote.sh\"]
