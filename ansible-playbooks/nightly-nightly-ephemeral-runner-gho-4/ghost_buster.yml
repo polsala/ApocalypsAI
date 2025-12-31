@@ -1,0 +1,440 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Detects and cleans up orphaned GitHub Actions self-hosted runners
+
+name: Ephemeral Runner Ghost Buster
+hosts: localhost
+connection: local
+become: false
+
+vars_files:
+  - vars/main.yml
+
+# Global variables
+vars:
+  run_timestamp: "{{ ansible_date_time.epoch }}"
+  report_dir: "reports"
+  report_file: "{{ report_dir }}/ghost_buster_report_{{ ansible_date_time.date }}_{{ ansible_date_time.time.replace(':', '-') }}.json"
+
+# Pre-tasks: Setup and validation
+pre_tasks:
+  - name: Ensure reports directory exists
+    ansible.builtin.file:
+      path: "{{ report_dir }}"
+      state: directory
+      mode: '0755'
+
+  - name: Display run information
+    ansible.builtin.debug:
+      msg: |
+        Starting Ghost Buster run at {{ ansible_date_time.iso8601 }}
+        Max age threshold: {{ max_age_hours }} hours
+        Dry run mode: {{ dry_run | default(false) }}
+        Report file: {{ report_file }}
+
+  - name: Validate cloud provider configuration
+    ansible.builtin.assert:
+      that:
+        - (groups.aws is defined and groups.aws | length > 0) or
+          (groups.azure is defined and groups.azure | length > 0) or
+          (groups.gcp is defined and groups.gcp | length > 0)
+      fail_msg: "No cloud providers configured in inventory"
+      success_msg: "Cloud providers detected"
+
+# Main tasks: Detection and cleanup
+tasks:
+  - name: Initialize cleanup report
+    ansible.builtin.set_fact:
+      cleanup_report:
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+        max_age_hours: "{{ max_age_hours }}"
+        dry_run: "{{ dry_run | default(false) }}"
+        providers: {}
+        summary: {}
+
+  # AWS Detection and Cleanup
+  - name: Detect orphaned AWS runners
+    when: groups.aws is defined and groups.aws | length > 0
+    block:
+      - name: Get AWS instances with ephemeral runner tags
+        amazon.aws.ec2_instance_info:
+          region: "{{ hostvars[groups.aws[0]].aws_region | default('us-east-1') }}"
+          filters:
+            "tag-key": "{{ tag_prefix }}*"
+            instance-state-name: ["running", "stopped", "stopping"]
+        register: aws_instances
+
+      - name: Parse AWS instance data
+        ansible.builtin.set_fact:
+          aws_orphaned_instances: >-
+            {% set instances = [] %}
+            {% for reservation in aws_instances.reservations %}
+              {% for instance in reservation.instances %}
+                {% if instance.tags and instance.tags.get('ephemeral-runner-id') %}
+                  {% set instance_data = {
+                    'id': instance.instance_id,
+                    'name': instance.tags.get('Name', 'unknown'),
+                    'tags': instance.tags,
+                    'state': instance.state.name,
+                    'launch_time': instance.launch_time,
+                    'age_hours': ((ansible_date_time.epoch | int) - (instance.launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600
+                  } %}
+                  {% if instance_data.age_hours > max_age_hours %}
+                    {{ instances.append(instance_data) or '' }}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {{ instances }}
+
+      - name: Display AWS orphaned instances
+        ansible.builtin.debug:
+          msg: "Found {{ aws_orphaned_instances | length }} orphaned AWS instances"
+        when: aws_orphaned_instances | length > 0
+
+      - name: Display AWS instances details
+        ansible.builtin.debug:
+          msg: |
+            Instance ID: {{ item.id }}
+            Name: {{ item.name }}
+            State: {{ item.state }}
+            Age: {{ item.age_hours }} hours
+            Tags: {{ item.tags }}
+        loop: "{{ aws_orphaned_instances }}"
+        when: aws_orphaned_instances | length > 0
+
+      - name: Terminate orphaned AWS instances
+        when: aws_orphaned_instances | length > 0
+        block:
+          - name: Confirm AWS termination (unless dry run)
+            ansible.builtin.pause:
+              prompt: |
+                About to terminate {{ aws_orphaned_instances | length }} AWS instances.
+                Continue? (y/N)
+              seconds: 10
+            when: not dry_run | default(false)
+
+          - name: Tag instances for cleanup
+            amazon.aws.ec2_tag:
+              region: "{{ hostvars[groups.aws[0]].aws_region | default('us-east-1') }}"
+              resource: "{{ item.id }}"
+              tags:
+                cleanup-initiated: "{{ ansible_date_time.iso8601 }}"
+                cleanup-reason: "orphaned-ephemeral-runner"
+                cleanup-age-hours: "{{ item.age_hours }}"
+              state: present
+            loop: "{{ aws_orphaned_instances }}"
+            when: not dry_run | default(false)
+
+          - name: Terminate AWS instances
+            amazon.aws.ec2_instance:
+              region: "{{ hostvars[groups.aws[0]].aws_region | default('us-east-1') }}"
+              instance_ids: "{{ item.id }}"
+              state: terminated
+              wait: true
+            loop: "{{ aws_orphaned_instances }}"
+            when: not dry_run | default(false)
+            register: aws_termination_results
+
+          - name: Record AWS termination results
+            ansible.builtin.set_fact:
+              cleanup_report: >-
+                {% set report = cleanup_report.copy() %}
+                {% set provider_data = {
+                  'provider': 'aws',
+                  'detected_count': aws_orphaned_instances | length,
+                  'terminated_count': aws_termination_results.results | selectattr('changed', 'equalto', true) | list | length,
+                  'instances': []
+                } %}
+                {% for item in aws_orphaned_instances %}
+                  {% set instance_info = {
+                    'id': item.id,
+                    'name': item.name,
+                    'age_hours': item.age_hours,
+                    'state': item.state,
+                    'terminated': (aws_termination_results.results | selectattr('instance_ids', 'contains', item.id) | first | default({})).changed | default(false)
+                  } %}
+                  {{ provider_data.instances.append(instance_info) or '' }}
+                {% endfor %}
+                {% set _ = report.providers.update({{ provider_data.provider }}: provider_data) %}
+                {{ report }}
+
+        rescue:
+          - name: Handle AWS termination errors
+            ansible.builtin.debug:
+              msg: "Error during AWS instance termination: {{ ansible_failed_result.msg }}"
+
+    rescue:
+      - name: Handle AWS detection errors
+        ansible.builtin.debug:
+          msg: "Error during AWS instance detection: {{ ansible_failed_result.msg }}"
+
+  # Azure Detection and Cleanup
+  - name: Detect orphaned Azure runners
+    when: groups.azure is defined and groups.azure | length > 0
+    block:
+      - name: Get Azure VMs with ephemeral runner tags
+        azure.azcollection.azure_rm_virtualmachine_info:
+          subscription_id: "{{ hostvars[groups.azure[0]].az_subscription_id }}"
+          resource_group: "{{ hostvars[groups.azure[0]].az_resource_group }}"
+        register: azure_vms
+
+      - name: Parse Azure VM data
+        ansible.builtin.set_fact:
+          azure_orphaned_vms: >-
+            {% set vms = [] %}
+            {% for vm in azure_vms.vms %}
+              {% if vm.tags and vm.tags.get('ephemeral-runner-id') %}
+                {% set vm_data = {
+                  'id': vm.id,
+                  'name': vm.name,
+                  'tags': vm.tags,
+                  'power_state': vm.power_state,
+                  'created_time': vm.time_created,
+                  'age_hours': ((ansible_date_time.epoch | int) - (vm.time_created | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600
+                } %}
+                {% if vm_data.age_hours > max_age_hours %}
+                  {{ vms.append(vm_data) or '' }}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ vms }}
+
+      - name: Display Azure orphaned VMs
+        ansible.builtin.debug:
+          msg: "Found {{ azure_orphaned_vms | length }} orphaned Azure VMs"
+        when: azure_orphaned_vms | length > 0
+
+      - name: Display Azure VMs details
+        ansible.builtin.debug:
+          msg: |
+            VM ID: {{ item.id }}
+            Name: {{ item.name }}
+            Power State: {{ item.power_state }}
+            Age: {{ item.age_hours }} hours
+            Tags: {{ item.tags }}
+        loop: "{{ azure_orphaned_vms }}"
+        when: azure_orphaned_vms | length > 0
+
+      - name: Terminate orphaned Azure VMs
+        when: azure_orphaned_vms | length > 0
+        block:
+          - name: Confirm Azure termination (unless dry run)
+            ansible.builtin.pause:
+              prompt: |
+                About to terminate {{ azure_orphaned_vms | length }} Azure VMs.
+                Continue? (y/N)
+              seconds: 10
+            when: not dry_run | default(false)
+
+          - name: Tag VMs for cleanup
+            azure.azcollection.azure_rm_tag:
+              subscription_id: "{{ hostvars[groups.azure[0]].az_subscription_id }}"
+              resource_uri: "{{ item.id }}"
+              tags:
+                cleanup-initiated: "{{ ansible_date_time.iso8601 }}"
+                cleanup-reason: "orphaned-ephemeral-runner"
+                cleanup-age-hours: "{{ item.age_hours }}"
+              state: present
+            loop: "{{ azure_orphaned_vms }}"
+            when: not dry_run | default(false)
+
+          - name: Delete Azure VMs
+            azure.azcollection.azure_rm_virtualmachine:
+              subscription_id: "{{ hostvars[groups.azure[0]].az_subscription_id }}"
+              resource_group: "{{ hostvars[groups.azure[0]].az_resource_group }}"
+              name: "{{ item.name }}"
+              state: absent
+              remove_data_disks: true
+              remove_os_disk: true
+            loop: "{{ azure_orphaned_vms }}"
+            when: not dry_run | default(false)
+            register: azure_deletion_results
+
+          - name: Record Azure deletion results
+            ansible.builtin.set_fact:
+              cleanup_report: >-
+                {% set report = cleanup_report.copy() %}
+                {% set provider_data = {
+                  'provider': 'azure',
+                  'detected_count': azure_orphaned_vms | length,
+                  'terminated_count': azure_deletion_results.results | selectattr('changed', 'equalto', true) | list | length,
+                  'instances': []
+                } %}
+                {% for item in azure_orphaned_vms %}
+                  {% set instance_info = {
+                    'id': item.id,
+                    'name': item.name,
+                    'age_hours': item.age_hours,
+                    'power_state': item.power_state,
+                    'terminated': (azure_deletion_results.results | selectattr('name', 'equalto', item.name) | first | default({})).changed | default(false)
+                  } %}
+                  {{ provider_data.instances.append(instance_info) or '' }}
+                {% endfor %}
+                {% set _ = report.providers.update({{ provider_data.provider }}: provider_data) %}
+                {{ report }}
+
+        rescue:
+          - name: Handle Azure deletion errors
+            ansible.builtin.debug:
+              msg: "Error during Azure VM deletion: {{ ansible_failed_result.msg }}"
+
+    rescue:
+      - name: Handle Azure detection errors
+        ansible.builtin.debug:
+          msg: "Error during Azure VM detection: {{ ansible_failed_result.msg }}"
+
+  # GCP Detection and Cleanup
+  - name: Detect orphaned GCP runners
+    when: groups.gcp is defined and groups.gcp | length > 0
+    block:
+      - name: Get GCP instances with ephemeral runner tags
+        google.cloud.gcp_compute_instance_template_info:
+          project: "{{ hostvars[groups.gcp[0]].gcp_project_id }}"
+          zone: "{{ hostvars[groups.gcp[0]].gcp_zone }}"
+        register: gcp_instances
+
+      - name: Get GCP instances info
+        google.cloud.gcp_compute_instance_info:
+          project: "{{ hostvars[groups.gcp[0]].gcp_project_id }}"
+          zone: "{{ hostvars[groups.gcp[0]].gcp_zone }}"
+        register: gcp_instances_info
+
+      - name: Parse GCP instance data
+        ansible.builtin.set_fact:
+          gcp_orphaned_instances: >-
+            {% set instances = [] %}
+            {% for instance in gcp_instances_info.instances %}
+              {% if instance.labels and instance.labels.get('ephemeral-runner-id') %}
+                {% set instance_data = {
+                  'id': instance.id,
+                  'name': instance.name,
+                  'labels': instance.labels,
+                  'status': instance.status,
+                  'creation_timestamp': instance.creationTimestamp,
+                  'age_hours': ((ansible_date_time.epoch | int) - (instance.creationTimestamp | to_datetime('%Y-%m-%dT%H:%M:%S.%f%z') | to_timestamp)) // 3600
+                } %}
+                {% if instance_data.age_hours > max_age_hours %}
+                  {{ instances.append(instance_data) or '' }}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ instances }}
+
+      - name: Display GCP orphaned instances
+        ansible.builtin.debug:
+          msg: "Found {{ gcp_orphaned_instances | length }} orphaned GCP instances"
+        when: gcp_orphaned_instances | length > 0
+
+      - name: Display GCP instances details
+        ansible.builtin.debug:
+          msg: |
+            Instance ID: {{ item.id }}
+            Name: {{ item.name }}
+            Status: {{ item.status }}
+            Age: {{ item.age_hours }} hours
+            Labels: {{ item.labels }}
+        loop: "{{ gcp_orphaned_instances }}"
+        when: gcp_orphaned_instances | length > 0
+
+      - name: Terminate orphaned GCP instances
+        when: gcp_orphaned_instances | length > 0
+        block:
+          - name: Confirm GCP termination (unless dry run)
+            ansible.builtin.pause:
+              prompt: |
+                About to terminate {{ gcp_orphaned_instances | length }} GCP instances.
+                Continue? (y/N)
+              seconds: 10
+            when: not dry_run | default(false)
+
+          - name: Add cleanup labels to GCP instances
+            google.cloud.gcp_compute_instance:
+              project: "{{ hostvars[groups.gcp[0]].gcp_project_id }}"
+              zone: "{{ hostvars[groups.gcp[0]].gcp_zone }}"
+              name: "{{ item.name }}"
+              labels:
+                cleanup-initiated: "{{ ansible_date_time.iso8601 }}"
+                cleanup-reason: "orphaned-ephemeral-runner"
+                cleanup-age-hours: "{{ item.age_hours }}"
+              state: present
+            loop: "{{ gcp_orphaned_instances }}"
+            when: not dry_run | default(false)
+
+          - name: Delete GCP instances
+            google.cloud.gcp_compute_instance:
+              project: "{{ hostvars[groups.gcp[0]].gcp_project_id }}"
+              zone: "{{ hostvars[groups.gcp[0]].gcp_zone }}"
+              name: "{{ item.name }}"
+              state: absent
+            loop: "{{ gcp_orphaned_instances }}"
+            when: not dry_run | default(false)
+            register: gcp_deletion_results
+
+          - name: Record GCP deletion results
+            ansible.builtin.set_fact:
+              cleanup_report: >-
+                {% set report = cleanup_report.copy() %}
+                {% set provider_data = {
+                  'provider': 'gcp',
+                  'detected_count': gcp_orphaned_instances | length,
+                  'terminated_count': gcp_deletion_results.results | selectattr('changed', 'equalto', true) | list | length,
+                  'instances': []
+                } %}
+                {% for item in gcp_orphaned_instances %}
+                  {% set instance_info = {
+                    'id': item.id,
+                    'name': item.name,
+                    'age_hours': item.age_hours,
+                    'status': item.status,
+                    'terminated': (gcp_deletion_results.results | selectattr('name', 'equalto', item.name) | first | default({})).changed | default(false)
+                  } %}
+                  {{ provider_data.instances.append(instance_info) or '' }}
+                {% endfor %}
+                {% set _ = report.providers.update({{ provider_data.provider }}: provider_data) %}
+                {{ report }}
+
+        rescue:
+          - name: Handle GCP deletion errors
+            ansible.builtin.debug:
+              msg: "Error during GCP instance deletion: {{ ansible_failed_result.msg }}"
+
+    rescue:
+      - name: Handle GCP detection errors
+        ansible.builtin.debug:
+          msg: "Error during GCP instance detection: {{ ansible_failed_result.msg }}"
+
+# Post-tasks: Reporting and cleanup
+post_tasks:
+  - name: Generate cleanup report
+    ansible.builtin.copy:
+      content: |
+        {
+          "timestamp": "{{ cleanup_report.timestamp }}",
+          "max_age_hours": {{ cleanup_report.max_age_hours }},
+          "dry_run": {{ cleanup_report.dry_run }},
+          "providers": {{ cleanup_report.providers | to_nice_json(indent=2) }},
+          "summary": {
+            "total_detected": {{ cleanup_report.providers.values() | map(attribute='detected_count') | sum | default(0) }},
+            "total_terminated": {{ cleanup_report.providers.values() | map(attribute='terminated_count') | sum | default(0) }},
+            "providers_count": {{ cleanup_report.providers | length }}
+          }
+        }
+      dest: "{{ report_file }}"
+
+  - name: Display final summary
+    ansible.builtin.debug:
+      msg: |
+        Ghost Buster run completed at {{ ansible_date_time.iso8601 }}
+        Total detected: {{ cleanup_report.providers.values() | map(attribute='detected_count') | sum | default(0) }}
+        Total terminated: {{ cleanup_report.providers.values() | map(attribute='terminated_count') | sum | default(0) }}
+        Report saved to: {{ report_file }}
+
+  - name: Display detailed provider summary
+    ansible.builtin.debug:
+      msg: |
+        Provider: {{ item.key }}
+        Detected: {{ item.value.detected_count }}
+        Terminated: {{ item.value.terminated_count }}
+        Instances: {{ item.value.instances | length }}
+    loop: "{{ cleanup_report.providers | dict2items }}"
