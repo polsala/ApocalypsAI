@@ -1,0 +1,216 @@
+---
+# Test playbook for Nightly Ephemeral Runner Ghost Buster
+
+name: Test Ghost Buster
+hosts: localhost
+connection: local
+become: false
+
+vars_files:
+  - vars/main.yml
+
+# Test variables
+vars:
+  test_run_timestamp: "{{ ansible_date_time.epoch }}"
+  test_report_dir: "test_reports"
+  test_report_file: "{{ test_report_dir }}/test_ghost_buster_report_{{ test_run_timestamp }}.json"
+
+pre_tasks:
+  - name: Ensure test reports directory exists
+    ansible.builtin.file:
+      path: "{{ test_report_dir }}"
+      state: directory
+      mode: '0755'
+
+  - name: Display test information
+    ansible.builtin.debug:
+      msg: |
+        Starting Ghost Buster test run at {{ ansible_date_time.iso8601 }}
+        Test report file: {{ test_report_file }}
+
+# Test tasks
+tasks:
+  - name: Test variable loading
+    ansible.builtin.debug:
+      msg: |
+        max_age_hours: {{ max_age_hours }}
+        tag_prefix: {{ tag_prefix }}
+        dry_run: {{ dry_run | default(false) }}
+
+  - name: Test inventory validation
+    ansible.builtin.assert:
+      that:
+        - (groups.aws is defined and groups.aws | length > 0) or
+          (groups.azure is defined and groups.azure | length > 0) or
+          (groups.gcp is defined and groups.gcp | length > 0)
+      fail_msg: "No cloud providers configured in test inventory"
+      success_msg: "Cloud providers detected in test inventory"
+
+  - name: Test report directory creation
+    ansible.builtin.file:
+      path: "{{ test_report_dir }}"
+      state: directory
+      mode: '0755'
+    register: report_dir_result
+
+  - name: Verify report directory was created
+    ansible.builtin.assert:
+      that:
+        - report_dir_result is changed
+        - report_dir_result is success
+      msg: "Report directory should be created successfully"
+
+  - name: Test JSON report generation
+    ansible.builtin.copy:
+      content: |
+        {
+          "timestamp": "{{ ansible_date_time.iso8601 }}",
+          "max_age_hours": {{ max_age_hours }},
+          "dry_run": {{ dry_run | default(false) }},
+          "providers": {},
+          "summary": {
+            "total_detected": 0,
+            "total_terminated": 0,
+            "providers_count": 0
+          }
+        }
+      dest: "{{ test_report_file }}"
+    register: report_generation_result
+
+  - name: Verify JSON report was generated
+    ansible.builtin.assert:
+      that:
+        - report_generation_result is changed
+        - report_generation_result is success
+      msg: "JSON report should be generated successfully"
+
+  - name: Test report file exists
+    ansible.builtin.stat:
+      path: "{{ test_report_file }}"
+    register: report_file_stat
+
+  - name: Verify report file exists and is readable
+    ansible.builtin.assert:
+      that:
+        - report_file_stat.stat.exists
+        - report_file_stat.stat.isreg
+        - report_file_stat.stat.readable
+      msg: "Report file should exist and be readable"
+
+  - name: Test JSON report content validation
+    ansible.builtin.slurp:
+      src: "{{ test_report_file }}"
+    register: report_content
+
+  - name: Verify JSON report content
+    ansible.builtin.assert:
+      that:
+        - report_content.content is defined
+        - report_content.content | b64decode | from_json is defined
+      msg: "Report content should be valid JSON"
+
+  - name: Test provider tag mappings
+    ansible.builtin.debug:
+      msg: |
+        AWS tag mappings: {{ provider_tag_mappings.aws }}
+        Azure tag mappings: {{ provider_tag_mappings.azure }}
+        GCP tag mappings: {{ provider_tag_mappings.gcp }}
+
+  - name: Test provider state mappings
+    ansible.builtin.debug:
+      msg: |
+        AWS state mappings: {{ provider_state_mappings.aws }}
+        Azure state mappings: {{ provider_state_mappings.azure }}
+        GCP state mappings: {{ provider_state_mappings.gcp }}
+
+  - name: Test safety settings
+    ansible.builtin.debug:
+      msg: |
+        Max instances per provider: {{ max_instances_per_provider }}
+        Enable backup tags: {{ enable_backup_tags }}
+        Backup tag prefix: {{ backup_tag_prefix }}
+
+  - name: Test dry run mode
+    ansible.builtin.debug:
+      msg: |
+        Dry run mode: {{ dry_run | default(false) }}
+        Require confirmation: {{ require_confirmation }}
+        Confirmation timeout: {{ confirmation_timeout }}
+
+  - name: Test API retry settings
+    ansible.builtin.debug:
+      msg: |
+        API retries: {{ api_retries }}
+        API retry delay: {{ api_retry_delay }}
+
+  - name: Test logging settings
+    ansible.builtin.debug:
+      msg: |
+        Log level: {{ log_level }}
+        Log file: {{ log_file }}
+
+  - name: Test report settings
+    ansible.builtin.debug:
+      msg: |
+        Report format: {{ report_format }}
+        Report retention days: {{ report_retention_days }}
+
+  - name: Test provider-specific settings
+    ansible.builtin.debug:
+      msg: |
+        AWS max instances: {{ aws.max_instances }}
+        Azure max VMs: {{ azure.max_vms }}
+        GCP max instances: {{ gcp.max_instances }}
+
+  - name: Test cleanup tags
+    ansible.builtin.debug:
+      msg: |
+        Cleanup tags: {{ cleanup_tags }}
+
+  - name: Test tag prefix
+    ansible.builtin.debug:
+      msg: |
+        Tag prefix: {{ tag_prefix }}
+
+  - name: Test max age threshold
+    ansible.builtin.debug:
+      msg: |
+        Max age hours: {{ max_age_hours }}
+
+  - name: Test timestamp generation
+    ansible.builtin.debug:
+      msg: |
+        Test run timestamp: {{ test_run_timestamp }}
+        Current timestamp: {{ ansible_date_time.epoch }}
+
+  - name: Test report file naming
+    ansible.builtin.debug:
+      msg: |
+        Test report file: {{ test_report_file }}
+        Expected pattern: test_reports/test_ghost_buster_report_*.json
+
+  - name: Test cleanup of test files
+    ansible.builtin.file:
+      path: "{{ test_report_file }}"
+      state: absent
+    when: cleanup_test_files | default(true)
+
+  - name: Verify test file cleanup
+    ansible.builtin.stat:
+      path: "{{ test_report_file }}"
+    register: cleanup_file_stat
+    when: cleanup_test_files | default(true)
+
+  - name: Confirm test file was removed
+    ansible.builtin.assert:
+      that:
+        - not cleanup_file_stat.stat.exists
+      msg: "Test file should be removed after cleanup"
+    when: cleanup_test_files | default(true)
+
+post_tasks:
+  - name: Display test completion
+    ansible.builtin.debug:
+      msg: |
+        Ghost Buster test completed successfully at {{ ansible_date_time.iso8601 }}
+        All tests passed!

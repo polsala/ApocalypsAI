@@ -1,0 +1,86 @@
+# Nightly Ephemeral Runner Ghost Buster Variables
+
+# Maximum age in hours before considering a runner orphaned
+max_age_hours: 4
+
+# Tag prefix used to identify ephemeral runners
+# This should match the tag prefix used in your runner deployment
+tag_prefix: "ephemeral-runner"
+
+# Additional tags to apply during cleanup
+cleanup_tags:
+  cleanup-initiated: "{{ ansible_date_time.iso8601 }}"
+  cleanup-reason: "orphaned-ephemeral-runner"
+
+# Dry run mode (set to true to test without making changes)
+dry_run: false
+
+# Confirmation settings
+require_confirmation: true
+confirmation_timeout: 10
+
+# Retry settings for API calls
+api_retries: 3
+api_retry_delay: 5
+
+# Logging settings
+log_level: "INFO"
+log_file: "ghost_buster.log"
+
+# Report settings
+report_format: "json"
+report_retention_days: 30
+
+# Safety settings
+max_instances_per_provider: 100
+enable_backup_tags: true
+backup_tag_prefix: "backup-"
+
+# Provider-specific settings
+aws:
+  # AWS-specific configuration
+  max_instances: 50
+  termination_protection: false
+  
+azure:
+  # Azure-specific configuration
+  max_vms: 50
+  delete_disks: true
+  delete_nics: true
+  
+gcp:
+  # GCP-specific configuration
+  max_instances: 50
+  delete_disks: true
+  delete_addresses: true
+
+# Tag mappings for different providers
+# AWS uses tags, Azure uses tags, GCP uses labels
+provider_tag_mappings:
+  aws:
+    runner_id: "ephemeral-runner-id"
+    runner_type: "runner-type"
+    created_by: "created-by"
+  azure:
+    runner_id: "ephemeral-runner-id"
+    runner_type: "runner-type"
+    created_by: "created-by"
+  gcp:
+    runner_id: "ephemeral-runner-id"
+    runner_type: "runner-type"
+    created_by: "created-by"
+
+# State mappings for different providers
+provider_state_mappings:
+  aws:
+    running: ["running"]
+    stopped: ["stopped", "stopping"]
+    terminated: ["terminated", "shutting-down"]
+  azure:
+    running: ["VM running"]
+    stopped: ["VM deallocated", "VM stopped"]
+    terminated: ["VM deleted"]
+  gcp:
+    running: ["RUNNING"]
+    stopped: ["TERMINATED", "STOPPING"]
+    terminated: ["DELETED"]
