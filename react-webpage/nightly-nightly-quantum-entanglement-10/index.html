@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --panel-bg: #1a1d24;
+            --text-color: #e0e6ed;
+            --accent-color: #4f46e5;
+            --grid-color: #2a2f3a;
+            --wire-color: #3b82f6;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--grid-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--grid-color);
+            background-color: var(--panel-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .circuit-area {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1d24 0%, #0f1115 100%);
+        }
+
+        .gate-palette {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .gate-card {
+            background-color: #232731;
+            border: 1px solid var(--grid-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .gate-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .gate-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #93c5fd;
+        }
+
+        .gate-desc {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #4338ca;
+        }
+
+        button.secondary {
+            background-color: #334155;
+        }
+
+        button.secondary:hover {
+            background-color: #475569;
+        }
+
+        .status-panel {
+            background-color: #232731;
+            border: 1px solid var(--grid-color);
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+        }
+
+        .state-display {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background-color: #0f1115;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--grid-color);
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+
+        .entanglement-visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .wire-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .qubit-label {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #64748b;
+            pointer-events: none;
+        }
+
+        .circuit-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .circuit-slot {
+            border: 1px dashed var(--grid-color);
+            border-radius: 4px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            font-size: 12px;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .circuit-slot.drag-over {
+            border-color: var(--accent-color);
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .gate-component {
+            background-color: #232731;
+            border: 2px solid var(--wire-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #93c5fd;
+            cursor: move;
+            user-select: none;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: #0f1115;
+            border: 1px solid var(--grid-color);
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 12px;
+            color: #e0e6ed;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: 30vh;
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 100;
+                border-right: none;
+                border-bottom: 1px solid var(--grid-color);
+            }
+            .main-content {
+                margin-top: 30vh;
+            }
+            .gate-palette {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <h2>Quantum Toolbox</h2>
+            <div class="gate-palette">
+                <div class="gate-card" draggable="true" data-gate="H">
+                    <div class="gate-name">Hadamard (H)</div>
+                    <div class="gate-desc">Creates superposition</div>
+                </div>
+                <div class="gate-card" draggable="true" data-gate="X">
+                    <div class="gate-name">Pauli-X (X)</div>
+                    <div class="gate-desc">Quantum NOT gate</div>
+                </div>
+                <div class="gate-card" draggable="true" data-gate="Y">
+                    <div class="gate-name">Pauli-Y (Y)</div>
+                    <div class="gate-desc">Y-axis rotation</div>
+                </div>
+                <div class="gate-card" draggable="true" data-gate="Z">
+                    <div class="gate-name">Pauli-Z (Z)</div>
+                    <div class="gate-desc">Z-axis rotation</div>
+                </div>
+                <div class="gate-card" draggable="true" data-gate="CNOT">
+                    <div class="gate-name">CNOT</div>
+                    <div class="gate-desc">Creates entanglement</div>
+                </div>
+                <div class="gate-card" draggable="true" data-gate="S">
+                    <div class="gate-name">Phase (S)</div>
+                    <div class="gate-desc">Adds phase</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="btn-simulate">Simulate</button>
+                <button id="btn-measure" class="secondary">Measure</button>
+                <button id="btn-clear" class="secondary">Clear</button>
+            </div>
+            
+            <div class="status-panel">
+                <h3>Quantum State</h3>
+                <div class="state-display" id="state-display">|00⟩ → [1.00, 0.00, 0.00, 0.00]</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <h1>🌌 Nightly Quantum Entanglement Simulator</h1>
+                <div style="font-size: 12px; color: #64748b;">Drag gates to build circuits • Observe entanglement • Learn quantum computing</div>
+            </div>
+            
+            <div class="circuit-area">
+                <div class="wire-grid" id="wire-grid"></div>
+                <div class="entanglement-visualizer" id="entanglement-visualizer"></div>
+                <div class="circuit-grid" id="circuit-grid"></div>
+                <div class="tooltip" id="tooltip"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Quantum Circuit Simulator - Vanilla JavaScript Implementation
+        
+        class QuantumSimulator {
+            constructor() {
+                this.qubits = 2;
+                this.circuit = [];
+                this.state = [1, 0, 0, 0]; // |00⟩
+                this.entanglement = false;
+                this.init();
+            }
+
+            init() {
+                this.setupDragAndDrop();
+                this.setupEventListeners();
+                this.drawWires();
+                this.updateStateDisplay();
+            }
+
+            setupDragAndDrop() {
+                const grid = document.getElementById('circuit-grid');
+                const gateCards = document.querySelectorAll('.gate-card');
+
+                gateCards.forEach(card => {
+                    card.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', card.dataset.gate);
+                        e.dataTransfer.effectAllowed = 'copy';
+                    });
+                });
+
+                grid.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    const target = e.target.closest('.circuit-slot');
+                    if (target) {
+                        target.classList.add('drag-over');
+                    }
+                });
+
+                grid.addEventListener('dragleave', (e) => {
+                    const target = e.target.closest('.circuit-slot');
+                    if (target) {
+                        target.classList.remove('drag-over');
+                    }
+                });
+
+                grid.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const target = e.target.closest('.circuit-slot');
+                    if (target) {
+                        target.classList.remove('drag-over');
+                        const gateType = e.dataTransfer.getData('text/plain');
+                        this.addGateToSlot(target, gateType);
+                    }
+                });
+            }
+
+            addGateToSlot(slot, gateType) {
+                // Clear existing gate
+                slot.innerHTML = '';
+                
+                const gateElement = document.createElement('div');
+                gateElement.className = 'gate-component';
+                gateElement.textContent = gateType;
+                gateElement.dataset.gate = gateType;
+                
+                // Add tooltip on hover
+                gateElement.addEventListener('mouseenter', (e) => {
+                    this.showTooltip(e, this.getGateDescription(gateType));
+                });
+                
+                gateElement.addEventListener('mouseleave', () => {
+                    this.hideTooltip();
+                });
+
+                slot.appendChild(gateElement);
+            }
+
+            getGateDescription(gateType) {
+                const descriptions = {
+                    'H': 'Hadamard Gate: Creates superposition. Transforms |0⟩ to (|0⟩ + |1⟩)/√2 and |1⟩ to (|0⟩ - |1⟩)/√2',
+                    'X': 'Pauli-X Gate: Quantum NOT operation. Flips |0⟩ to |1⟩ and |1⟩ to |0⟩',
+                    'Y': 'Pauli-Y Gate: Y-axis rotation. Applies i to the imaginary component',
+                    'Z': 'Pauli-Z Gate: Z-axis rotation. Adds phase without changing probability',
+                    'CNOT': 'Controlled-NOT: Creates entanglement between two qubits',
+                    'S': 'Phase Gate: Adds π/2 phase to |1⟩ state'
+                };
+                return descriptions[gateType] || 'Unknown gate';
+            }
+
+            setupEventListeners() {
+                document.getElementById('btn-simulate').addEventListener('click', () => {
+                    this.simulateCircuit();
+                });
+
+                document.getElementById('btn-measure').addEventListener('click', () => {
+                    this.measureCircuit();
+                });
+
+                document.getElementById('btn-clear').addEventListener('click', () => {
+                    this.clearCircuit();
+                });
+            }
+
+            drawWires() {
+                const grid = document.getElementById('wire-grid');
+                grid.innerHTML = '';
+                
+                for (let i = 0; i < this.qubits; i++) {
+                    const wire = document.createElement('div');
+                    wire.style.position = 'absolute';
+                    wire.style.top = `${(i + 1) * 20}%`;
+                    wire.style.left = '50px';
+                    wire.style.right = '50px';
+                    wire.style.height = '2px';
+                    wire.style.backgroundColor = '#3b82f6';
+                    wire.style.opacity = '0.3';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'qubit-label';
+                    label.style.top = `${(i + 1) * 20}%`;
+                    label.textContent = `|q${i}⟩`;
+                    
+                    grid.appendChild(wire);
+                    grid.appendChild(label);
+                }
+            }
+
+            simulateCircuit() {
+                // Reset state
+                this.state = [1, 0, 0, 0];
+                this.entanglement = false;
+                
+                // Get all gates from the circuit
+                const slots = document.querySelectorAll('.circuit-slot');
+                const gates = [];
+                
+                slots.forEach(slot => {
+                    const gateElement = slot.querySelector('.gate-component');
+                    if (gateElement) {
+                        gates.push(gateElement.dataset.gate);
+                    }
+                });
+                
+                // Apply gates
+                gates.forEach(gate => {
+                    this.applyGate(gate);
+                });
+                
+                this.updateStateDisplay();
+                this.visualizeEntanglement();
+            }
+
+            applyGate(gateType) {
+                switch (gateType) {
+                    case 'H':
+                        this.applyHadamard();
+                        break;
+                    case 'X':
+                        this.applyPauliX();
+                        break;
+                    case 'Y':
+                        this.applyPauliY();
+                        break;
+                    case 'Z':
+                        this.applyPauliZ();
+                        break;
+                    case 'CNOT':
+                        this.applyCNOT();
+                        break;
+                    case 'S':
+                        this.applyPhase();
+                        break;
+                }
+            }
+
+            applyHadamard() {
+                // H gate on first qubit
+                const newState = [
+                    (this.state[0] + this.state[1]) / Math.sqrt(2),
+                    (this.state[0] - this.state[1]) / Math.sqrt(2),
+                    (this.state[2] + this.state[3]) / Math.sqrt(2),
+                    (this.state[2] - this.state[3]) / Math.sqrt(2)
+                ];
+                this.state = newState;
+            }
+
+            applyPauliX() {
+                // X gate on first qubit
+                const newState = [
+                    this.state[1],
+                    this.state[0],
+                    this.state[3],
+                    this.state[2]
+                ];
+                this.state = newState;
+            }
+
+            applyPauliY() {
+                // Y gate on first qubit (simplified)
+                const newState = [
+                    -this.state[1],
+                    this.state[0],
+                    -this.state[3],
+                    this.state[2]
+                ];
+                this.state = newState;
+            }
+
+            applyPauliZ() {
+                // Z gate on first qubit
+                const newState = [
+                    this.state[0],
+                    -this.state[1],
+                    this.state[2],
+                    -this.state[3]
+                ];
+                this.state = newState;
+            }
+
+            applyCNOT() {
+                // CNOT gate (control: first qubit, target: second qubit)
+                const newState = [
+                    this.state[0],
+                    this.state[1],
+                    this.state[3],
+                    this.state[2]
+                ];
+                this.state = newState;
+                this.entanglement = true;
+            }
+
+            applyPhase() {
+                // S gate on first qubit
+                const newState = [
+                    this.state[0],
+                    this.state[1] * 1j, // Simplified
+                    this.state[2],
+                    this.state[3] * 1j
+                ];
+                this.state = newState;
+            }
+
+            measureCircuit() {
+                // Simulate measurement collapse
+                const probabilities = this.state.map(amp => Math.abs(amp) ** 2);
+                const total = probabilities.reduce((a, b) => a + b, 0);
+                
+                // Normalize
+                const normalized = probabilities.map(p => p / total);
+                
+                // Random measurement
+                const rand = Math.random();
+                let cumulative = 0;
+                let result = 0;
+                
+                for (let i = 0; i < normalized.length; i++) {
+                    cumulative += normalized[i];
+                    if (rand <= cumulative) {
+                        result = i;
+                        break;
+                    }
+                }
+                
+                // Collapse state
+                this.state = [0, 0, 0, 0];
+                this.state[result] = 1;
+                
+                this.updateStateDisplay();
+                this.showMeasurementResult(result);
+            }
+
+            showMeasurementResult(result) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.opacity = '1';
+                tooltip.style.left = '50px';
+                tooltip.style.top = '50px';
+                tooltip.innerHTML = `
+                    <strong>Measurement Result:</strong><br>
+                    Collapsed to state |${result.toString(2).padStart(2, '0')}⟩
+                `;
+                
+                setTimeout(() => {
+                    tooltip.style.opacity = '0';
+                }, 3000);
+            }
+
+            updateStateDisplay() {
+                const display = document.getElementById('state-display');
+                const stateStr = this.state.map(val => val.toFixed(2)).join(', ');
+                const basisStates = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+                
+                let displayText = '';
+                for (let i = 0; i < this.state.length; i++) {
+                    displayText += `${basisStates[i]} → ${this.state[i].toFixed(2)}\n`;
+                }
+                
+                display.textContent = displayText;
+            }
+
+            visualizeEntanglement() {
+                const visualizer = document.getElementById('entanglement-visualizer');
+                visualizer.innerHTML = '';
+                
+                if (this.entanglement) {
+                    // Create entanglement visualization
+                    for (let i = 0; i < 50; i++) {
+                        const particle = document.createElement('div');
+                        particle.style.position = 'absolute';
+                        particle.style.width = '4px';
+                        particle.style.height = '4px';
+                        particle.style.backgroundColor = '#4f46e5';
+                        particle.style.borderRadius = '50%';
+                        particle.style.left = Math.random() * 100 + '%';
+                        particle.style.top = Math.random() * 100 + '%';
+                        particle.style.animation = `float ${2 + Math.random() * 3}s infinite`;
+                        visualizer.appendChild(particle);
+                    }
+                    
+                    // Add CSS animation
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes float {
+                            0% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+                            50% { opacity: 0.8; }
+                            100% { transform: translateY(-20px) rotate(360deg); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+
+            clearCircuit() {
+                const slots = document.querySelectorAll('.circuit-slot');
+                slots.forEach(slot => {
+                    slot.innerHTML = '';
+                });
+                this.state = [1, 0, 0, 0];
+                this.entanglement = false;
+                this.updateStateDisplay();
+                document.getElementById('entanglement-visualizer').innerHTML = '';
+            }
+
+            showTooltip(e, text) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.opacity = '1';
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+                tooltip.innerHTML = `<strong>Gate Info:</strong><br>${text}`;
+            }
+
+            hideTooltip() {
+                document.getElementById('tooltip').style.opacity = '0';
+            }
+        }
+
+        // Initialize simulator when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuantumSimulator();
+        });
+    </script>
+</body>
+</html>
