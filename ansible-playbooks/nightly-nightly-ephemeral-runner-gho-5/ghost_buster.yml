@@ -1,0 +1,70 @@
+---
+- name: Ephemeral Runner Ghost Buster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Configuration
+    max_instance_age_hours: 6
+    cleanup_enabled: true
+    
+    # State tracking
+    detected_orphans: []
+    terminated_instances: []
+    
+  tasks:
+    - name: Display banner
+      debug:
+        msg: |
+          =========================================
+          Nightly Ephemeral Runner Ghost Buster
+          =========================================
+          Scanning for orphaned instances...
+
+    - name: Detect orphaned AWS instances
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: aws
+        provider_tag: "aws"
+      when: groups.aws is defined and groups.aws | length > 0
+
+    - name: Detect orphaned Azure instances
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: azure
+        provider_tag: "azure"
+      when: groups.azure is defined and groups.azure | length > 0
+
+    - name: Detect orphaned GCP instances
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: gcp
+        provider_tag: "gcp"
+      when: groups.gcp is defined and groups.gcp | length > 0
+
+    - name: Display detected orphans summary
+      debug:
+        msg: |
+          Detected {{ detected_orphans | length }} orphaned instances:
+          {% for instance in detected_orphans %}
+          - {{ instance.provider }}: {{ instance.name }} ({{ instance.age_hours }}h old)
+          {% endfor %}
+      when: detected_orphans | length > 0
+
+    - name: Display no orphans found
+      debug:
+        msg: "No orphaned instances detected. All clean!"
+      when: detected_orphans | length == 0
+
+    - name: Generate cleanup report
+      template:
+        src: templates/ghost_buster_report.j2
+        dest: ghost_buster_report_{{ ansible_date_time.epoch }}.txt
+      when: detected_orphans | length > 0
+
+    - name: Display completion banner
+      debug:
+        msg: |
+          =========================================
+          Ghost Buster Complete
+          =========================================
+          Report generated: ghost_buster_report_{{ ansible_date_time.epoch }}.txt

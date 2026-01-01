@@ -1,0 +1,56 @@
+=========================================
+Nightly Ephemeral Runner Ghost Buster Report
+=========================================
+
+Generated: {{ ansible_date_time.iso8601 }}
+
+SUMMARY
+-------
+Total orphaned instances detected: {{ detected_orphans | length }}
+
+DETAILED FINDINGS
+-----------------
+{% for instance in detected_orphans %}
+Instance {{ loop.index }}:
+  Provider: {{ instance.provider }}
+  Name: {{ instance.name }}
+  ID: {{ instance.id }}
+  Age: {{ instance.age_hours }} hours
+  State: {{ instance.state }}
+  {% if instance.age_hours > 24 %}
+  Status: CRITICAL - Over 24 hours old
+  {% elif instance.age_hours > 12 %}
+  Status: WARNING - Over 12 hours old
+  {% else %}
+  Status: INFO - Recently orphaned
+  {% endif %}
+
+{% endfor %}
+
+COST IMPLICATIONS
+-----------------
+Estimated cost savings if cleaned up:
+{% set total_hours = detected_orphans | sum(attribute='age_hours') %}
+{% set estimated_cost = (total_hours * 0.02) | round(2) %}
+- Total orphaned hours: {{ total_hours }}
+- Estimated savings (assuming $0.02/hour): ${{ estimated_cost }}
+
+RECOMMENDATIONS
+---------------
+{% if detected_orphans | length > 0 %}
+1. Review the detected instances above
+2. Verify they are truly orphaned (not in use)
+3. Terminate them using your cloud provider's console or CLI
+4. Consider implementing automated cleanup policies
+{% else %}
+1. No action required - no orphaned instances found
+2. Continue monitoring for future orphaned instances
+{% endif %}
+
+NEXT STEPS
+----------
+- Run this playbook daily via cron
+- Set up alerts for instances older than 12 hours
+- Implement automated termination for instances older than 24 hours
+
+=========================================

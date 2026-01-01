@@ -1,0 +1,86 @@
+---
+# Detect orphaned instances for a specific provider
+- name: Get current timestamp for age calculation
+  set_fact:
+    current_timestamp: "{{ ansible_date_time.epoch | int }}"
+
+- name: Get AWS instances (if provider is aws)
+  ec2_instance_info:
+    region: "{{ aws_region | default('us-east-1') }}"
+    filters:
+      "tag:Name": "*runner*"
+      instance-state-name: ["running", "stopped"]
+  register: aws_instances
+  when: provider == "aws"
+  ignore_errors: true
+
+- name: Get Azure VMs (if provider is azure)
+  azure_rm_virtualmachine_info:
+    resource_group: "{{ azure_resource_group | default('ephemeral-rg') }}"
+  register: azure_vms
+  when: provider == "azure"
+  ignore_errors: true
+
+- name: Get GCP instances (if provider is gcp)
+  gcp_compute_instance_info:
+    project: "{{ gcp_project | default('ephemeral-project') }}"
+    zone: "{{ gcp_zone | default('us-central1-a') }}"
+    filters:
+      - name: "*runner*"
+  register: gcp_instances
+  when: provider == "gcp"
+  ignore_errors: true
+
+- name: Process AWS instances
+  set_fact:
+    detected_orphans: "{{ detected_orphans + [{
+      'provider': 'aws',
+      'name': instance.tags.Name,
+      'id': instance.instance_id,
+      'age_hours': ((current_timestamp - (instance.launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600),
+      'state': instance.state.name
+    }] }}"
+  loop: "{{ aws_instances.instances | default([]) }}"
+  loop_control:
+    label: "{{ item.instance_id }}"
+  when: >
+    provider == "aws" and 
+    aws_instances is defined and 
+    aws_instances.instances is defined and 
+    (current_timestamp - (item.launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600 > max_instance_age_hours
+
+- name: Process Azure VMs
+  set_fact:
+    detected_orphans: "{{ detected_orphans + [{
+      'provider': 'azure',
+      'name': vm.name,
+      'id': vm.id,
+      'age_hours': ((current_timestamp - (vm.time_created | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600),
+      'state': vm.provisioning_state
+    }] }}"
+  loop: "{{ azure_vms.ansible_facts.azure_vm | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: >
+    provider == "azure" and 
+    azure_vms is defined and 
+    azure_vms.ansible_facts.azure_vm is defined and 
+    (current_timestamp - (item.time_created | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600 > max_instance_age_hours
+
+- name: Process GCP instances
+  set_fact:
+    detected_orphans: "{{ detected_orphans + [{
+      'provider': 'gcp',
+      'name': instance.name,
+      'id': instance.id,
+      'age_hours': ((current_timestamp - (instance.creation_timestamp | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600),
+      'state': instance.status
+    }] }}"
+  loop: "{{ gcp_instances.instances | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: >
+    provider == "gcp" and 
+    gcp_instances is defined and 
+    gcp_instances.instances is defined and 
+    (current_timestamp - (item.creation_timestamp | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) // 3600 > max_instance_age_hours
