@@ -1,0 +1,19 @@
+.mood-ring-container {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: #444; /* Outer ring effect */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px;
+}
+
+.mood-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  transition: background-color 0.5s ease-in-out;
+  border: 5px solid rgba(255, 255, 255, 0.2); /* Inner glow */
+}
