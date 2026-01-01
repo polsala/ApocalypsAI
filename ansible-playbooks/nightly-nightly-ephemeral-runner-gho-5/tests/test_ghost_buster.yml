@@ -1,0 +1,52 @@
+---
+- name: Test Ghost Buster Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    max_instance_age_hours: 1
+    cleanup_enabled: false
+    
+  tasks:
+    - name: Display test banner
+      debug:
+        msg: |
+          =========================================
+          Testing Ghost Buster Playbook
+          =========================================
+
+    - name: Test with mock AWS inventory
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: aws
+        provider_tag: "aws"
+      when: groups.aws is defined and groups.aws | length > 0
+
+    - name: Test with mock Azure inventory
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: azure
+        provider_tag: "azure"
+      when: groups.azure is defined and groups.azure | length > 0
+
+    - name: Test with mock GCP inventory
+      include_tasks: tasks/detect_orphans.yml
+      vars:
+        provider: gcp
+        provider_tag: "gcp"
+      when: groups.gcp is defined and groups.gcp | length > 0
+
+    - name: Verify no orphans detected in test environment
+      assert:
+        that:
+          - detected_orphans is defined
+          - detected_orphans | length == 0
+        fail_msg: "Orphans detected in test environment - this should not happen"
+        success_msg: "Test environment clean - no orphans detected"
+
+    - name: Display test completion
+      debug:
+        msg: |
+          =========================================
+          Ghost Buster Test Complete
+          =========================================
+          All tests passed successfully!
