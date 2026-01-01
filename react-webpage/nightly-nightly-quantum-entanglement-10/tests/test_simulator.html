@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-suite {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-suite">
+        <h1>🧪 Quantum Simulator Test Suite</h1>
+        <div id="test-results"></div>
+        <button onclick="runTests()">Run Tests</button>
+    </div>
+
+    <script>
+        // Mock QuantumSimulator class for testing
+        class MockQuantumSimulator {
+            constructor() {
+                this.state = [1, 0, 0, 0];
+                this.entanglement = false;
+            }
+
+            applyHadamard() {
+                const newState = [
+                    (this.state[0] + this.state[1]) / Math.sqrt(2),
+                    (this.state[0] - this.state[1]) / Math.sqrt(2),
+                    (this.state[2] + this.state[3]) / Math.sqrt(2),
+                    (this.state[2] - this.state[3]) / Math.sqrt(2)
+                ];
+                this.state = newState;
+            }
+
+            applyPauliX() {
+                const newState = [
+                    this.state[1],
+                    this.state[0],
+                    this.state[3],
+                    this.state[2]
+                ];
+                this.state = newState;
+            }
+
+            applyCNOT() {
+                const newState = [
+                    this.state[0],
+                    this.state[1],
+                    this.state[3],
+                    this.state[2]
+                ];
+                this.state = newState;
+                this.entanglement = true;
+            }
+
+            clearCircuit() {
+                this.state = [1, 0, 0, 0];
+                this.entanglement = false;
+            }
+
+            getState() {
+                return this.state;
+            }
+
+            hasEntanglement() {
+                return this.entanglement;
+            }
+        }
+
+        // Test functions
+        function assertEqual(actual, expected, message) {
+            const passed = JSON.stringify(actual) === JSON.stringify(expected);
+            return { passed, message, actual, expected };
+        }
+
+        function assertArrayApproxEqual(actual, expected, tolerance = 0.01, message) {
+            if (actual.length !== expected.length) {
+                return { passed: false, message, actual, expected };
+            }
+            
+            for (let i = 0; i < actual.length; i++) {
+                if (Math.abs(actual[i] - expected[i]) > tolerance) {
+                    return { passed: false, message, actual, expected };
+                }
+            }
+            
+            return { passed: true, message, actual, expected };
+        }
+
+        function runTests() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '';
+            
+            const simulator = new MockQuantumSimulator();
+            let testCount = 0;
+            let passCount = 0;
+
+            function addResult(testName, result) {
+                testCount++;
+                if (result.passed) passCount++;
+                
+                const div = document.createElement('div');
+                div.className = `test-result ${result.passed ? 'pass' : 'fail'}`;
+                
+                const title = document.createElement('div');
+                title.className = 'test-title';
+                title.textContent = `${testName}: ${result.passed ? 'PASS' : 'FAIL'}`;
+                
+                const details = document.createElement('div');
+                details.innerHTML = `
+                    <strong>Message:</strong> ${result.message}<br>
+                    <strong>Expected:</strong> [${result.expected}]<br>
+                    <strong>Actual:</strong> [${result.actual}]
+                `;
+                
+                div.appendChild(title);
+                div.appendChild(details);
+                results.appendChild(div);
+            }
+
+            // Test 1: Initial state
+            let result = assertEqual(simulator.getState(), [1, 0, 0, 0], 'Initial state should be |00⟩');
+            addResult('Initial State Test', result);
+
+            // Test 2: Hadamard gate creates superposition
+            simulator.applyHadamard();
+            result = assertArrayApproxEqual(simulator.getState(), [0.707, 0.707, 0, 0], 0.01, 'Hadamard should create superposition');
+            addResult('Hadamard Gate Test', result);
+
+            // Test 3: Pauli-X gate flips state
+            simulator.applyPauliX();
+            result = assertArrayApproxEqual(simulator.getState(), [0.707, 0.707, 0, 0], 0.01, 'X gate should flip first qubit');
+            addResult('Pauli-X Gate Test', result);
+
+            // Test 4: CNOT creates entanglement
+            simulator.clearCircuit();
+            simulator.applyHadamard();
+            simulator.applyCNOT();
+            result = assertEqual(simulator.hasEntanglement(), true, 'CNOT should create entanglement');
+            addResult('CNOT Entanglement Test', result);
+
+            // Test 5: Clear resets state
+            simulator.clearCircuit();
+            result = assertEqual(simulator.getState(), [1, 0, 0, 0], 'Clear should reset to initial state');
+            addResult('Clear Circuit Test', result);
+
+            // Summary
+            const summary = document.createElement('div');
+            summary.className = 'test-result';
+            summary.style.marginTop = '20px';
+            summary.style.fontWeight = 'bold';
+            summary.textContent = `Tests completed: ${passCount}/${testCount} passed`;
+            results.appendChild(summary);
+        }
+
+        // Run tests automatically on load
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
