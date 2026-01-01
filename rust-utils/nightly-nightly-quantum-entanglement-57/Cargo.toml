@@ -1,0 +1,26 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical-yet-useful Rust CLI tool that simulates quantum entanglement verification for distributed systems"
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+homepage = "https://github.com/polsala/ApocalypsAI"
+documentation = "https://github.com/polsala/ApocalypsAI"
+keywords = ["quantum", "entanglement", "cli", "simulation", "distributed-systems"]
+categories = ["command-line-utilities", "science"]
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+test = "0.1"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
