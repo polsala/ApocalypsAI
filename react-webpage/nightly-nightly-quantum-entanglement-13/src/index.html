@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Entanglement Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>⚛️ Quantum Entanglement Simulator</h1>
+            <p class="subtitle">Drag gates, create entanglement, observe quantum magic!</p>
+        </header>
+
+        <div class="main-content">
+            <div class="toolbox">
+                <h3>Quantum Gates</h3>
+                <div class="gate-grid">
+                    <div class="gate-item" draggable="true" data-gate="h">
+                        <span class="gate-symbol">H</span>
+                        <span class="gate-name">Hadamard</span>
+                        <span class="gate-desc">Creates superposition</span>
+                    </div>
+                    <div class="gate-item" draggable="true" data-gate="x">
+                        <span class="gate-symbol">X</span>
+                        <span class="gate-name">Pauli-X</span>
+                        <span class="gate-desc">Bit flip</span>
+                    </div>
+                    <div class="gate-item" draggable="true" data-gate="z">
+                        <span class="gate-symbol">Z</span>
+                        <span class="gate-name">Pauli-Z</span>
+                        <span class="gate-desc">Phase flip</span>
+                    </div>
+                    <div class="gate-item" draggable="true" data-gate="cnot">
+                        <span class="gate-symbol">●─X</span>
+                        <span class="gate-name">CNOT</span>
+                        <span class="gate-desc">Entanglement gate</span>
+                    </div>
+                    <div class="gate-item" draggable="true" data-gate="measure">
+                        <span class="gate-symbol">M</span>
+                        <span class="gate-name">Measure</span>
+                        <span class="gate-desc">Observe quantum state</span>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="run-btn" class="btn-primary">▶️ Run Simulation</button>
+                    <button id="reset-btn" class="btn-secondary">🔄 Reset</button>
+                    <button id="save-btn" class="btn-tertiary">💾 Save</button>
+                    <button id="load-btn" class="btn-tertiary">📂 Load</button>
+                </div>
+
+                <div class="stats">
+                    <h4>Quantum State</h4>
+                    <div id="state-display" class="state-box">|00⟩</div>
+                    <div id="probabilities" class="prob-box">
+                        <div>Probability of |00⟩: 100%</div>
+                        <div>Probability of |01⟩: 0%</div>
+                        <div>Probability of |10⟩: 0%</div>
+                        <div>Probability of |11⟩: 0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="circuit-area">
+                <div class="circuit-header">
+                    <h3>Quantum Circuit</h3>
+                    <div class="qubit-labels">
+                        <span class="qubit-label">Qubit 0</span>
+                        <span class="qubit-label">Qubit 1</span>
+                    </div>
+                </div>
+                <div id="circuit-board" class="circuit-board">
+                    <div class="qubit-line" data-qubit="0">
+                        <div class="qubit-track"></div>
+                    </div>
+                    <div class="qubit-line" data-qubit="1">
+                        <div class="qubit-track"></div>
+                    </div>
+                </div>
+                
+                <div class="visualization">
+                    <h4>Bloch Sphere Visualization</h4>
+                    <canvas id="bloch-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>💡 Tip: Try creating a Bell state with H + CNOT gates!</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
