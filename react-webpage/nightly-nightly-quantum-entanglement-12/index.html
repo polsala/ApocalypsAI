@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #root {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- Import Maps for Three.js and Tone.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "tone": "https://unpkg.com/tone@14.9.72/build/esm/index.js"
+            }
+        }
+    </script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Main Application -->
+    <script type="module" src="src/index.js"></script>
+</body>
+</html>
