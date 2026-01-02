@@ -1,0 +1,1 @@
+name: PR Language Labeler\ndescription: Auto‑label pull requests based on detected programming languages\ninputs:\n  github-token:\n    description: 'GITHUB_TOKEN with repo scope'\n    required: true\n  files:\n    description: 'Optional JSON array of filenames to analyze (for testing)'\n    required: false\nruns:\n  using: node12\n  main: src/index.js
