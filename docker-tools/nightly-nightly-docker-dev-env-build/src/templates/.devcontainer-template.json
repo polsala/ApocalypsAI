@@ -1,0 +1,24 @@
+{
+    "name": "{{STACK_NAME}} Development Environment",
+    "dockerFile": "Dockerfile",
+    "workspaceFolder": "/app",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.vscode-json",
+                "redhat.vscode-yaml",
+                "ms-vscode.vscode-typescript-next"
+            ]
+        }
+    },
+    "forwardPorts": [8080],
+    "postCreateCommand": "echo 'Development environment ready!'"
+}
