@@ -1,0 +1,9 @@
+---
+paths_to_sweep:
+  - /tmp
+  - /var/log/old_app_logs
+  - /opt/temp_builds
+
+age_threshold_days: 30 # Items older than 30 days will be considered dust bunnies
+
+dry_run: true # Set to 'false' to actually remove files. Default is true for safety.
