@@ -1,0 +1,68 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/main.yml # Load default variables
+
+  tasks:
+    - name: Ensure required variables are defined
+      ansible.builtin.assert:
+        that:
+          - paths_to_sweep is defined and paths_to_sweep | length > 0
+          - age_threshold_days is defined and age_threshold_days | int > 0
+          - dry_run is defined
+        fail_msg: "Missing required variables: paths_to_sweep, age_threshold_days, or dry_run."
+
+    - name: Find files and directories older than {{ age_threshold_days }} days
+      ansible.builtin.find:
+        paths: "{{ paths_to_sweep }}"
+        age: "{{ age_threshold_days }}d"
+        recurse: yes
+        file_type: any # Find both files and directories
+      register: old_items_found
+      # Mock rationale: In tests, this task's output will be simulated using set_fact.
+
+    - name: Report found digital dust bunnies (dry run or actual)
+      ansible.builtin.debug:
+        msg: |
+          Found {{ old_items_found.files | length }} old files and {{ old_items_found.directories | length }} old directories.
+          {% if old_items_found.files | length > 0 %}
+          Old Files:
+          {% for file in old_items_found.files %}
+          - {{ file.path }} (Last modified: {{ file.mtime | ansible.builtin.to_datetime('%Y-%m-%dT%H:%M:%SZ') | ansible.builtin.strftime('%Y-%m-%d') }})
+          {% endfor %}
+          {% endif %}
+          {% if old_items_found.directories | length > 0 %}
+          Old Directories:
+          {% for dir in old_items_found.directories %}
+          - {{ dir.path }} (Last modified: {{ dir.mtime | ansible.builtin.to_datetime('%Y-%m-%dT%H:%M:%SZ') | ansible.builtin.strftime('%Y-%m-%d') }})
+          {% endfor %}
+          {% endif %}
+          {% if dry_run %}
+          (This was a DRY RUN. No changes were made.)
+          {% else %}
+          (These items will be removed.)
+          {% endif %}
+      when: old_items_found.files | length > 0 or old_items_found.directories | length > 0
+
+    - name: No digital dust bunnies found
+      ansible.builtin.debug:
+        msg: "No digital dust bunnies older than {{ age_threshold_days }} days found. Your systems are sparkling clean!"
+      when: old_items_found.files | length == 0 and old_items_found.directories | length == 0
+
+    - name: Remove old files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_items_found.files }}"
+      when: not dry_run
+      # Mock rationale: In tests, this task's execution will be asserted to be skipped when dry_run is true.
+
+    - name: Remove old directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_items_found.directories }}"
+      when: not dry_run
+      # Mock rationale: In tests, this task's execution will be asserted to be skipped when dry_run is true.

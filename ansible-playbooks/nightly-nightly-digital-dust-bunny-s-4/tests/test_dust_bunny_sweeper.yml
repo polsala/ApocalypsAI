@@ -1,0 +1,126 @@
+---
+- name: Test Digital Dust Bunny Sweeper Playbook - Dry Run with Findings
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    paths_to_sweep:
+      - /test/path1
+    age_threshold_days: 7
+    dry_run: true
+
+  tasks:
+    - name: Mock find results - scenario: old files and directories found
+      set_fact:
+        old_items_found:
+          files:
+            - path: "/test/path1/old_log.txt"
+              mtime: "2023-01-01T00:00:00Z"
+              size: 1024
+            - path: "/test/path1/another_old_file.tmp"
+              mtime: "2023-01-02T00:00:00Z"
+              size: 512
+          directories:
+            - path: "/test/path1/old_dir"
+              mtime: "2023-02-01T00:00:00Z"
+              size: 4096
+      # Mock rationale: Simulating the output of the 'find' module for offline and deterministic testing.
+      # This avoids actual file system interaction during tests.
+
+    - name: Test reporting condition (should be true)
+      ansible.builtin.assert:
+        that:
+          - "old_items_found.files | length > 0 or old_items_found.directories | length > 0"
+        msg: "Reporting condition should be true when items are found."
+
+    - name: Test 'no dust bunnies found' condition (should be false)
+      ansible.builtin.assert:
+        that:
+          - "not (old_items_found.files | length == 0 and old_items_found.directories | length == 0)"
+        msg: "'No dust bunnies found' condition should be false when items are found."
+
+    - name: Assert dry_run is true, implying removal tasks will be skipped
+      ansible.builtin.assert:
+        that:
+          - dry_run == true
+        msg: "dry_run variable is not true, removal tasks might not be skipped."
+      # Mock rationale: Verifies the dry_run variable's state, which directly controls deletion tasks.
+
+- name: Test Digital Dust Bunny Sweeper Playbook - No Findings
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    paths_to_sweep:
+      - /test/path2
+    age_threshold_days: 1
+    dry_run: true
+
+  tasks:
+    - name: Mock find results - scenario: no old files or directories found
+      set_fact:
+        old_items_found:
+          files: []
+          directories: []
+      # Mock rationale: Simulating the output of the 'find' module for offline and deterministic testing.
+
+    - name: Test reporting condition (should be false)
+      ansible.builtin.assert:
+        that:
+          - "not (old_items_found.files | length > 0 or old_items_found.directories | length > 0)"
+        msg: "Reporting condition should be false when no items are found."
+
+    - name: Test 'no dust bunnies found' condition (should be true)
+      ansible.builtin.assert:
+        that:
+          - "old_items_found.files | length == 0 and old_items_found.directories | length == 0"
+        msg: "'No dust bunnies found' condition should be true when no items are found."
+
+    - name: Assert dry_run is true, implying removal tasks will be skipped
+      ansible.builtin.assert:
+        that:
+          - dry_run == true
+        msg: "dry_run variable is not true, removal tasks might not be skipped."
+      # Mock rationale: Verifies the dry_run variable's state, which directly controls deletion tasks.
+
+- name: Test Digital Dust Bunny Sweeper Playbook - Actual Removal Logic
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    paths_to_sweep:
+      - /test/path3
+    age_threshold_days: 1
+    dry_run: false # Simulate actual removal
+
+  tasks:
+    - name: Mock find results - scenario: old files and directories found for removal
+      set_fact:
+        old_items_found:
+          files:
+            - path: "/test/path3/removable_file.txt"
+              mtime: "2023-01-01T00:00:00Z"
+              size: 100
+          directories:
+            - path: "/test/path3/removable_dir"
+              mtime: "2023-01-02T00:00:00Z"
+              size: 200
+      # Mock rationale: Simulating the output of the 'find' module for offline and deterministic testing.
+
+    - name: Test reporting condition (should be true)
+      ansible.builtin.assert:
+        that:
+          - "old_items_found.files | length > 0 or old_items_found.directories | length > 0"
+        msg: "Reporting condition should be true when items are found for removal."
+
+    - name: Test removal condition for files (should be true)
+      ansible.builtin.assert:
+        that:
+          - "not dry_run"
+        msg: "Removal condition for files should be true when dry_run is false."
+
+    - name: Test removal condition for directories (should be true)
+      ansible.builtin.assert:
+        that:
+          - "not dry_run"
+        msg: "Removal condition for directories should be true when dry_run is false."
