@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --text-color: #e0e6ed;
+            --accent-color: #00f3ff;
+            --particle-color: #ff00ff;
+            --entangled-color: #00ff88;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 17, 21, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2d3748, #4a5568);
+            border: 1px solid #666;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #4a5568, #718096);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .status {
+            font-size: 0.9rem;
+            color: #cbd5e0;
+            margin-top: 10px;
+            min-height: 40px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            color: #94a3b8;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--accent-color);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 200;
+            max-width: 200px;
+        }
+
+        .particle-info {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--particle-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 150;
+        }
+
+        .legend {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .color-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #cbd5e0;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui-panel">
+        <h1>⚛️ Quantum Entanglement Simulator</h1>
+        <div class="controls">
+            <button id="create-btn">Create Entangled Pair</button>
+            <button id="reset-btn">Reset Simulation</button>
+            <button id="toggle-sound">🔊 Sound: ON</button>
+        </div>
+        <div class="status" id="status-text">Ready to create entangled particles...</div>
+        <div class="stats">
+            <span>Particles: <span id="particle-count">0</span></span>
+            <span>Entangled Pairs: <span id="pair-count">0</span></span>
+            <span>Time: <span id="sim-time">0.00</span>s</span>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><div class="color-box" style="background: var(--particle-color)"></div> Superposition State</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--entangled-color)"></div> Entangled State</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--accent-color)"></div> Measured State</div>
+        </div>
+        <div class="instructions">
+            <strong>How it works:</strong> Click "Create Entangled Pair" to generate two particles. Drag them apart. Click "Measure" on one to instantly collapse both particles' states!
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+    <div class="particle-info" id="particle-info"></div>
+
+    <canvas id="canvas-container"></canvas>
+
+    <script>
+        // Quantum Entanglement Simulator
+        class QuantumSimulator {
+            constructor() {
+                this.canvas = document.getElementById('canvas-container');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.pairs = [];
+                this.time = 0;
+                this.soundEnabled = true;
+                this.audioContext = null;
+                this.lastMousePos = { x: 0, y: 0 };
+                this.selectedParticle = null;
+                this.isDragging = false;
+
+                this.init();
+                this.setupEventListeners();
+                this.animate();
+            }
+
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupEventListeners() {
+                document.getElementById('create-btn').addEventListener('click', () => this.createEntangledPair());
+                document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+                document.getElementById('toggle-sound').addEventListener('click', () => this.toggleSound());
+
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+                this.canvas.addEventListener('mouseleave', () => this.handleMouseUp());
+            }
+
+            createEntangledPair() {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+
+                // Create two particles close together
+                const particle1 = new QuantumParticle(centerX - 50, centerY, this);
+                const particle2 = new QuantumParticle(centerX + 50, centerY, this);
+
+                this.particles.push(particle1, particle2);
+                this.pairs.push({ p1: particle1, p2: particle2 });
+
+                this.updateStats();
+                this.playSound('entangle');
+                this.showStatus(`Created entangled pair #${this.pairs.length}`);
+            }
+
+            reset() {
+                this.particles = [];
+                this.pairs = [];
+                this.time = 0;
+                this.updateStats();
+                this.showStatus('Simulation reset');
+                this.playSound('reset');
+            }
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                const btn = document.getElementById('toggle-sound');
+                btn.textContent = this.soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+            }
+
+            handleMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // Find if we clicked on a particle
+                for (let particle of this.particles) {
+                    const dist = Math.hypot(mouseX - particle.x, mouseY - particle.y);
+                    if (dist < particle.radius + 10) {
+                        this.selectedParticle = particle;
+                        this.isDragging = true;
+                        this.showParticleInfo(particle, mouseX, mouseY);
+                        break;
+                    }
+                }
+            }
+
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                if (this.isDragging && this.selectedParticle) {
+                    this.selectedParticle.x = mouseX;
+                    this.selectedParticle.y = mouseY;
+                    this.showParticleInfo(this.selectedParticle, mouseX, mouseY);
+                }
+
+                // Update tooltip
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.left = (mouseX + 15) + 'px';
+                tooltip.style.top = (mouseY + 15) + 'px';
+
+                // Check hover for tooltips
+                let hovered = false;
+                for (let particle of this.particles) {
+                    const dist = Math.hypot(mouseX - particle.x, mouseY - particle.y);
+                    if (dist < particle.radius + 15) {
+                        tooltip.style.opacity = '1';
+                        tooltip.textContent = particle.getTooltipText();
+                        hovered = true;
+                        break;
+                    }
+                }
+                if (!hovered) {
+                    tooltip.style.opacity = '0';
+                }
+            }
+
+            handleMouseUp() {
+                if (this.selectedParticle) {
+                    // Check if we dropped on another particle to measure
+                    const rect = this.canvas.getBoundingClientRect();
+                    const mouseX = this.lastMousePos.x - rect.left;
+                    const mouseY = this.lastMousePos.y - rect.top;
+
+                    for (let particle of this.particles) {
+                        if (particle !== this.selectedParticle) {
+                            const dist = Math.hypot(mouseX - particle.x, mouseY - particle.y);
+                            if (dist < particle.radius + 20) {
+                                this.measureParticle(this.selectedParticle);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                this.isDragging = false;
+                this.selectedParticle = null;
+                document.getElementById('particle-info').style.opacity = '0';
+            }
+
+            measureParticle(particle) {
+                if (particle.isMeasured) return;
+
+                particle.measure();
+                this.playSound('measure');
+
+                // Find entangled partner and collapse its state
+                for (let pair of this.pairs) {
+                    if (pair.p1 === particle && pair.p2.isEntangled) {
+                        pair.p2.collapseToOpposite(particle.state);
+                        this.showStatus('Quantum collapse: Spooky action at a distance!');
+                        break;
+                    } else if (pair.p2 === particle && pair.p1.isEntangled) {
+                        pair.p1.collapseToOpposite(particle.state);
+                        this.showStatus('Quantum collapse: Spooky action at a distance!');
+                        break;
+                    }
+                }
+            }
+
+            showStatus(text) {
+                const statusEl = document.getElementById('status-text');
+                statusEl.textContent = text;
+                statusEl.style.color = '#00f3ff';
+                setTimeout(() => {
+                    statusEl.style.color = '#cbd5e0';
+                }, 2000);
+            }
+
+            showParticleInfo(particle, x, y) {
+                const infoEl = document.getElementById('particle-info');
+                infoEl.style.opacity = '1';
+                infoEl.style.left = (x + 20) + 'px';
+                infoEl.style.top = (y + 20) + 'px';
+                infoEl.innerHTML = `<strong>Particle ${particle.id}</strong><br>State: ${particle.getStateText()}<br>Entangled: ${particle.isEntangled ? 'Yes' : 'No'}`;
+            }
+
+            updateStats() {
+                document.getElementById('particle-count').textContent = this.particles.length;
+                document.getElementById('pair-count').textContent = this.pairs.length;
+            }
+
+            playSound(type) {
+                if (!this.soundEnabled) return;
+
+                try {
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(this.audioContext.destination);
+
+                    const now = this.audioContext.currentTime;
+
+                    if (type === 'entangle') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(440, now);
+                        osc.frequency.exponentialRampToValueAtTime(880, now + 0.5);
+                        gain.gain.setValueAtTime(0.1, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                        osc.start(now);
+                        osc.stop(now + 0.5);
+                    } else if (type === 'measure') {
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(220, now);
+                        osc.frequency.linearRampToValueAtTime(880, now + 0.1);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                        osc.start(now);
+                        osc.stop(now + 0.2);
+                    } else if (type === 'reset') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(110, now);
+                        osc.frequency.linearRampToValueAtTime(220, now + 0.3);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                        osc.start(now);
+                        osc.stop(now + 0.3);
+                    }
+                } catch (e) {
+                    console.log('Audio error:', e);
+                }
+            }
+
+            animate() {
+                this.time += 0.016; // ~60fps
+                document.getElementById('sim-time').textContent = this.time.toFixed(2);
+
+                this.ctx.fillStyle = 'rgba(15, 17, 21, 0.2)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw background grid
+                this.drawGrid();
+
+                // Update and draw particles
+                for (let particle of this.particles) {
+                    particle.update();
+                    particle.draw(this.ctx);
+                }
+
+                // Draw entanglement connections
+                for (let pair of this.pairs) {
+                    this.drawEntanglementLine(pair.p1, pair.p2);
+                }
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            drawGrid() {
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
+
+                const gridSize = 50;
+                for (let x = 0; x < this.canvas.width; x += gridSize) {
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                }
+                for (let y = 0; y < this.canvas.height; y += gridSize) {
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                }
+                this.ctx.stroke();
+            }
+
+            drawEntanglementLine(p1, p2) {
+                if (!p1.isEntangled || !p2.isEntangled) return;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(p1.x, p1.y);
+                this.ctx.lineTo(p2.x, p2.y);
+
+                const gradient = this.ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                gradient.addColorStop(0, '#ff00ff');
+                gradient.addColorStop(0.5, '#00f3ff');
+                gradient.addColorStop(1, '#00ff88');
+
+                this.ctx.strokeStyle = gradient;
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+        }
+
+        class QuantumParticle {
+            constructor(x, y, simulator) {
+                this.id = Math.floor(Math.random() * 10000);
+                this.x = x;
+                this.y = y;
+                this.radius = 15;
+                this.state = Math.random() > 0.5 ? 'spin-up' : 'spin-down';
+                this.isEntangled = false;
+                this.isMeasured = false;
+                this.simulator = simulator;
+                this.wobble = 0;
+                this.color = '#ff00ff';
+            }
+
+            update() {
+                if (!this.isMeasured) {
+                    this.wobble += 0.1;
+                    this.radius = 15 + Math.sin(this.wobble) * 3;
+                }
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+
+                if (this.isMeasured) {
+                    ctx.fillStyle = '#00f3ff';
+                    ctx.shadowColor = '#00f3ff';
+                    ctx.shadowBlur = 20;
+                } else if (this.isEntangled) {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.shadowColor = '#00ff88';
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.shadowBlur = 15;
+                }
+
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.closePath();
+
+                // Draw state indicator
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.getStateText(), this.x, this.y + 5);
+
+                // Draw measurement button if entangled
+                if (this.isEntangled && !this.isMeasured) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.fillRect(this.x - 20, this.y - 35, 40, 15);
+                    ctx.fillStyle = 'black';
+                    ctx.font = '8px Arial';
+                    ctx.fillText('MEASURE', this.x, this.y - 25);
+                }
+            }
+
+            measure() {
+                this.isMeasured = true;
+                this.isEntangled = false;
+                this.radius = 20;
+                this.simulator.playSound('measure');
+            }
+
+            collapseToOpposite(state) {
+                this.isMeasured = true;
+                this.isEntangled = false;
+                this.state = state === 'spin-up' ? 'spin-down' : 'spin-up';
+                this.radius = 20;
+                this.simulator.playSound('measure');
+            }
+
+            getStateText() {
+                if (this.isMeasured) {
+                    return this.state === 'spin-up' ? '↑ MEASURED' : '↓ MEASURED';
+                } else if (this.isEntangled) {
+                    return '⚛️ ENTANGLED';
+                } else {
+                    return '❓ SUPERPOSITION';
+                }
+            }
+
+            getTooltipText() {
+                return `Particle ${this.id}\nState: ${this.getStateText()}\nEntangled: ${this.isEntangled ? 'Yes' : 'No'}\nClick and drag to move\nDrop on partner to measure`;
+            }
+        }
+
+        // Initialize simulator when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuantumSimulator();
+        });
+    </script>
+</body>
+</html>
