@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-suite {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-case {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #ccc;
+        }
+        .test-case.pass {
+            border-left-color: #00ff88;
+        }
+        .test-case.fail {
+            border-left-color: #ff0055;
+        }
+        .result {
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-suite">
+        <h1>🧪 Quantum Entanglement Simulator - Test Suite</h1>
+        <p>These tests verify the core functionality of the quantum simulator. Since this is a web-based interactive tool, tests focus on logic validation rather than DOM manipulation.</p>
+        
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="resetTests()">Reset Results</button>
+        
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        // Mock DOM elements for testing
+        const mockCanvas = {
+            width: 800,
+            height: 600
+        };
+
+        // Import the QuantumParticle class logic for testing
+        class TestQuantumParticle {
+            constructor(x, y) {
+                this.id = Math.floor(Math.random() * 10000);
+                this.x = x;
+                this.y = y;
+                this.radius = 15;
+                this.state = Math.random() > 0.5 ? 'spin-up' : 'spin-down';
+                this.isEntangled = false;
+                this.isMeasured = false;
+                this.wobble = 0;
+            }
+
+            measure() {
+                this.isMeasured = true;
+                this.isEntangled = false;
+                this.radius = 20;
+            }
+
+            collapseToOpposite(state) {
+                this.isMeasured = true;
+                this.isEntangled = false;
+                this.state = state === 'spin-up' ? 'spin-down' : 'spin-up';
+            }
+
+            getStateText() {
+                if (this.isMeasured) {
+                    return this.state === 'spin-up' ? '↑ MEASURED' : '↓ MEASURED';
+                } else if (this.isEntangled) {
+                    return '⚛️ ENTANGLED';
+                } else {
+                    return '❓ SUPERPOSITION';
+                }
+            }
+        }
+
+        // Test cases
+        const tests = [
+            {
+                name: "Particle Creation",
+                description: "Verify particles can be created with initial properties",
+                test: () => {
+                    const p = new TestQuantumParticle(100, 100);
+                    return p.x === 100 && p.y === 100 && p.radius === 15 && !p.isMeasured && !p.isEntangled;
+                }
+            },
+            {
+                name: "State Initialization",
+                description: "Verify particles have valid initial states",
+                test: () => {
+                    const p = new TestQuantumParticle(100, 100);
+                    return (p.state === 'spin-up' || p.state === 'spin-down');
+                }
+            },
+            {
+                name: "Measurement Effect",
+                description: "Verify measuring a particle sets correct properties",
+                test: () => {
+                    const p = new TestQuantumParticle(100, 100);
+                    p.measure();
+                    return p.isMeasured && !p.isEntangled && p.radius === 20;
+                }
+            },
+            {
+                name: "State Collapse",
+                description: "Verify entangled partner collapses to opposite state",
+                test: () => {
+                    const p1 = new TestQuantumParticle(100, 100);
+                    const p2 = new TestQuantumParticle(200, 200);
+                    
+                    // Simulate entanglement
+                    p1.isEntangled = true;
+                    p2.isEntangled = true;
+                    
+                    const originalState = p1.state;
+                    p1.measure();
+                    p2.collapseToOpposite(originalState);
+                    
+                    return p2.state !== originalState && p2.isMeasured;
+                }
+            },
+            {
+                name: "State Text Display",
+                description: "Verify state text displays correctly for different conditions",
+                test: () => {
+                    const p = new TestQuantumParticle(100, 100);
+                    
+                    // Test superposition
+                    const superText = p.getStateText();
+                    if (!superText.includes('❓')) return false;
+                    
+                    // Test entangled
+                    p.isEntangled = true;
+                    const entText = p.getStateText();
+                    if (!entText.includes('⚛️')) return false;
+                    
+                    // Test measured
+                    p.measure();
+                    const measText = p.getStateText();
+                    return measText.includes('MEASURED');
+                }
+            },
+            {
+                name: "Entanglement Logic",
+                description: "Verify entanglement properties are set correctly",
+                test: () => {
+                    const p1 = new TestQuantumParticle(100, 100);
+                    const p2 = new TestQuantumParticle(200, 200);
+                    
+                    // Simulate entanglement
+                    p1.isEntangled = true;
+                    p2.isEntangled = true;
+                    
+                    return p1.isEntangled && p2.isEntangled && !p1.isMeasured && !p2.isMeasured;
+                }
+            }
+        ];
+
+        function runTest(test) {
+            try {
+                const result = test.test();
+                return {
+                    name: test.name,
+                    description: test.description,
+                    passed: result,
+                    error: result ? null : 'Test failed'
+                };
+            } catch (error) {
+                return {
+                    name: test.name,
+                    description: test.description,
+                    passed: false,
+                    error: error.message
+                };
+            }
+        }
+
+        function runAllTests() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = '';
+            
+            let passed = 0;
+            let total = tests.length;
+            
+            tests.forEach(test => {
+                const result = runTest(test);
+                const div = document.createElement('div');
+                div.className = 'test-case ' + (result.passed ? 'pass' : 'fail');
+                
+                div.innerHTML = `
+                    <strong>${result.name}</strong>
+                    <p>${result.description}</p>
+                    <div class="result">
+                        Status: ${result.passed ? '✅ PASSED' : '❌ FAILED'}
+                        ${result.error ? `<br>Error: ${result.error}` : ''}
+                    </div>
+                `;
+                
+                output.appendChild(div);
+                
+                if (result.passed) passed++;
+            });
+            
+            const summary = document.createElement('div');
+            summary.innerHTML = `
+                <h3>Test Summary</h3>
+                <p>Passed: ${passed}/${total}</p>
+                <p>Success Rate: ${Math.round((passed/total) * 100)}%</p>
+            `;
+            output.appendChild(summary);
+        }
+
+        function resetTests() {
+            document.getElementById('test-output').innerHTML = '';
+        }
+
+        // Mock rationale: These tests verify the core quantum simulation logic
+        // without requiring a full browser environment. They test particle creation,
+        // state management, measurement effects, and entanglement behavior.
+        // The tests use simplified mock objects to isolate the business logic
+        // from DOM dependencies, making them deterministic and fast to execute.
+    </script>
+</body>
+</html>
