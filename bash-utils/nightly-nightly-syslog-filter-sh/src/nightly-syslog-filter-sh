@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# Default configuration
+INCLUDE_KEYWORD="error"
+INCLUDE_COLOR="red"
+EXCLUDE_KEYWORD="debug"
+EXCLUDE_COLOR="blue"
+LOG_FILE="/var/log/syslog"
+
+# ANSI color codes
+declare -A COLORS
+COLORS["red"]="\033[0;31m"
+COLORS["green"]="\033[0;32m"
+COLORS["yellow"]="\033[0;33m"
+COLORS["blue"]="\033[0;34m"
+COLORS["magenta"]="\033[0;35m"
+COLORS["cyan"]="\033[0;36m"
+COLORS["white"]="\033[0;37m"
+COLORS["reset"]="\033[0m"
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 [--include <keyword>] [--color-include <color>] [--exclude <keyword>] [--color-exclude <color>] <log_file>"
+    echo "  --include <keyword>: Filter messages containing this keyword (case-insensitive)."
+    echo "  --color-include <color>: Color for messages matching --include (red, green, yellow, blue, magenta, cyan, white)."
+    echo "  --exclude <keyword>: Filter messages containing this keyword (case-insensitive)."
+    echo "  --color-exclude <color>: Color for messages matching --exclude (red, green, yellow, blue, magenta, cyan, white)."
+    echo "  <log_file>: The path to the syslog file to monitor."
+    exit 1
+}
+
+# Parse command-line arguments
+while [[ "$#" -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --include)
+        INCLUDE_KEYWORD="$2"
+        shift # past argument
+        shift # past value
+        ;; 
+        --color-include)
+        INCLUDE_COLOR="$2"
+        shift # past argument
+        shift # past value
+        ;; 
+        --exclude)
+        EXCLUDE_KEYWORD="$2"
+        shift # past argument
+        shift # past value
+        ;; 
+        --color-exclude)
+        EXCLUDE_COLOR="$2"
+        shift # past argument
+        shift # past value
+        ;; 
+        -h|--help)
+        usage
+        ;; 
+        *)
+        # Assume it's the log file if it's the last argument and not an option
+        if [[ $# -eq 1 ]]; then
+            LOG_FILE="$1"
+            shift # past argument
+        else
+            echo "Unknown option: $1"
+            usage
+        fi
+        ;; 
+    esac
+done
+
+# Validate colors
+if [[ -z "${COLORS[$INCLUDE_COLOR]}" ]]; then
+    echo "Error: Invalid include color '$INCLUDE_COLOR'. Supported colors: ${!COLORS[*]}"
+    exit 1
+fi
+if [[ -z "${COLORS[$EXCLUDE_COLOR]}" ]]; then
+    echo "Error: Invalid exclude color '$EXCLUDE_COLOR'. Supported colors: ${!COLORS[*]}"
+    exit 1
+fi
+
+# Check if log file exists
+if [ ! -f "$LOG_FILE" ]; then
+    echo "Error: Log file '$LOG_FILE' not found."
+    exit 1
+fi
+
+# Main filtering logic
+tail -f "$LOG_FILE" | while IFS= read -r line;
+do
+    # Convert line to lowercase for case-insensitive matching
+    lower_line=$(echo "$line" | tr '[:upper:]' '[:lower:]')
+
+    # Check for exclude keyword first
+    if echo "$lower_line" | grep -q "$EXCLUDE_KEYWORD"; then
+        # If it matches exclude, print without color (or with exclude color if specified)
+        if [ "$EXCLUDE_COLOR" != "" ]; then
+            echo -e "${COLORS[$EXCLUDE_COLOR]}$line${COLORS["reset"]}"
+        else
+            echo "$line"
+        fi
+    # Check for include keyword if not excluded
+    elif echo "$lower_line" | grep -q "$INCLUDE_KEYWORD"; then
+        echo -e "${COLORS[$INCLUDE_COLOR]}$line${COLORS["reset"]}"
+    else
+        # Print lines that don't match any filter
+        echo "$line"
+    fi
+done
