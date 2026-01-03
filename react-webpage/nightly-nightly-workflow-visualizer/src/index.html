@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Actions Workflow Visualizer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f6f8fa; }
+        .header { margin-bottom: 20px; }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        #graph { width: 100%; height: 600px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .controls { margin-bottom: 10px; }
+        .legend { display: flex; gap: 15px; font-size: 12px; color: #666; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 50%; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>GitHub Actions Workflow Visualizer</h1>
+        <div class="stats">
+            <div class="stat">
+                <strong>0</strong> Jobs
+            </div>
+            <div class="stat">
+                <strong>0</strong> Dependencies
+            </div>
+            <div class="stat">
+                <strong>0</strong> Workflows
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div> Jobs</div>
+            <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div> Dependencies</div>
+            <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> Parallel</div>
+        </div>
+    </div>
+    
+    <div id="graph"></div>
+    
+    <script>
+        // This will be populated by the CLI tool
+        const data = {
+            nodes: [],
+            edges: [],
+            workflows: 0
+        };
+        
+        const svg = d3.select("#graph")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", [0, 0, 800, 600]);
+        
+        const simulation = d3.forceSimulation(data.nodes)
+            .force("link", d3.forceLink(data.edges).id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(400, 300))
+            .force("collide", d3.forceCollide(30));
+        
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(data.edges)
+            .join("line")
+            .attr("stroke", "#ef4444")
+            .attr("stroke-width", 2);
+        
+        const node = svg.append("g")
+            .selectAll("circle")
+            .data(data.nodes)
+            .join("circle")
+            .attr("r", 20)
+            .attr("fill", "#3b82f6")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+        
+        const label = svg.append("g")
+            .selectAll("text")
+            .data(data.nodes)
+            .join("text")
+            .text(d => d.name)
+            .attr("text-anchor", "middle")
+            .attr("dy", 4)
+            .attr("font-size", 10)
+            .attr("fill", "#333");
+        
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+            
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+            
+            label
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+        
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    </script>
+</body>
+</html>

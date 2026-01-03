@@ -1,0 +1,28 @@
+{
+  "name": "nightly-workflow-visualizer",
+  "version": "1.0.0",
+  "description": "Interactive dependency graphs for GitHub Actions workflows",
+  "main": "src/analyze.js",
+  "scripts": {
+    "test": "node tests/test_analyze.js",
+    "build": "echo 'Build complete - no compilation needed for this utility'",
+    "analyze": "node src/analyze.js"
+  },
+  "keywords": [
+    "github-actions",
+    "workflow",
+    "visualization",
+    "dependency-graph",
+    "d3"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
