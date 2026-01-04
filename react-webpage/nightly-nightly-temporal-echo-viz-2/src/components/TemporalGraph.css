@@ -1,0 +1,34 @@
+.temporal-graph-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%; /* Take full height of parent card */
+}
+
+.temporal-svg {
+  width: 100%;
+  height: 100%;
+  max-width: 800px; /* Max width for the SVG itself */
+  max-height: 300px; /* Max height for the SVG itself */
+  border: 1px solid #4a4a6a;
+  border-radius: 5px;
+  background-color: #1a1a2e;
+}
+
+.grid line {
+  stroke: #4a4a6a;
+  stroke-dasharray: 2,2;
+}
+
+.y-axis-labels text,
+.x-axis-labels text {
+  fill: #a0a0a0;
+  font-size: 10px;
+}
+
+.legend text {
+  fill: #e0e0e0;
+  font-size: 12px;
+}
