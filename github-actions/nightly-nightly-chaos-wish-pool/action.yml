@@ -1,0 +1,75 @@
+name: 'Chaos Wish Pool'
+description: 'Randomly selects and executes community-approved chaos scenarios'
+inputs:
+  scenario-file:
+    description: 'Path to YAML file containing chaos scenarios'
+    required: true
+    default: '.github/chaos_scenarios.yml'
+  max-duration:
+    description: 'Maximum duration (seconds) for any chaos scenario'
+    required: false
+    default: '300'
+  safety-branch-pattern:
+    description: 'Regex pattern for safe branches to run chaos on'
+    required: false
+    default: '.*-test$'
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Validate inputs'
+      run: |
+        echo "Scenario file: ${{ inputs.scenario-file }}"
+        echo "Max duration: ${{ inputs.max-duration }}"
+        echo "Safety pattern: ${{ inputs.safety-branch-pattern }}"
+        if [ -z "$CHAOS_APPROVED" ]; then
+          echo "Error: CHAOS_APPROVED environment variable not set"
+          exit 1
+        fi
+        if ! grep -q "true" <<< "$CHAOS_APPROVED"; then
+          echo "Error: CHAOS_APPROVED must be 'true'"
+          exit 1
+        fi
+    - name: 'Load scenarios'
+      id: load-scenarios
+      run: |
+        SCENARIO_FILE="${{ inputs.scenario-file }}"
+        if [ ! -f "$SCENARIO_FILE" ]; then
+          echo "scenario_count=0" >> $GITHUB_OUTPUT
+          echo "Error: Scenario file not found: $SCENARIO_FILE"
+          exit 1
+        fi
+        SCENARIO_COUNT=$(grep -c "^  - name:" "$SCENARIO_FILE" | head -1)
+        echo "scenario_count=$SCENARIO_COUNT" >> $GITHUB_OUTPUT
+    - name: 'Select random scenario'
+      id: select-scenario
+      if: steps.load-scenarios.outputs.scenario_count > 0
+      run: |
+        SCENARIO_FILE="${{ inputs.scenario-file }}"
+        SCENARIO_COUNT=${{ steps.load-scenarios.outputs.scenario_count }}
+        RANDOM_INDEX=$((RANDOM % SCENARIO_COUNT))
+        echo "selected_index=$RANDOM_INDEX" >> $GITHUB_OUTPUT
+        
+        # Extract scenario at random index
+        SCENARIO=$(sed -n "1,/^scenarios:/p; /^scenarios:/,/^[[:space:]]*- name:/p" "$SCENARIO_FILE" | 
+          awk -v idx=$RANDOM_INDEX '/^[[:space:]]*- name:/ { if (scenario_count++ == idx) { print; while (getline) print } }' | 
+          tail -n +2)
+        echo "selected_scenario=$SCENARIO" >> $GITHUB_OUTPUT
+    - name: 'Execute chaos scenario'
+      if: steps.select-scenario.outputs.scenario_count > 0
+      uses: ./src/execute_chaos.sh
+      with:
+        scenario: ${{ steps.select-scenario.outputs.selected_scenario }}
+        max-duration: ${{ inputs.max-duration }}
+        github-token: ${{ github.token }}
+    - name: 'Report outcome'
+      if: steps.select-scenario.outputs.scenario_count > 0
+      run: |
+        echo "## 🎩 Chaos Wish Granted!"
+        echo "A whimsical chaos scenario has been executed."
+        echo "Check the repository for magical transformations!"
+    - name: 'No scenarios available'
+      if: steps.load-scenarios.outputs.scenario_count == 0
+      run: |
+        echo "## 📋 No Chaos Scenarios"
+        echo "No approved chaos scenarios found."
+        echo "Add scenarios to ${{ inputs.scenario-file }} to enable chaos!"
