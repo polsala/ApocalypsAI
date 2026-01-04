@@ -1,0 +1,3 @@
+name: "PR Title Length Checker"\ndescription: "Adds a label to PRs whose titles exceed a configurable length"\ninputs:\n  max-length:\n    description: "Maximum allowed title length"
+    required: false\n    default: "72"\n  dry-run:\n    description: "If true, only prints what would happen"
+    required: false\n    default: "false"\nruns:\n  using: "node12"\n  main: "src/check.js"\n  env:\n    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n
