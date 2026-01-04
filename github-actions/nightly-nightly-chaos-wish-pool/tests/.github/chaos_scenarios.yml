@@ -1,0 +1,30 @@
+scenarios:
+  - name: "Rename to magic"
+    description: "Rename main branch to something whimsical"
+    type: branch-rename
+    params:
+      new_name: "enchanted-main"
+      duration: 300
+  - name: "File shuffle"
+    description: "Temporarily move some files around"
+    type: file-shuffle
+    params:
+      files:
+        - ".github/workflows/"
+        - "README.md"
+      duration: 60
+  - name: "Commit spree"
+    description: "Create whimsical commits"
+    type: commit-spree
+    params:
+      commit_message: "✨ Whimsical chaos commit! ✨"
+      duration: 120
+  - name: "Emoji blast"
+    description: "Spread playful emojis throughout"
+    type: emoji-blast
+    params:
+      emoji_list:
+        - "🌈"
+        - "🦄"
+        - "✨"
+      duration: 180
