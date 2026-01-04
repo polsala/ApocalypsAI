@@ -1,0 +1,52 @@
+export class Logger {
+  private colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    dim: '\x1b[2m',
+    underscore: '\x1b[4m',
+    blink: '\x1b[5m',
+    reverse: '\x1b[7m',
+    hidden: '\x1b[8m',
+    
+    black: '\x1b[30m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    magenta: '\x1b[35m',
+    cyan: '\x1b[36m',
+    white: '\x1b[37m',
+    
+    bgBlack: '\x1b[40m',
+    bgRed: '\x1b[41m',
+    bgGreen: '\x1b[42m',
+    bgYellow: '\x1b[43m',
+    bgBlue: '\x1b[44m',
+    bgMagenta: '\x1b[45m',
+    bgCyan: '\x1b[46m',
+    bgWhite: '\x1b[47m'
+  };
+
+  public log(message: string): void {
+    console.log(`${this.colors.cyan}${message}${this.colors.reset}`);
+  }
+
+  public warn(message: string): void {
+    console.log(`${this.colors.yellow}⚠️  ${message}${this.colors.reset}`);
+  }
+
+  public error(message: string, error?: any): void {
+    console.log(`${this.colors.bgRed}${this.colors.white}💥 ERROR: ${message}${this.colors.reset}`);
+    if (error) {
+      console.error(error);
+    }
+  }
+
+  public success(message: string): void {
+    console.log(`${this.colors.green}✅ ${message}${this.colors.reset}`);
+  }
+
+  public info(message: string): void {
+    console.log(`${this.colors.blue}ℹ️  ${message}${this.colors.reset}`);
+  }
+}
