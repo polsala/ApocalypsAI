@@ -1,0 +1,3 @@
+name: "Nightly PR Labeler"\ndescription: "Automatically add labels to PRs based on title keywords"\nauthor: "ApocalypsAI"\ninputs:\n  github-token:\n    description: "GitHub token with repo permissions"
+    required: true\n  label-mapping:\n    description: "JSON string mapping keywords to label names"
+    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"\nbranding:\n  icon: "tag"\n  color: "purple"
