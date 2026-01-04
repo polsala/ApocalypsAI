@@ -1,0 +1,31 @@
+{
+  "name": "nightly-emoji-weather-widget",
+  "version": "1.0.0",
+  "description": "A whimsical cross-platform CLI weather widget that displays forecasts using animated emojis and ASCII art",
+  "main": "src/index.js",
+  "bin": {
+    "emoji-weather": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/test_index.js",
+    "install": "npm install node-fetch"
+  },
+  "keywords": [
+    "weather",
+    "cli",
+    "emoji",
+    "ascii",
+    "widget",
+    "cross-platform"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "readline": "^1.3.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
