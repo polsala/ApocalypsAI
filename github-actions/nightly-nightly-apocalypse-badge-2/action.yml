@@ -1,0 +1,15 @@
+name: "Nightly Apocalypse Badge"
+description: "Posts a post‑apocalypse themed badge comment on a PR based on changed files."
+inputs:
+  changed_files:
+    description: "Comma‑separated list of files changed in the PR."
+    required: true
+  github_token:
+    description: "GitHub token for posting comments."
+    required: true
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    GITHUB_TOKEN: "${{ inputs.github_token }}"
+    INPUT_CHANGED_FILES: "${{ inputs.changed_files }}"
