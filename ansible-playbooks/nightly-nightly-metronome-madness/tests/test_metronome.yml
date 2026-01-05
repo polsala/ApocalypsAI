@@ -1,0 +1,40 @@
+---
+# Test Nightly Metronome Madness
+
+- name: Test metronome playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    tempo_min: 80
+    tempo_max: 120
+    beat_pattern: "straight"
+    duration_minutes: 0.1  # Short test duration
+
+  tasks:
+    - name: Verify metronome script creation
+      stat:
+        path: /tmp/metronome_beat.py
+      register: script_stat
+
+    - name: Assert metronome script exists
+      assert:
+        that:
+          - script_stat.stat.exists == true
+        fail_msg: "Metronome beat script was not created"
+
+    - name: Test tempo generation
+      set_fact:
+        test_tempo: "{{ (tempo_min | int) + (tempo_max | int - tempo_min | int) | random }}"
+
+    - name: Verify tempo is within range
+      assert:
+        that:
+          - test_tempo >= {{ tempo_min }}
+          - test_tempo <= {{ tempo_max }}
+        fail_msg: "Generated tempo {{ test_tempo }} is outside valid range [{{ tempo_min }}-{{ tempo_max }}]"
+
+    - name: Clean up test files
+      file:
+        path: /tmp/metronome_beat.py
+        state: absent

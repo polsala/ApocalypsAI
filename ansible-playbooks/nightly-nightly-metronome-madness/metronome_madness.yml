@@ -1,0 +1,85 @@
+---
+# Nightly Metronome Madness - Chaotic Rhythm Generator
+
+- name: Generate chaotic metronome beats
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars/metronome.yml
+
+  pre_tasks:
+    - name: Install required Python packages
+      pip:
+        name: simpleaudio
+        state: present
+
+  tasks:
+    - name: Generate random tempo
+      set_fact:
+        current_tempo: "{{ (tempo_range | int | random) }}"
+      vars:
+        tempo_range: "{{ (tempo_min | int) }},{{ (tempo_max | int) }}"
+
+    - name: Create metronome beat function
+      community.general.shell:
+        cmd: |
+          cat > /tmp/metronome_beat.py << 'EOF'
+          import simpleaudio as sa
+          import time
+          import random
+          
+          def play_beat():
+            # Simple click sound
+            freq = 800  # Frequency in Hz
+            sample_rate = 44100
+            duration = 0.1  # seconds
+            
+            # Generate click sound
+            t = sa.WaveObject(
+                sa.generate_tone(freq, duration, sample_rate),
+                sample_rate,
+                2,
+                2
+            )
+            
+            # Play with slight variation
+            play_time = duration + (random.uniform(-0.02, 0.02))
+            t.play()
+            time.sleep(play_time)
+          
+          if __name__ == "__main__":
+            play_beat()
+          EOF
+        creates: /tmp/metronome_beat.py
+
+    - name: Run metronome for specified duration
+      shell: |
+        python3 /tmp/metronome_beat.py &
+        BEAT_PID=$!
+        
+        # Calculate beats per minute
+        tempo={{ current_tempo }}
+        beats_per_second=$((tempo / 60))
+        
+        # Run for duration minutes
+        end_time=$(date -d '+{{ duration_minutes }} minutes' +%s)
+        
+        while [ $(date +%s) -lt $end_time ]; do
+          sleep $(( 60 / beats_per_second ))
+          python3 /tmp/metronome_beat.py &
+        done
+        
+        wait $BEAT_PID
+      async: 0
+      poll: 0
+      register: metronome_process
+
+    - name: Display metronome info
+      debug:
+        msg: |
+          🎵 Metronome Madness Active 🎵
+          Tempo: {{ current_tempo }} BPM
+          Pattern: {{ beat_pattern | default('straight') }}
+          Duration: {{ duration_minutes }} minutes
+          Press Ctrl+C to stop at any time!
