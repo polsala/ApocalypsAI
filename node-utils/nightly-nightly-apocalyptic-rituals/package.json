@@ -1,0 +1,24 @@
+{
+  "name": "nightly-apocalyptic-rituals",
+  "version": "1.0.0",
+  "description": "Tracks daily 'Apocalyptic Rituals' (tasks) to maintain sanity and order in the wasteland.",
+  "main": "src/ritual-tracker.js",
+  "scripts": {
+    "start": "node src/ritual-tracker.js",
+    "test": "node tests/test-ritual-tracker.js"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "utility",
+    "apocalypse",
+    "rituals",
+    "tracker",
+    "tasks"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "sinon": "^17.0.1"
+  }
+}
