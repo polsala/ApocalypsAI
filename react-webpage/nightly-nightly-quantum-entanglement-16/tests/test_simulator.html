@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .test-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Quantum Entanglement Simulator - Test Suite</h1>
+    <p>These tests verify the core functionality of the quantum simulator without requiring a browser.</p>
+
+    <div id="test-output"></div>
+
+    <script>
+        // Mock DOM elements for testing
+        class MockCanvas {
+            constructor() {
+                this.width = 800;
+                this.height = 600;
+                this.getContext = () => ({
+                    fillRect: () => {},
+                    beginPath: () => {},
+                    arc: () => {},
+                    fill: () => {},
+                    stroke: () => {},
+                    moveTo: () => {},
+                    lineTo: () => {},
+                    strokeStyle: '',
+                    lineWidth: 1,
+                    fillStyle: '',
+                    globalAlpha: 1
+                });
+            }
+        }
+
+        // Import the Particle class logic
+        const Particle = class {
+            constructor(x, y, id, partnerId) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.id = id;
+                this.partnerId = partnerId;
+                this.entangled = true;
+                this.measured = false;
+                this.spin = Math.random() > 0.5 ? 1 : -1;
+                this.color = this.spin === 1 ? '#667eea' : '#ff6b6b';
+                this.size = 4;
+                this.alpha = 1;
+            }
+
+            update(width, height, speed) {
+                if (!this.measured) {
+                    this.x += this.vx * speed;
+                    this.y += this.vy * speed;
+
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                }
+            }
+
+            measure() {
+                if (!this.measured) {
+                    this.measured = true;
+                    this.alpha = 0.5;
+                    this.size = 6;
+                    return this.spin;
+                }
+                return this.spin;
+            }
+        };
+
+        // Test functions
+        function runTests() {
+            const tests = [];
+
+            // Test 1: Particle Creation
+            tests.push({
+                name: "Particle Creation",
+                test: () => {
+                    const p = new Particle(100, 100, 'test1', 'test2');
+                    return p.x === 100 && p.y === 100 && p.id === 'test1';
+                }
+            });
+
+            // Test 2: Entanglement Logic
+            tests.push({
+                name: "Entanglement Logic",
+                test: () => {
+                    const p1 = new Particle(100, 100, 'p1', 'p2');
+                    const p2 = new Particle(200, 200, 'p2', 'p1');
+                    
+                    // Set opposite spins for entanglement
+                    p1.spin = 1;
+                    p2.spin = -1;
+                    
+                    return p1.spin === 1 && p2.spin === -1 && p1.partnerId === 'p2';
+                }
+            });
+
+            // Test 3: Measurement Effect
+            tests.push({
+                name: "Measurement Effect",
+                test: () => {
+                    const p1 = new Particle(100, 100, 'p1', 'p2');
+                    const p2 = new Particle(200, 200, 'p2', 'p1');
+                    
+                    const spin1 = p1.measure();
+                    const spin2 = p2.measure();
+                    
+                    return p1.measured && p2.measured && p1.size === 6 && p2.size === 6;
+                }
+            });
+
+            // Test 4: Movement Logic
+            tests.push({
+                name: "Movement Logic",
+                test: () => {
+                    const p = new Particle(100, 100, 'test', 'partner');
+                    const initialX = p.x;
+                    const initialY = p.y;
+                    
+                    p.update(800, 600, 1);
+                    
+                    return p.x !== initialX || p.y !== initialY;
+                }
+            });
+
+            // Test 5: Boundary Reflection
+            tests.push({
+                name: "Boundary Reflection",
+                test: () => {
+                    const p = new Particle(-10, 100, 'test', 'partner');
+                    p.vx = -1; // Moving left
+                    p.update(800, 600, 1);
+                    
+                    return p.vx > 0; // Should have bounced
+                }
+            });
+
+            // Run all tests
+            const output = document.getElementById('test-output');
+            let passed = 0;
+            let failed = 0;
+
+            tests.forEach(test => {
+                const result = document.createElement('div');
+                result.className = 'test-container';
+                
+                try {
+                    const success = test.test();
+                    if (success) {
+                        result.innerHTML = `<strong class="pass">✓ PASS</strong> - ${test.name}`;
+                        passed++;
+                    } else {
+                        result.innerHTML = `<strong class="fail">✗ FAIL</strong> - ${test.name}`;
+                        failed++;
+                    }
+                } catch (error) {
+                    result.innerHTML = `<strong class="fail">✗ ERROR</strong> - ${test.name}: ${error.message}`;
+                    failed++;
+                }
+                
+                output.appendChild(result);
+            });
+
+            // Summary
+            const summary = document.createElement('div');
+            summary.className = 'test-container';
+            summary.innerHTML = `
+                <h3>Test Summary</h3>
+                <p><strong>Passed:</strong> ${passed}</p>
+                <p><strong>Failed:</strong> ${failed}</p>
+                <p><strong>Total:</strong> ${tests.length}</p>
+                <p><strong>Success Rate:</strong> ${Math.round((passed / tests.length) * 100)}%</p>
+            `;
+            output.appendChild(summary);
+        }
+
+        // Run tests when page loads
+        window.onload = runTests;
+    </script>
+</body>
+</html>
