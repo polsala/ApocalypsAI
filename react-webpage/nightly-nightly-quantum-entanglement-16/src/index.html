@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nightly Quantum Entanglement Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --text-color: #e0e6ed;
+            --accent-color: #667eea;
+            --entangled-color: #ff6b6b;
+            --measured-color: #ffd93d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(90deg, var(--accent-color), var(--entangled-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.3s;
+        }
+
+        button:hover {
+            background: #768cff;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 80px);
+        }
+
+        .stats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid var(--accent-color);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .legend {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #8899a6;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const Particle = class {
+            constructor(x, y, id, partnerId) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.id = id;
+                this.partnerId = partnerId;
+                this.entangled = true;
+                this.measured = false;
+                this.spin = Math.random() > 0.5 ? 1 : -1;
+                this.color = this.spin === 1 ? '#667eea' : '#ff6b6b';
+                this.size = 4;
+                this.alpha = 1;
+            }
+
+            update(width, height, speed) {
+                if (!this.measured) {
+                    this.x += this.vx * speed;
+                    this.y += this.vy * speed;
+
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                }
+            }
+
+            measure() {
+                if (!this.measured) {
+                    this.measured = true;
+                    this.alpha = 0.5;
+                    this.size = 6;
+                    return this.spin;
+                }
+                return this.spin;
+            }
+        };
+
+        function QuantumSimulator() {
+            const canvasRef = useRef(null);
+            const animationRef = useRef(null);
+            const particlesRef = useRef([]);
+            const [stats, setStats] = useState({ pairs: 0, measured: 0 });
+            const [speed, setSpeed] = useState(1);
+            const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });
+
+            const createEntangledPair = () => {
+                const canvas = canvasRef.current;
+                const width = canvas.width;
+                const height = canvas.height;
+
+                const x1 = Math.random() * width;
+                const y1 = Math.random() * height;
+                const x2 = Math.random() * width;
+                const y2 = Math.random() * height;
+
+                const id1 = Date.now() + Math.random();
+                const id2 = Date.now() + Math.random() + 1;
+
+                const spin = Math.random() > 0.5 ? 1 : -1;
+
+                const p1 = new Particle(x1, y1, id1, id2);
+                p1.spin = spin;
+                p1.color = spin === 1 ? '#667eea' : '#ff6b6b';
+
+                const p2 = new Particle(x2, y2, id2, id1);
+                p2.spin = -spin; // Opposite spin for entanglement
+                p2.color = p2.spin === 1 ? '#667eea' : '#ff6b6b';
+
+                particlesRef.current.push(p1, p2);
+                updateStats();
+            };
+
+            const measureParticle = (x, y) => {
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const mouseX = (x - rect.left) * scaleX;
+                const mouseY = (y - rect.top) * scaleY;
+
+                let measuredSpin = null;
+
+                particlesRef.current.forEach(particle => {
+                    const dist = Math.sqrt(
+                        Math.pow(particle.x - mouseX, 2) + Math.pow(particle.y - mouseY, 2)
+                    );
+
+                    if (dist < 20 && !particle.measured) {
+                        measuredSpin = particle.measure();
+
+                        // Find and measure partner
+                        const partner = particlesRef.current.find(p => p.id === particle.partnerId);
+                        if (partner) {
+                            partner.measure();
+                        }
+
+                        setTooltip({
+                            show: true,
+                            text: `Particle measured! Spin: ${measuredSpin === 1 ? 'UP' : 'DOWN'}\nEntanglement preserved!`,
+                            x: x + 10,
+                            y: y + 10
+                        });
+
+                        setTimeout(() => {
+                            setTooltip({ show: false, text: '', x: 0, y: 0 });
+                        }, 2000);
+                    }
+                });
+
+                updateStats();
+            };
+
+            const updateStats = () => {
+                const pairs = particlesRef.current.length / 2;
+                const measured = particlesRef.current.filter(p => p.measured).length;
+                setStats({ pairs, measured });
+            };
+
+            const clearAll = () => {
+                particlesRef.current = [];
+                updateStats();
+            };
+
+            const draw = () => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+
+                // Clear canvas
+                ctx.fillStyle = 'rgba(15, 17, 21, 0.1)';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw particles
+                particlesRef.current.forEach(particle => {
+                    particle.update(width, height, speed);
+
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = particle.alpha;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+
+                    // Draw entanglement line
+                    if (particle.entangled && !particle.measured) {
+                        const partner = particlesRef.current.find(p => p.id === particle.partnerId);
+                        if (partner) {
+                            ctx.beginPath();
+                            ctx.moveTo(particle.x, particle.y);
+                            ctx.lineTo(partner.x, partner.y);
+                            ctx.strokeStyle = 'rgba(102, 126, 234, 0.3)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                });
+
+                animationRef.current = requestAnimationFrame(draw);
+            };
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const resizeCanvas = () => {
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                };
+
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                draw();
+
+                return () => {
+                    window.removeEventListener('resize', resizeCanvas);
+                    if (animationRef.current) {
+                        cancelAnimationFrame(animationRef.current);
+                    }
+                };
+            }, [speed]);
+
+            return (
+                <div>
+                    <header>
+                        <h1>⚛️ Nightly Quantum Entanglement Simulator</h1>
+                        <div className="controls">
+                            <button onClick={createEntangledPair}>Create Entangled Pair</button>
+                            <button onClick={clearAll}>Clear All</button>
+                            <div className="control-group">
+                                <span>Speed:</span>
+                                <input 
+                                    type="range" 
+                                    min="0.1" 
+                                    max="3" 
+                                    step="0.1" 
+                                    value={speed} 
+                                    onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                                />
+                                <span>{speed.toFixed(1)}x</span>
+                            </div>
+                        </div>
+                        <div className="legend">
+                            <div className="legend-item">
+                                <div className="dot" style={{backgroundColor: '#667eea'}}></div>
+                                Spin Up (Blue)
+                            </div>
+                            <div className="legend-item">
+                                <div className="dot" style={{backgroundColor: '#ff6b6b'}}></div>
+                                Spin Down (Red)
+                            </div>
+                            <div className="legend-item">
+                                <div className="dot" style={{backgroundColor: '#ffd93d'}}></div>
+                                Measured
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <canvas 
+                        ref={canvasRef} 
+                        onClick={(e) => measureParticle(e.clientX, e.clientY)}
+                        style={{cursor: 'crosshair'}}
+                    />
+
+                    <div className="stats">
+                        Pairs: {stats.pairs}\nMeasured: {stats.measured}
+                    </div>
+
+                    {tooltip.show && (
+                        <div 
+                            className="tooltip show"
+                            style={{
+                                left: tooltip.x,
+                                top: tooltip.y
+                            }}
+                        >
+                            {tooltip.text}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(<QuantumSimulator />);
+    </script>
+</body>
+</html>
