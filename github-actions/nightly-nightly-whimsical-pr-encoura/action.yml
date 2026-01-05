@@ -1,0 +1,16 @@
+name: 'Whimsical PR Encourager'
+description: 'Adds a random, whimsical, and encouraging comment to newly opened Pull Requests.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  messages:
+    description: 'JSON array of custom whimsical messages. If empty or invalid, uses default messages.'
+    required: false
+    default: '[]'
+outputs:
+  comment-id:
+    description: 'The ID of the created comment.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
