@@ -1,0 +1,22 @@
+[package]
+name = "nightly-quantum-entanglement-simulator"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical quantum circuit simulator with ASCII visualization and entanglement detection"
+authors = ["ApocalypsAI"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+fastrand = "2.0"
+
+[dev-dependencies]
+fastrand = "2.0"
+
+[[bin]]
+name = "quantum_simulator"
+path = "src/main.rs"
+
+[lib]
+name = "nightly_quantum_entanglement_simulator"
+path = "src/lib.rs"
