@@ -1,0 +1,40 @@
+---
+# Size validation tasks
+
+- name: Count lines in playbook
+  command: wc -l "{{ playbook_file }}"
+  register: line_count_result
+
+- name: Extract line count
+  set_fact:
+    line_count: "{{ line_count_result.stdout.split()[0] | int }}"
+
+- name: Check if playbook exceeds maximum size
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'size_check': 'passed' if line_count <= validation_settings.max_playbook_size else 'failed',
+        'details': validation_result.details | combine({
+          'size': {
+            'lines': line_count,
+            'max_allowed': validation_settings.max_playbook_size,
+            'status': 'within_limit' if line_count <= validation_settings.max_playbook_size else 'exceeds_limit'
+          }
+        })
+      }) or validation_result }}
+
+- name: Add size warning to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'warnings': validation_result.warnings + ['Playbook exceeds recommended size']
+      }) if line_count > validation_settings.max_playbook_size else validation_result }}
+
+- name: Log size check result
+  debug:
+    msg: "Size check for {{ playbook_file }}: {{ line_count }} lines (max: {{ validation_settings.max_playbook_size }})"
+
+- name: Suggest refactoring for large playbooks
+  debug:
+    msg: "Consider breaking down this large playbook into smaller, focused playbooks"
+  when: line_count > validation_settings.max_playbook_size

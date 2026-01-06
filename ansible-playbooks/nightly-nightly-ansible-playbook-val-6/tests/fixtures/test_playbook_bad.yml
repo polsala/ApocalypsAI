@@ -1,0 +1,17 @@
+---
+# Invalid test playbook for validation (contains forbidden patterns)
+
+- name: Test Playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello World"
+      always_run: true  # Forbidden pattern
+    
+    - name: Another test task
+      copy:
+        content: "Test content"
+        dest: "/tmp/test_file.txt"
+      ignore_errors: true  # Forbidden pattern

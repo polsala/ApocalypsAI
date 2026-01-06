@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ansible Playbook Validation Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { background: #f4f4f4; padding: 20px; border-radius: 5px; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .card { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-passed { color: #28a745; font-weight: bold; }
+        .status-failed { color: #dc3545; font-weight: bold; }
+        .status-warning { color: #ffc107; font-weight: bold; }
+        .details { margin-top: 20px; }
+        .playbook-section { margin-bottom: 30px; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 3px; margin: 5px 0; }
+        .warning { color: #856404; background: #fff3cd; padding: 10px; border-radius: 3px; margin: 5px 0; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Ansible Playbook Validation Report</h1>
+        <p><strong>Generated:</strong> {{ timestamp }}</p>
+        <p><strong>Total Playbooks:</strong> {{ validation_results | length }}</p>
+    </div>
+
+    <div class="summary">
+        <div class="card">
+            <h3>Overall Status</h3>
+            <p class="status-{{ 'passed' if validation_results | selectattr('status', 'equalto', 'passed') | list | length == validation_results | length else 'failed' }}">
+                {{ 'All Passed' if validation_results | selectattr('status', 'equalto', 'passed') | list | length == validation_results | length else 'Some Failed' }}
+            </p>
+        </div>
+        <div class="card">
+            <h3>Passed</h3>
+            <p class="status-passed">{{ validation_results | selectattr('status', 'equalto', 'passed') | list | length }}</p>
+        </div>
+        <div class="card">
+            <h3>Failed</h3>
+            <p class="status-failed">{{ validation_results | selectattr('status', 'equalto', 'failed') | list | length }}</p>
+        </div>
+        <div class="card">
+            <h3>Warnings</h3>
+            <p class="status-warning">{{ validation_results | selectattr('status', 'equalto', 'warning') | list | length }}</p>
+        </div>
+    </div>
+
+    <div class="details">
+        {% for result in validation_results %}
+        <div class="playbook-section">
+            <h2>{{ result.playbook }}</h2>
+            <p><strong>Status:</strong> <span class="status-{{ result.status }}">{{ result.status | upper }}</span></p>
+            
+            <h3>Validation Details</h3>
+            <ul>
+                <li><strong>Syntax:</strong> {{ result.syntax_check }}</li>
+                <li><strong>Lint:</strong> {{ result.lint_check }}</li>
+                <li><strong>Size:</strong> {{ result.size_check }}</li>
+                <li><strong>Best Practices:</strong> {{ result.best_practices }}</li>
+                <li><strong>Idempotency:</strong> {{ result.idempotency_check }}</li>
+            </ul>
+            
+            {% if result.errors | length > 0 %}
+            <h3>Errors</h3>
+            {% for error in result.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            {% if result.warnings | length > 0 %}
+            <h3>Warnings</h3>
+            {% for warning in result.warnings %}
+            <div class="warning">{{ warning }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            {% if result.details %}
+            <h3>Technical Details</h3>
+            <pre>{{ result.details | to_nice_json }}</pre>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

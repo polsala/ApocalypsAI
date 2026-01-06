@@ -1,0 +1,15 @@
+---
+# Valid test playbook for validation
+
+- name: Test Playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test task
+      debug:
+        msg: "Hello World"
+    
+    - name: Another test task
+      copy:
+        content: "Test content"
+        dest: "/tmp/test_file.txt"

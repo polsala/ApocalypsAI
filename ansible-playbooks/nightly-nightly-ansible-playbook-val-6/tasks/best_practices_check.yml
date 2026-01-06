@@ -1,0 +1,56 @@
+---
+# Best practices validation tasks
+
+- name: Read playbook content
+  slurp:
+    src: "{{ playbook_file }}"
+  register: playbook_content
+
+- name: Decode playbook content
+  set_fact:
+    playbook_text: "{{ playbook_content.content | b64decode }}"
+
+- name: Check for forbidden patterns
+  set_fact:
+    forbidden_found: >
+      {{ playbook_text | regex_search(forbidden_pattern, multiline=true) | default([]) }}
+  loop: "{{ validation_settings.forbidden_patterns }}"
+  loop_control:
+    loop_var: forbidden_pattern
+
+- name: Record best practices check result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'best_practices': 'passed' if forbidden_found | length == 0 else 'failed',
+        'details': validation_result.details | combine({
+          'best_practices': {
+            'forbidden_patterns_found': forbidden_found,
+            'allowed_modules': validation_settings.allowed_modules
+          }
+        })
+      }) or validation_result }}
+
+- name: Add best practices errors to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'errors': validation_result.errors + ['Forbidden patterns found in playbook']
+      }) if forbidden_found | length > 0 else validation_result }}
+
+- name: Add best practices warnings to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'warnings': validation_result.warnings + ['Consider reviewing playbook for best practices']
+      }) if forbidden_found | length > 0 else validation_result }}
+
+- name: Log best practices check result
+  debug:
+    msg: "Best practices check for {{ playbook_file }}: {{ 'PASSED' if forbidden_found | length == 0 else 'FAILED' }}"
+
+- name: Display forbidden patterns found
+  debug:
+    msg: "Forbidden pattern found: {{ item }}"
+  loop: "{{ forbidden_found }}"
+  when: forbidden_found | length > 0

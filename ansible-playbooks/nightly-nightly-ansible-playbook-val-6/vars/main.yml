@@ -1,0 +1,62 @@
+---
+# Validation settings and configuration
+
+validation_settings:
+  # Maximum allowed lines in a playbook
+  max_playbook_size: 1000
+  
+  # Allowed modules for best practices
+  allowed_modules:
+    - apt
+    - yum
+    - dnf
+    - service
+    - file
+    - template
+    - copy
+    - lineinfile
+    - replace
+    - user
+    - group
+    - package
+    - pip
+    - npm
+    - git
+    - shell
+    - command
+    - include_tasks
+    - import_tasks
+    - include_role
+    - import_role
+  
+  # Forbidden patterns for best practices
+  forbidden_patterns:
+    - "always_run"
+    - "force=yes"
+    - "ignore_errors: true"
+    - "changed_when: false"
+    - "failed_when: false"
+    - "delegate_to: localhost"
+    - "run_once: true"
+  
+  # Molecule settings
+  molecule:
+    image: "quay.io/ansible/ansible-runner:latest"
+    driver: "docker"
+    
+  # Report settings
+  report:
+    format: ["html", "json", "markdown"]
+    include_details: true
+    include_logs: true
+
+# Default providers for idempotency testing
+default_providers:
+  - docker
+  - aws
+  - azure
+  - gcp
+
+# Logging settings
+log_level: "INFO"
+log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

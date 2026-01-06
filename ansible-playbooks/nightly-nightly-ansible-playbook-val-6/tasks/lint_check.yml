@@ -1,0 +1,68 @@
+---
+# Lint validation tasks
+
+- name: Check if ansible-lint is installed
+  command: ansible-lint --version
+  register: lint_version
+  ignore_errors: true
+
+- name: Install ansible-lint if not available
+  pip:
+    name: ansible-lint
+    state: present
+  when: lint_version.rc != 0
+
+- name: Perform lint check on {{ playbook_file }}
+  command: >
+    ansible-lint "{{ playbook_file }}" --format json
+  register: lint_result
+  ignore_errors: true
+  args:
+    chdir: "{{ playbook_file | dirname }}"
+
+- name: Parse lint results
+  set_fact:
+    lint_json: "{{ lint_result.stdout | from_json | default([]) }}"
+  when: lint_result.rc == 0 and lint_result.stdout | length > 0
+
+- name: Parse lint errors when command fails
+  set_fact:
+    lint_json: "{{ [] }}"
+  when: lint_result.rc != 0
+
+- name: Record lint check result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'lint_check': 'passed' if lint_json | length == 0 else 'failed',
+        'details': validation_result.details | combine({
+          'lint': {
+            'total_issues': lint_json | length,
+            'issues': lint_json
+          }
+        })
+      }) or validation_result }}
+
+- name: Add lint errors to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'errors': validation_result.errors + lint_json | map(attribute='message') | list
+      }) if lint_json | length > 0 else validation_result }}
+
+- name: Add lint warnings to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'warnings': validation_result.warnings + ['Lint found potential issues']
+      }) if lint_json | length > 0 else validation_result }}
+
+- name: Log lint check result
+  debug:
+    msg: "Lint check for {{ playbook_file }}: {{ lint_json | length }} issues found"
+
+- name: Display lint issues
+  debug:
+    msg: "{{ item.rule }}: {{ item.message }}"
+  loop: "{{ lint_json }}"
+  when: lint_json | length > 0
