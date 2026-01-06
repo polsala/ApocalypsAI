@@ -1,0 +1,44 @@
+---
+# Variables for Nightly Ephemeral Runner Ghost Buster
+
+# GitHub API Configuration
+github_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+github_org: "your-org"
+github_repo: "your-repo"
+
+# Cloud Providers to scan (aws, azure, gcp)
+cloud_providers:
+  - aws
+  - azure
+  - gcp
+
+# Maximum age in hours before considering a runner for cleanup
+max_age_hours: 4
+
+# Instance tags that identify GitHub runners
+# These should match the tags used when creating ephemeral runners
+tags_to_check:
+  purpose: "github-runner"
+  created_by: "ephemeral-runner"
+
+# Debug mode for detailed logging
+debug_mode: false
+
+# Output path for the cleanup report
+report_output_path: "/tmp/ghost_buster_report_{{ ansible_date_time.epoch }}.txt"
+
+# Dry run mode (set to true to test without making changes)
+dry_run: false
+
+# AWS Configuration
+aws_profile: "default"
+
+# Azure Configuration
+azure_subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
+
+# GCP Configuration
+gcp_project_id: "{{ lookup('env', 'GCP_PROJECT_ID') }}"
+
+# Safety thresholds
+max_instances_per_provider: 50  # Maximum instances to process per provider
+concurrent_cleanup_limit: 10   # Maximum concurrent termination operations

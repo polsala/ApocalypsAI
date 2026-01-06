@@ -1,0 +1,102 @@
+---
+# Tests for Nightly Ephemeral Runner Ghost Buster
+
+- name: Test Ghost Buster Variables
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Check required variables are defined
+      assert:
+        that:
+          - github_token is defined
+          - github_org is defined
+          - github_repo is defined
+          - cloud_providers is defined
+          - max_age_hours is defined
+        fail_msg: "Required variables not defined"
+
+    - name: Check cloud providers list is valid
+      assert:
+        that:
+          - cloud_providers | length > 0
+          - cloud_providers | type_debug == 'list'
+          - cloud_providers | map('match', '^(aws|azure|gcp)$') | list | select | list | length == cloud_providers | length
+        fail_msg: "Invalid cloud providers configuration"
+
+    - name: Check max age is reasonable
+      assert:
+        that:
+          - max_age_hours is number
+          - max_age_hours > 0
+          - max_age_hours <= 24
+        fail_msg: "Max age hours should be a number between 1 and 24"
+
+    - name: Check tags_to_check structure
+      assert:
+        that:
+          - tags_to_check is defined
+          - tags_to_check.purpose is defined
+          - tags_to_check.created_by is defined
+        fail_msg: "Tags configuration incomplete"
+
+    - name: Display test configuration
+      debug:
+        msg: |
+          Test Configuration:
+          - GitHub Org: {{ github_org }}
+          - GitHub Repo: {{ github_repo }}
+          - Cloud Providers: {{ cloud_providers }}
+          - Max Age: {{ max_age_hours }} hours
+          - Purpose Tag: {{ tags_to_check.purpose }}
+          - Created By Tag: {{ tags_to_check.created_by }}
+
+- name: Test Ghost Buster Dry Run
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Run ghost buster in dry run mode
+      include_tasks: ../ghost_buster.yml
+      vars:
+        dry_run: true
+        github_token: "test-token"
+        github_org: "test-org"
+        github_repo: "test-repo"
+        debug_mode: true
+
+    - name: Verify dry run completed successfully
+      assert:
+        that:
+          - cleanup_results is defined
+          - cleanup_results | type_debug == 'list'
+        fail_msg: "Dry run did not complete successfully"
+
+- name: Test Variable File Loading
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Load main variables
+      include_vars:
+        file: ../vars/main.yml
+
+    - name: Verify variables loaded correctly
+      assert:
+        that:
+          - github_token is defined
+          - cloud_providers is defined
+          - max_age_hours is defined
+        fail_msg: "Variables not loaded correctly"
+
+    - name: Check environment variable fallback
+      set_fact:
+        env_github_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+
+    - name: Verify environment variable fallback works
+      assert:
+        that:
+          - env_github_token is defined
+        fail_msg: "Environment variable lookup failed"
+      when: env_github_token | length > 0
