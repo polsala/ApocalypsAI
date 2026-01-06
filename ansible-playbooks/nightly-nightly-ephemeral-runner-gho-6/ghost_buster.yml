@@ -1,0 +1,445 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Detects and cleans up orphaned GitHub Actions self-hosted runners
+
+- name: Ghost Buster - Detect and clean up orphaned runners
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  vars:
+    # GitHub API base URL
+    github_api_base: "https://api.github.com"
+    # Track cleanup results
+    cleanup_results: []
+    # Track scanned instances
+    scanned_instances: []
+  tasks:
+    - name: Display execution header
+      debug:
+        msg: |
+          =========================================
+          Nightly Ephemeral Runner Ghost Buster
+          =========================================
+          Starting ghost busting operation...
+          Max age for cleanup: {{ max_age_hours }} hours
+          Dry run mode: {{ dry_run | default(false) }}
+          =========================================
+
+    - name: Validate required variables
+      assert:
+        that:
+          - github_token is defined and github_token | length > 0
+          - cloud_providers is defined and cloud_providers | length > 0
+        fail_msg: "Required variables not set: github_token or cloud_providers"
+
+    - name: Get registered GitHub runners
+      uri:
+        url: "{{ github_api_base }}/repos/{{ github_org }}/{{ github_repo }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "token {{ github_token }}"
+          Accept: "application/vnd.github.v3+json"
+        status_code: 200
+      register: github_runners_response
+      retries: 3
+      delay: 5
+      until: github_runners_response is succeeded
+      when: not dry_run
+
+    - name: Extract registered runner names
+      set_fact:
+        registered_runners: >-
+          {{ github_runners_response.json.runners | map(attribute='name') | list if github_runners_response is defined else [] }}
+      when: not dry_run
+
+    - name: Debug registered runners
+      debug:
+        msg: "Registered GitHub runners: {{ registered_runners }}"
+      when: debug_mode | default(false)
+
+    # AWS EC2 Runner Detection
+    - name: Scan AWS EC2 for GitHub runner instances
+      block:
+        - name: Get AWS EC2 instances with GitHub runner tags
+          command: >-
+            aws ec2 describe-instances
+            --filters "Name=tag:Purpose,Values={{ tags_to_check.purpose }}"
+                     "Name=tag:CreatedBy,Values={{ tags_to_check.created_by }}"
+                     "Name=instance-state-name,Values=running"
+            --query "Reservations[].Instances[].[InstanceId,Tags[?Key=='Name'].Value|[0],LaunchTime,Tags]"
+            --output text
+          register: aws_instances
+          environment:
+            AWS_PROFILE: "{{ aws_profile | default('default') }}"
+          ignore_errors: true
+
+        - name: Process AWS instances
+          set_fact:
+            aws_runner_instances: >-
+              {% set instances = [] %}
+              {% for line in (aws_instances.stdout | default('')).splitlines() %}
+                {% set parts = line.split('\t') %}
+                {% if parts | length >= 4 %}
+                  {% set instance_id = parts[0] %}
+                  {% set name = parts[1] | default('unknown') %}
+                  {% set launch_time = parts[2] %}
+                  {% set tags_str = parts[3:] | join('\t') %}
+                  {% set tags = {} %}
+                  {% for tag_pair in tags_str.split('\t') %}
+                    {% set tag_parts = tag_pair.split('=') %}
+                    {% if tag_parts | length == 2 %}
+                      {% set _ = tags.update({tag_parts[0]: tag_parts[1]}) %}
+                    {% endif %}
+                  {% endfor %}
+                  {% set _ = instances.append({
+                    'provider': 'aws',
+                    'instance_id': instance_id,
+                    'name': name,
+                    'launch_time': launch_time,
+                    'tags': tags,
+                    'metadata': {
+                      'instance_id': instance_id,
+                      'name': name,
+                      'launch_time': launch_time
+                    }
+                  }) %}
+                {% endif %}
+              {% endfor %}
+              {{ instances }}
+
+        - name: Debug AWS instances found
+          debug:
+            msg: "AWS runner instances found: {{ aws_runner_instances | length }}"
+          when: debug_mode | default(false)
+
+        - name: Check AWS instances against GitHub registration
+          set_fact:
+            aws_orphaned: >-
+              {% set orphaned = [] %}
+              {% for instance in aws_runner_instances %}
+                {% set instance_name = instance.name | default('') %}
+                {% if instance_name not in registered_runners %}
+                  {% set _ = orphaned.append(instance) %}
+                {% endif %}
+              {% endfor %}
+              {{ orphaned }}
+
+        - name: Filter AWS instances by age
+          set_fact:
+            aws_old_orphaned: >-
+              {% set old_orphaned = [] %}
+              {% for instance in aws_orphaned %}
+                {% set launch_time = instance.launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') %}
+                {% set age_hours = ((ansible_date_time.epoch | int) - (launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') | to_timestamp)) / 3600 %}
+                {% if age_hours > max_age_hours %}
+                  {% set _ = old_orphaned.append(instance.update({'age_hours': age_hours}) or instance) %}
+                {% endif %}
+              {% endfor %}
+              {{ old_orphaned }}
+
+        - name: Add AWS results to cleanup summary
+          set_fact:
+            cleanup_results: >-
+              {{ cleanup_results + [{
+                'provider': 'aws',
+                'total_scanned': aws_runner_instances | length,
+                'orphaned_found': aws_orphaned | length,
+                'old_orphaned': aws_old_orphaned | length,
+                'instances': aws_old_orphaned
+              }] }}
+
+        - name: Terminate old orphaned AWS instances
+          block:
+            - name: Display AWS instances to terminate
+              debug:
+                msg: "Terminating AWS instance: {{ instance.instance_id }} ({{ instance.name }}) - {{ instance.age_hours | round(2) }} hours old"
+              loop: "{{ aws_old_orphaned }}"
+              loop_control:
+                loop_var: instance
+
+            - name: Terminate AWS instance
+              command: >-
+                aws ec2 terminate-instances
+                --instance-ids {{ item.instance_id }}
+                --output text
+              loop: "{{ aws_old_orphaned }}"
+              loop_control:
+                loop_var: item
+              environment:
+                AWS_PROFILE: "{{ aws_profile | default('default') }}"
+              register: aws_termination_results
+              ignore_errors: true
+
+            - name: Log AWS termination results
+              debug:
+                msg: "AWS termination result: {{ aws_termination_results }}"
+              when: debug_mode | default(false)
+
+          when: aws_old_orphaned | length > 0 and not dry_run
+
+        - name: Display AWS dry run summary
+          debug:
+            msg: "[DRY RUN] Would terminate {{ aws_old_orphaned | length }} old orphaned AWS instances"
+          when: aws_old_orphaned | length > 0 and dry_run
+
+      when: "'aws' in cloud_providers"
+
+    # Azure VM Runner Detection
+    - name: Scan Azure VMs for GitHub runner instances
+      block:
+        - name: Get Azure VMs with GitHub runner tags
+          command: >-
+            az vm list
+            --show-details
+            --query "[?tags.Purpose=='{{ tags_to_check.purpose }}' && tags.CreatedBy=='{{ tags_to_check.created_by }}' && powerState=='VM running'].[name,resourceGroup,vmId,tags,licenseType]"
+            --output tsv
+          register: azure_vms
+          environment:
+            AZURE_SUBSCRIPTION_ID: "{{ azure_subscription_id | default('') }}"
+          ignore_errors: true
+
+        - name: Process Azure VMs
+          set_fact:
+            azure_runner_vms: >-
+              {% set vms = [] %}
+              {% for line in (azure_vms.stdout | default('')).splitlines() %}
+                {% set parts = line.split('\t') %}
+                {% if parts | length >= 3 %}
+                  {% set vm_name = parts[0] %}
+                  {% set resource_group = parts[1] %}
+                  {% set vm_id = parts[2] %}
+                  {% set tags_str = parts[3] | default('{}') %}
+                  {% set tags = tags_str | from_json %}
+                  {% set _ = vms.append({
+                    'provider': 'azure',
+                    'vm_id': vm_id,
+                    'name': vm_name,
+                    'resource_group': resource_group,
+                    'tags': tags,
+                    'metadata': {
+                      'vm_id': vm_id,
+                      'name': vm_name,
+                      'resource_group': resource_group
+                    }
+                  }) %}
+                {% endif %}
+              {% endfor %}
+              {{ vms }}
+
+        - name: Debug Azure VMs found
+          debug:
+            msg: "Azure runner VMs found: {{ azure_runner_vms | length }}"
+          when: debug_mode | default(false)
+
+        - name: Check Azure VMs against GitHub registration
+          set_fact:
+            azure_orphaned: >-
+              {% set orphaned = [] %}
+              {% for vm in azure_runner_vms %}
+                {% set vm_name = vm.name | default('') %}
+                {% if vm_name not in registered_runners %}
+                  {% set _ = orphaned.append(vm) %}
+                {% endif %}
+              {% endfor %}
+              {{ orphaned }}
+
+        - name: Add Azure results to cleanup summary
+          set_fact:
+            cleanup_results: >-
+              {{ cleanup_results + [{
+                'provider': 'azure',
+                'total_scanned': azure_runner_vms | length,
+                'orphaned_found': azure_orphaned | length,
+                'old_orphaned': azure_orphaned | length,
+                'instances': azure_orphaned
+              }] }}
+
+        - name: Terminate orphaned Azure VMs
+          block:
+            - name: Display Azure VMs to terminate
+              debug:
+                msg: "Terminating Azure VM: {{ vm.name }} ({{ vm.resource_group }})"
+              loop: "{{ azure_orphaned }}"
+              loop_control:
+                loop_var: vm
+
+            - name: Terminate Azure VM
+              command: >-
+                az vm delete
+                --resource-group {{ item.resource_group }}
+                --name {{ item.name }}
+                --yes
+                --no-wait
+              loop: "{{ azure_orphaned }}"
+              loop_control:
+                loop_var: item
+              environment:
+                AZURE_SUBSCRIPTION_ID: "{{ azure_subscription_id | default('') }}"
+              register: azure_termination_results
+              ignore_errors: true
+
+            - name: Log Azure termination results
+              debug:
+                msg: "Azure termination result: {{ azure_termination_results }}"
+              when: debug_mode | default(false)
+
+          when: azure_orphaned | length > 0 and not dry_run
+
+        - name: Display Azure dry run summary
+          debug:
+            msg: "[DRY RUN] Would terminate {{ azure_orphaned | length }} orphaned Azure VMs"
+          when: azure_orphaned | length > 0 and dry_run
+
+      when: "'azure' in cloud_providers"
+
+    # GCP Compute Engine Runner Detection
+    - name: Scan GCP Compute Engine for GitHub runner instances
+      block:
+        - name: Get GCP instances with GitHub runner tags
+          command: >-
+            gcloud compute instances list
+            --filter="labels.purpose={{ tags_to_check.purpose }} AND labels.created-by={{ tags_to_check.created_by }}"
+            --format="csv(name,zone,id,creationTimestamp,status,labels)"
+          register: gcp_instances
+          environment:
+            CLOUDSDK_CORE_PROJECT: "{{ gcp_project_id | default('') }}"
+          ignore_errors: true
+
+        - name: Process GCP instances
+          set_fact:
+            gcp_runner_instances: >-
+              {% set instances = [] %}
+              {% for line in (gcp_instances.stdout | default('')).splitlines() %}
+                {% set parts = line.split(',') %}
+                {% if parts | length >= 6 %}
+                  {% set name = parts[0] %}
+                  {% set zone = parts[1] %}
+                  {% set instance_id = parts[2] %}
+                  {% set creation_time = parts[3] %}
+                  {% set status = parts[4] %}
+                  {% set labels_str = parts[5] %}
+                  {% set labels = {} %}
+                  {% for label_pair in labels_str.split(',') %}
+                    {% set label_parts = label_pair.split('=') %}
+                    {% if label_parts | length == 2 %}
+                      {% set _ = labels.update({label_parts[0]: label_parts[1]}) %}
+                    {% endif %}
+                  {% endfor %}
+                  {% set _ = instances.append({
+                    'provider': 'gcp',
+                    'instance_id': instance_id,
+                    'name': name,
+                    'zone': zone,
+                    'creation_time': creation_time,
+                    'status': status,
+                    'labels': labels,
+                    'metadata': {
+                      'instance_id': instance_id,
+                      'name': name,
+                      'zone': zone,
+                      'creation_time': creation_time
+                    }
+                  }) %}
+                {% endif %}
+              {% endfor %}
+              {{ instances }}
+
+        - name: Debug GCP instances found
+          debug:
+            msg: "GCP runner instances found: {{ gcp_runner_instances | length }}"
+          when: debug_mode | default(false)
+
+        - name: Check GCP instances against GitHub registration
+          set_fact:
+            gcp_orphaned: >-
+              {% set orphaned = [] %}
+              {% for instance in gcp_runner_instances %}
+                {% set instance_name = instance.name | default('') %}
+                {% if instance_name not in registered_runners %}
+                  {% set _ = orphaned.append(instance) %}
+                {% endif %}
+              {% endfor %}
+              {{ orphaned }}
+
+        - name: Filter GCP instances by age
+          set_fact:
+            gcp_old_orphaned: >-
+              {% set old_orphaned = [] %}
+              {% for instance in gcp_orphaned %}
+                {% set creation_time = instance.creation_time %}
+                {% set age_hours = ((ansible_date_time.epoch | int) - (creation_time | to_datetime('%Y-%m-%dT%H:%M:%S') | to_timestamp)) / 3600 %}
+                {% if age_hours > max_age_hours %}
+                  {% set _ = old_orphaned.append(instance.update({'age_hours': age_hours}) or instance) %}
+                {% endif %}
+              {% endfor %}
+              {{ old_orphaned }}
+
+        - name: Add GCP results to cleanup summary
+          set_fact:
+            cleanup_results: >-
+              {{ cleanup_results + [{
+                'provider': 'gcp',
+                'total_scanned': gcp_runner_instances | length,
+                'orphaned_found': gcp_orphaned | length,
+                'old_orphaned': gcp_old_orphaned | length,
+                'instances': gcp_old_orphaned
+              }] }}
+
+        - name: Terminate old orphaned GCP instances
+          block:
+            - name: Display GCP instances to terminate
+              debug:
+                msg: "Terminating GCP instance: {{ instance.name }} ({{ instance.zone }}) - {{ instance.age_hours | round(2) }} hours old"
+              loop: "{{ gcp_old_orphaned }}"
+              loop_control:
+                loop_var: instance
+
+            - name: Terminate GCP instance
+              command: >-
+                gcloud compute instances delete {{ item.name }}
+                --zone={{ item.zone }}
+                --quiet
+              loop: "{{ gcp_old_orphaned }}"
+              loop_control:
+                loop_var: item
+              environment:
+                CLOUDSDK_CORE_PROJECT: "{{ gcp_project_id | default('') }}"
+              register: gcp_termination_results
+              ignore_errors: true
+
+            - name: Log GCP termination results
+              debug:
+                msg: "GCP termination result: {{ gcp_termination_results }}"
+              when: debug_mode | default(false)
+
+          when: gcp_old_orphaned | length > 0 and not dry_run
+
+        - name: Display GCP dry run summary
+          debug:
+            msg: "[DRY RUN] Would terminate {{ gcp_old_orphaned | length }} old orphaned GCP instances"
+          when: gcp_old_orphaned | length > 0 and dry_run
+
+      when: "'gcp' in cloud_providers"
+
+    - name: Generate cleanup report
+      template:
+        src: templates/ghost_buster_report.j2
+        dest: "{{ report_output_path | default('/tmp/ghost_buster_report_') + ansible_date_time.epoch | string + '.txt' }}"
+
+    - name: Display final summary
+      debug:
+        msg: |
+          =========================================
+          Ghost Buster Operation Complete
+          =========================================
+          Total providers scanned: {{ cleanup_results | length }}
+          {% for result in cleanup_results %}
+          {{ result.provider | upper }}:
+            - Instances scanned: {{ result.total_scanned }}
+            - Orphaned found: {{ result.orphaned_found }}
+            - Old orphaned: {{ result.old_orphaned }}
+          {% endfor %}
+          Dry run mode: {{ dry_run | default(false) }}
+          Report saved to: {{ report_output_path | default('/tmp/ghost_buster_report_') + ansible_date_time.epoch | string + '.txt' }}
+          =========================================

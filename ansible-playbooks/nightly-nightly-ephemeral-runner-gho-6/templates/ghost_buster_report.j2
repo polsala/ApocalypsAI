@@ -1,0 +1,76 @@
+=========================================
+Nightly Ephemeral Runner Ghost Buster Report
+=========================================
+
+Execution Details:
+- Date: {{ ansible_date_time.date }}
+- Time: {{ ansible_date_time.time }}
+- Dry Run Mode: {{ dry_run | default(false) }}
+- Max Age Threshold: {{ max_age_hours }} hours
+
+GitHub Configuration:
+- Organization: {{ github_org }}
+- Repository: {{ github_repo }}
+- Registered Runners: {{ registered_runners | length }}
+
+Cloud Provider Results:
+{% for result in cleanup_results %}
+{{ result.provider | upper }}:
+  - Instances Scanned: {{ result.total_scanned }}
+  - Orphaned Found: {{ result.orphaned_found }}
+  - Old Orphaned (>{{ max_age_hours }}h): {{ result.old_orphaned }}
+  {% if result.instances | length > 0 %}
+  Instances Details:
+  {% for instance in result.instances %}
+    - {{ instance.name }} ({{ instance.instance_id | default(instance.vm_id) }})
+      {% if instance.age_hours is defined %}
+      - Age: {{ instance.age_hours | round(2) }} hours
+      {% endif %}
+      - Tags: {{ instance.tags | to_nice_json }}
+  {% endfor %}
+  {% endif %}
+
+{% endfor %}
+
+Cleanup Actions Taken:
+{% if dry_run | default(false) %}
+[DRY RUN] No actual cleanup performed
+{% else %}
+- AWS EC2 instances terminated: {{ cleanup_results | selectattr('provider', 'equalto', 'aws') | map(attribute='old_orphaned') | sum | default(0) }}
+- Azure VMs terminated: {{ cleanup_results | selectattr('provider', 'equalto', 'azure') | map(attribute='old_orphaned') | sum | default(0) }}
+- GCP instances terminated: {{ cleanup_results | selectattr('provider', 'equalto', 'gcp') | map(attribute='old_orphaned') | sum | default(0) }}
+{% endif %}
+
+Cost Savings Estimate:
+{% set aws_cost_per_hour = 0.02 %}
+{% set azure_cost_per_hour = 0.02 %}
+{% set gcp_cost_per_hour = 0.02 %}
+{% set total_savings = [] %}
+
+{% for result in cleanup_results %}
+{% if result.provider == 'aws' %}
+{% for instance in result.instances %}
+{% if instance.age_hours is defined %}
+{% set _ = total_savings.append(instance.age_hours * aws_cost_per_hour) %}
+{% endif %}
+{% endfor %}
+{% elif result.provider == 'azure' %}
+{% for instance in result.instances %}
+{% if instance.age_hours is defined %}
+{% set _ = total_savings.append(instance.age_hours * azure_cost_per_hour) %}
+{% endif %}
+{% endfor %}
+{% elif result.provider == 'gcp' %}
+{% for instance in result.instances %}
+{% if instance.age_hours is defined %}
+{% set _ = total_savings.append(instance.age_hours * gcp_cost_per_hour) %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+Estimated Total Savings: ${{ (total_savings | sum | default(0)) | round(2) }}
+
+=========================================
+End of Report
+=========================================
