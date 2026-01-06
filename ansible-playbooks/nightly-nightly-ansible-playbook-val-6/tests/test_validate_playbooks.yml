@@ -1,0 +1,109 @@
+---
+# Tests for the Ansible Playbook Validator
+
+- name: Test Ansible Playbook Validator
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_playbook: "tests/fixtures/test_playbook.yml"
+    test_playbook_bad: "tests/fixtures/test_playbook_bad.yml"
+  
+  tasks:
+    - name: Create test fixtures directory
+      file:
+        path: "tests/fixtures"
+        state: directory
+        mode: '0755'
+    
+    - name: Create valid test playbook
+      copy:
+        content: |
+          ---
+          - name: Test Playbook
+            hosts: localhost
+            tasks:
+              - name: Test task
+                debug:
+                  msg: "Hello World"
+        dest: "{{ test_playbook }}"
+        mode: '0644'
+    
+    - name: Create invalid test playbook
+      copy:
+        content: |
+          ---
+          - name: Test Playbook
+            hosts: localhost
+            tasks:
+              - name: Test task
+                debug:
+                  msg: "Hello World"
+                always_run: true
+        dest: "{{ test_playbook_bad }}"
+        mode: '0644'
+    
+    - name: Test syntax validation with valid playbook
+      include_tasks: tasks/syntax_check.yml
+      vars:
+        playbook_file: "{{ test_playbook }}"
+      register: syntax_test_valid
+    
+    - name: Verify syntax validation passed for valid playbook
+      assert:
+        that:
+          - syntax_test_valid.results[0].validation_result.syntax_check == 'passed'
+        fail_msg: "Syntax validation should pass for valid playbook"
+    
+    - name: Test syntax validation with invalid playbook
+      include_tasks: tasks/syntax_check.yml
+      vars:
+        playbook_file: "{{ test_playbook_bad }}"
+      register: syntax_test_invalid
+    
+    - name: Verify syntax validation failed for invalid playbook
+      assert:
+        that:
+          - syntax_test_invalid.results[0].validation_result.syntax_check == 'failed'
+        fail_msg: "Syntax validation should fail for invalid playbook"
+    
+    - name: Test size validation
+      include_tasks: tasks/size_check.yml
+      vars:
+        playbook_file: "{{ test_playbook }}"
+      register: size_test
+    
+    - name: Verify size validation passed
+      assert:
+        that:
+          - size_test.results[0].validation_result.size_check == 'passed'
+        fail_msg: "Size validation should pass for small playbook"
+    
+    - name: Test best practices validation
+      include_tasks: tasks/best_practices_check.yml
+      vars:
+        playbook_file: "{{ test_playbook_bad }}"
+      register: best_practices_test
+    
+    - name: Verify best practices validation failed for invalid playbook
+      assert:
+        that:
+          - best_practices_test.results[0].validation_result.best_practices == 'failed'
+        fail_msg: "Best practices validation should fail for playbook with forbidden patterns"
+    
+    - name: Test complete validation workflow
+      include_tasks: tasks/validate_playbook.yml
+      vars:
+        current_playbook: "{{ test_playbook }}"
+      register: complete_validation
+    
+    - name: Verify complete validation passed
+      assert:
+        that:
+          - complete_validation.results[0].validation_result.status in ['passed', 'warning']
+        fail_msg: "Complete validation should pass or warn for valid playbook"
+    
+    - name: Cleanup test fixtures
+      file:
+        path: "tests/fixtures"
+        state: absent
+      ignore_errors: true

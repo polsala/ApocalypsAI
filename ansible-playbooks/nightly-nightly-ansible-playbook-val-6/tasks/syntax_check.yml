@@ -1,0 +1,47 @@
+---
+# Syntax validation tasks
+
+- name: Perform syntax check on {{ playbook_file }}
+  command: >
+    ansible-playbook --syntax-check "{{ playbook_file }}"
+  register: syntax_result
+  ignore_errors: true
+  args:
+    chdir: "{{ playbook_file | dirname }}"
+
+- name: Record syntax check result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'syntax_check': 'passed' if syntax_result.rc == 0 else 'failed',
+        'details': validation_result.details | combine({
+          'syntax': {
+            'rc': syntax_result.rc,
+            'stdout': syntax_result.stdout,
+            'stderr': syntax_result.stderr
+          }
+        })
+      }) or validation_result }}
+
+- name: Add syntax errors to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'errors': validation_result.errors + [syntax_result.stderr]
+      }) if syntax_result.rc != 0 else validation_result }}
+
+- name: Add syntax warnings to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'warnings': validation_result.warnings + [syntax_result.stdout]
+      }) if syntax_result.rc == 0 and syntax_result.stdout | length > 0 else validation_result }}
+
+- name: Log syntax check result
+  debug:
+    msg: "Syntax check for {{ playbook_file }}: {{ 'PASSED' if syntax_result.rc == 0 else 'FAILED' }}"
+
+- name: Fail on syntax errors
+  fail:
+    msg: "Syntax validation failed for {{ playbook_file }}"
+  when: syntax_result.rc != 0

@@ -1,0 +1,76 @@
+---
+# Tasks for validating individual playbooks
+
+- name: Initialize validation result for {{ current_playbook }}
+  set_fact:
+    validation_result: >
+      {
+        'playbook': '{{ current_playbook }}',
+        'status': 'pending',
+        'syntax_check': 'pending',
+        'lint_check': 'pending',
+        'idempotency_check': 'pending',
+        'size_check': 'pending',
+        'best_practices': 'pending',
+        'errors': [],
+        'warnings': [],
+        'details': {}
+      }
+
+- name: Check playbook file exists
+  stat:
+    path: "{{ current_playbook }}"
+  register: playbook_stat
+
+- name: Fail if playbook does not exist
+  fail:
+    msg: "Playbook {{ current_playbook }} not found"
+  when: not playbook_stat.stat.exists
+
+- name: Perform syntax validation
+  include_tasks: tasks/syntax_check.yml
+  vars:
+    playbook_file: "{{ current_playbook }}"
+
+- name: Perform lint validation
+  include_tasks: tasks/lint_check.yml
+  vars:
+    playbook_file: "{{ current_playbook }}"
+
+- name: Perform size validation
+  include_tasks: tasks/size_check.yml
+  vars:
+    playbook_file: "{{ current_playbook }}"
+
+- name: Perform best practices validation
+  include_tasks: tasks/best_practices_check.yml
+  vars:
+    playbook_file: "{{ current_playbook }}"
+
+- name: Perform idempotency validation
+  include_tasks: tasks/idempotency_check.yml
+  vars:
+    playbook_file: "{{ current_playbook }}"
+    providers: "{{ providers }}"
+
+- name: Determine overall validation status
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'status': 'failed' if validation_result.errors | length > 0 else 
+                   'warning' if validation_result.warnings | length > 0 else 'passed'
+      }) or validation_result }}
+
+- name: Add validation result to results list
+  set_fact:
+    validation_results: "{{ validation_results + [validation_result] }}"
+
+- name: Log validation result
+  debug:
+    msg: "Validation result for {{ current_playbook }}: {{ validation_result.status }}"
+
+- name: Save detailed validation result
+  copy:
+    content: "{{ validation_result | to_nice_json }}"
+    dest: "{{ logs_dir }}/validation_{{ current_playbook | basename | replace('.yml', '') }}_{{ timestamp }}.json"
+    mode: '0644'

@@ -1,0 +1,85 @@
+---
+# Idempotency validation tasks
+
+- name: Check if molecule is installed
+  command: molecule --version
+  register: molecule_version
+  ignore_errors: true
+
+- name: Install molecule if not available
+  pip:
+    name: molecule[docker]
+    state: present
+  when: molecule_version.rc != 0
+
+- name: Create temporary molecule directory
+  file:
+    path: "/tmp/molecule_{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+
+- name: Generate molecule configuration
+  template:
+    src: templates/molecule.yml.j2
+    dest: "/tmp/molecule_{{ inventory_hostname }}/molecule.yml"
+    mode: '0644'
+  vars:
+    playbook_file: "{{ playbook_file }}"
+    providers: "{{ providers }}"
+
+- name: Create molecule scenario directory
+  file:
+    path: "/tmp/molecule_{{ inventory_hostname }}/scenarios/default"
+    state: directory
+    mode: '0755'
+
+- name: Copy playbook to molecule directory
+  copy:
+    src: "{{ playbook_file }}"
+    dest: "/tmp/molecule_{{ inventory_hostname }}/scenarios/default/playbook.yml"
+    mode: '0644'
+
+- name: Run molecule idempotency test
+  command: >
+    molecule test --scenario-name default
+  register: idempotency_result
+  ignore_errors: true
+  args:
+    chdir: "/tmp/molecule_{{ inventory_hostname }}"
+
+- name: Record idempotency check result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'idempotency_check': 'passed' if idempotency_result.rc == 0 else 'failed',
+        'details': validation_result.details | combine({
+          'idempotency': {
+            'rc': idempotency_result.rc,
+            'stdout': idempotency_result.stdout,
+            'stderr': idempotency_result.stderr
+          }
+        })
+      }) or validation_result }}
+
+- name: Add idempotency errors to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'errors': validation_result.errors + [idempotency_result.stderr]
+      }) if idempotency_result.rc != 0 else validation_result }}
+
+- name: Add idempotency warnings to validation result
+  set_fact:
+    validation_result: >
+      {{ validation_result.update({
+        'warnings': validation_result.warnings + ['Idempotency test had warnings']
+      }) if idempotency_result.rc == 0 and idempotency_result.stdout | search('WARNING') else validation_result }}
+
+- name: Log idempotency check result
+  debug:
+    msg: "Idempotency check for {{ playbook_file }}: {{ 'PASSED' if idempotency_result.rc == 0 else 'FAILED' }}"
+
+- name: Fail on idempotency errors
+  fail:
+    msg: "Idempotency validation failed for {{ playbook_file }}"
+  when: idempotency_result.rc != 0

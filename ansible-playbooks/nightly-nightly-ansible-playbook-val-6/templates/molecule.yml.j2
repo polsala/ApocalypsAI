@@ -1,0 +1,34 @@
+---
+# Molecule configuration for idempotency testing
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: instance
+    image: "{{ molecule_image | default('quay.io/ansible/ansible-runner:latest') }}"
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    command: "/lib/systemd/systemd"
+    tmpfs:
+      - /run
+      - /tmp
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: playbook.yml
+    idempotence: playbook.yml
+
+verifier:
+  name: ansible
+
+lint: |-
+  set -e
+  yamllint .
+  ansible-lint

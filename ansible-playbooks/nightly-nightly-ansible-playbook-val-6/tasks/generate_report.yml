@@ -1,0 +1,34 @@
+---
+# Report generation tasks
+
+- name: Generate HTML report
+  template:
+    src: templates/validation_report.html.j2
+    dest: "{{ report_dir }}/validation_report_{{ timestamp }}.html"
+    mode: '0644'
+  vars:
+    validation_results: "{{ validation_results }}"
+    timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: Generate JSON summary
+  copy:
+    content: "{{ validation_results | to_nice_json }}"
+    dest: "{{ report_dir }}/validation_summary_{{ timestamp }}.json"
+    mode: '0644'
+
+- name: Generate markdown report
+  template:
+    src: templates/validation_report.md.j2
+    dest: "{{ report_dir }}/validation_report_{{ timestamp }}.md"
+    mode: '0644'
+  vars:
+    validation_results: "{{ validation_results }}"
+    timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: Display report locations
+  debug:
+    msg: >
+      Reports generated:
+      - HTML: {{ report_dir }}/validation_report_{{ timestamp }}.html
+      - JSON: {{ report_dir }}/validation_summary_{{ timestamp }}.json
+      - Markdown: {{ report_dir }}/validation_report_{{ timestamp }}.md

@@ -1,0 +1,81 @@
+---
+# Nightly Ansible Playbook Validator
+# Validates Ansible playbooks for syntax, idempotency, and best practices
+
+- name: Validate Ansible Playbooks
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  vars:
+    # Input parameters
+    playbook_path: "{{ playbook_path | default('') }}"
+    playbook_dir: "{{ playbook_dir | default('') }}"
+    providers: "{{ providers | default(['docker']) }}"
+    generate_report: "{{ generate_report | default(true) }}"
+    
+    # Internal variables
+    validation_results: []
+    report_dir: "reports"
+    logs_dir: "logs"
+    timestamp: "{{ ansible_date_time.epoch }}"
+  
+  tasks:
+    - name: Create output directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ report_dir }}"
+        - "{{ logs_dir }}"
+    
+    - name: Validate input parameters
+      fail:
+        msg: "Either playbook_path or playbook_dir must be specified"
+      when: playbook_path | length == 0 and playbook_dir | length == 0
+    
+    - name: Discover playbooks to validate
+      set_fact:
+        playbooks_to_validate: >
+          {{ playbook_dir | default(playbook_path) | 
+             lookup('fileglob', '*.yml', wantlist=True) if playbook_dir else [playbook_path] }}
+      when: playbook_dir | length > 0
+    
+    - name: Set single playbook for validation
+      set_fact:
+        playbooks_to_validate: [playbook_path]
+      when: playbook_path | length > 0 and (playbook_dir | length == 0 or playbook_dir is not defined)
+    
+    - name: Display validation targets
+      debug:
+        msg: "Validating playbooks: {{ playbooks_to_validate }}"
+    
+    - name: Validate each playbook
+      include_tasks: tasks/validate_playbook.yml
+      loop: "{{ playbooks_to_validate }}"
+      loop_control:
+        loop_var: current_playbook
+    
+    - name: Generate validation report
+      include_tasks: tasks/generate_report.yml
+      when: generate_report | bool
+    
+    - name: Display validation summary
+      debug:
+        msg: >
+          Validation completed!
+          Total playbooks: {{ validation_results | length }}
+          Passed: {{ validation_results | selectattr('status', 'equalto', 'passed') | list | length }}
+          Failed: {{ validation_results | selectattr('status', 'equalto', 'failed') | list | length }}
+          Warnings: {{ validation_results | selectattr('status', 'equalto', 'warning') | list | length }}
+
+- name: Cleanup temporary files
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Remove temporary molecule files
+      file:
+        path: "/tmp/molecule_{{ inventory_hostname }}"
+        state: absent
+      ignore_errors: true
