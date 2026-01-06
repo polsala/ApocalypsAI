@@ -1,0 +1,85 @@
+name: Test Chaos Recovery Oracle
+
+definition:
+  $schema: 'https://json.schemastore.org/github-workflow'
+  on:
+    workflow_dispatch: {}
+  jobs:
+    test-chaos-config:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Validate chaos_config.yml exists
+          run: |
+            if [ -f chaos_config.yml ]; then
+              echo "✅ chaos_config.yml found"
+            else
+              echo "⚠️ chaos_config.yml not found, creating default"
+              cat > chaos_config.yml << EOF
+              scenarios:
+                - type: network_latency
+                  probability: 0.1
+                  max_delay: 1s
+              EOF
+            fi
+
+        - name: Test Python chaos simulation (mocked)
+          run: |
+            python3 - << 'PY'
+            import yaml
+            import sys
+            
+            # Mock the chaos simulation without actual system changes
+            with open('chaos_config.yml', 'r') as f:
+                config = yaml.safe_load(f)
+            
+            scenarios = config.get('scenarios', [])
+            
+            # Validate required fields
+            for scenario in scenarios:
+                required = ['type', 'probability']
+                for field in required:
+                    if field not in scenario:
+                        sys.exit(f"Missing required field '{field}' in scenario")
+                        
+                if not isinstance(scenario['probability'], (int, float)) or not (0 <= scenario['probability'] <= 1):
+                    sys.exit(f"Invalid probability value: {scenario['probability']}")
+            
+            print(f"✅ Validated {len(scenarios)} chaos scenarios")
+            PY
+
+        - name: Test recovery status generation
+          run: |
+            # Simulate recovery success
+            echo "✅ System health restored!" > recovery_status.txt
+            
+            # Verify file was created
+            if [ -f recovery_status.txt ]; then
+              echo "✅ Recovery status file created"
+            else
+              echo "❌ Recovery status file missing"
+              exit 1
+            fi
+
+        - name: Test report generation (mocked)
+          run: |
+            python3 - << 'PY'
+            import datetime
+            
+            # Mock the report generation
+            report = "# Chaos Oracle Report\n\n"
+            report += f"**Date**: {datetime.datetime.utcnow().isoformat()} UTC\n\n"
+            report += "## What happened?\n"
+            report += "The Oracle took a nap today - no chaos invoked.\n\n"
+            report += "## Recovery Status\n"
+            report += "✅ System health restored!\n\n"
+            report += "## Divine wisdom\n"
+            report += "✨ *The system survives another day!* 🎉\n"
+            
+            with open('chaos_report.md', 'w') as f:
+                f.write(report)
+            
+            print("✅ Generated mock chaos report")
+            PY

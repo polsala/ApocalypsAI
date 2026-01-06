@@ -1,0 +1,165 @@
+name: Nightly Chaos Recovery Oracle
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+  workflow_dispatch: {}
+
+jobs:
+  chaos-oracle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load chaos configuration
+        id: load-config
+        run: |
+          if [ -f chaos_config.yml ]; then
+            echo "Using custom chaos config"
+          else
+            echo "Using default chaos config"
+            cat > chaos_config.yml << EOF
+            scenarios:
+              - type: network_latency
+                probability: 0.4
+                max_delay: 3s
+              - type: resource_spike
+                probability: 0.3
+                cpu_percent: 75
+              - type: service_disruption
+                probability: 0.2
+                duration: 1m
+            EOF
+          fi
+
+      - name: Simulate chaos
+        id: simulate-chaos
+        run: |
+          python3 - << 'PY'
+          import random
+          import yaml
+          import subprocess
+          
+          with open('chaos_config.yml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          scenarios = config.get('scenarios', [])
+          executed = []
+          
+          for scenario in scenarios:
+              if random.random() < scenario['probability']:
+                  executed.append(scenario)
+                  
+                  if scenario['type'] == 'network_latency':
+                      delay = scenario['max_delay'].replace('s', '')
+                      subprocess.run(['tc', 'qdisc', 'add', 'dev', 'lo', 'root', 'netem', f'delay', f'{delay}ms'], check=False)
+                  elif scenario['type'] == 'resource_spike':
+                      cpu = scenario['cpu_percent']
+                      subprocess.run(['stress', '--cpu', str(int(cpu/10))], check=False)
+                  elif scenario['type'] == 'service_disruption':
+                      duration = scenario['duration'].replace('m', '')
+                      subprocess.Popen(['sleep', duration], stdout=subprocess.DEVNULL)
+          
+          # Store executed scenarios for reporting
+          with open('/tmp/chaos_executed.txt', 'w') as f:
+              for s in executed:
+                  f.write(f"{s['type']}\n")
+          PY
+
+      - name: Recovery ritual
+        id: recover
+        run: |
+          echo "🔮 Performing ancient recovery ritual..."
+          
+          # Clear any network chaos
+          tc qdisc del dev lo root 2>/dev/null || true
+          
+          # Check system health
+          if systemctl is-system-running --quiet; then
+              echo "✅ System health restored!" > recovery_status.txt
+              echo "recovery_success=true" >> $GITHUB_OUTPUT
+          else
+              echo "⚠️ Partial recovery - system needs attention" > recovery_status.txt
+              echo "recovery_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate whimsical diagnostic report
+        run: |
+          python3 - << 'PY'
+          import datetime
+          import random
+          
+          try:
+              with open('/tmp/chaos_executed.txt', 'r') as f:
+                  scenarios = [line.strip() for line in f if line.strip()]
+          except FileNotFoundError:
+              scenarios = []
+          
+          with open('recovery_status.txt', 'r') as f:
+              status = f.read().strip()
+          
+          emojis = ["✨", "💥", "⚡", "🛡️", "🚀", "🎉"]
+          
+          report = f"# Chaos Oracle Report\n\n"
+          report += f"**Date**: {datetime.datetime.utcnow().isoformat()} UTC\n\n"
+          report += f"## What happened?\n"
+          if scenarios:
+              report += f"The Oracle summoned these chaos spells:\n"
+              for scenario in scenarios:
+                  report += f"- 🧙‍♂️ **{scenario.title()}**\n"
+          else:
+              report += "The Oracle took a nap today - no chaos invoked.\n"
+          
+          report += f"\n## Recovery Status\n"
+          report += f"{status}\n\n"
+          report += f"## Divine wisdom\n"
+          report += f"{random.choice(emojis)} *The system survives another day!* {random.choice(emojis)}\n"
+          
+          with open('chaos_report.md', 'w') as f:
+              f.write(report)
+          print(report)
+          PY
+
+      - name: Upload diagnostic artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-report
+          path: |
+            chaos_report.md
+            recovery_status.txt
+
+      - name: Comment on PR (if exists)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('chaos_report.md', 'utf8');
+            
+            // Find open PRs for the repository
+            const {data: prs} = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            
+            if (prs.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prs[0].number,
+                body: '## 🧙‍♂️ Chaos Oracle Report\n' + report
+              });
+            }
+
+      - name: Notify on recovery failure
+        if: steps.recover.outputs.recovery_success == 'false'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '⚠️ Chaos Oracle could not fully recover the system. Check the artifacts for details.'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
