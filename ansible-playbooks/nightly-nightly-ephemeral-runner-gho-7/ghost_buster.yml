@@ -1,0 +1,221 @@
+---
+# Nightly Ephemeral Runner Ghost Buster
+# Detects and cleans up orphaned GitHub Actions self-hosted runners
+
+name: Ephemeral Runner Ghost Buster
+hosts: localhost
+connection: local
+gather_facts: false
+
+vars_files:
+  - vars/main.yml
+
+vars:
+  # Command-line overrides
+  dry_run: "{{ dry_run | default(false) | bool }}"
+  force_cleanup: "{{ force_cleanup | default(false) | bool }}"
+  max_age_hours: "{{ max_age_hours | default(24) | int }}"
+  github_orgs: "{{ github_orgs | default(['my-org']) }}"
+  cloud_providers: "{{ cloud_providers | default(['aws', 'azure', 'gcp']) }}"
+
+  # Internal state
+  orphaned_runners: []
+  cleanup_results: []
+  total_runners_found: 0
+  total_orphaned: 0
+
+tasks:
+  - name: Display configuration
+    debug:
+      msg: |
+        Ephemeral Runner Ghost Buster Configuration:
+        - Dry run: {{ dry_run }}
+        - Force cleanup: {{ force_cleanup }}
+        - Max age (hours): {{ max_age_hours }}
+        - GitHub orgs: {{ github_orgs | join(', ') }}
+        - Cloud providers: {{ cloud_providers | join(', ') }}
+
+  - name: Validate cloud provider configuration
+    fail:
+      msg: "Invalid cloud provider: {{ item }}. Must be one of: aws, azure, gcp"
+    loop: "{{ cloud_providers }}"
+    when: item not in ['aws', 'azure', 'gcp']
+
+  - name: Ensure required environment variables are set
+    fail:
+      msg: "Missing required environment variable: {{ item }}"
+    loop: >
+      {%- set required_vars = [] -%}
+      {%- if 'aws' in cloud_providers -%}
+        {%- set _ = required_vars.extend(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']) -%}
+      {%- endif -%}
+      {%- if 'azure' in cloud_providers -%}
+        {%- set _ = required_vars.extend(['AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_SUBSCRIPTION_ID', 'AZURE_TENANT_ID']) -%}
+      {%- endif -%}
+      {%- if 'gcp' in cloud_providers -%}
+        {%- set _ = required_vars.extend(['GOOGLE_APPLICATION_CREDENTIALS']) -%}
+      {%- endif -%}
+      {{ required_vars }}
+    when: lookup('env', item) | length == 0
+
+  # Get active GitHub runners
+  - name: Get active GitHub runners
+    uri:
+      url: "https://api.github.com/orgs/{{ item }}/actions/runners"
+      method: GET
+      headers:
+        Authorization: "token {{ lookup('env', 'GITHUB_TOKEN') }}"
+        Accept: "application/vnd.github.v3+json"
+      status_code: 200
+    register: github_runners_response
+    loop: "{{ github_orgs }}"
+    when: lookup('env', 'GITHUB_TOKEN') | length > 0
+
+  - name: Extract active runner names
+    set_fact:
+      active_runners: >
+        {{ github_runners_response.results
+           | map(attribute='json.runners')
+           | flatten
+           | map(attribute='name')
+           | list }}
+    when: github_runners_response is defined
+
+  - name: Handle missing GitHub token
+    set_fact:
+      active_runners: []
+    when: lookup('env', 'GITHUB_TOKEN') | length == 0
+
+  # Scan AWS EC2 instances
+  - name: Scan AWS EC2 instances for runner tags
+    block:
+      - name: Get AWS EC2 instances with runner tags
+        ec2_instance_info:
+          filters:
+            tag-key: "GitHubRunner"
+            instance-state-name: ["running", "stopped", "stopping"]
+        register: aws_instances
+
+      - name: Process AWS instances
+        set_fact:
+          aws_runners: >
+            {{ aws_instances.instances
+               | selectattr('tags.GitHubRunner', 'defined')
+               | map('extract', {'tags': 'tags', 'instance_id': 'instance_id', 'launch_time': 'launch_time', 'state': 'state'})
+               | list }}
+
+      - name: Check AWS instances for orphaned runners
+        include_tasks: tasks/check_orphaned.yml
+        loop: "{{ aws_runners }}"
+        loop_control:
+          loop_var: runner_instance
+        vars:
+          provider: "aws"
+          instance_id: "{{ runner_instance.instance_id }}"
+          instance_name: "{{ runner_instance.tags.GitHubRunner }}"
+          launch_time: "{{ runner_instance.launch_time }}"
+          state: "{{ runner_instance.state.name }}"
+
+    rescue:
+      - name: Handle AWS scanning errors
+        debug:
+          msg: "Failed to scan AWS instances: {{ ansible_failed_result.msg }}"
+        when: not ansible_check_mode
+
+  # Scan Azure VMs
+  - name: Scan Azure VMs for runner tags
+    block:
+      - name: Get Azure VMs with runner tags
+        azure_rm_virtualmachine_info:
+          tags:
+            GitHubRunner: "*"
+        register: azure_vms
+
+      - name: Process Azure VMs
+        set_fact:
+          azure_runners: >
+            {{ azure_vms.ansible_facts.azure_vm
+               | selectattr('tags.GitHubRunner', 'defined')
+               | map('extract', {'tags': 'tags', 'id': 'id', 'name': 'name', 'provisioning_state': 'provisioning_state'})
+               | list }}
+
+      - name: Check Azure VMs for orphaned runners
+        include_tasks: tasks/check_orphaned.yml
+        loop: "{{ azure_runners }}"
+        loop_control:
+          loop_var: runner_vm
+        vars:
+          provider: "azure"
+          instance_id: "{{ runner_vm.id }}"
+          instance_name: "{{ runner_vm.tags.GitHubRunner }}"
+          launch_time: "{{ runner_vm.tags.CreatedAt | default(omit) }}"
+          state: "{{ runner_vm.provisioning_state }}"
+
+    rescue:
+      - name: Handle Azure scanning errors
+        debug:
+          msg: "Failed to scan Azure VMs: {{ ansible_failed_result.msg }}"
+        when: not ansible_check_mode
+
+  # Scan GCP Compute Engine instances
+  - name: Scan GCP Compute Engine instances for runner tags
+    block:
+      - name: Get GCP instances with runner labels
+        gcp_compute_instance_info:
+          filters:
+            - labels.GitHubRunner:*
+        register: gcp_instances
+
+      - name: Process GCP instances
+        set_fact:
+          gcp_runners: >
+            {{ gcp_instances.instances
+               | selectattr('labels.GitHubRunner', 'defined')
+               | map('extract', {'labels': 'labels', 'id': 'id', 'name': 'name', 'status': 'status'})
+               | list }}
+
+      - name: Check GCP instances for orphaned runners
+        include_tasks: tasks/check_orphaned.yml
+        loop: "{{ gcp_runners }}"
+        loop_control:
+          loop_var: runner_instance
+        vars:
+          provider: "gcp"
+          instance_id: "{{ runner_instance.id }}"
+          instance_name: "{{ runner_instance.labels.GitHubRunner }}"
+          launch_time: "{{ runner_instance.creationTimestamp | default(omit) }}"
+          state: "{{ runner_instance.status }}"
+
+    rescue:
+      - name: Handle GCP scanning errors
+        debug:
+          msg: "Failed to scan GCP instances: {{ ansible_failed_result.msg }}"
+        when: not ansible_check_mode
+
+  # Generate cleanup report
+  - name: Generate cleanup report
+    template:
+      src: templates/cleanup_report.j2
+      dest: "cleanup_report_{{ ansible_date_time.epoch }}.txt"
+    run_once: true
+
+  - name: Display summary
+    debug:
+      msg: |
+        Ghost Buster Summary:
+        - Total runners found: {{ total_runners_found }}
+        - Orphaned runners: {{ total_orphaned }}
+        - Cleanup actions: {{ cleanup_results | length }}
+        - Report generated: cleanup_report_{{ ansible_date_time.epoch }}.txt
+
+  - name: Display orphaned runners
+    debug:
+      msg: "Orphaned runner: {{ item.instance_name }} ({{ item.provider }}/{{ item.instance_id }}) - {{ item.age_hours }}h old"
+    loop: "{{ orphaned_runners }}"
+    when: orphaned_runners | length > 0
+
+  - name: Display cleanup results
+    debug:
+      msg: "{{ item.action }}: {{ item.instance_name }} ({{ item.provider }}/{{ item.instance_id }}) - {{ item.result }}"
+    loop: "{{ cleanup_results }}"
+    when: cleanup_results | length > 0

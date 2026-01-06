@@ -1,0 +1,35 @@
+---
+# Default variables for Ephemeral Runner Ghost Buster
+
+# Maximum age in hours before a runner is considered orphaned
+max_age_hours: 24
+
+# GitHub organizations to scan for active runners
+# Note: Requires GITHUB_TOKEN environment variable
+github_orgs:
+  - "my-org"
+  - "another-org"
+
+# Cloud providers to scan (aws, azure, gcp)
+cloud_providers:
+  - "aws"
+  - "azure"
+  - "gcp"
+
+# Safety settings
+require_confirmation: true
+allow_force_cleanup: false
+
+# Logging settings
+log_level: "info"
+generate_report: true
+
+# Error handling
+continue_on_error: true
+max_retries: 3
+retry_delay: 5
+
+# Advanced settings
+scan_batch_size: 50
+parallel_scans: true
+include_terminated: false

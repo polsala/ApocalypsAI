@@ -1,0 +1,141 @@
+---
+# Check if a runner instance is orphaned
+
+- name: Calculate instance age in hours
+  set_fact:
+    instance_age_hours: >
+      {%- set launch_dt = None -%}
+      {%- if launch_time is string -%}
+        {%- set launch_dt = launch_time | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') -%}
+      {%- elif launch_time is mapping and launch_time.date is defined -%}
+        {%- set launch_dt = launch_time.date | to_datetime('%Y-%m-%dT%H:%M:%S.%fZ') -%}
+      {%- endif -%}
+      {%- if launch_dt is not none -%}
+        {{ ((ansible_date_time.epoch | int) - (launch_dt | to_timestamp)) // 3600 }}
+      {%- else -%}
+        999
+      {%- endif -%}
+
+- name: Check if runner is active on GitHub
+  set_fact:
+    is_active_runner: "{{ instance_name in active_runners }}"
+
+- name: Determine if runner should be cleaned up
+  set_fact:
+    should_cleanup: >
+      {{ (instance_age_hours >= max_age_hours) and (not is_active_runner) and (state in ['running', 'stopped']) }}
+
+- name: Count total runners
+  set_fact:
+    total_runners_found: "{{ total_runners_found | default(0) + 1 }}"
+
+- name: Add to orphaned runners list if applicable
+  set_fact:
+    orphaned_runners: >
+      {{ orphaned_runners | default([]) + [{
+        'provider': provider,
+        'instance_id': instance_id,
+        'instance_name': instance_name,
+        'age_hours': instance_age_hours,
+        'state': state,
+        'is_active': is_active_runner
+      }] }}
+  when: should_cleanup
+
+- name: Count orphaned runners
+  set_fact:
+    total_orphaned: "{{ total_orphaned | default(0) + (1 if should_cleanup else 0) }}"
+
+- name: Display runner status
+  debug:
+    msg: >
+      {{ provider | upper }} Instance: {{ instance_name }} ({{ instance_id }})
+      - Age: {{ instance_age_hours }}h
+      - State: {{ state }}
+      - Active on GitHub: {{ is_active_runner }}
+      - Should cleanup: {{ should_cleanup }}
+
+- name: Confirm cleanup action
+  pause:
+    prompt: "Delete {{ provider }} instance {{ instance_name }} ({{ instance_id }})? [y/N]"
+    echo: true
+  when: >
+    should_cleanup and
+    not dry_run and
+    not force_cleanup and
+    not ansible_check_mode
+  register: cleanup_confirmation
+
+- name: Perform cleanup action
+  block:
+    - name: Delete AWS instance
+      ec2_instance:
+        instance_ids: "{{ instance_id }}"
+        state: absent
+        wait: true
+      when: provider == 'aws' and should_cleanup
+
+    - name: Delete Azure VM
+      azure_rm_virtualmachine:
+        resource_group: "{{ instance_id.split('/')[-5] }}"
+        name: "{{ instance_name }}"
+        state: absent
+        wait: true
+      when: provider == 'azure' and should_cleanup
+
+    - name: Delete GCP instance
+      gcp_compute_instance:
+        name: "{{ instance_name }}"
+        zone: "{{ instance_id.split('/')[-2] }}"
+        state: absent
+        wait: true
+      when: provider == 'gcp' and should_cleanup
+
+    - name: Record cleanup result
+      set_fact:
+        cleanup_results: >
+          {{ cleanup_results | default([]) + [{
+            'action': 'DELETED',
+            'provider': provider,
+            'instance_id': instance_id,
+            'instance_name': instance_name,
+            'result': 'Success'
+          }] }}
+      when: should_cleanup
+
+  rescue:
+    - name: Record cleanup failure
+      set_fact:
+        cleanup_results: >
+          {{ cleanup_results | default([]) + [{
+            'action': 'DELETE_FAILED',
+            'provider': provider,
+            'instance_id': instance_id,
+            'instance_name': instance_name,
+            'result': ansible_failed_result.msg
+          }] }}
+      when: should_cleanup
+
+- name: Record dry run action
+  set_fact:
+    cleanup_results: >
+      {{ cleanup_results | default([]) + [{
+        'action': 'WOULD_DELETE',
+        'provider': provider,
+        'instance_id': instance_id,
+        'instance_name': instance_name,
+        'result': 'Dry run - no action taken'
+      }] }}
+  when: should_cleanup and dry_run
+
+- name: Record skipped action
+  set_fact:
+    cleanup_results: >
+      {{ cleanup_results | default([]) + [{
+        'action': 'SKIPPED',
+        'provider': provider,
+        'instance_id': instance_id,
+        'instance_name': instance_name,
+        'result': 'Not orphaned or too young'
+      }] }}
+  when: not should_cleanup

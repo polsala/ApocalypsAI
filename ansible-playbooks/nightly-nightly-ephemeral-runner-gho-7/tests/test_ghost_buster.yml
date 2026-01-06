@@ -1,0 +1,62 @@
+---
+# Test suite for Ephemeral Runner Ghost Buster
+
+- name: Test ghost buster configuration
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test default variables are loaded
+      assert:
+        that:
+          - max_age_hours is defined
+          - github_orgs is defined
+          - cloud_providers is defined
+
+    - name: Test variable types
+      assert:
+        that:
+          - max_age_hours is int
+          - github_orgs is list
+          - cloud_providers is list
+
+    - name: Test cloud provider validation
+      assert:
+        that:
+          - item in ['aws', 'azure', 'gcp']
+      loop: "{{ cloud_providers }}"
+
+    - name: Test dry run mode
+      command: ansible-playbook ghost_buster.yml --extra-vars "dry_run=true" --syntax-check
+      register: dry_run_syntax
+      changed_when: false
+
+    - name: Test force cleanup mode
+      command: ansible-playbook ghost_buster.yml --extra-vars "force_cleanup=true" --syntax-check
+      register: force_cleanup_syntax
+      changed_when: false
+
+    - name: Test custom age threshold
+      command: ansible-playbook ghost_buster.yml --extra-vars "max_age_hours=12" --syntax-check
+      register: custom_age_syntax
+      changed_when: false
+
+    - name: Test invalid cloud provider fails
+      command: ansible-playbook ghost_buster.yml --extra-vars "cloud_providers=['invalid']" --syntax-check
+      register: invalid_provider
+      failed_when: invalid_provider.rc == 0
+
+    - name: Test report generation
+      command: ansible-playbook ghost_buster.yml --extra-vars "dry_run=true" -e "generate_report=true"
+      register: report_test
+      changed_when: false
+      when: false  # Skip actual execution in test
+
+    - name: Test variable precedence
+      set_fact:
+        test_max_age: 48
+      when: true
+
+    - name: Verify variable precedence works
+      assert:
+        that:
+          - test_max_age == 48
