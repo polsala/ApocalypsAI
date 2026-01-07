@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  chaos-monkey-test:
+    build: .
+    container_name: chaos-monkey-test
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CHAOS_DURATION=30
+      - CHAOS_INTENSITY=low
+      - CHAOS_INTERVAL=5
+      - CHAOS_TARGET_LABEL=chaos.monkey=true
+      - CHAOS_DRY_RUN=true
+      - CHAOS_LOG_LEVEL=DEBUG
+    command: python -m pytest tests/ -v
+    depends_on:
+      - test-target
+  
+  test-target:
+    image: nginx:latest
+    container_name: test-target
+    labels:
+      - "chaos.monkey=true"
+    ports:
+      - "8888:80"
+    restart: unless-stopped
