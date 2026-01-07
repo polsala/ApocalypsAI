@@ -1,0 +1,46 @@
+name: Nightly GitHub Actions Lint Bot
+
+# This workflow is designed to be a reusable GitHub Action.
+# It lints and validates other GitHub Actions workflows within a repository.
+
+# Trigger: This action can be triggered manually or by other workflows.
+# It's intended to be used as a 'composite' action.
+
+# Inputs: Define inputs for the action.
+inputs:
+  workflow_path:
+    description: 'Path to the directory containing GitHub Actions workflow files.'
+    required: false
+    default: '.github/workflows/'
+  fail_on_warnings:
+    description: 'Set to true to fail the job on warnings.'
+    required: false
+    default: 'false'
+
+# Runs on a virtual environment.
+runs:
+  using: 'composite'
+  steps:
+    # Step 1: Checkout the repository code.
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 2: Install action-validator.
+    # This tool is used to lint and validate GitHub Actions workflows.
+    - name: Install action-validator
+      run: | 
+        pip install action-validator
+      shell: bash
+
+    # Step 3: Run the action-validator.
+    # This step performs the actual linting and validation.
+    # It uses the inputs to determine the path and whether to fail on warnings.
+    - name: Lint and validate workflows
+      run: |
+        echo "Linting workflows in: ${{ inputs.workflow_path }}"
+        if [ "${{ inputs.fail_on_warnings }}" = "true" ]; then
+          action-validator --path "${{ inputs.workflow_path }}" --fail-on-warnings
+        else
+          action-validator --path "${{ inputs.workflow_path }}"
+        fi
+      shell: bash

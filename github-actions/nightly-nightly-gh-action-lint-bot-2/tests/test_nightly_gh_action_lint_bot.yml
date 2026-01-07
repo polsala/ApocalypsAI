@@ -1,0 +1,49 @@
+name: Test Nightly GitHub Actions Lint Bot
+
+on: [push, pull_request]
+
+jobs:
+  test-lint-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock workflow files
+        run: |
+          mkdir -p mock_workflows/valid
+          mkdir -p mock_workflows/invalid
+          echo "name: Valid Workflow\n
+on: push\njobs: build: runs-on: ubuntu-latest steps: - name: Checkout code uses: actions/checkout@v4" > mock_workflows/valid/valid_workflow.yml
+          echo "name: Invalid Workflow\n
+on: push\njobs: build: runs-on: ubuntu-latest steps: - name: Checkout code uses: actions/checkout@v4 invalid_syntax: this_is_not_valid" > mock_workflows/invalid/invalid_workflow.yml
+        shell: bash
+
+      - name: Test with a valid workflow (should pass)
+        uses: ./ # Refers to the current repository's action
+        with:
+          workflow_path: 'mock_workflows/valid'
+        id: test_valid
+
+      - name: Assert valid workflow test passed
+        run: echo "Valid workflow test completed."
+        # In a real scenario, you might check the job status or output.
+        # For this mock, we assume if it reaches here, it didn't fail unexpectedly.
+
+      - name: Test with an invalid workflow (should fail)
+        uses: ./ # Refers to the current repository's action
+        with:
+          workflow_path: 'mock_workflows/invalid'
+          fail_on_warnings: 'true'
+        continue-on-error: true # Expected to fail
+        id: test_invalid
+
+      - name: Assert invalid workflow test failed as expected
+        run: |
+          if [ "${{ steps.test_invalid.outcome }}" = "failure" ]; then
+            echo "Invalid workflow test failed as expected."
+          else
+            echo "Error: Invalid workflow test did not fail as expected."
+            exit 1
+          fi
+        shell: bash
