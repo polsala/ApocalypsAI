@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  chaos-monkey:
+    build: .
+    container_name: chaos-monkey
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CHAOS_DURATION=600
+      - CHAOS_INTENSITY=medium
+      - CHAOS_INTERVAL=30
+      - CHAOS_TARGET_LABEL=chaos.monkey=true
+      - CHAOS_LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  
+  test-app:
+    image: nginx:latest
+    container_name: test-app
+    labels:
+      - "chaos.monkey=true"
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+  
+  test-app-2:
+    image: httpd:latest
+    container_name: test-app-2
+    labels:
+      - "chaos.monkey=true"
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+  
+  dashboard:
+    build: .
+    container_name: chaos-dashboard
+    ports:
+      - "8081:8081"
+    environment:
+      - CHAOS_API_URL=http://chaos-monkey:8080
+    depends_on:
+      - chaos-monkey
+    restart: unless-stopped
