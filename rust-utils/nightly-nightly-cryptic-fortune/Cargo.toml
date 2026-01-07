@@ -1,0 +1,11 @@
+[package]
+name = "nightly_cryptic_fortune"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+
+[[bin]]
+name = "nightly-cryptic-fortune"
+path = "src/main.rs"
