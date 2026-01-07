@@ -1,0 +1,9 @@
+[package]
+name = "nightly-ration-rebalancer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+csv = "1.2"
+serde = { version = "1.0", features = ["derive"] }
