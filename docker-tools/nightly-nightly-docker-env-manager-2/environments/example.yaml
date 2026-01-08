@@ -1,0 +1,24 @@
+# Example environment definition
+# This file defines a simple Python development environment.
+
+name: example-python-dev
+
+# Use a pre-built Docker image
+image: python:3.10-slim
+
+# Map host port 8000 to container port 8000
+ports:
+  - "8000:8000"
+
+# Mount the current directory into the container's /app directory
+volumes:
+  - ".:/app"
+
+# Commands to run after the container starts
+commands:
+  - "echo 'Environment setup complete!'"
+  - "pip install --no-cache-dir -r requirements.txt"
+
+# Environment variables to set inside the container
+environment:
+  - "MY_VAR=some_value"
