@@ -1,0 +1,23 @@
+[package]
+name = "nightly-rust-quickbench"
+version = "0.1.0"
+edition = "2021"
+description = "A high-performance CLI tool for quick Rust microbenchmarking with statistical analysis"
+authors = ["ApocalypsAI Community"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+
+[dev-dependencies]
+
+[[bin]]
+name = "quickbench"
+path = "src/main.rs"
+
+[lib]
+name = "nightly_rust_quickbench"
+path = "src/lib.rs"
+
+[features]
+default = []
