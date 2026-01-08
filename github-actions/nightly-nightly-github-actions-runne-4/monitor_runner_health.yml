@@ -1,0 +1,430 @@
+name: Monitor Self-Hosted Runners
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:
+    inputs:
+      alert_threshold:
+        description: 'Alert threshold for job failure rate (0-100)'
+        required: false
+        default: '80'
+        type: string
+      cleanup_stuck:
+        description: 'Clean up stuck runners'
+        required: false
+        default: true
+        type: boolean
+      include_metrics:
+        description: 'Include detailed system metrics'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  runner-health-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      actions: read
+    outputs:
+      health-report: ${{ steps.generate-report.outputs.report-path }}
+      issues-created: ${{ steps.create-issues.outputs.issues-created }}
+      runners-cleaned: ${{ steps.cleanup.outputs.runners-cleaned }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pyyaml
+
+    - name: Get repository info
+      id: repo-info
+      run: |
+        echo "REPO_OWNER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)" >> $GITHUB_OUTPUT
+        echo "REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+
+    - name: Get workflow runs
+      id: workflow-runs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ steps.repo-info.outputs.REPO_OWNER }}
+        REPO_NAME: ${{ steps.repo-info.outputs.REPO_NAME }}
+      run: |
+        # Get recent workflow runs to analyze runner performance
+        curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/runs?per_page=100" \
+          > workflow_runs.json
+        
+        # Get self-hosted runners
+        curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/runners" \
+          > runners.json
+        
+        echo "WORKFLOW_RUNS_COUNT=$(jq '.total_count' workflow_runs.json)" >> $GITHUB_OUTPUT
+        echo "RUNNERS_COUNT=$(jq '.total_count' runners.json)" >> $GITHUB_OUTPUT
+
+    - name: Analyze runner health
+      id: analyze-health
+      env:
+        ALERT_THRESHOLD: ${{ github.event.inputs.alert_threshold || '80' }}
+        INCLUDE_METRICS: ${{ github.event.inputs.include_metrics || 'true' }}
+      run: |
+        python << 'EOF'
+        import json
+        import sys
+        import time
+        from datetime import datetime, timedelta
+        
+        # Load data
+        with open('workflow_runs.json', 'r') as f:
+            workflow_runs = json.load(f)
+        
+        with open('runners.json', 'r') as f:
+            runners_data = json.load(f)
+        
+        # Analyze workflow runs
+        runs = workflow_runs.get('workflow_runs', [])
+        total_runs = len(runs)
+        
+        # Count self-hosted vs hosted runs
+        self_hosted_runs = [r for r in runs if r.get('runner_name')]
+        hosted_runs = [r for r in runs if not r.get('runner_name')]
+        
+        # Analyze success rates
+        successful_runs = [r for r in runs if r.get('conclusion') == 'success']
+        failed_runs = [r for r in runs if r.get('conclusion') in ['failure', 'cancelled', 'timed_out']]
+        
+        success_rate = (len(successful_runs) / total_runs * 100) if total_runs > 0 else 0
+        failure_rate = (len(failed_runs) / total_runs * 100) if total_runs > 0 else 0
+        
+        # Analyze runner usage
+        runner_usage = {}
+        for run in self_hosted_runs:
+            runner_name = run.get('runner_name', 'unknown')
+            if runner_name not in runner_usage:
+                runner_usage[runner_name] = {
+                    'count': 0,
+                    'successful': 0,
+                    'failed': 0,
+                    'total_duration': 0
+                }
+            
+            runner_usage[runner_name]['count'] += 1
+            if run.get('conclusion') == 'success':
+                runner_usage[runner_name]['successful'] += 1
+            else:
+                runner_usage[runner_name]['failed'] += 1
+            
+            # Calculate duration
+            created_at = datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
+            updated_at = datetime.fromisoformat(run['updated_at'].replace('Z', '+00:00'))
+            duration = (updated_at - created_at).total_seconds()
+            runner_usage[runner_name]['total_duration'] += duration
+        
+        # Generate health report
+        health_report = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'summary': {
+                'total_runs': total_runs,
+                'self_hosted_runs': len(self_hosted_runs),
+                'hosted_runs': len(hosted_runs),
+                'success_rate': round(success_rate, 2),
+                'failure_rate': round(failure_rate, 2),
+                'total_runners': runners_data.get('total_count', 0)
+            },
+            'runner_details': runner_usage,
+            'alerts': []
+        }
+        
+        # Check for alerts
+        alert_threshold = float('${{ env.ALERT_THRESHOLD }}')
+        if failure_rate > alert_threshold:
+            health_report['alerts'].append({
+                'type': 'high_failure_rate',
+                'message': f'Failure rate ({failure_rate:.1f}%) exceeds threshold ({alert_threshold}%))
+            })
+        
+        # Check individual runner health
+        for runner_name, stats in runner_usage.items():
+            if stats['count'] > 0:
+                runner_failure_rate = (stats['failed'] / stats['count']) * 100
+                if runner_failure_rate > alert_threshold:
+                    health_report['alerts'].append({
+                        'type': 'unhealthy_runner',
+                        'runner': runner_name,
+                        'message': f'Runner {runner_name} has failure rate of {runner_failure_rate:.1f}%'
+                    })
+                
+                # Check for stuck runners (long duration)
+                avg_duration = stats['total_duration'] / stats['count']
+                if avg_duration > 3600:  # More than 1 hour average
+                    health_report['alerts'].append({
+                        'type': 'stuck_runner',
+                        'runner': runner_name,
+                        'message': f'Runner {runner_name} has average duration of {avg_duration/60:.1f} minutes'
+                    })
+        
+        # Save report
+        with open('health_report.json', 'w') as f:
+            json.dump(health_report, f, indent=2)
+        
+        print(f"::set-output name=total-runs::{total_runs}")
+        print(f"::set-output name=self-hosted-runs::{len(self_hosted_runs)}")
+        print(f"::set-output name=success-rate::{success_rate:.2f}")
+        print(f"::set-output name=failure-rate::{failure_rate:.2f}")
+        print(f"::set-output name=alerts-count::{len(health_report['alerts'])}")
+        print(f"::set-output name=report-path::health_report.json")
+        EOF
+
+    - name: Generate markdown report
+      id: generate-report
+      run: |
+        python << 'EOF'
+        import json
+        from datetime import datetime
+        
+        with open('health_report.json', 'r') as f:
+            report = json.load(f)
+        
+        # Generate markdown
+        markdown = f"""# Runner Health Report
+Generated: {report['timestamp']}
+
+## Summary
+- **Total Runs**: {report['summary']['total_runs']}
+- **Self-Hosted Runs**: {report['summary']['self_hosted_runs']}
+- **Hosted Runs**: {report['summary']['hosted_runs']}
+- **Success Rate**: {report['summary']['success_rate']}%
+- **Failure Rate**: {report['summary']['failure_rate']}%
+- **Total Runners**: {report['summary']['total_runners']}
+
+## Runner Details
+"""
+        
+        for runner_name, stats in report['runner_details'].items():
+            success_rate = (stats['successful'] / stats['count'] * 100) if stats['count'] > 0 else 0
+            avg_duration = stats['total_duration'] / stats['count'] / 60 if stats['count'] > 0 else 0
+            
+            markdown += f"""
+### {runner_name}
+- **Jobs Completed**: {stats['count']}
+- **Success Rate**: {success_rate:.1f}%
+- **Average Duration**: {avg_duration:.1f} minutes
+"""
+        
+        if report['alerts']:
+            markdown += "\n## Alerts\n"
+            for alert in report['alerts']:
+                if alert['type'] == 'high_failure_rate':
+                    markdown += f"- ⚠️ {alert['message']}\n"
+                elif alert['type'] == 'unhealthy_runner':
+                    markdown += f"- 🚨 {alert['message']}\n"
+                elif alert['type'] == 'stuck_runner':
+                    markdown += f"- ⏰ {alert['message']}\n"
+        else:
+            markdown += "\n## Status\n✅ All runners are healthy\n"
+        
+        # Save markdown report
+        with open('health_report.md', 'w') as f:
+            f.write(markdown)
+        
+        print(f"::set-output name=report-path::health_report.md")
+        EOF
+
+    - name: Create issues for alerts
+      id: create-issues
+      if: steps.analyze-health.outputs.alerts-count > 0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ steps.repo-info.outputs.REPO_OWNER }}
+        REPO_NAME: ${{ steps.repo-info.outputs.REPO_NAME }}
+      run: |
+        python << 'EOF'
+        import json
+        import requests
+        import os
+        
+        with open('health_report.json', 'r') as f:
+            report = json.load(f)
+        
+        issues_created = 0
+        
+        for alert in report['alerts']:
+            if alert['type'] == 'high_failure_rate':
+                title = "High Failure Rate Detected"
+                body = f"""
+                ## 🚨 High Failure Rate Alert
+                
+                The repository is experiencing a high failure rate of {report['summary']['failure_rate']:.1f}%.
+                
+                **Details:**
+                - Total runs: {report['summary']['total_runs']}
+                - Failed runs: {len([r for r in report['runner_details'].values() if r['failed'] > 0])}
+                - Success rate: {report['summary']['success_rate']:.1f}%
+                
+                **Action Required:**
+                Please investigate recent workflow failures and runner health.
+                
+                **Generated Report:** {os.getenv('GITHUB_SERVER_URL')}/{os.getenv('GITHUB_REPOSITORY')}/actions/runs/{os.getenv('GITHUB_RUN_ID')}
+                """
+            elif alert['type'] == 'unhealthy_runner':
+                title = f"Unhealthy Runner: {alert['runner']}"
+                body = f"""
+                ## 🚨 Unhealthy Runner Detected
+                
+                Runner **{alert['runner']}** is experiencing issues.
+                
+                **Details:**
+                {alert['message']}
+                
+                **Runner Stats:**
+                {json.dumps(report['runner_details'][alert['runner']], indent=2)}
+                
+                **Action Required:**
+                Please check the runner's connectivity and resources.
+                """
+            elif alert['type'] == 'stuck_runner':
+                title = f"Stuck Runner: {alert['runner']}"
+                body = f"""
+                ## ⏰ Stuck Runner Detected
+                
+                Runner **{alert['runner']}** appears to be stuck or running slowly.
+                
+                **Details:**
+                {alert['message']}
+                
+                **Action Required:**
+                Please check if the runner needs to be restarted or if jobs are hanging.
+                """
+            else:
+                continue
+            
+            # Create issue
+            url = f"https://api.github.com/repos/{os.getenv('REPO_OWNER')}/{os.getenv('REPO_NAME')}/issues"
+            headers = {
+                'Authorization': f"token {os.getenv('GITHUB_TOKEN')}",
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            data = {
+                'title': title,
+                'body': body,
+                'labels': ['runner-health', 'monitoring']
+            }
+            
+            response = requests.post(url, headers=headers, json=data)
+            if response.status_code == 201:
+                issues_created += 1
+                print(f"Created issue for alert: {alert['type']}")
+            else:
+                print(f"Failed to create issue: {response.status_code} - {response.text}")
+        
+        print(f"::set-output name=issues-created::{issues_created}")
+        EOF
+
+    - name: Cleanup stuck runners
+      id: cleanup
+      if: github.event.inputs.cleanup_stuck == 'true' && steps.analyze-health.outputs.alerts-count > 0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ steps.repo-info.outputs.REPO_OWNER }}
+        REPO_NAME: ${{ steps.repo-info.outputs.REPO_NAME }}
+      run: |
+        python << 'EOF'
+        import json
+        import requests
+        import os
+        
+        with open('health_report.json', 'r') as f:
+            report = json.load(f)
+        
+        runners_cleaned = 0
+        
+        # Get list of runners that need cleanup
+        runners_to_cleanup = []
+        for alert in report['alerts']:
+            if alert['type'] == 'stuck_runner':
+                runners_to_cleanup.append(alert['runner'])
+        
+        if not runners_to_cleanup:
+            print("No stuck runners to cleanup")
+            print(f"::set-output name=runners-cleaned::0")
+            exit(0)
+        
+        # Get runner IDs
+        url = f"https://api.github.com/repos/{os.getenv('REPO_OWNER')}/{os.getenv('REPO_NAME')}/actions/runners"
+        headers = {
+            'Authorization': f"token {os.getenv('GITHUB_TOKEN')}",
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to get runners: {response.status_code}")
+            exit(1)
+        
+        runners_data = response.json()
+        runners_list = runners_data.get('runners', [])
+        
+        # Find and delete stuck runners
+        for runner in runners_list:
+            if runner['name'] in runners_to_cleanup:
+                delete_url = f"https://api.github.com/repos/{os.getenv('REPO_OWNER')}/{os.getenv('REPO_NAME')}/actions/runners/{runner['id']}"
+                delete_response = requests.delete(delete_url, headers=headers)
+                
+                if delete_response.status_code == 204:
+                    runners_cleaned += 1
+                    print(f"Deleted stuck runner: {runner['name']}")
+                else:
+                    print(f"Failed to delete runner {runner['name']}: {delete_response.status_code}")
+        
+        print(f"::set-output name=runners-cleaned::{runners_cleaned}")
+        EOF
+
+    - name: Upload health report
+      uses: actions/upload-artifact@v4
+      with:
+        name: runner-health-report
+        path: |
+          health_report.json
+          health_report.md
+        retention-days: 30
+
+    - name: Comment on latest workflow run
+      if: always()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get the latest workflow run ID
+        LATEST_RUN_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?per_page=1" | \
+          jq -r '.workflow_runs[0].id')
+        
+        # Create comment body
+        COMMENT_BODY="## Runner Health Check Complete
+        
+        **Summary:**
+        - Total runs analyzed: ${{ steps.analyze-health.outputs.total-runs }}
+        - Self-hosted runs: ${{ steps.analyze-health.outputs.self-hosted-runs }}
+        - Success rate: ${{ steps.analyze-health.outputs.success-rate }}%
+        - Failure rate: ${{ steps.analyze-health.outputs.failure-rate }}%
+        - Alerts generated: ${{ steps.analyze-health.outputs.alerts-count }}
+        
+        **Actions taken:**
+        - Issues created: ${{ steps.create-issues.outputs.issues-created || '0' }}
+        - Runners cleaned: ${{ steps.cleanup.outputs.runners-cleaned || '0' }}
+        
+        **Report:** [Download health report](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+        "
+        
+        # Post comment (this would need the run ID to be available)
+        echo "$COMMENT_BODY" > comment_body.md
