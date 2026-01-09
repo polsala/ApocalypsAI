@@ -1,0 +1,559 @@
+name: GitHub Actions Runner Health Checker
+
+on:
+  workflow_call:
+    inputs:
+      github-token:
+        description: 'GitHub token with repo access'
+        required: true
+        type: string
+      organization:
+        description: 'Organization name to monitor'
+        required: true
+        type: string
+      alert-threshold:
+        description: 'Number of offline runners before creating an issue'
+        required: false
+        default: 3
+        type: number
+      include-repositories:
+        description: 'Comma-separated list of repositories to include'
+        required: false
+        default: ''
+        type: string
+      exclude-repositories:
+        description: 'Comma-separated list of repositories to exclude'
+        required: false
+        default: ''
+        type: string
+      report-format:
+        description: 'Output format (markdown or json)'
+        required: false
+        default: 'markdown'
+        type: string
+      create-issues:
+        description: 'Whether to create issues for unhealthy runners'
+        required: false
+        default: true
+        type: boolean
+      dry-run:
+        description: 'Run without creating issues or making changes'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      health-report:
+        description: 'Path to the generated health report'
+        value: ${{ jobs.check-health.outputs.health-report }}
+      unhealthy-runners-count:
+        description: 'Number of unhealthy runners detected'
+        value: ${{ jobs.check-health.outputs.unhealthy-runners-count }}
+      total-runners-count:
+        description: 'Total number of runners monitored'
+        value: ${{ jobs.check-health.outputs.total-runners-count }}
+
+jobs:
+  check-health:
+    name: Check Runner Health
+    runs-on: ubuntu-latest
+    outputs:
+      health-report: ${{ steps.generate-report.outputs.report-path }}
+      unhealthy-runners-count: ${{ steps.analyze.outputs.unhealthy-count }}
+      total-runners-count: ${{ steps.analyze.outputs.total-count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pyyaml
+
+      - name: Get organization repositories
+        id: get-repos
+        env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+          ORG_NAME: ${{ inputs.organization }}
+          INCLUDE_REPOS: ${{ inputs.include-repositories }}
+          EXCLUDE_REPOS: ${{ inputs.exclude-repositories }}
+        run: |
+          python << 'EOF'
+          import os
+          import json
+          import requests
+          from urllib.parse import quote
+          
+          github_token = os.environ['GITHUB_TOKEN']
+          org_name = os.environ['ORG_NAME']
+          include_repos = os.environ.get('INCLUDE_REPOS', '').strip()
+          exclude_repos = os.environ.get('EXCLUDE_REPOS', '').strip()
+          
+          # Parse include/exclude lists
+          include_list = [r.strip() for r in include_repos.split(',') if r.strip()] if include_repos else None
+          exclude_list = [r.strip() for r in exclude_repos.split(',') if r.strip()] if exclude_repos else []
+          
+          headers = {
+              'Authorization': f'token {github_token}',
+              'Accept': 'application/vnd.github.v3+json'
+          }
+          
+          # Get all repositories in the organization
+          repos = []
+          page = 1
+          while True:
+              url = f'https://api.github.com/orgs/{quote(org_name)}/repos?page={page}&per_page=100'
+              response = requests.get(url, headers=headers)
+              if response.status_code != 200:
+                  print(f'Error fetching repositories: {response.status_code}')
+                  exit(1)
+              
+              page_repos = response.json()
+              if not page_repos:
+                  break
+              
+              for repo in page_repos:
+                  repo_name = repo['name']
+                  
+                  # Filter by include list if specified
+                  if include_list and repo_name not in include_list:
+                      continue
+                  
+                  # Filter by exclude list
+                  if repo_name in exclude_list:
+                      continue
+                  
+                  repos.append(repo_name)
+              
+              page += 1
+          
+          # Save repositories to file
+          with open('repositories.json', 'w') as f:
+              json.dump(repos, f, indent=2)
+          
+          print(f'Found {len(repos)} repositories to monitor')
+          print(f'::set-output name=repo-count::{len(repos)}')
+          EOF
+
+      - name: Check runner health
+        id: check-runners
+        env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+          ORG_NAME: ${{ inputs.organization }}
+        run: |
+          python << 'EOF'
+          import os
+          import json
+          import requests
+          import datetime
+          from urllib.parse import quote
+          
+          github_token = os.environ['GITHUB_TOKEN']
+          org_name = os.environ['ORG_NAME']
+          
+          headers = {
+              'Authorization': f'token {github_token}',
+              'Accept': 'application/vnd.github.v3+json'
+          }
+          
+          # Load repositories
+          with open('repositories.json', 'r') as f:
+              repositories = json.load(f)
+          
+          all_runners = []
+          runner_stats = {}
+          
+          for repo in repositories:
+              print(f'Checking runners for {repo}...')
+              
+              # Get repository runners
+              url = f'https://api.github.com/repos/{quote(org_name)}/{quote(repo)}/actions/runners'
+              response = requests.get(url, headers=headers)
+              
+              if response.status_code == 200:
+                  repo_runners = response.json().get('runners', [])
+                  
+                  for runner in repo_runners:
+                      runner_info = {
+                          'id': runner['id'],
+                          'name': runner['name'],
+                          'repository': repo,
+                          'status': runner['status'],
+                          'busy': runner['busy'],
+                          'last_seen_at': runner.get('last_seen_at'),
+                          'labels': runner.get('labels', [])
+                      }
+                      all_runners.append(runner_info)
+                      
+                      # Initialize stats for this runner
+                      runner_stats[runner['id']] = {
+                          'job_count': 0,
+                          'success_count': 0,
+                          'total_duration': 0,
+                          'last_activity': None
+                      }
+              else:
+                  print(f'Error fetching runners for {repo}: {response.status_code}')
+          
+          # Get recent workflow runs to calculate statistics
+          end_time = datetime.datetime.utcnow()
+          start_time = end_time - datetime.timedelta(hours=24)
+          
+          for repo in repositories:
+              print(f'Analyzing workflow runs for {repo}...')
+              
+              # Get workflow runs from the last 24 hours
+              url = f'https://api.github.com/repos/{quote(org_name)}/{quote(repo)}/actions/runs'
+              url += f'?created=>={start_time.isoformat()}Z&per_page=100'
+              
+              page = 1
+              while True:
+                  paginated_url = f'{url}&page={page}'
+                  response = requests.get(paginated_url, headers=headers)
+                  
+                  if response.status_code == 200:
+                      runs_data = response.json()
+                      runs = runs_data.get('workflow_runs', [])
+                      
+                      if not runs:
+                          break
+                      
+                      for run in runs:
+                          if run.get('status') == 'completed':
+                              runner_id = run.get('run_attempt')
+                              # Note: GitHub API doesn't directly provide runner ID in workflow runs
+                              # We'll track general repository statistics instead
+                              
+                              # Update repository stats
+                              if repo not in runner_stats:
+                                  runner_stats[repo] = {
+                                      'job_count': 0,
+                                      'success_count': 0,
+                                      'total_duration': 0
+                                  }
+                              
+                              runner_stats[repo]['job_count'] += 1
+                              if run.get('conclusion') == 'success':
+                                  runner_stats[repo]['success_count'] += 1
+                              
+                              # Calculate duration
+                              created_at = datetime.datetime.fromisoformat(run['created_at'].replace('Z', '+00:00'))
+                              updated_at = datetime.datetime.fromisoformat(run['updated_at'].replace('Z', '+00:00'))
+                              duration = (updated_at - created_at).total_seconds() / 60  # minutes
+                              runner_stats[repo]['total_duration'] += duration
+                  else:
+                      print(f'Error fetching runs for {repo}: {response.status_code}')
+                      break
+                  
+                  page += 1
+          
+          # Save runner data
+          with open('runner_data.json', 'w') as f:
+              json.dump({
+                  'runners': all_runners,
+                  'stats': runner_stats,
+                  'timestamp': datetime.datetime.utcnow().isoformat()
+              }, f, indent=2)
+          
+          print(f'Checked {len(all_runners)} runners across {len(repositories)} repositories')
+          EOF
+
+      - name: Analyze runner health
+        id: analyze
+        env:
+          ALERT_THRESHOLD: ${{ inputs.alert-threshold }}
+        run: |
+          python << 'EOF'
+          import json
+          import datetime
+          
+          # Load runner data
+          with open('runner_data.json', 'r') as f:
+              data = json.load(f)
+          
+          runners = data['runners']
+          stats = data['stats']
+          
+          # Determine unhealthy runners
+          unhealthy_runners = []
+          current_time = datetime.datetime.utcnow()
+          
+          for runner in runners:
+              status = runner['status']
+              last_seen = runner.get('last_seen_at')
+              
+              issues = []
+              
+              if status == 'offline':
+                  issues.append('Runner is offline')
+              elif status == 'online' and runner['busy']:
+                  # Check if runner has been busy for too long (simple heuristic)
+                  issues.append('Runner is busy')
+              
+              # Check last seen time (if available)
+              if last_seen:
+                  last_seen_time = datetime.datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                  time_diff = current_time - last_seen_time.replace(tzinfo=None)
+                  if time_diff.total_seconds() > 3600:  # More than 1 hour ago
+                      issues.append(f'No activity for {time_diff.total_seconds()/3600:.1f} hours')
+              else:
+                  issues.append('No recent activity data')
+              
+              if issues:
+                  unhealthy_runners.append({
+                      'id': runner['id'],
+                      'name': runner['name'],
+                      'repository': runner['repository'],
+                      'status': status,
+                      'last_seen': last_seen,
+                      'issues': issues
+                  })
+          
+          # Calculate summary statistics
+          total_runners = len(runners)
+          unhealthy_count = len(unhealthy_runners)
+          healthy_count = total_runners - unhealthy_count
+          
+          # Calculate success rates by repository
+          repo_success_rates = {}
+          repo_avg_durations = {}
+          
+          for repo, repo_stats in stats.items():
+              if isinstance(repo_stats, dict) and 'job_count' in repo_stats:
+                  job_count = repo_stats['job_count']
+                  success_count = repo_stats['success_count']
+                  total_duration = repo_stats['total_duration']
+                  
+                  if job_count > 0:
+                      success_rate = (success_count / job_count) * 100
+                      avg_duration = total_duration / job_count
+                      repo_success_rates[repo] = success_rate
+                      repo_avg_durations[repo] = avg_duration
+          
+          # Save analysis results
+          analysis = {
+              'total_runners': total_runners,
+              'healthy_runners': healthy_count,
+              'unhealthy_runners': unhealthy_count,
+              'unhealthy_runner_details': unhealthy_runners,
+              'repository_success_rates': repo_success_rates,
+              'repository_avg_durations': repo_avg_durations,
+              'timestamp': datetime.datetime.utcnow().isoformat()
+          }
+          
+          with open('analysis.json', 'w') as f:
+              json.dump(analysis, f, indent=2)
+          
+          print(f'::set-output name=total-count::{total_runners}')
+          print(f'::set-output name=unhealthy-count::{unhealthy_count}')
+          print(f'::set-output name=healthy-count::{healthy_count}')
+          print(f'::set-output name=alert-needed::{unhealthy_count > int(os.environ.get("ALERT_THRESHOLD", "3"))}')
+          EOF
+
+      - name: Generate health report
+        id: generate-report
+        env:
+          REPORT_FORMAT: ${{ inputs.report-format }}
+        run: |
+          python << 'EOF'
+          import json
+          import datetime
+          
+          # Load analysis data
+          with open('analysis.json', 'r') as f:
+              analysis = json.load(f)
+          
+          report_format = os.environ.get('REPORT_FORMAT', 'markdown')
+          
+          if report_format == 'json':
+              # Generate JSON report
+              report_data = {
+                  'organization': '${{ inputs.organization }}',
+                  'generated_at': analysis['timestamp'],
+                  'time_range': 'Last 24 hours',
+                  'summary': {
+                      'total_runners': analysis['total_runners'],
+                      'healthy_runners': analysis['healthy_runners'],
+                      'unhealthy_runners': analysis['unhealthy_runners']
+                  },
+                  'unhealthy_runners': analysis['unhealthy_runner_details'],
+                  'performance_metrics': {
+                      'success_rates_by_repository': analysis['repository_success_rates'],
+                      'average_durations_by_repository': analysis['repository_avg_durations']
+                  }
+              }
+              
+              report_path = 'health_report.json'
+              with open(report_path, 'w') as f:
+                  json.dump(report_data, f, indent=2)
+          else:
+              # Generate Markdown report
+              report_lines = [
+                  '# GitHub Actions Runner Health Report',
+                  '',
+                  f'**Organization**: ${{ inputs.organization }}',
+                  f'**Generated**: {analysis["timestamp"]}',
+                  '**Time Range**: Last 24 hours',
+                  '',
+                  '## Summary',
+                  f'- Total Runners: {analysis["total_runners"]}',
+                  f'- Healthy Runners: {analysis["healthy_runners"]}',
+                  f'- Unhealthy Runners: {analysis["unhealthy_runners"]}',
+                  '',
+                  '## Unhealthy Runners',
+                  '',
+                  '| Repository | Runner Name | Status | Last Seen | Issues |',
+                  '|------------|-------------|--------|-----------|--------|'
+              ]
+              
+              for runner in analysis['unhealthy_runner_details']:
+                  issues_str = '; '.join(runner['issues'])
+                  last_seen = runner['last_seen'] or 'Unknown'
+                  report_lines.append(
+                      f'| {runner["repository"]} | {runner["name"]} | {runner["status"]} | {last_seen} | {issues_str} |'
+                  )
+              
+              report_lines.extend([
+                  '',
+                  '## Performance Metrics',
+                  '',
+                  '### Job Success Rates by Repository',
+                  ''
+              ])
+              
+              for repo, success_rate in analysis['repository_success_rates'].items():
+                  report_lines.append(f'- {repo}: {success_rate:.1f}%')
+              
+              report_lines.extend([
+                  '',
+                  '### Average Job Duration by Repository',
+                  ''
+              ])
+              
+              for repo, avg_duration in analysis['repository_avg_durations'].items():
+                  report_lines.append(f'- {repo}: {avg_duration:.1f} minutes')
+              
+              report_lines.extend([
+                  '',
+                  '## Recommendations',
+                  ''
+              ])
+              
+              if analysis['unhealthy_runners'] > 0:
+                  report_lines.append(f'1. Investigate {analysis["unhealthy_runners"]} unhealthy runners')
+              
+              if analysis['repository_success_rates']:
+                  lowest_success_rate = min(analysis['repository_success_rates'].values())
+                  if lowest_success_rate < 95:
+                      report_lines.append('2. Review repositories with low success rates')
+              
+              report_content = '\n'.join(report_lines)
+              
+              report_path = 'health_report.md'
+              with open(report_path, 'w') as f:
+                  f.write(report_content)
+          
+          print(f'::set-output name=report-path::{report_path}')
+          print(f'Generated report: {report_path}')
+          EOF
+
+      - name: Create issue for unhealthy runners
+        if: ${{ inputs.create-issues == 'true' && steps.analyze.outputs.alert-needed == 'true' && inputs.dry-run != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+          ORG_NAME: ${{ inputs.organization }}
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          
+          # Load analysis data
+          with open('analysis.json', 'r') as f:
+              analysis = json.load(f)
+          
+          # Load markdown report
+          with open('health_report.md', 'r') as f:
+              report_content = f.read()
+          
+          # Create issue body
+          issue_body = f"""## 🚨 Runner Health Alert
+
+**Organization**: {os.environ['ORG_NAME']}
+**Unhealthy Runners**: {analysis['unhealthy_runners']}
+**Total Runners**: {analysis['total_runners']}
+
+### Summary
+{analysis['unhealthy_runners']} runners are currently experiencing issues and may need attention.
+
+### Detailed Report
+{report_content}
+
+### Next Steps
+1. Check the status of the unhealthy runners listed above
+2. Investigate any infrastructure issues
+3. Consider scaling up healthy runners if needed
+4. Review runner configurations and resource allocation
+
+**This is an automated alert. Please investigate and take appropriate action.**
+"""
+          
+          # Create the issue using GitHub CLI
+          issue_title = f"🚨 Runner Health Alert: {analysis['unhealthy_runners']} Unhealthy Runners Detected"
+          
+          # Use gh command to create issue
+          import subprocess
+          
+          try:
+              result = subprocess.run([
+                  'gh', 'issue', 'create',
+                  '--title', issue_title,
+                  '--body', issue_body,
+                  '--label', 'runner-health,monitoring'
+              ], capture_output=True, text=True, check=True)
+              
+              print(f'Successfully created issue: {result.stdout.strip()}')
+          except subprocess.CalledProcessError as e:
+              print(f'Error creating issue: {e.stderr}')
+              exit(1)
+          EOF
+
+      - name: Upload health report
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-health-report
+          path: health_report.*
+          retention-days: 30
+
+      - name: Comment on workflow run
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Read the analysis data
+            const analysisData = JSON.parse(fs.readFileSync('analysis.json', 'utf8'));
+            
+            const summary = `## Runner Health Check Summary
+
+- **Total Runners**: ${analysisData.total_runners}
+- **Healthy Runners**: ${analysisData.healthy_runners}
+- **Unhealthy Runners**: ${analysisData.unhealthy_runners}
+- **Success Rate**: ${analysisData.repository_success_rates ? Object.values(analysisData.repository_success_rates).reduce((a, b) => a + b, 0) / Object.values(analysisData.repository_success_rates).length : 'N/A'}%
+
+${analysisData.unhealthy_runners > 0 ? '⚠️ **Action Required**: Some runners need attention.' : '✅ All runners are healthy.'}`;
+            
+            github.rest.actions.createWorkflowRunAnnotation({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              annotation_level: analysisData.unhealthy_runners > 0 ? 'warning' : 'notice',
+              message: summary,
+              title: 'Runner Health Check Results'
+            });
