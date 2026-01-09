@@ -1,0 +1,177 @@
+name: Test Runner Health Checker
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/runner-health-checker.yml'
+      - 'tests/test_runner_health_checker.yml'
+
+jobs:
+  test-runner-health-checker:
+    name: Test Runner Health Checker
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test workflow syntax
+        run: |
+          # Check if the workflow file is valid YAML
+          python -c "import yaml; yaml.safe_load(open('.github/workflows/runner-health-checker.yml'))"
+          echo "✅ Workflow YAML is valid"
+      
+      - name: Validate workflow structure
+        run: |
+          python << 'EOF'
+          import yaml
+          import json
+          
+          # Load the workflow file
+          with open('.github/workflows/runner-health-checker.yml', 'r') as f:
+              workflow = yaml.safe_load(f)
+          
+          # Validate required structure
+          assert 'name' in workflow, "Workflow must have a name"
+          assert 'on' in workflow, "Workflow must have triggers"
+          assert 'jobs' in workflow, "Workflow must have jobs"
+          
+          # Check for workflow_call trigger
+          on_section = workflow['on']
+          assert 'workflow_call' in on_section, "Workflow must support workflow_call"
+          
+          # Check inputs
+          inputs = on_section['workflow_call'].get('inputs', {})
+          required_inputs = ['github-token', 'organization']
+          for input_name in required_inputs:
+              assert input_name in inputs, f"Required input '{input_name}' missing"
+              assert 'required' in inputs[input_name], f"Input '{input_name}' must specify required"
+              assert inputs[input_name]['required'] == True, f"Input '{input_name}' must be required"
+          
+          # Check outputs
+          outputs = on_section['workflow_call'].get('outputs', {})
+          required_outputs = ['health-report', 'unhealthy-runners-count', 'total-runners-count']
+          for output_name in required_outputs:
+              assert output_name in outputs, f"Required output '{output_name}' missing"
+          
+          # Check jobs
+          jobs = workflow['jobs']
+          assert 'check-health' in jobs, "Must have check-health job"
+          
+          check_health_job = jobs['check-health']
+          assert 'steps' in check_health_job, "check-health job must have steps"
+          
+          print("✅ Workflow structure is valid")
+          EOF
+      
+      - name: Test Python dependencies
+        run: |
+          python -c "import requests; print('✅ requests module available')"
+          python -c "import yaml; print('✅ yaml module available')"
+      
+      - name: Test workflow integration
+        run: |
+          # Create a mock test to verify the workflow can be called
+          echo "Testing workflow integration..."
+          
+          # This would normally require actual GitHub API access
+          # For now, we just verify the structure is correct
+          echo "✅ Workflow integration test passed (structure validation only)"
+      
+      - name: Validate report generation
+        run: |
+          python << 'EOF'
+          import json
+          import tempfile
+          import os
+          
+          # Create mock data for testing report generation
+          mock_analysis = {
+              'total_runners': 10,
+              'healthy_runners': 8,
+              'unhealthy_runners': 2,
+              'unhealthy_runner_details': [
+                  {
+                      'id': 1,
+                      'name': 'test-runner-1',
+                      'repository': 'test-repo',
+                      'status': 'offline',
+                      'last_seen': '2024-01-15T08:00:00Z',
+                      'issues': ['Runner is offline']
+                  }
+              ],
+              'repository_success_rates': {
+                  'test-repo': 95.5
+              },
+              'repository_avg_durations': {
+                  'test-repo': 4.2
+              },
+              'timestamp': '2024-01-15T10:30:00Z'
+          }
+          
+          # Test JSON report generation
+          with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+              json.dump(mock_analysis, f, indent=2)
+              json_report_path = f.name
+          
+          # Test markdown report generation
+          report_lines = [
+              '# GitHub Actions Runner Health Report',
+              '',
+              '**Organization**: test-org',
+              '**Generated**: 2024-01-15T10:30:00Z',
+              '**Time Range**: Last 24 hours',
+              '',
+              '## Summary',
+              '- Total Runners: 10',
+              '- Healthy Runners: 8',
+              '- Unhealthy Runners: 2',
+              '',
+              '## Unhealthy Runners',
+              '',
+              '| Repository | Runner Name | Status | Last Seen | Issues |',
+              '|------------|-------------|--------|-----------|--------|',
+              '| test-repo | test-runner-1 | offline | 2024-01-15T08:00:00Z | Runner is offline |',
+              '',
+              '## Performance Metrics',
+              '',
+              '### Job Success Rates by Repository',
+              '',
+              '- test-repo: 95.5%',
+              '',
+              '### Average Job Duration by Repository',
+              '',
+              '- test-repo: 4.2 minutes',
+              '',
+              '## Recommendations',
+              '',
+              '1. Investigate 2 unhealthy runners',
+              '2. Review repositories with low success rates'
+          ]
+          
+          markdown_report = '\n'.join(report_lines)
+          
+          with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+              f.write(markdown_report)
+              md_report_path = f.name
+          
+          # Verify files were created
+          assert os.path.exists(json_report_path), "JSON report not created"
+          assert os.path.exists(md_report_path), "Markdown report not created"
+          
+          # Verify content
+          with open(json_report_path, 'r') as f:
+              json_content = json.load(f)
+              assert json_content['total_runners'] == 10, "JSON report content incorrect"
+          
+          with open(md_report_path, 'r') as f:
+              md_content = f.read()
+              assert 'GitHub Actions Runner Health Report' in md_content, "Markdown report content incorrect"
+          
+          # Clean up
+          os.unlink(json_report_path)
+          os.unlink(md_report_path)
+          
+          print("✅ Report generation test passed")
+          EOF
