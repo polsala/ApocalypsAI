@@ -1,0 +1,13 @@
+- name: Test detect_drift – with drift
+  hosts: localhost
+  gather_facts: false
+  vars:
+    baseline_content: "foo=bar"
+    current_content: "foo=baz"
+  tasks:
+    - import_playbook: ../src/detect_drift.yml
+    - name: Assert drifted is true
+      assert:
+        that:
+          - drifted == true
+        fail_msg: "Drift was not detected when baseline and current differed"

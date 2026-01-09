@@ -1,0 +1,13 @@
+- name: Detect configuration drift
+  hosts: localhost
+  gather_facts: false
+  vars:
+    baseline_content: "{{ baseline_content | default('') }}"
+    current_content: "{{ current_content | default('') }}"
+  tasks:
+    - name: Determine if drift exists
+      set_fact:
+        drifted: "{{ baseline_content != current_content }}"
+    - name: Output result
+      debug:
+        msg: "Drift detected: {{ drifted }}"
