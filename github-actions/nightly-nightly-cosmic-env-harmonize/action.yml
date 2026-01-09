@@ -1,0 +1,47 @@
+name: 'Nightly Cosmic Env Harmonizer'
+description: 'Ensures celestial constants (environment variables) are aligned before proceeding.'
+inputs:
+  celestial_constants:
+    description: 'Comma-separated list of environment variable names that must be present.'
+    required: true
+  fail_on_disharmony:
+    description: 'Set to true to fail the workflow if any celestial constant is missing.'
+    required: false
+    default: 'true'
+outputs:
+  harmony_status:
+    description: 'Indicates if all celestial constants were found ("harmonious") or not ("disharmonious").'
+runs:
+  using: 'composite'
+  steps:
+    - name: Check for Celestial Constants
+      id: check_constants
+      shell: bash
+      run: |
+        REQUIRED_ENVS="${{ inputs.celestial_constants }}"
+        FAIL_ON_MISSING="${{ inputs.fail_on_disharmony }}"
+        MISSING_ENVS=""
+        HARMONY_STATUS="harmonious"
+
+        IFS=',' read -ra ADDR <<< "$REQUIRED_ENVS"
+        for i in "${ADDR[@]}"; do
+          ENV_VAR=$(echo "$i" | xargs) # Trim whitespace
+          if [ -z "${!ENV_VAR}" ]; then
+            echo "::warning::🌌 Temporal Disruption Detected: Celestial constant '$ENV_VAR' is missing!"
+            MISSING_ENVS="$MISSING_ENVS $ENV_VAR"
+            HARMONY_STATUS="disharmonious"
+          else
+            echo "✨ Celestial constant '$ENV_VAR' is present."
+          fi
+        done
+
+        if [ "$HARMONY_STATUS" == "disharmonious" ]; then
+          echo "::error::Cosmic disharmony detected! Missing constants: $MISSING_ENVS"
+          echo "harmony_status=disharmonious" >> "$GITHUB_OUTPUT"
+          if [ "$FAIL_ON_MISSING" == "true" ]; then
+            exit 1
+          fi
+        else
+          echo "✅ Cosmic Harmony Achieved! All celestial constants are present."
+          echo "harmony_status=harmonious" >> "$GITHUB_OUTPUT"
+        fi

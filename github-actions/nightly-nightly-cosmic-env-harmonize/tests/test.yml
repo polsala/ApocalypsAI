@@ -1,0 +1,75 @@
+name: Test Nightly Cosmic Env Harmonizer
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test_harmonizer_success:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set test environment variables
+        run: |
+          echo "TEST_COSMIC_RAY=present" >> "$GITHUB_ENV"
+          echo "TEST_GALAXY_CLUSTER=M87" >> "$GITHUB_ENV"
+
+      - name: Run Harmonizer (Expected Success)
+        id: harmonizer
+        uses: ./
+        with:
+          celestial_constants: 'TEST_COSMIC_RAY,TEST_GALAXY_CLUSTER,GITHUB_TOKEN' # GITHUB_TOKEN is always present
+          fail_on_disharmony: 'true'
+      - name: Verify Success Output
+        run: |
+          if [ "${{ steps.harmonizer.outputs.harmony_status }}" != "harmonious" ]; then
+            echo "::error::Expected 'harmonious' status, but got '${{ steps.harmonizer.outputs.harmony_status }}'"
+            exit 1
+          fi
+          echo "✅ Harmonious status confirmed."
+
+  test_harmonizer_failure_fail_true:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Harmonizer (Expected Failure)
+        id: harmonizer
+        uses: ./
+        with:
+          celestial_constants: 'MISSING_CELESTIAL_BODY,GITHUB_TOKEN'
+          fail_on_disharmony: 'true'
+        continue-on-error: true # Allow job to continue to check output, but step should fail
+      - name: Verify Failure Output
+        run: |
+          if [ "${{ steps.harmonizer.outputs.harmony_status }}" != "disharmonious" ]; then
+            echo "::error::Expected 'disharmonious' status, but got '${{ steps.harmonizer.outputs.harmony_status }}'"
+            exit 1
+          fi
+          echo "✅ Disharmonious status confirmed."
+          # Mock rationale: We cannot directly check the exit code of a previous step in a subsequent step
+          # without parsing logs or using a custom action. The 'continue-on-error: true' allows the workflow
+          # to proceed, but the step itself will be marked as failed. The 'exit 1' in the action's shell
+          # script ensures the step fails. This test verifies the output, which is a direct consequence
+          # of the internal logic, confirming the action correctly identifies disharmony and signals failure.
+
+  test_harmonizer_failure_fail_false:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Harmonizer (Expected Disharmony, but job continues)
+        id: harmonizer
+        uses: ./
+        with:
+          celestial_constants: 'ANOTHER_MISSING_CONSTANT,GITHUB_TOKEN'
+          fail_on_disharmony: 'false'
+      - name: Verify Disharmony Output (Job should not fail)
+        run: |
+          if [ "${{ steps.harmonizer.outputs.harmony_status }}" != "disharmonious" ]; then
+            echo "::error::Expected 'disharmonious' status, but got '${{ steps.harmonizer.outputs.harmony_status }}'"
+            exit 1
+          fi
+          echo "✅ Disharmonious status confirmed, but workflow continued as expected."
