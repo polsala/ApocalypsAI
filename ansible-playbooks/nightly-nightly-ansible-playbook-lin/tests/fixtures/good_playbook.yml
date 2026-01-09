@@ -1,0 +1,47 @@
+---
+# Good example playbook
+- name: Configure web server
+  hosts: webservers
+  become: true
+  gather_facts: true
+  vars:
+    web_user: www-data
+    web_group: www-data
+    document_root: /var/www/html
+  
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - nginx
+          - python3-pip
+        state: present
+      
+    - name: Create web directory
+      file:
+        path: "{{ document_root }}"
+        state: directory
+        owner: "{{ web_user }}"
+        group: "{{ web_group }}"
+        mode: '0755'
+      
+    - name: Configure nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart nginx
+    
+    - name: Start nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: true
+  
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted

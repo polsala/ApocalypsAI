@@ -1,0 +1,51 @@
+---
+# Bad example playbook with multiple issues
+- name: Web server setup
+  hosts: webservers
+  gather_facts: false
+  
+  tasks:
+    # Missing task name
+    - debug:
+        msg: "Starting setup"
+    
+    # Uses deprecated sudo
+    - name: Install packages
+      apt:
+        name: nginx
+        state: present
+      sudo: yes
+      sudo_user: root
+    
+    # Hardcoded secret
+    - name: Set database password
+      set_fact:
+        db_password: "mysecretpassword123"
+    
+    # Non-octal permissions
+    - name: Create directory
+      file:
+        path: /var/www/html
+        state: directory
+        mode: "755"
+    
+    # Deprecated with_items
+    - name: Install multiple packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - nginx
+        - python3
+        - git
+    
+    # CamelCase variable
+    - name: Use variable
+      debug:
+        msg: "{{ myVariable }}"
+  
+  handlers:
+    # Handler without name
+    - service:
+        name: nginx
+        state: restarted
