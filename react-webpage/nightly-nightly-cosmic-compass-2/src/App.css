@@ -1,0 +1,60 @@
+.App {
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+}
+
+main {
+  background-color: #3a3f47;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-width: 800px;
+  width: 90%;
+}
+
+button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #21a1f1;
+}
+
+.compass-result {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #4a4f57;
+  border-radius: 8px;
+}
+
+.compass-result p {
+  margin: 10px 0;
+}
+
+.compass-result strong {
+  color: #61dafb;
+}
