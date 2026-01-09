@@ -1,0 +1,22 @@
+# Ansible Linter Configuration
+rules:
+  enabled:
+    - yaml-valid
+    - task-name-required
+    - module-exists
+    - no-hardcoded-secrets
+    - sudo-usage
+    - file-permissions
+    - loop-optimization
+    - gather-facts
+    - variable-naming
+    - handler-usage
+  disabled:
+    - loop-optimization  # Allow with_items for legacy playbooks
+
+exclude:
+  - vendor/
+  - tests/fixtures/
+  - *.retry
+
+max_line_length: 120
