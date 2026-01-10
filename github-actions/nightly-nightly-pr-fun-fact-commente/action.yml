@@ -1,0 +1,12 @@
+name: PR Fun Fact Commenter
+description: Posts a random fun fact comment on a pull request
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
+outputs:
+  fun_fact:
+    description: 'The fun fact that was posted'
