@@ -1,0 +1,16 @@
+[package]
+name = "quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical CLI tool that simulates quantum entanglement verification for distributed systems"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde-toml = "0.11"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = "3.0"
