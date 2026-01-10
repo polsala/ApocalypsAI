@@ -1,0 +1,13 @@
+[package]
+name = "nightly-chrono-compass"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+humantime = "2.1"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "0.3"
