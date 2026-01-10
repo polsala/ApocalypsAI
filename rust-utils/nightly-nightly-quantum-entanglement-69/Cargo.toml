@@ -1,0 +1,17 @@
+[package]
+name = "nightly-quantum-entanglement-simulator"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical CLI tool that simulates quantum entanglement states for fun and education"
+authors = ["ApocalypsAI"]
+license = "MIT"
+
+[dependencies]
+rand = "0.8.5"
+
+[dev-dependencies]
+# Mock rationale: Using standard Rust testing framework for deterministic unit tests
+
+[[bin]]
+name = "nightly-quantum-entanglement-simulator"
+path = "src/main.rs"
