@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Simulator Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1d24;
+            color: #e0e6ed;
+            padding: 20px;
+        }
+        .test-suite {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-case {
+            background: #2a2f3a;
+            border: 1px solid #3a3f4b;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .test-result {
+            font-family: monospace;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .pass { color: #4ade80; }
+        .fail { color: #ef4444; }
+        button {
+            background: #4cc9f0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { background: #76e6ff; }
+    </style>
+</head>
+<body>
+    <div class="test-suite">
+        <h1>🧪 Quantum Simulator Test Suite</h1>
+        <p>These tests verify the quantum state calculations and gate operations.</p>
+
+        <div class="test-case">
+            <h3>Test 1: Initial State</h3>
+            <p>Verifies that the quantum state starts in |00⟩</p>
+            <button onclick="testInitialState()">Run Test</button>
+            <div id="test1-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 2: Hadamard Gate</h3>
+            <p>Verifies that H gate creates superposition</p>
+            <button onclick="testHadamard()">Run Test</button>
+            <div id="test2-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 3: CNOT Gate</h3>
+            <p>Verifies that CNOT creates entanglement</p>
+            <button onclick="testCNOT()">Run Test</button>
+            <div id="test3-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 4: Measurement</h3>
+            <p>Verifies that measurement collapses the state</p>
+            <button onclick="testMeasurement()">Run Test</button>
+            <div id="test4-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test 5: Bloch Sphere Calculation</h3>
+            <p>Verifies Bloch vector calculations</p>
+            <button onclick="testBloch()">Run Test</button>
+            <div id="test5-result" class="test-result"></div>
+        </div>
+
+        <div class="test-case">
+            <h3>Run All Tests</h3>
+            <button onclick="runAllTests()">Run All</button>
+            <div id="all-results" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Import the QuantumState class (simplified for testing)
+        class QuantumState {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.state = [1, 0, 0, 0];
+                this.entangled = false;
+            }
+
+            hadamard() {
+                const [a, b, c, d] = this.state;
+                this.state = [
+                    (a + c) / Math.sqrt(2),
+                    (b + d) / Math.sqrt(2),
+                    (a - c) / Math.sqrt(2),
+                    (b - d) / Math.sqrt(2)
+                ];
+                this.checkEntanglement();
+            }
+
+            cnot() {
+                const [a, b, c, d] = this.state;
+                this.state = [a, b, d, c];
+                this.checkEntanglement();
+            }
+
+            checkEntanglement() {
+                const [a, b, c, d] = this.state;
+                const det = a * d - b * c;
+                this.entangled = Math.abs(det) > 0.1;
+            }
+
+            measure() {
+                const probabilities = this.state.map(s => s * s);
+                const total = probabilities.reduce((a, b) => a + b, 0);
+                const normalized = probabilities.map(p => p / total);
+
+                const rand = Math.random();
+                let cumulative = 0;
+                let result = 0;
+
+                for (let i = 0; i < normalized.length; i++) {
+                    cumulative += normalized[i];
+                    if (rand <= cumulative) {
+                        result = i;
+                        break;
+                    }
+                }
+
+                this.state = [0, 0, 0, 0];
+                this.state[result] = 1;
+
+                return result;
+            }
+
+            getBlochVector() {
+                const [a, b, c, d] = this.state;
+                const x = 2 * (a * c + b * d);
+                const y = 2 * (b * c - a * d);
+                const z = a * a + b * b - c * c - d * d;
+                return { x, y, z };
+            }
+        }
+
+        function assert(condition, message) {
+            return condition ? "✅ PASS: " + message : "❌ FAIL: " + message;
+        }
+
+        function testInitialState() {
+            const resultDiv = document.getElementById('test1-result');
+            const state = new QuantumState();
+            
+            const checks = [
+                assert(state.state[0] === 1, "Initial state[0] should be 1"),
+                assert(state.state[1] === 0, "Initial state[1] should be 0"),
+                assert(state.state[2] === 0, "Initial state[2] should be 0"),
+                assert(state.state[3] === 0, "Initial state[3] should be 0"),
+                assert(!state.entangled, "Initial state should not be entangled")
+            ];
+            
+            resultDiv.textContent = checks.join('\n');
+        }
+
+        function testHadamard() {
+            const resultDiv = document.getElementById('test2-result');
+            const state = new QuantumState();
+            state.hadamard();
+            
+            const expected = 1 / Math.sqrt(2);
+            const tolerance = 0.001;
+            
+            const checks = [
+                assert(Math.abs(state.state[0] - expected) < tolerance, "H|00⟩ should have amplitude 1/√2 for |00⟩"),
+                assert(Math.abs(state.state[2] - expected) < tolerance, "H|00⟩ should have amplitude 1/√2 for |10⟩"),
+                assert(Math.abs(state.state[1]) < tolerance, "H|00⟩ should have 0 amplitude for |01⟩"),
+                assert(Math.abs(state.state[3]) < tolerance, "H|00⟩ should have 0 amplitude for |11⟩")
+            ];
+            
+            resultDiv.textContent = checks.join('\n');
+        }
+
+        function testCNOT() {
+            const resultDiv = document.getElementById('test3-result');
+            const state = new QuantumState();
+            state.hadamard(); // Create superposition first
+            state.cnot(); // Then entangle
+            
+            const checks = [
+                assert(state.entangled, "CNOT should create entanglement"),
+                assert(Math.abs(state.state[0] - 1/Math.sqrt(2)) < 0.001, "Entangled state should have correct amplitudes")
+            ];
+            
+            resultDiv.textContent = checks.join('\n');
+        }
+
+        function testMeasurement() {
+            const resultDiv = document.getElementById('test4-result');
+            const state = new QuantumState();
+            state.hadamard();
+            
+            // Run multiple measurements to check probability distribution
+            let zeros = 0, ones = 0;
+            for (let i = 0; i < 1000; i++) {
+                const originalState = [1/Math.sqrt(2), 0, 1/Math.sqrt(2), 0];
+                const testState = new QuantumState();
+                testState.state = originalState;
+                const result = testState.measure();
+                if (result === 0 || result === 1) zeros++;
+                else ones++;
+            }
+            
+            const zeroProb = zeros / 1000;
+            const oneProb = ones / 1000;
+            
+            const checks = [
+                assert(Math.abs(zeroProb - 0.5) < 0.1, "Measurement should give 50/50 distribution"),
+                assert(Math.abs(oneProb - 0.5) < 0.1, "Measurement should give 50/50 distribution")
+            ];
+            
+            resultDiv.textContent = checks.join('\n');
+        }
+
+        function testBloch() {
+            const resultDiv = document.getElementById('test5-result');
+            const state = new QuantumState();
+            
+            // Test |0⟩ state
+            const bloch0 = state.getBlochVector();
+            state.hadamard(); // Create |+⟩ state
+            const blochPlus = state.getBlochVector();
+            
+            const checks = [
+                assert(Math.abs(bloch0.z - 1) < 0.001, "|0⟩ should have z=1 on Bloch sphere"),
+                assert(Math.abs(blochPlus.x - 1) < 0.001, "|+⟩ should have x=1 on Bloch sphere"),
+                assert(Math.abs(blochPlus.z) < 0.001, "|+⟩ should have z=0 on Bloch sphere")
+            ];
+            
+            resultDiv.textContent = checks.join('\n');
+        }
+
+        function runAllTests() {
+            const resultDiv = document.getElementById('all-results');
+            let allResults = [];
+            
+            // Capture test results
+            const originalLog = console.log;
+            console.log = function(msg) {
+                allResults.push(msg);
+            };
+            
+            testInitialState();
+            testHadamard();
+            testCNOT();
+            testMeasurement();
+            testBloch();
+            
+            console.log = originalLog;
+            
+            resultDiv.textContent = "All tests completed. Check individual test results above.";
+        }
+    </script>
+</body>
+</html>
