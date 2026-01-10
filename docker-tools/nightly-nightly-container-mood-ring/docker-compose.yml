@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # A dummy application container to monitor
+  my-app-container:
+    image: busybox:latest
+    command: sh -c "while true; do echo 'INFO: App is running smoothly.'; sleep 5; done"
+    # Uncomment the following lines to simulate different moods:
+    # command: sh -c "while true; do echo 'WARNING: Low disk space.'; sleep 3; done" # Grumpy
+    # command: sh -c "while true; do echo 'ERROR: Database connection failed!'; sleep 1; done" # Distressed
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.1' # Simulate high CPU by limiting it
+    #     reservations:
+    #       cpus: '0.05'
+    # restart: on-failure # Simulate Fickle
+
+  # The Nightly Container Mood Ring utility
+  mood-ring:
+    build: . # Build from the current directory (where Dockerfile is)
+    image: container-mood-ring:latest # Tag the built image
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket to allow interaction
+    # This service is not meant to run continuously, but as a one-off command.
+    # The 'command' field here is just a placeholder; it will be overridden
+    # when you run 'docker-compose run mood-ring <target_container_name>'.
+    command: ["my-app-container"] # Default target if not specified via 'docker-compose run'
+    # Set to 'no' to prevent it from starting with 'docker-compose up'
+    # and only run it explicitly with 'docker-compose run'.
+    # This is important for utilities that are meant to be run on demand.
