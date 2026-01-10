@@ -1,0 +1,1 @@
+use crate::generate_map;\n\n#[test]\nfn integration_deterministic() {\n    let map_a = generate_map(4, 2, &['X'], 7);\n    let map_b = generate_map(4, 2, &['X'], 7);\n    assert_eq!(map_a, map_b);\n}\n
