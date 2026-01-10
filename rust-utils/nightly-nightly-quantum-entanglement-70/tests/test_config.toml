@@ -1,0 +1,13 @@
+[network]
+algorithm = "bell-state"
+topology = "star"
+timeout = 30
+nodes = ["node1:8080", "node2:8080", "node3:8080"]
+
+[particles]
+particle_type = "photon"
+
+[output]
+verbose = true
+metrics = true
+animations = true
