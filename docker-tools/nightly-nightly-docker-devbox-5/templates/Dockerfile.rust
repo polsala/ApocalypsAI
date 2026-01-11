@@ -1,0 +1,32 @@
+# Rust Development Environment
+FROM rust:1.75-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH=/usr/local/cargo/bin:/usr/local/rustup/bin:${PATH}
+
+# Install additional cargo tools
+RUN cargo install cargo-audit
+RUN cargo install cargo-outdated
+RUN cargo install cargo-watch
+
+# Create source and data directories
+RUN mkdir -p /app/src /app/data
+
+# Set permissions
+RUN useradd -m -s /bin/bash devuser && chown -R devuser:devuser /app
+USER devuser
+
+# Default command
+CMD ["/bin/bash"]

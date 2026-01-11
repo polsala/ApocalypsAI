@@ -1,0 +1,22 @@
+{
+  "name": "rust",
+  "description": "Rust toolchain with cargo and common crates for systems programming",
+  "dockerfile": "Dockerfile.rust",
+  "base_image": "rust:1.75-slim",
+  "packages": ["build-essential", "curl", "wget"],
+  "ports": [8080, 3030],
+  "volumes": ["./src:/app/src", "./data:/app/data"],
+  "environment": {
+    "CARGO_HOME": "/usr/local/cargo",
+    "RUSTUP_HOME": "/usr/local/rustup",
+    "PATH": "/usr/local/cargo/bin:/usr/local/rustup/bin:${PATH}"
+  },
+  "startup_command": "bash",
+  "dependencies": ["rustc", "cargo", "rustfmt", "clippy"],
+  "setup_commands": [
+    "cargo install cargo-audit",
+    "cargo install cargo-outdated",
+    "cargo install cargo-watch"
+  ],
+  "readme_template": "# Rust Development Environment\n\nThis is a Rust development environment with:\n\n- Cargo toolchain\n- Common crates pre-installed\n- Port 8080 and 3030 exposed for web services\n- Debug and release build support\n\n## Getting Started\n\n1. Create a new project:\n   ```bash\n   cargo new my_project\n   cd my_project\n   ```\n\n2. Build your project:\n   ```bash\n   cargo build\n   ```\n\n3. Run your project:\n   ```bash\n   cargo run\n   ```\n\n4. Run tests:\n   ```bash\n   cargo test\n   ```\n\n5. Format code:\n   ```bash\n   cargo fmt\n   ```\n\n6. Check for issues:\n   ```bash\n   cargo clippy\n   ```\n"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "go",
+  "description": "Go 1.21 development environment with essential tools and modules",
+  "dockerfile": "Dockerfile.go",
+  "base_image": "golang:1.21-slim",
+  "packages": ["build-essential", "curl", "wget"],
+  "ports": [8080, 9000],
+  "volumes": ["./src:/app/src", "./data:/app/data"],
+  "environment": {
+    "GOPATH": "/go",
+    "GO111MODULE": "on",
+    "CGO_ENABLED": "0"
+  },
+  "startup_command": "bash",
+  "dependencies": ["go", "gofmt", "goimports"],
+  "setup_commands": [
+    "go install golang.org/x/tools/cmd/goimports@latest",
+    "go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest",
+    "go install github.com/cosmtrek/air@latest"
+  ],
+  "readme_template": "# Go Development Environment\n\nThis is a Go 1.21 development environment with:\n\n- Essential Go tools and modules\n- Port 8080 and 9000 exposed for web services\n- Fast build times with CGO disabled\n- Hot reload support\n\n## Getting Started\n\n1. Initialize your module:\n   ```bash\n   go mod init myproject\n   ```\n\n2. Add dependencies:\n   ```bash\n   go get github.com/gin-gonic/gin\n   ```\n\n3. Build your project:\n   ```bash\n   go build\n   ```\n\n4. Run your project:\n   ```bash\n   go run main.go\n   ```\n\n5. Run tests:\n   ```bash\n   go test ./...\n   ```\n\n6. Format code:\n   ```bash\n   go fmt ./...\n   ```\n"
+}

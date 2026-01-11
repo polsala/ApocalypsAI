@@ -1,0 +1,22 @@
+{
+  "name": "nodejs",
+  "description": "Node.js 20 development environment with npm, yarn, and essential packages",
+  "dockerfile": "Dockerfile.nodejs",
+  "base_image": "node:20-slim",
+  "packages": ["curl", "wget", "git"],
+  "ports": [3000, 5000, 8080],
+  "volumes": ["./src:/app/src", "./data:/app/data"],
+  "environment": {
+    "NODE_ENV": "development",
+    "NPM_CONFIG_LOGLEVEL": "info",
+    "YARN_VERSION_CHECK": "false"
+  },
+  "startup_command": "bash",
+  "dependencies": ["nodejs", "npm", "yarn"],
+  "setup_commands": [
+    "npm install -g npm@latest",
+    "npm install -g yarn",
+    "npm install -g eslint prettier typescript ts-node"
+  ],
+  "readme_template": "# Node.js Development Environment\n\nThis is a Node.js 20 development environment with:\n\n- npm and yarn package managers\n- Common development dependencies\n- Port 3000, 5000, and 8080 exposed for development servers\n- Hot reload support\n\n## Getting Started\n\n1. Initialize your project:\n   ```bash\n   npm init -y\n   ```\n\n2. Install dependencies:\n   ```bash\n   npm install\n   ```\n\n3. Start development server:\n   ```bash\n   npm run dev\n   ```\n\n4. Run tests:\n   ```bash\n   npm test\n   ```\n\n5. Lint code:\n   ```bash\n   npx eslint src/\n   ```\n"
+}
