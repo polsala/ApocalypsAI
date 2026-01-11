@@ -1,0 +1,19 @@
+[package]
+name = "nightly-quantum-entanglement-checker"
+version = "0.1.0"
+edition = "2021"
+description = "A whimsical-yet-useful Rust CLI tool for quantum entanglement verification"
+authors = ["ApocalypsAI"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+
+[dev-dependencies]
+test = "0.1"
+
+[[bin]]
+name = "nightly-quantum-entanglement-checker"
+path = "src/main.rs"
