@@ -1,1 +1,40 @@
-import subprocess\nimport re\nimport os\nimport sys\n\nSCRIPT = os.path.join(\"src\", \"main.sh\")\n\ndef run_script(args):\n    result = subprocess.run(\n        [\"/usr/bin/env\", \"bash\", SCRIPT] + args,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n        text=True,\n        check=True\n    )\n    return result.stdout.strip()\n\ndef test_deterministic_output():\n    output = run_script([\"--seed\", \"42\"])\n    expected = \"🌟 Tip: Learn basic first-aid skills. 🩹\"\n    assert output == expected\n\ndef test_list_tips():\n    output = run_script([\"-l\"])\n    # Should contain all tips\n    for tip in [\n        \"Carry a multi-tool for unexpected repairs.\",\n        \"Keep a small stash of high-energy snacks.\",\n        \"Learn basic first-aid skills.\",\n        \"Maintain a clean water source.\",\n        \"Practice silent communication.\"\n    ]:\n        assert tip in output\n\ndef test_random_output_pattern():\n    output = run_script([])\n    # Pattern: \"🌟 Tip: <text> <emoji>\"\n    pattern = r\"^🌟 Tip: .+ [\\\\w\\\\W]$\"\n    assert re.match(pattern, output)\n
+import subprocess
+import re
+import os
+import sys
+
+SCRIPT = os.path.join(\"src\", \"main.sh\")
+
+def run_script(args):
+    result = subprocess.run(
+        [\"/usr/bin/env\", \"bash\", SCRIPT] + args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True
+    )
+    return result.stdout.strip()
+
+def test_deterministic_output():
+    output = run_script([\"--seed\", \"42\"])
+    expected = \"🌟 Tip: Learn basic first-aid skills. 🩹\"
+    assert output == expected
+
+def test_list_tips():
+    output = run_script([\"-l\"])
+    # Should contain all tips
+    for tip in [
+        \"Carry a multi-tool for unexpected repairs.\",
+        \"Keep a small stash of high-energy snacks.\",
+        \"Learn basic first-aid skills.\",
+        \"Maintain a clean water source.\",
+        \"Practice silent communication.\"
+    ]:
+        assert tip in output
+
+def test_random_output_pattern():
+    output = run_script([])
+    # Pattern: \"🌟 Tip: <text> <emoji>\"
+    pattern = r\"^🌟 Tip: .+ [\\\\w\\\\W]$\"
+    assert re.match(pattern, output)
+

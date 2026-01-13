@@ -1,1 +1,20 @@
-export const MOON_PHASES = ["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];\n\n/**\n * Generate an array of moon‑phase emojis representing the passage of time.\n * @param seconds Total duration in seconds.\n * @param interval Interval between ticks (seconds).\n * @returns Array of emojis, one per tick.\n */\nexport function generateChrono(seconds: number, interval: number = 1): string[] {\n  if (seconds <= 0 || interval <= 0) {\n    return [];\n  }\n  const steps = Math.floor(seconds / interval);\n  const result: string[] = [];\n  for (let i = 0; i < steps; i++) {\n    result.push(MOON_PHASES[i % MOON_PHASES.length]);\n  }\n  return result;\n}\n
+export const MOON_PHASES = ["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
+
+/**
+ * Generate an array of moon‑phase emojis representing the passage of time.
+ * @param seconds Total duration in seconds.
+ * @param interval Interval between ticks (seconds).
+ * @returns Array of emojis, one per tick.
+ */
+export function generateChrono(seconds: number, interval: number = 1): string[] {
+  if (seconds <= 0 || interval <= 0) {
+    return [];
+  }
+  const steps = Math.floor(seconds / interval);
+  const result: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    result.push(MOON_PHASES[i % MOON_PHASES.length]);
+  }
+  return result;
+}
+

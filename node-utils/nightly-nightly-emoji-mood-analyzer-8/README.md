@@ -1,1 +1,27 @@
-# nightly-emoji-mood-analyzer\n\nA whimsical CLI utility that reads a piece of text and returns an emoji representing the overall mood. Uses simple keyword matching to guess happiness, sadness, anger, fear, or surprise.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n```sh\necho "I am thrilled!" | nemoji\n# or\nnemoji "I am thrilled!"\n```\n\nOutputs an emoji like 😊.\n\n## How it works\n\nThe tool scans the input for keywords associated with five moods and returns the corresponding emoji. If no keywords are found, it returns 🤔.\n\n## License\n\nMIT
+# nightly-emoji-mood-analyzer
+
+A whimsical CLI utility that reads a piece of text and returns an emoji representing the overall mood. Uses simple keyword matching to guess happiness, sadness, anger, fear, or surprise.
+
+## Installation
+
+```sh
+npm install -g .
+```
+
+## Usage
+
+```sh
+echo "I am thrilled!" | nemoji
+# or
+nemoji "I am thrilled!"
+```
+
+Outputs an emoji like ð.
+
+## How it works
+
+The tool scans the input for keywords associated with five moods and returns the corresponding emoji. If no keywords are found, it returns ð¤.
+
+## License
+
+MIT

@@ -1,1 +1,47 @@
-import crypto from "crypto";\n\nconst mapping: Record<string, string> = {\n  "0": "  ",\n  "1": "░░",\n  "2": "▒▒",\n  "3": "▓▓",\n  "4": "██",\n  "5": "▉▉",\n  "6": "▊▊",\n  "7": "▍▍",\n  "8": "▏▏",\n  "9": "▐▐",\n  "a": "▖▖",\n  "b": "▗▗",\n  "c": "▘▘",\n  "d": "▙▙",\n  "e": "▚▚",\n  "f": "▛▛"\n};\n\n/**\n * Convert a string into deterministic ASCII block art.\n * @param text Input string to be transformed.\n * @returns Multiline string containing the art.\n */\nexport function hashArt(text: string): string {\n  const hash = crypto.createHash("sha256").update(text).digest("hex");\n  const patterns = hash.split("").map(ch => mapping[ch]);\n  const lines: string[] = [];\n  for (let i = 0; i < patterns.length; i += 8) {\n    lines.push(patterns.slice(i, i + 8).join(""));\n  }\n  return lines.join("\n");\n}\n\n// CLI handling – executed when run directly\nif (require.main === module) {\n  const input = process.argv[2] ?? "";\n  if (!input) {\n    console.error("Usage: node main.js <text>");\n    process.exit(1);\n  }\n  console.log(hashArt(input));\n}\n
+import crypto from "crypto";
+
+const mapping: Record<string, string> = {
+  "0": "  ",
+  "1": "ââ",
+  "2": "ââ",
+  "3": "ââ",
+  "4": "ââ",
+  "5": "ââ",
+  "6": "ââ",
+  "7": "ââ",
+  "8": "ââ",
+  "9": "ââ",
+  "a": "ââ",
+  "b": "ââ",
+  "c": "ââ",
+  "d": "ââ",
+  "e": "ââ",
+  "f": "ââ"
+};
+
+/**
+ * Convert a string into deterministic ASCII block art.
+ * @param text Input string to be transformed.
+ * @returns Multiline string containing the art.
+ */
+export function hashArt(text: string): string {
+  const hash = crypto.createHash("sha256").update(text).digest("hex");
+  const patterns = hash.split("").map(ch => mapping[ch]);
+  const lines: string[] = [];
+  for (let i = 0; i < patterns.length; i += 8) {
+    lines.push(patterns.slice(i, i + 8).join(""));
+  }
+  return lines.join("
+");
+}
+
+// CLI handling â executed when run directly
+if (require.main === module) {
+  const input = process.argv[2] ?? "";
+  if (!input) {
+    console.error("Usage: node main.js <text>");
+    process.exit(1);
+  }
+  console.log(hashArt(input));
+}
+

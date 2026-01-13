@@ -1,1 +1,5 @@
-module.exports = {\n  preset: 'ts-jest',\n  testEnvironment: 'node',\n};\n
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+};
+

@@ -1,1 +1,35 @@
-import { render } from '../src/main';\nimport * as assert from 'assert';\n\nfunction stripAnsi(str: string): string {\n  return str.replace(/\\x1b\\[[0-9;]*m/g, '');\n}\n\n// Test rendering of the letter A with a fixed seed\nconst outA = render('A', 0);\nconst strippedA = stripAnsi(outA);\nconst linesA = strippedA.split('\n').map(l => l.trimEnd());\nassert.deepStrictEqual(linesA, [\n  '  #',\n  ' # #',\n  '#####',\n  '#   #',\n  '#   #',\n]);\n\n// Test that an unknown character renders as blanks\nconst outUnknown = render('?', 1);\nconst strippedU = stripAnsi(outUnknown);\nconst linesU = strippedU.split('\n').map(l => l.trimEnd());\nassert.deepStrictEqual(linesU, [\n  '',\n  '',\n  '',\n  '',\n  '',\n]);\n\nconsole.log('All tests passed.');\n
+import { render } from '../src/main';
+import * as assert from 'assert';
+
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+// Test rendering of the letter A with a fixed seed
+const outA = render('A', 0);
+const strippedA = stripAnsi(outA);
+const linesA = strippedA.split('
+').map(l => l.trimEnd());
+assert.deepStrictEqual(linesA, [
+  '  #',
+  ' # #',
+  '#####',
+  '#   #',
+  '#   #',
+]);
+
+// Test that an unknown character renders as blanks
+const outUnknown = render('?', 1);
+const strippedU = stripAnsi(outUnknown);
+const linesU = strippedU.split('
+').map(l => l.trimEnd());
+assert.deepStrictEqual(linesU, [
+  '',
+  '',
+  '',
+  '',
+  '',
+]);
+
+console.log('All tests passed.');
+

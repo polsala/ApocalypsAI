@@ -1,1 +1,62 @@
-import React, { useState } from "react";\nimport { computeTotalWeight } from "./utils";\n\nfunction App() {\n  const [items, setItems] = useState([]);\n  const [name, setName] = useState("");\n  const [weight, setWeight] = useState("");\n  const [durability, setDurability] = useState("");\n\n  const addItem = () => {\n    if (!name) return;\n    const newItem = {\n      name,\n      weight: parseFloat(weight) || 0,\n      durability: parseInt(durability) || 0,\n    };\n    setItems([...items, newItem]);\n    setName("");\n    setWeight("");\n    setDurability("");\n  };\n\n  const totalWeight = computeTotalWeight(items);\n\n  return (\n    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>\n      <h1>Survival Gear Dashboard</h1>\n      <div>\n        <input\n          placeholder="Item name"\n          value={name}\n          onChange={(e) => setName(e.target.value)}\n        />\n        <input\n          placeholder="Weight (kg)"\n          value={weight}\n          onChange={(e) => setWeight(e.target.value)}\n          type="number"\n          step="0.1"\n        />\n        <input\n          placeholder="Durability"\n          value={durability}\n          onChange={(e) => setDurability(e.target.value)}\n          type="number"\n        />\n        <button onClick={addItem}>Add Item</button>\n      </div>\n      <h2>Items</h2>\n      <ul>\n        {items.map((it, idx) => (\n          <li key={idx}>\n            {it.name} – {it.weight}kg – durability {it.durability}\n          </li>\n        ))}\n      </ul>\n      <h3>Total Weight: {totalWeight} kg</h3>\n    </div>\n  );\n}\n\nexport default App;
+import React, { useState } from "react";
+import { computeTotalWeight } from "./utils";
+
+function App() {
+  const [items, setItems] = useState([]);
+  const [name, setName] = useState("");
+  const [weight, setWeight] = useState("");
+  const [durability, setDurability] = useState("");
+
+  const addItem = () => {
+    if (!name) return;
+    const newItem = {
+      name,
+      weight: parseFloat(weight) || 0,
+      durability: parseInt(durability) || 0,
+    };
+    setItems([...items, newItem]);
+    setName("");
+    setWeight("");
+    setDurability("");
+  };
+
+  const totalWeight = computeTotalWeight(items);
+
+  return (
+    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>
+      <h1>Survival Gear Dashboard</h1>
+      <div>
+        <input
+          placeholder="Item name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          placeholder="Weight (kg)"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          type="number"
+          step="0.1"
+        />
+        <input
+          placeholder="Durability"
+          value={durability}
+          onChange={(e) => setDurability(e.target.value)}
+          type="number"
+        />
+        <button onClick={addItem}>Add Item</button>
+      </div>
+      <h2>Items</h2>
+      <ul>
+        {items.map((it, idx) => (
+          <li key={idx}>
+            {it.name} â {it.weight}kg â durability {it.durability}
+          </li>
+        ))}
+      </ul>
+      <h3>Total Weight: {totalWeight} kg</h3>
+    </div>
+  );
+}
+
+export default App;

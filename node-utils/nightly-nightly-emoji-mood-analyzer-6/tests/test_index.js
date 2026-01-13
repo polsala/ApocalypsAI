@@ -1,1 +1,11 @@
-const assert = require('assert');\nconst {analyzeMood} = require('../src/index.js');\n\n// Mock rationale: deterministic keyword matching\nassert.strictEqual(analyzeMood('I am so happy today!'), '😊');\nassert.strictEqual(analyzeMood('This is terrible and sad.'), '😞');\nassert.strictEqual(analyzeMood('I am angry about the delay.'), '😠');\nassert.strictEqual(analyzeMood('I just finished a marathon, wow!'), '🤩');\nassert.strictEqual(analyzeMood('Just an ordinary day.'), '🤔');\n\nconsole.log('All tests passed.');
+const assert = require('assert');
+const {analyzeMood} = require('../src/index.js');
+
+// Mock rationale: deterministic keyword matching
+assert.strictEqual(analyzeMood('I am so happy today!'), 'ð');
+assert.strictEqual(analyzeMood('This is terrible and sad.'), 'ð');
+assert.strictEqual(analyzeMood('I am angry about the delay.'), 'ð ');
+assert.strictEqual(analyzeMood('I just finished a marathon, wow!'), 'ð¤©');
+assert.strictEqual(analyzeMood('Just an ordinary day.'), 'ð¤');
+
+console.log('All tests passed.');

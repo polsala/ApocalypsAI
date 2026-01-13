@@ -1,1 +1,49 @@
-import { render, screen } from "@testing-library/react";\nimport App from "../src/App";\n\n// Mock Date to a fixed day\nconst RealDate = Date;\n\nfunction mockDate(isoDate) {\n  global.Date = class extends RealDate {\n    constructor(...args) {\n      if (args.length) {\n        return new RealDate(...args);\n      }\n      return new RealDate(isoDate);\n    }\n    static now() {\n      return new RealDate(isoDate).getTime();\n    }\n    static parse(str) {\n      return RealDate.parse(str);\n    }\n    static UTC(...args) {\n      return RealDate.UTC(...args);\n    }\n  };\n}\n\nafterAll(() => {\n  global.Date = RealDate;\n});\n\ntest("renders deterministic mood for mocked date", () => {\n  mockDate("2023-01-01T00:00:00Z");\n  render(<App />);\n  const dateStr = "2023-01-01";\n  const moods = [\n    { phrase: "Radiant Ruins", color: "#ff7f7f" },\n    { phrase: "Dusty Dawn", color: "#ffd27f" },\n    { phrase: "Gleeful Grit", color: "#7fff7f" },\n    { phrase: "Mellow Mutant", color: "#7fd2ff" },\n    { phrase: "Serene Fallout", color: "#d27fff" },\n    { phrase: "Optimistic Oblivion", color: "#ff7fd2" }\n  ];\n  let hash = 0;\n  for (let i = 0; i < dateStr.length; i++) {\n    hash = (hash + dateStr.charCodeAt(i)) % moods.length;\n  }\n  const expectedPhrase = moods[hash].phrase;\n  expect(screen.getByText(expectedPhrase)).toBeInTheDocument();\n});
+import { render, screen } from "@testing-library/react";
+import App from "../src/App";
+
+// Mock Date to a fixed day
+const RealDate = Date;
+
+function mockDate(isoDate) {
+  global.Date = class extends RealDate {
+    constructor(...args) {
+      if (args.length) {
+        return new RealDate(...args);
+      }
+      return new RealDate(isoDate);
+    }
+    static now() {
+      return new RealDate(isoDate).getTime();
+    }
+    static parse(str) {
+      return RealDate.parse(str);
+    }
+    static UTC(...args) {
+      return RealDate.UTC(...args);
+    }
+  };
+}
+
+afterAll(() => {
+  global.Date = RealDate;
+});
+
+test("renders deterministic mood for mocked date", () => {
+  mockDate("2023-01-01T00:00:00Z");
+  render(<App />);
+  const dateStr = "2023-01-01";
+  const moods = [
+    { phrase: "Radiant Ruins", color: "#ff7f7f" },
+    { phrase: "Dusty Dawn", color: "#ffd27f" },
+    { phrase: "Gleeful Grit", color: "#7fff7f" },
+    { phrase: "Mellow Mutant", color: "#7fd2ff" },
+    { phrase: "Serene Fallout", color: "#d27fff" },
+    { phrase: "Optimistic Oblivion", color: "#ff7fd2" }
+  ];
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = (hash + dateStr.charCodeAt(i)) % moods.length;
+  }
+  const expectedPhrase = moods[hash].phrase;
+  expect(screen.getByText(expectedPhrase)).toBeInTheDocument();
+});

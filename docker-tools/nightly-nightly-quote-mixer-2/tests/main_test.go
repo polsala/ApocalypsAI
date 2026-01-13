@@ -1,1 +1,52 @@
-package main\n\nimport (\n    "encoding/json"\n    "math/rand"\n    "net/http"\n    "net/http/httptest"\n    "testing"\n)\n\nfunc TestMixQuoteDeterministic(t *testing.T) {\n    // Use a fixed seed to make the output predictable\n    rng = rand.New(rand.NewSource(1))\n    // Replicate the selection logic to compute the expected result\n    i := rng.Intn(len(inspirational))\n    a := rng.Intn(len(apocalyptic))\n    expected := inspirational[i] + " " + apocalyptic[a] + "."\n\n    // Reset rng for the function under test\n    rng = rand.New(rand.NewSource(1))\n    got := mixQuote()\n    if got != expected {\n        t.Fatalf(\"expected %q, got %q\", expected, got)\n    }\n}\n\nfunc TestQuoteHandlerDeterministic(t *testing.T) {\n    // Fixed seed ensures the same quote each run\n    rng = rand.New(rand.NewSource(2))\n    // Build the expected response using the same seed\n    i := rng.Intn(len(inspirational))\n    a := rng.Intn(len(apocalyptic))\n    expectedQuote := inspirational[i] + " " + apocalyptic[a] + "."\n\n    // Reset rng for the handler\n    rng = rand.New(rand.NewSource(2))\n    req := httptest.NewRequest(http.MethodGet, \"/quote\", nil)\n    w := httptest.NewRecorder()\n    quoteHandler(w, req)\n\n    if w.Code != http.StatusOK {\n        t.Fatalf(\"expected status 200, got %d\", w.Code)\n    }\n    var resp QuoteResponse\n    if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {\n        t.Fatalf(\"failed to decode JSON response: %v\", err)\n    }\n    if resp.Quote != expectedQuote {\n        t.Fatalf(\"expected quote %q, got %q\", expectedQuote, resp.Quote)\n    }\n}\n
+package main
+
+import (
+    "encoding/json"
+    "math/rand"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestMixQuoteDeterministic(t *testing.T) {
+    // Use a fixed seed to make the output predictable
+    rng = rand.New(rand.NewSource(1))
+    // Replicate the selection logic to compute the expected result
+    i := rng.Intn(len(inspirational))
+    a := rng.Intn(len(apocalyptic))
+    expected := inspirational[i] + " " + apocalyptic[a] + "."
+
+    // Reset rng for the function under test
+    rng = rand.New(rand.NewSource(1))
+    got := mixQuote()
+    if got != expected {
+        t.Fatalf(\"expected %q, got %q\", expected, got)
+    }
+}
+
+func TestQuoteHandlerDeterministic(t *testing.T) {
+    // Fixed seed ensures the same quote each run
+    rng = rand.New(rand.NewSource(2))
+    // Build the expected response using the same seed
+    i := rng.Intn(len(inspirational))
+    a := rng.Intn(len(apocalyptic))
+    expectedQuote := inspirational[i] + " " + apocalyptic[a] + "."
+
+    // Reset rng for the handler
+    rng = rand.New(rand.NewSource(2))
+    req := httptest.NewRequest(http.MethodGet, \"/quote\", nil)
+    w := httptest.NewRecorder()
+    quoteHandler(w, req)
+
+    if w.Code != http.StatusOK {
+        t.Fatalf(\"expected status 200, got %d\", w.Code)
+    }
+    var resp QuoteResponse
+    if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+        t.Fatalf(\"failed to decode JSON response: %v\", err)
+    }
+    if resp.Quote != expectedQuote {
+        t.Fatalf(\"expected quote %q, got %q\", expectedQuote, resp.Quote)
+    }
+}
+

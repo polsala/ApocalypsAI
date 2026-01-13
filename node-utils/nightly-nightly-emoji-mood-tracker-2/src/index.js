@@ -1,1 +1,73 @@
-#!/usr/bin/env node\nconst fs = require('fs');\nconst path = require('path');\nconst os = require('os');\n\nconst LOG_PATH = path.join(os.homedir(), '.emoji_mood_log.json');\n\nfunction loadLog() {\n  try {\n    const data = fs.readFileSync(LOG_PATH, 'utf8');\n    return JSON.parse(data);\n  } catch (e) {\n    return [];\n  }\n}\n\nfunction saveLog(entries) {\n  fs.writeFileSync(LOG_PATH, JSON.stringify(entries, null, 2), 'utf8');\n}\n\n/**\n * Log a mood entry.\n * @param {string} emoji - Emoji representing the mood.\n * @param {string} note - Optional note.\n */\nfunction logMood(emoji, note = '') {\n  if (!emoji) {\n    throw new Error('Emoji is required');\n  }\n  const entries = loadLog();\n  entries.push({ emoji, note, timestamp: new Date().toISOString() });\n  saveLog(entries);\n}\n\n/**\n * Get mood statistics as a map from emoji to count.\n * @returns {Object} stats\n */\nfunction getStats() {\n  const entries = loadLog();\n  const stats = {};\n  for (const e of entries) {\n    stats[e.emoji] = (stats[e.emoji] || 0) + 1;\n  }\n  return stats;\n}\n\n// CLI handling\nif (require.main === module) {\n  const [, , command, ...args] = process.argv;\n  try {\n    if (command === 'log') {\n      const [emoji, ...noteParts] = args;\n      const note = noteParts.join(' ');\n      logMood(emoji, note);\n      console.log('Mood logged.');\n    } else if (command === 'stats') {\n      const stats = getStats();\n      console.log('Mood stats:');\n      for (const [emoji, count] of Object.entries(stats)) {\n        console.log(`${emoji}: ${count}`);\n      }\n    } else {\n      console.error('Unknown command. Use "log" or "stats".');\n      process.exit(1);\n    }\n  } catch (err) {\n    console.error('Error:', err.message);\n    process.exit(1);\n  }\n}\n\nmodule.exports = { logMood, getStats, LOG_PATH };
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const LOG_PATH = path.join(os.homedir(), '.emoji_mood_log.json');
+
+function loadLog() {
+  try {
+    const data = fs.readFileSync(LOG_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLog(entries) {
+  fs.writeFileSync(LOG_PATH, JSON.stringify(entries, null, 2), 'utf8');
+}
+
+/**
+ * Log a mood entry.
+ * @param {string} emoji - Emoji representing the mood.
+ * @param {string} note - Optional note.
+ */
+function logMood(emoji, note = '') {
+  if (!emoji) {
+    throw new Error('Emoji is required');
+  }
+  const entries = loadLog();
+  entries.push({ emoji, note, timestamp: new Date().toISOString() });
+  saveLog(entries);
+}
+
+/**
+ * Get mood statistics as a map from emoji to count.
+ * @returns {Object} stats
+ */
+function getStats() {
+  const entries = loadLog();
+  const stats = {};
+  for (const e of entries) {
+    stats[e.emoji] = (stats[e.emoji] || 0) + 1;
+  }
+  return stats;
+}
+
+// CLI handling
+if (require.main === module) {
+  const [, , command, ...args] = process.argv;
+  try {
+    if (command === 'log') {
+      const [emoji, ...noteParts] = args;
+      const note = noteParts.join(' ');
+      logMood(emoji, note);
+      console.log('Mood logged.');
+    } else if (command === 'stats') {
+      const stats = getStats();
+      console.log('Mood stats:');
+      for (const [emoji, count] of Object.entries(stats)) {
+        console.log(`${emoji}: ${count}`);
+      }
+    } else {
+      console.error('Unknown command. Use "log" or "stats".');
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    process.exit(1);
+  }
+}
+
+module.exports = { logMood, getStats, LOG_PATH };

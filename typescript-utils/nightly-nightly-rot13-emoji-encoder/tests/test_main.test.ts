@@ -1,1 +1,37 @@
-import { encodeWithEmoji, rot13 } from "../src/main";\n\n// Mock rationale: No external dependencies; tests are pure functions.\n\nfunction expectEqual(actual: string, expected: string): void {\n  if (actual !== expected) {\n    throw new Error(`Assertion failed. Expected: ${expected}, Got: ${actual}`);\n  }\n}\n\n// Test ROT13 correctness\nconst rot13Tests: Array<[string, string]> = [\n  ["Hello", "Uryyb"],\n  ["abcdefghijklmnopqrstuvwxyz", "nopqrstuvwxyzabcdefghijklm"],\n  ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "NOPQRSTUVWXYZABCDEFGHIJKLM"],\n  ["123!", "123!"],\n];\nfor (const [input, expected] of rot13Tests) {\n  expectEqual(rot13(input), expected);\n}\n\n// Test emoji‑decorated output\n// Emoji list used in implementation: ["😀","🚀","🌟","🔥","💧","🍀","🎲","🧩","⚡","🪐"]\n// For input "Hello" -> ROT13 "Uryyb"\n// U (85) %10 =5 -> "💧"\n// r (114)%10 =4 -> "🔥"\n// y (121)%10 =1 -> "🚀"\n// y (121)%10 =1 -> "🚀"\n// b (98) %10 =8 -> "⚡"\nconst expectedHello = "💧U🔥r🚀y🚀y⚡b";\nexpectEqual(encodeWithEmoji("Hello"), expectedHello);\n\n// Empty string should return empty\nexpectEqual(encodeWithEmoji(""), "");\n\nconsole.log("All tests passed.");\n
+import { encodeWithEmoji, rot13 } from "../src/main";
+
+// Mock rationale: No external dependencies; tests are pure functions.
+
+function expectEqual(actual: string, expected: string): void {
+  if (actual !== expected) {
+    throw new Error(`Assertion failed. Expected: ${expected}, Got: ${actual}`);
+  }
+}
+
+// Test ROT13 correctness
+const rot13Tests: Array<[string, string]> = [
+  ["Hello", "Uryyb"],
+  ["abcdefghijklmnopqrstuvwxyz", "nopqrstuvwxyzabcdefghijklm"],
+  ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "NOPQRSTUVWXYZABCDEFGHIJKLM"],
+  ["123!", "123!"],
+];
+for (const [input, expected] of rot13Tests) {
+  expectEqual(rot13(input), expected);
+}
+
+// Test emojiâdecorated output
+// Emoji list used in implementation: ["ð","ð","ð","ð¥","ð§","ð","ð²","ð§©","â¡","ðª"]
+// For input "Hello" -> ROT13 "Uryyb"
+// U (85) %10 =5 -> "ð§"
+// r (114)%10 =4 -> "ð¥"
+// y (121)%10 =1 -> "ð"
+// y (121)%10 =1 -> "ð"
+// b (98) %10 =8 -> "â¡"
+const expectedHello = "ð§Uð¥rðyðyâ¡b";
+expectEqual(encodeWithEmoji("Hello"), expectedHello);
+
+// Empty string should return empty
+expectEqual(encodeWithEmoji(""), "");
+
+console.log("All tests passed.");
+

@@ -1,1 +1,11 @@
-FROM alpine:3.18\n\n# Install bash (Alpine ships with ash, we need bash for $RANDOM handling)\nRUN apk add --no-cache bash\n\n# Copy the generator script\nCOPY src/generate.sh /usr/local/bin/generate.sh\nRUN chmod +x /usr/local/bin/generate.sh\n\n# Set entrypoint\nENTRYPOINT ["bash", "/usr/local/bin/generate.sh"]
+FROM alpine:3.18
+
+# Install bash (Alpine ships with ash, we need bash for $RANDOM handling)
+RUN apk add --no-cache bash
+
+# Copy the generator script
+COPY src/generate.sh /usr/local/bin/generate.sh
+RUN chmod +x /usr/local/bin/generate.sh
+
+# Set entrypoint
+ENTRYPOINT ["bash", "/usr/local/bin/generate.sh"]

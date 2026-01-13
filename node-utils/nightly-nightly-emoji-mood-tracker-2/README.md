@@ -1,1 +1,25 @@
-# Emoji Mood Tracker\n\nA whimsical CLI tool to log your mood using emojis and view simple statistics.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n- Log a mood:\n\n```sh\nemoji-mood log 😊 "Feeling great"\n```\n\n- Show statistics:\n\n```sh\nemoji-mood stats\n```\n\nThe data is stored in `~/.emoji_mood_log.json`.
+# Emoji Mood Tracker
+
+A whimsical CLI tool to log your mood using emojis and view simple statistics.
+
+## Installation
+
+```sh
+npm install -g .
+```
+
+## Usage
+
+- Log a mood:
+
+```sh
+emoji-mood log ð "Feeling great"
+```
+
+- Show statistics:
+
+```sh
+emoji-mood stats
+```
+
+The data is stored in `~/.emoji_mood_log.json`.

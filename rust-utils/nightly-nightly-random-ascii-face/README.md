@@ -1,1 +1,29 @@
-# nightly-random-ascii-face\n\nGenerate a random ASCII face with optional style and seed.\n\n## Usage\n\n```bash\ncargo run -- --seed 42 --style smile\n```\n\nOptions:\n\n- `--seed <u64>`: Optional seed for deterministic output.\n- `--style <style>`: Optional style filter (`smile`, `frown`, `surprised`).\n\n## Examples\n\n```bash\n# Random face\ncargo run -- --seed 42\n# Smile face\ncargo run -- --style smile\n# Deterministic smile\ncargo run -- --seed 42 --style smile\n```\n\n## Tests\n\nRun `cargo test` to execute the test suite.
+# nightly-random-ascii-face
+
+Generate a random ASCII face with optional style and seed.
+
+## Usage
+
+```bash
+cargo run -- --seed 42 --style smile
+```
+
+Options:
+
+- `--seed <u64>`: Optional seed for deterministic output.
+- `--style <style>`: Optional style filter (`smile`, `frown`, `surprised`).
+
+## Examples
+
+```bash
+# Random face
+cargo run -- --seed 42
+# Smile face
+cargo run -- --style smile
+# Deterministic smile
+cargo run -- --seed 42 --style smile
+```
+
+## Tests
+
+Run `cargo test` to execute the test suite.

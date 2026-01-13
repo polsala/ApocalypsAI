@@ -1,1 +1,61 @@
-const core = require('@actions/core');\nconst github = require('@actions/github');\nconst { detectLanguages, run } = require('../src/index');\n\njest.mock('@actions/core');\njest.mock('@actions/github');\n\ndescribe('detectLanguages', () => {\n  test('maps extensions to languages', () => {\n    const files = ['app.js', 'main.py', 'script.sh', 'README.md'];\n    expect(detectLanguages(files).sort()).toEqual(['javascript', 'python', 'shell'].sort());\n  });\n});\n\ndescribe('run', () => {\n  const mockAddLabels = jest.fn();\n  const mockListFiles = jest.fn().mockResolvedValue({ data: [{ filename: 'test.go' }, { filename: 'lib.rs' }] });\n  beforeEach(() => {\n    jest.clearAllMocks();\n    core.getInput.mockImplementation(name => {\n      if (name === 'github-token') return 'fake-token';\n      if (name === 'files') return '';\n      return '';\n    });\n    github.context = {\n      payload: { pull_request: { number: 42 } },\n      repo: { owner: 'owner', repo: 'repo' }\n    };\n    github.getOctokit.mockReturnValue({\n      rest: {\n        pulls: { listFiles: mockListFiles },\n        issues: { addLabels: mockAddLabels }\n      }\n    });\n  });\n\n  test('adds language labels based on changed files', async () => {\n    await run();\n    expect(mockAddLabels).toHaveBeenCalledWith({\n      owner: 'owner',\n      repo: 'repo',\n      issue_number: 42,\n      labels: ['lang:go', 'lang:rust']\n    });\n  });\n\n  test('uses provided files input', async () => {\n    core.getInput.mockImplementation(name => {\n      if (name === 'github-token') return 'fake-token';\n      if (name === 'files') return JSON.stringify(['a.rb', 'b.rb']);\n      return '';\n    });\n    await run();\n    expect(mockAddLabels).toHaveBeenCalledWith({\n      owner: 'owner',\n      repo: 'repo',\n      issue_number: 42,\n      labels: ['lang:ruby']\n    });\n  });\n});
+const core = require('@actions/core');
+const github = require('@actions/github');
+const { detectLanguages, run } = require('../src/index');
+
+jest.mock('@actions/core');
+jest.mock('@actions/github');
+
+describe('detectLanguages', () => {
+  test('maps extensions to languages', () => {
+    const files = ['app.js', 'main.py', 'script.sh', 'README.md'];
+    expect(detectLanguages(files).sort()).toEqual(['javascript', 'python', 'shell'].sort());
+  });
+});
+
+describe('run', () => {
+  const mockAddLabels = jest.fn();
+  const mockListFiles = jest.fn().mockResolvedValue({ data: [{ filename: 'test.go' }, { filename: 'lib.rs' }] });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    core.getInput.mockImplementation(name => {
+      if (name === 'github-token') return 'fake-token';
+      if (name === 'files') return '';
+      return '';
+    });
+    github.context = {
+      payload: { pull_request: { number: 42 } },
+      repo: { owner: 'owner', repo: 'repo' }
+    };
+    github.getOctokit.mockReturnValue({
+      rest: {
+        pulls: { listFiles: mockListFiles },
+        issues: { addLabels: mockAddLabels }
+      }
+    });
+  });
+
+  test('adds language labels based on changed files', async () => {
+    await run();
+    expect(mockAddLabels).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      issue_number: 42,
+      labels: ['lang:go', 'lang:rust']
+    });
+  });
+
+  test('uses provided files input', async () => {
+    core.getInput.mockImplementation(name => {
+      if (name === 'github-token') return 'fake-token';
+      if (name === 'files') return JSON.stringify(['a.rb', 'b.rb']);
+      return '';
+    });
+    await run();
+    expect(mockAddLabels).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      issue_number: 42,
+      labels: ['lang:ruby']
+    });
+  });
+});

@@ -1,1 +1,16 @@
-export const zones = [\n  'The Scorched Desert',\n  'Radiated Wasteland',\n  'Frozen Tundra',\n  'Toxic Swamp',\n  'Ashen Mountains'\n];\n\nexport const conditions = [\n  'Acid rain',\n  'Firestorm',\n  'Eternal night',\n  'Radioactive fog',\n  'Meteor shower',\n  'Sandstorm of ash'\n];
+export const zones = [
+  'The Scorched Desert',
+  'Radiated Wasteland',
+  'Frozen Tundra',
+  'Toxic Swamp',
+  'Ashen Mountains'
+];
+
+export const conditions = [
+  'Acid rain',
+  'Firestorm',
+  'Eternal night',
+  'Radioactive fog',
+  'Meteor shower',
+  'Sandstorm of ash'
+];

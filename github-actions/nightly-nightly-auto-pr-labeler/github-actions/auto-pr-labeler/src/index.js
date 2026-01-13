@@ -1,1 +1,47 @@
-const core = require('@actions/core');\nconst github = require('@actions/github');\n\nasync function run() {\n  try {\n    const token = core.getInput('repo-token', { required: true });\n    const octokit = github.getOctokit(token);\n    const { context } = github;\n    const pr = context.payload.pull_request;\n    if (!pr) {\n      core.setFailed('No pull request found.');\n      return;\n    }\n    const title = pr.title.toLowerCase();\n    const labels = [];\n\n    const mapping = {\n      'fix': '🧟 zombie-fix',\n      'feature': '☀️ sunrise-feature',\n      'doc': '📚 documentation',\n      'refactor': '🔧 refactor',\n      'test': '✅ test-addition'\n    };\n\n    for (const [keyword, label] of Object.entries(mapping)) {\n      if (title.includes(keyword)) {\n        labels.push(label);\n      }\n    }\n\n    if (labels.length > 0) {\n      await octokit.rest.issues.addLabels({\n        owner: context.repo.owner,\n        repo: context.repo.repo,\n        issue_number: pr.number,\n        labels\n      });\n      core.info(`Added labels: ${labels.join(', ')}`);\n    } else {\n      core.info('No matching keywords, no labels added.');\n    }\n  } catch (error) {\n    core.setFailed(error.message);\n  }\n}\n\nrun();
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+async function run() {
+  try {
+    const token = core.getInput('repo-token', { required: true });
+    const octokit = github.getOctokit(token);
+    const { context } = github;
+    const pr = context.payload.pull_request;
+    if (!pr) {
+      core.setFailed('No pull request found.');
+      return;
+    }
+    const title = pr.title.toLowerCase();
+    const labels = [];
+
+    const mapping = {
+      'fix': 'ð§ zombie-fix',
+      'feature': 'âï¸ sunrise-feature',
+      'doc': 'ð documentation',
+      'refactor': 'ð§ refactor',
+      'test': 'â test-addition'
+    };
+
+    for (const [keyword, label] of Object.entries(mapping)) {
+      if (title.includes(keyword)) {
+        labels.push(label);
+      }
+    }
+
+    if (labels.length > 0) {
+      await octokit.rest.issues.addLabels({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: pr.number,
+        labels
+      });
+      core.info(`Added labels: ${labels.join(', ')}`);
+    } else {
+      core.info('No matching keywords, no labels added.');
+    }
+  } catch (error) {
+    core.setFailed(error.message);
+  }
+}
+
+run();

@@ -1,1 +1,65 @@
-package main\n\nimport (\n    "flag"\n    "fmt"\n    "net"\n    "strconv"\n    "sync"\n    "time"\n)\n\nfunc scanPort(host string, port int, timeout time.Duration) bool {\n    address := fmt.Sprintf("%s:%d", host, port)\n    conn, err := net.DialTimeout("tcp", address, timeout)\n    if err != nil {\n        return false\n    }\n    conn.Close()\n    return true\n}\n\nfunc main() {\n    host := flag.String("host", "localhost", "Target host")\n    start := flag.Int("start", 1, "Start port")\n    end := flag.Int("end", 1024, "End port")\n    timeoutMs := flag.Int("timeout", 200, "Timeout per port in milliseconds")\n    flag.Parse()\n\n    if *start > *end {\n        fmt.Println("Invalid range: start > end")\n        return\n    }\n\n    var wg sync.WaitGroup\n    var mu sync.Mutex\n    openPorts := []int{}\n    timeout := time.Duration(*timeoutMs) * time.Millisecond\n    sem := make(chan struct{}, 100) // limit concurrency\n\n    for port := *start; port <= *end; port++ {\n        wg.Add(1)\n        sem <- struct{}{}\n        go func(p int) {\n            defer wg.Done()\n            if scanPort(*host, p, timeout) {\n                mu.Lock()\n                openPorts = append(openPorts, p)\n                mu.Unlock()\n            }\n            <-sem\n        }(port)\n    }\n    wg.Wait()\n\n    if len(openPorts) == 0 {\n        fmt.Println("No open ports found.")\n        return\n    }\n    fmt.Println("Open ports:")\n    for _, p := range openPorts {\n        fmt.Printf("- %d\n", p)\n    }\n}\n
+package main
+
+import (
+    "flag"
+    "fmt"
+    "net"
+    "strconv"
+    "sync"
+    "time"
+)
+
+func scanPort(host string, port int, timeout time.Duration) bool {
+    address := fmt.Sprintf("%s:%d", host, port)
+    conn, err := net.DialTimeout("tcp", address, timeout)
+    if err != nil {
+        return false
+    }
+    conn.Close()
+    return true
+}
+
+func main() {
+    host := flag.String("host", "localhost", "Target host")
+    start := flag.Int("start", 1, "Start port")
+    end := flag.Int("end", 1024, "End port")
+    timeoutMs := flag.Int("timeout", 200, "Timeout per port in milliseconds")
+    flag.Parse()
+
+    if *start > *end {
+        fmt.Println("Invalid range: start > end")
+        return
+    }
+
+    var wg sync.WaitGroup
+    var mu sync.Mutex
+    openPorts := []int{}
+    timeout := time.Duration(*timeoutMs) * time.Millisecond
+    sem := make(chan struct{}, 100) // limit concurrency
+
+    for port := *start; port <= *end; port++ {
+        wg.Add(1)
+        sem <- struct{}{}
+        go func(p int) {
+            defer wg.Done()
+            if scanPort(*host, p, timeout) {
+                mu.Lock()
+                openPorts = append(openPorts, p)
+                mu.Unlock()
+            }
+            <-sem
+        }(port)
+    }
+    wg.Wait()
+
+    if len(openPorts) == 0 {
+        fmt.Println("No open ports found.")
+        return
+    }
+    fmt.Println("Open ports:")
+    for _, p := range openPorts {
+        fmt.Printf("- %d
+", p)
+    }
+}
+

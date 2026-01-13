@@ -1,1 +1,10 @@
----\n- name: Verify data fragment existence at {{ data_path }}\n  ansible.builtin.stat:\n    path: "{{ data_path }}"\n  register: fragment_stat\n\n- name: Set data fragment status fact\n  set_fact:\n    fragment_status: "{{ 'PRESENT' if fragment_stat.stat.exists else 'MISSING' }}"\n
+---
+- name: Verify data fragment existence at {{ data_path }}
+  ansible.builtin.stat:
+    path: "{{ data_path }}"
+  register: fragment_stat
+
+- name: Set data fragment status fact
+  set_fact:
+    fragment_status: "{{ 'PRESENT' if fragment_stat.stat.exists else 'MISSING' }}"
+

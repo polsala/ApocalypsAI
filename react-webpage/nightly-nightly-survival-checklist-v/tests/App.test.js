@@ -1,1 +1,18 @@
-import { render, screen, fireEvent } from '@testing-library/react';\nimport App from '../src/App';\n\ntest('renders checklist items', () => {\n  render(<App />);\n  const items = screen.getAllByRole('checkbox');\n  expect(items).toHaveLength(5);\n});\n\ntest('toggles checklist items', () => {\n  render(<App />);\n  const checkbox = screen.getByLabelText(/Find a safe shelter/i);\n  expect(checkbox).not.toBeChecked();\n  fireEvent.click(checkbox);\n  expect(checkbox).toBeChecked();\n  const progressText = screen.getByText(/1 of 5 completed/i);\n  expect(progressText).toBeInTheDocument();\n});
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from '../src/App';
+
+test('renders checklist items', () => {
+  render(<App />);
+  const items = screen.getAllByRole('checkbox');
+  expect(items).toHaveLength(5);
+});
+
+test('toggles checklist items', () => {
+  render(<App />);
+  const checkbox = screen.getByLabelText(/Find a safe shelter/i);
+  expect(checkbox).not.toBeChecked();
+  fireEvent.click(checkbox);
+  expect(checkbox).toBeChecked();
+  const progressText = screen.getByText(/1 of 5 completed/i);
+  expect(progressText).toBeInTheDocument();
+});

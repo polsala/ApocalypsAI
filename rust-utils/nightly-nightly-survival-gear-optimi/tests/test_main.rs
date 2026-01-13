@@ -1,1 +1,39 @@
-#[cfg(test)]\nmod tests {\n    use nightly_survival_gear_optimizer::lib::{Item, solve_knapsack};\n\n    #[test]\n    fn test_simple_case() {\n        let items = vec![\n            Item { name: "Water".to_string(), weight: 3, utility: 10 },\n            Item { name: "Food".to_string(), weight: 4, utility: 12 },\n            Item { name: "Radio".to_string(), weight: 2, utility: 7 },\n        ];\n        let selected = solve_knapsack(&items, 5);\n        // Best utility: Water (3,10) + Radio (2,7) = 17\n        assert_eq!(selected, vec!["Water".to_string(), "Radio".to_string()]);\n    }\n\n    #[test]\n    fn test_no_items() {\n        let items: Vec<Item> = vec![];\n        let selected = solve_knapsack(&items, 10);\n        assert!(selected.is_empty());\n    }\n\n    #[test]\n    fn test_exact_fit() {\n        let items = vec![\n            Item { name: "A".to_string(), weight: 5, utility: 8 },\n            Item { name: "B".to_string(), weight: 3, utility: 5 },\n            Item { name: "C".to_string(), weight: 2, utility: 3 },\n        ];\n        let selected = solve_knapsack(&items, 10);\n        // All items fit within capacity 10\n        assert_eq!(selected.len(), 3);\n        assert!(selected.contains(&"A".to_string()));\n        assert!(selected.contains(&"B".to_string()));\n        assert!(selected.contains(&"C".to_string()));\n    }\n}\n
+#[cfg(test)]
+mod tests {
+    use nightly_survival_gear_optimizer::lib::{Item, solve_knapsack};
+
+    #[test]
+    fn test_simple_case() {
+        let items = vec![
+            Item { name: "Water".to_string(), weight: 3, utility: 10 },
+            Item { name: "Food".to_string(), weight: 4, utility: 12 },
+            Item { name: "Radio".to_string(), weight: 2, utility: 7 },
+        ];
+        let selected = solve_knapsack(&items, 5);
+        // Best utility: Water (3,10) + Radio (2,7) = 17
+        assert_eq!(selected, vec!["Water".to_string(), "Radio".to_string()]);
+    }
+
+    #[test]
+    fn test_no_items() {
+        let items: Vec<Item> = vec![];
+        let selected = solve_knapsack(&items, 10);
+        assert!(selected.is_empty());
+    }
+
+    #[test]
+    fn test_exact_fit() {
+        let items = vec![
+            Item { name: "A".to_string(), weight: 5, utility: 8 },
+            Item { name: "B".to_string(), weight: 3, utility: 5 },
+            Item { name: "C".to_string(), weight: 2, utility: 3 },
+        ];
+        let selected = solve_knapsack(&items, 10);
+        // All items fit within capacity 10
+        assert_eq!(selected.len(), 3);
+        assert!(selected.contains(&"A".to_string()));
+        assert!(selected.contains(&"B".to_string()));
+        assert!(selected.contains(&"C".to_string()));
+    }
+}
+

@@ -1,1 +1,38 @@
-import unittest\nimport string\nfrom src.app import app, generate_password, DEFAULT_LENGTH, MAX_LENGTH\n\nclass TestPasswordGenerator(unittest.TestCase):\n    def setUp(self):\n        self.client = app.test_client()\n\n    def test_default_length(self):\n        response = self.client.get('/generate')\n        self.assertEqual(response.status_code, 200)\n        data = response.get_json()\n        self.assertIn('password', data)\n        self.assertEqual(len(data['password']), DEFAULT_LENGTH)\n\n    def test_custom_length(self):\n        length = 20\n        response = self.client.get(f'/generate?length={length}')\n        self.assertEqual(response.status_code, 200)\n        data = response.get_json()\n        self.assertEqual(len(data['password']), length)\n\n    def test_length_bounds(self):\n        # Too small\n        resp_small = self.client.get('/generate?length=0')\n        self.assertEqual(resp_small.status_code, 400)\n        # Too large\n        resp_large = self.client.get(f'/generate?length={MAX_LENGTH + 1}')\n        self.assertEqual(resp_large.status_code, 400)\n\n    def test_character_set(self):\n        pwd = generate_password(50)\n        allowed = set(string.ascii_letters + string.digits + string.punctuation)\n        self.assertTrue(set(pwd).issubset(allowed))\n\nif __name__ == '__main__':\n    unittest.main()\n
+import unittest
+import string
+from src.app import app, generate_password, DEFAULT_LENGTH, MAX_LENGTH
+
+class TestPasswordGenerator(unittest.TestCase):
+    def setUp(self):
+        self.client = app.test_client()
+
+    def test_default_length(self):
+        response = self.client.get('/generate')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('password', data)
+        self.assertEqual(len(data['password']), DEFAULT_LENGTH)
+
+    def test_custom_length(self):
+        length = 20
+        response = self.client.get(f'/generate?length={length}')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(len(data['password']), length)
+
+    def test_length_bounds(self):
+        # Too small
+        resp_small = self.client.get('/generate?length=0')
+        self.assertEqual(resp_small.status_code, 400)
+        # Too large
+        resp_large = self.client.get(f'/generate?length={MAX_LENGTH + 1}')
+        self.assertEqual(resp_large.status_code, 400)
+
+    def test_character_set(self):
+        pwd = generate_password(50)
+        allowed = set(string.ascii_letters + string.digits + string.punctuation)
+        self.assertTrue(set(pwd).issubset(allowed))
+
+if __name__ == '__main__':
+    unittest.main()
+

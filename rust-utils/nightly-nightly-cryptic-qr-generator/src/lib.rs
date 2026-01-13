@@ -1,1 +1,30 @@
-use qrcode::QrCode;\nuse qrcode::EcLevel;\n\n/// Generate an ASCII representation of a QR code for the given data.\n///\n/// The output consists of Unicode full‑block characters (█) for dark modules\n/// and spaces for light modules, terminated by newlines for each row.\npub fn generate_qr_ascii(data: &str) -> String {\n    // Create QR code with medium error correction.\n    let code = QrCode::with_error_correction_level(data.as_bytes(), EcLevel::M)\n        .expect("Failed to create QR code");\n    // Render the QR matrix as a 2‑D bool vector (true = dark).\n    let matrix: Vec<Vec<bool>> = code.render::<bool>()\n        .quiet_zone(false)\n        .build();\n    let mut result = String::new();\n    for row in matrix {\n        for module in row {\n            if module {\n                result.push('█');\n            } else {\n                result.push(' ');\n            }\n        }\n        result.push('\n');\n    }\n    result\n}\n
+use qrcode::QrCode;
+use qrcode::EcLevel;
+
+/// Generate an ASCII representation of a QR code for the given data.
+///
+/// The output consists of Unicode fullâblock characters (â) for dark modules
+/// and spaces for light modules, terminated by newlines for each row.
+pub fn generate_qr_ascii(data: &str) -> String {
+    // Create QR code with medium error correction.
+    let code = QrCode::with_error_correction_level(data.as_bytes(), EcLevel::M)
+        .expect("Failed to create QR code");
+    // Render the QR matrix as a 2âD bool vector (true = dark).
+    let matrix: Vec<Vec<bool>> = code.render::<bool>()
+        .quiet_zone(false)
+        .build();
+    let mut result = String::new();
+    for row in matrix {
+        for module in row {
+            if module {
+                result.push('â');
+            } else {
+                result.push(' ');
+            }
+        }
+        result.push('
+');
+    }
+    result
+}
+

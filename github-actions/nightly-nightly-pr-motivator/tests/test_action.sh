@@ -1,1 +1,56 @@
-#!/usr/bin/env bash\nset -euo pipefail\n\n# Mock curl to capture arguments\ncaptured_url=\"\"\ncaptured_data=\"\"\nmock_curl() {\n  local method=\"\"\n  while [[ $# -gt 0 ]]; do\n    case \"$1\" in\n      -X) shift; method=$1 ;;&n      -H) shift; ;;&n      -d) shift; captured_data=$1 ;;&n      *) if [[ \"$1\" =~ ^https:// ]]; then captured_url=$1; fi ;;&n    esac\n    shift\n  done\n  echo \"mock curl called\"\n}\nexport -f mock_curl\nalias curl=mock_curl\n\n# Set deterministic environment\nexport PR_NUMBER=7\nexport GITHUB_TOKEN=dummy\nexport REPO=owner/repo\n\n# Run the entrypoint\nbash src/entrypoint.sh\n\n# Compute expected quote index\nseed=$PR_NUMBER\na=1664525\nc=1013904223\nm=4294967296\nrand=$(((seed * a + c) % m))\n\ntotal=$(wc -l < quotes.txt)\nindex=$(( (rand % total) + 1 ))\nexpected_quote=$(sed -n "${index}p" quotes.txt)\nescaped_expected=${expected_quote//"/\\\"}\nexpected_payload=\"{\\\"body\\\":\\\"$escaped_expected\\\"}\"\nexpected_url=\"https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments\"\n\nif [[ \"$captured_url\" != \"$expected_url\" ]]; then\n  echo \"FAIL: URL mismatch\"\n  echo \"got: $captured_url\"\n  echo \"expected: $expected_url\"\n  exit 1\nfi\n\nif [[ \"$captured_data\" != \"$expected_payload\" ]]; then\n  echo \"FAIL: payload mismatch\"\n  echo \"got: $captured_data\"\n  echo \"expected: $expected_payload\"\n  exit 1\nfi\n\necho \"PASS\"\n
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Mock curl to capture arguments
+captured_url=""
+captured_data=""
+mock_curl() {
+  local method=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -X) shift; method=$1 ;;&n      -H) shift; ;;&n      -d) shift; captured_data=$1 ;;&n      *) if [[ "$1" =~ ^https:// ]]; then captured_url=$1; fi ;;&n    esac
+    shift
+  done
+  echo "mock curl called"
+}
+export -f mock_curl
+alias curl=mock_curl
+
+# Set deterministic environment
+export PR_NUMBER=7
+export GITHUB_TOKEN=dummy
+export REPO=owner/repo
+
+# Run the entrypoint
+bash src/entrypoint.sh
+
+# Compute expected quote index
+seed=$PR_NUMBER
+a=1664525
+c=1013904223
+m=4294967296
+rand=$(((seed * a + c) % m))
+
+total=$(wc -l < quotes.txt)
+index=$(( (rand % total) + 1 ))
+expected_quote=$(sed -n "${index}p" quotes.txt)
+escaped_expected=${expected_quote//"/\"}
+expected_payload="{\"body\":\"$escaped_expected\"}"
+expected_url="https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments"
+
+if [[ "$captured_url" != "$expected_url" ]]; then
+  echo "FAIL: URL mismatch"
+  echo "got: $captured_url"
+  echo "expected: $expected_url"
+  exit 1
+fi
+
+if [[ "$captured_data" != "$expected_payload" ]]; then
+  echo "FAIL: payload mismatch"
+  echo "got: $captured_data"
+  echo "expected: $expected_payload"
+  exit 1
+fi
+
+echo "PASS"
+

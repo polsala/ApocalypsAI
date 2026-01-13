@@ -1,1 +1,68 @@
-# Nightly Emoji Crypt Decoder\n\n## Overview\n\n`nightly-emoji-crypt-decoder` translates a string of emojis into plain‑text letters using a predefined substitution cipher.  It’s perfect for fun puzzles, secret messages, or adding a whimsical touch to community posts.\n\n## Installation\n\nThe utility is a pure Node.js script with no external dependencies.  Clone the repository (or copy the `src/` folder) and run it with Node 14+:\n\n```bash\nnode src/main.js "🍎🍌🍒"\n```\n\nYou can also pipe input:\n\n```bash\necho "🍎🍌🍒" | node src/main.js\n```\n\n## Emoji ↔ Letter Mapping\n\n| Emoji | Letter | Emoji | Letter |\n|-------|--------|-------|--------|\n| 🍎 | A | 🍍 | H |\n| 🍌 | B | 🥝 | I |\n| 🍒 | C | 🍅 | J |\n| 🍇 | D | 🥑 | K |\n| 🍉 | E | 🍆 | L |\n| 🍓 | F | 🥔 | M |\n| 🍑 | G | 🥕 | N |\n| 🍍 | H | 🌽 | O |\n| 🥝 | I | 🌶️ | P |\n| 🍅 | J | 🧄 | Q |\n| 🥑 | K | 🧅 | R |\n| 🍆 | L | 🍄 | S |\n| 🥔 | M | 🥜 | T |\n| 🥕 | N | 🍞 | U |\n| 🌽 | O | 🥐 | V |\n| 🌶️ | P | 🧀 | W |\n| 🧄 | Q | 🍖 | X |\n| 🧅 | R | 🍗 | Y |\n| 🍄 | S | 🥩 | Z |\n\nAny emoji not listed in the table is decoded as `?`.\n\n## Usage\n\n```bash\n# Decode via argument\nnode src/main.js "🍎🍌🍒"\n# => ABC\n\n# Decode via stdin\necho "🍎🍌🍒" | node src/main.js\n# => ABC\n```\n\n## Testing\n\nRun the bundled test script with Node:\n\n```bash\nnode tests/test_main.js\n```\n\nYou should see `All tests passed` if everything works correctly.\n
+# Nightly Emoji Crypt Decoder
+
+## Overview
+
+`nightly-emoji-crypt-decoder` translates a string of emojis into plainâtext letters using a predefined substitution cipher.  Itâs perfect for fun puzzles, secret messages, or adding a whimsical touch to community posts.
+
+## Installation
+
+The utility is a pure Node.js script with no external dependencies.  Clone the repository (or copy the `src/` folder) and run it with Node 14+:
+
+```bash
+node src/main.js "ððð"
+```
+
+You can also pipe input:
+
+```bash
+echo "ððð" | node src/main.js
+```
+
+## Emoji â Letter Mapping
+
+| Emoji | Letter | Emoji | Letter |
+|-------|--------|-------|--------|
+| ð | A | ð | H |
+| ð | B | ð¥ | I |
+| ð | C | ð | J |
+| ð | D | ð¥ | K |
+| ð | E | ð | L |
+| ð | F | ð¥ | M |
+| ð | G | ð¥ | N |
+| ð | H | ð½ | O |
+| ð¥ | I | ð¶ï¸ | P |
+| ð | J | ð§ | Q |
+| ð¥ | K | ð§ | R |
+| ð | L | ð | S |
+| ð¥ | M | ð¥ | T |
+| ð¥ | N | ð | U |
+| ð½ | O | ð¥ | V |
+| ð¶ï¸ | P | ð§ | W |
+| ð§ | Q | ð | X |
+| ð§ | R | ð | Y |
+| ð | S | ð¥© | Z |
+
+Any emoji not listed in the table is decoded as `?`.
+
+## Usage
+
+```bash
+# Decode via argument
+node src/main.js "ððð"
+# => ABC
+
+# Decode via stdin
+echo "ððð" | node src/main.js
+# => ABC
+```
+
+## Testing
+
+Run the bundled test script with Node:
+
+```bash
+node tests/test_main.js
+```
+
+You should see `All tests passed` if everything works correctly.
+

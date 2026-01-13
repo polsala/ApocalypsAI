@@ -1,1 +1,38 @@
-# nightly-qr-code-cli\n\nGenerate a QR‑code‑like visual in your terminal from any text.\n\n## Install\n\n```sh\nnpm install -g nightly-qr-code-cli\n```\n\n## Usage\n\n```sh\nnpx nightly-qr-code-cli "Hello, world!"\n```\n\nOutputs a block‑character representation of a QR code (placeholder implementation).\n\n## API\n\n```ts\nimport { generateQr } from "nightly-qr-code-cli";\n\nconst art = generateQr("Hello");\nconsole.log(art);\n```\n\n## How it works\n\nThe library encodes the input string into a deterministic pattern of Unicode block\ncharacters. It is **not** a real QR code; it is a whimsical visual for fun\nand debugging.\n\n## Testing\n\n```sh\nnpm test\n```
+# nightly-qr-code-cli
+
+Generate a QRâcodeâlike visual in your terminal from any text.
+
+## Install
+
+```sh
+npm install -g nightly-qr-code-cli
+```
+
+## Usage
+
+```sh
+npx nightly-qr-code-cli "Hello, world!"
+```
+
+Outputs a blockâcharacter representation of a QR code (placeholder implementation).
+
+## API
+
+```ts
+import { generateQr } from "nightly-qr-code-cli";
+
+const art = generateQr("Hello");
+console.log(art);
+```
+
+## How it works
+
+The library encodes the input string into a deterministic pattern of Unicode block
+characters. It is **not** a real QR code; it is a whimsical visual for fun
+and debugging.
+
+## Testing
+
+```sh
+npm test
+```

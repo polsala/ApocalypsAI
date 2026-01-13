@@ -1,1 +1,17 @@
-import React from 'react';\nimport { formatDate, getPrediction } from './date-utils';\n\nconst App = () => {\n  const now = new Date();\n  const formatted = formatDate(now);\n  const prediction = getPrediction(now);\n  return (\n    <div style={{fontFamily: 'sans-serif', padding: '2rem'}}>{'\n'}      <h1>Apocalypse Chrono Chronicle</h1>{'\n'}      <p>Today is {formatted}.</p>{'\n'}      <p>{prediction}</p>{'\n'}    </div>\n  );\n};\n\nexport default App;
+import React from 'react';
+import { formatDate, getPrediction } from './date-utils';
+
+const App = () => {
+  const now = new Date();
+  const formatted = formatDate(now);
+  const prediction = getPrediction(now);
+  return (
+    <div style={{fontFamily: 'sans-serif', padding: '2rem'}}>{'
+'}      <h1>Apocalypse Chrono Chronicle</h1>{'
+'}      <p>Today is {formatted}.</p>{'
+'}      <p>{prediction}</p>{'
+'}    </div>
+  );
+};
+
+export default App;

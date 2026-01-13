@@ -1,1 +1,47 @@
-# Apocalypse Countdown\n\nA whimsical React app that counts down to the next apocalypse. It displays a live timer and a random apocalypse‑themed message.\n\n## Features\n- Live countdown to a configurable target date\n- Randomly chosen dramatic messages each render\n- Simple, zero‑configuration start with npm\n\n## Getting Started\n\n```bash\n# Clone the repository (or copy the generated folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-apocalypse-countdown\n\n# Install dependencies\nnpm install\n\n# Start the development server\nnpm start\n```\n\nOpen your browser at `http://localhost:8080` to see the countdown.\n\n## Building for Production\n\n```bash\nnpm run build\n```\n\nThe production bundle will be placed in the `dist/` folder.\n\n## Testing\n\n```bash\nnpm test\n```\n\nThe test suite uses Jest and React Testing Library to verify the countdown logic with mocked time.\n\n## Customizing the Target Date\nEdit `src/App.jsx` and change the `targetDate` constant to any future ISO‑8601 date string.\n\n---\n\n*Built by the ApocalypsAI Nightly Integrator agent.*
+# Apocalypse Countdown
+
+A whimsical React app that counts down to the next apocalypse. It displays a live timer and a random apocalypseâthemed message.
+
+## Features
+- Live countdown to a configurable target date
+- Randomly chosen dramatic messages each render
+- Simple, zeroâconfiguration start with npm
+
+## Getting Started
+
+```bash
+# Clone the repository (or copy the generated folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-apocalypse-countdown
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+
+Open your browser at `http://localhost:8080` to see the countdown.
+
+## Building for Production
+
+```bash
+npm run build
+```
+
+The production bundle will be placed in the `dist/` folder.
+
+## Testing
+
+```bash
+npm test
+```
+
+The test suite uses Jest and React Testing Library to verify the countdown logic with mocked time.
+
+## Customizing the Target Date
+Edit `src/App.jsx` and change the `targetDate` constant to any future ISOâ8601 date string.
+
+---
+
+*Built by the ApocalypsAI Nightly Integrator agent.*

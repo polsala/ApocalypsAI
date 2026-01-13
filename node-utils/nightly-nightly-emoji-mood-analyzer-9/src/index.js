@@ -1,1 +1,48 @@
-#!/usr/bin/env node\nconst fs = require('fs');\n\nfunction analyzeMood(text) {\n  const positive = ['happy','joy','love','great','awesome','fantastic','good','wonderful','excellent','pleased'];\n  const negative = ['sad','angry','hate','terrible','bad','awful','depressed','upset','mad','worst'];\n  const words = text.toLowerCase().match(/\b\w+\b/g) || [];\n  let posCount = 0;\n  let negCount = 0;\n  for (const w of words) {\n    if (positive.includes(w)) posCount++;\n    if (negative.includes(w)) negCount++;\n  }\n  if (posCount > negCount) return '😊';\n  if (negCount > posCount) return '😠';\n  return '🤔';\n}\n\n// CLI handling\nfunction main() {\n  const args = process.argv.slice(2);\n  let inputPromise;\n  if (args.length > 0) {\n    inputPromise = Promise.resolve(args.join(' '));\n  } else {\n    // read from stdin\n    inputPromise = new Promise((resolve) => {\n      let data = '';\n      process.stdin.setEncoding('utf8');\n      process.stdin.on('data', chunk => data += chunk);\n      process.stdin.on('end', () => resolve(data.trim()));\n    });\n  }\n  inputPromise.then(text => {\n    if (!text) {\n      console.error('No input provided.');\n      process.exit(1);\n    }\n    const emoji = analyzeMood(text);\n    console.log(emoji);\n  });\n}\n\nif (require.main === module) {\n  main();\n}\n\nmodule.exports = { analyzeMood };
+#!/usr/bin/env node
+const fs = require('fs');
+
+function analyzeMood(text) {
+  const positive = ['happy','joy','love','great','awesome','fantastic','good','wonderful','excellent','pleased'];
+  const negative = ['sad','angry','hate','terrible','bad','awful','depressed','upset','mad','worst'];
+  const words = text.toLowerCase().match(/\w+/g) || [];
+  let posCount = 0;
+  let negCount = 0;
+  for (const w of words) {
+    if (positive.includes(w)) posCount++;
+    if (negative.includes(w)) negCount++;
+  }
+  if (posCount > negCount) return 'ð';
+  if (negCount > posCount) return 'ð ';
+  return 'ð¤';
+}
+
+// CLI handling
+function main() {
+  const args = process.argv.slice(2);
+  let inputPromise;
+  if (args.length > 0) {
+    inputPromise = Promise.resolve(args.join(' '));
+  } else {
+    // read from stdin
+    inputPromise = new Promise((resolve) => {
+      let data = '';
+      process.stdin.setEncoding('utf8');
+      process.stdin.on('data', chunk => data += chunk);
+      process.stdin.on('end', () => resolve(data.trim()));
+    });
+  }
+  inputPromise.then(text => {
+    if (!text) {
+      console.error('No input provided.');
+      process.exit(1);
+    }
+    const emoji = analyzeMood(text);
+    console.log(emoji);
+  });
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { analyzeMood };

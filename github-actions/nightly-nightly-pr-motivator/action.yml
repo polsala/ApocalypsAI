@@ -1,1 +1,17 @@
-name: "Nightly PR Motivator"\ndescription: "Posts a random motivational quote comment on a PR"\ninputs:\n  github-token:\n    description: "GitHub token"\n    required: true\nruns:\n  using: "composite"\n  steps:\n    - name: Run motivator script\n      env:\n        GITHUB_TOKEN: ${{ inputs.github-token }}\n        PR_NUMBER: ${{ github.event.pull_request.number }}\n        REPO: ${{ github.repository }}\n      run: |\n        bash "${{ github.action_path }}/src/entrypoint.sh"\n
+name: "Nightly PR Motivator"
+description: "Posts a random motivational quote comment on a PR"
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run motivator script
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        bash "${{ github.action_path }}/src/entrypoint.sh"
+

@@ -1,1 +1,23 @@
-export function timeToClockEmoji(time: string): string {\n  const match = /^(\\d{1,2}):(\\d{2})$/.exec(time.trim());\n  if (!match) {\n    throw new Error(`Invalid time format: ${time}`);\n  }\n  let hour = parseInt(match[1], 10);\n  const minute = parseInt(match[2], 10);\n  hour = hour % 12;\n  let emojiHour = hour;\n  let isHalf = false;\n  if (minute >= 45) {\n    emojiHour = (hour + 1) % 12;\n  } else if (minute >= 15) {\n    isHalf = true;\n  }\n  const base = [\n    "🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"\n  ];\n  const half = [\n    "🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"\n  ];\n  return isHalf ? half[emojiHour] : base[emojiHour];\n}
+export function timeToClockEmoji(time: string): string {
+  const match = /^(\\d{1,2}):(\\d{2})$/.exec(time.trim());
+  if (!match) {
+    throw new Error(`Invalid time format: ${time}`);
+  }
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  hour = hour % 12;
+  let emojiHour = hour;
+  let isHalf = false;
+  if (minute >= 45) {
+    emojiHour = (hour + 1) % 12;
+  } else if (minute >= 15) {
+    isHalf = true;
+  }
+  const base = [
+    "🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"
+  ];
+  const half = [
+    "🕧","🕜","🕝","🕞","🕟","🕠","🕡","🕢","🕣","🕤","🕥","🕦"
+  ];
+  return isHalf ? half[emojiHour] : base[emojiHour];
+}

@@ -1,1 +1,34 @@
-import React from "react";\nimport { moods } from "./moodData";\n\nfunction hashDate(dateStr) {\n  // simple deterministic hash: sum char codes\n  let hash = 0;\n  for (let i = 0; i < dateStr.length; i++) {\n    hash = (hash + dateStr.charCodeAt(i)) % moods.length;\n  }\n  return hash;\n}\n\nexport default function App() {\n  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD\n  const idx = hashDate(today);\n  const { phrase, color } = moods[idx];\n\n  const style = {\n    height: "100vh",\n    display: "flex",\n    justifyContent: "center",\n    alignItems: "center",\n    backgroundColor: color,\n    color: "#222",\n    fontFamily: "sans-serif",\n    fontSize: "2rem"\n  };\n\n  return (\n    <div style={style}>\n      {phrase}\n    </div>\n  );\n}
+import React from "react";
+import { moods } from "./moodData";
+
+function hashDate(dateStr) {
+  // simple deterministic hash: sum char codes
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = (hash + dateStr.charCodeAt(i)) % moods.length;
+  }
+  return hash;
+}
+
+export default function App() {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const idx = hashDate(today);
+  const { phrase, color } = moods[idx];
+
+  const style = {
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: color,
+    color: "#222",
+    fontFamily: "sans-serif",
+    fontSize: "2rem"
+  };
+
+  return (
+    <div style={style}>
+      {phrase}
+    </div>
+  );
+}

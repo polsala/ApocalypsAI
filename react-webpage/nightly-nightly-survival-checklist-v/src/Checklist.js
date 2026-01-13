@@ -1,1 +1,39 @@
-import React, { useState } from 'react';\n\nfunction Checklist({ items }) {\n  const [checked, setChecked] = useState(() => items.reduce((acc, item) => ({ ...acc, [item.id]: false }), {}));\n\n  const toggle = (id) => {\n    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));\n  };\n\n  const completed = Object.values(checked).filter(Boolean).length;\n  const total = items.length;\n  const progress = Math.round((completed / total) * 100);\n\n  return (\n    <div>\n      <ul style={{ listStyle: 'none', padding: 0 }}>\n        {items.map((item) => (\n          <li key={item.id} style={{ marginBottom: '8px' }}>\n            <label>\n              <input\n                type="checkbox"\n                checked={checked[item.id]}\n                onChange={() => toggle(item.id)}\n                style={{ marginRight: '8px' }}\n              />\n              {item.text}\n            </label>\n          </li>\n        ))}\n      </ul>\n      <div style={{ marginTop: '20px' }}>\n        <progress value={completed} max={total} style={{ width: '100%' }} />\n        <p>{completed} of {total} completed ({progress}%)</p>\n      </div>\n    </div>\n  );\n}\n\nexport default Checklist;
+import React, { useState } from 'react';
+
+function Checklist({ items }) {
+  const [checked, setChecked] = useState(() => items.reduce((acc, item) => ({ ...acc, [item.id]: false }), {}));
+
+  const toggle = (id) => {
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const completed = Object.values(checked).filter(Boolean).length;
+  const total = items.length;
+  const progress = Math.round((completed / total) * 100);
+
+  return (
+    <div>
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        {items.map((item) => (
+          <li key={item.id} style={{ marginBottom: '8px' }}>
+            <label>
+              <input
+                type="checkbox"
+                checked={checked[item.id]}
+                onChange={() => toggle(item.id)}
+                style={{ marginRight: '8px' }}
+              />
+              {item.text}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <div style={{ marginTop: '20px' }}>
+        <progress value={completed} max={total} style={{ width: '100%' }} />
+        <p>{completed} of {total} completed ({progress}%)</p>
+      </div>
+    </div>
+  );
+}
+
+export default Checklist;

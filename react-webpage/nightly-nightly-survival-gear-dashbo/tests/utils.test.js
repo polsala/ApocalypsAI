@@ -1,1 +1,11 @@
-import { computeTotalWeight } from "../src/utils";\n\ntest(\"computeTotalWeight sums weights correctly\", () => {\n  const items = [\n    { name: "Rope", weight: 2.5, durability: 80 },\n    { name: "Water Bottle", weight: 1.2, durability: 100 },\n    { name: "Tent", weight: 5.0, durability: 70 },\n  ];\n  const total = computeTotalWeight(items);\n  expect(total).toBeCloseTo(8.7);\n});
+import { computeTotalWeight } from "../src/utils";
+
+test("computeTotalWeight sums weights correctly", () => {
+  const items = [
+    { name: "Rope", weight: 2.5, durability: 80 },
+    { name: "Water Bottle", weight: 1.2, durability: 100 },
+    { name: "Tent", weight: 5.0, durability: 70 },
+  ];
+  const total = computeTotalWeight(items);
+  expect(total).toBeCloseTo(8.7);
+});

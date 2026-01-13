@@ -1,1 +1,37 @@
-# nightly-uptime-report\n\n**Purpose**: Collect the system uptime from a list of hosts and produce a human‑readable report (`uptime_report.txt`). This utility is useful for quick health checks of a fleet of machines without writing custom scripts.\n\n## Files\n\n- `src/uptime_report.yml` – The main Ansible playbook.\n- `src/inventory.ini` – Sample inventory defining target hosts (default uses localhost).\n- `src/templates/uptime_report.j2` – Jinja2 template for the final report.\n- `tests/test_uptime_report.py` – Automated test that runs the playbook locally and verifies the output.\n\n## How to run\n\n```bash\n# Install Ansible if not already present\npython -m pip install ansible\n\n# Execute the playbook (uses the provided inventory)\nansible-playbook -i src/inventory.ini src/uptime_report.yml\n\n# After a successful run, you will find `uptime_report.txt` in the current directory.\ncat uptime_report.txt\n```\n\nThe playbook is written to be idempotent and safe to run multiple times. It works with any inventory – just point `-i` to your own hosts file.\n\n## Testing\n\nRun the test suite with pytest (the repository already includes pytest as a dev dependency):\n\n```bash\npython -m pip install pytest\npytest tests/test_uptime_report.py\n```\n\nThe test uses a local inventory and a harmless `echo` command to simulate uptime, ensuring deterministic, offline execution.\n
+# nightly-uptime-report
+
+**Purpose**: Collect the system uptime from a list of hosts and produce a humanâreadable report (`uptime_report.txt`). This utility is useful for quick health checks of a fleet of machines without writing custom scripts.
+
+## Files
+
+- `src/uptime_report.yml` â The main Ansible playbook.
+- `src/inventory.ini` â Sample inventory defining target hosts (default uses localhost).
+- `src/templates/uptime_report.j2` â Jinja2 template for the final report.
+- `tests/test_uptime_report.py` â Automated test that runs the playbook locally and verifies the output.
+
+## How to run
+
+```bash
+# Install Ansible if not already present
+python -m pip install ansible
+
+# Execute the playbook (uses the provided inventory)
+ansible-playbook -i src/inventory.ini src/uptime_report.yml
+
+# After a successful run, you will find `uptime_report.txt` in the current directory.
+cat uptime_report.txt
+```
+
+The playbook is written to be idempotent and safe to run multiple times. It works with any inventory â just point `-i` to your own hosts file.
+
+## Testing
+
+Run the test suite with pytest (the repository already includes pytest as a dev dependency):
+
+```bash
+python -m pip install pytest
+pytest tests/test_uptime_report.py
+```
+
+The test uses a local inventory and a harmless `echo` command to simulate uptime, ensuring deterministic, offline execution.
+

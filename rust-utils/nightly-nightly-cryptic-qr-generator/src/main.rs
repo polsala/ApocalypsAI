@@ -1,1 +1,13 @@
-use std::env;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    }\n    let input = &args[1];\n    let ascii_qr = cryptic_qr_generator::generate_qr_ascii(input);\n    println!("{}", ascii_qr);\n}\n
+use std::env;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <text>", args[0]);
+        std::process::exit(1);
+    }
+    let input = &args[1];
+    let ascii_qr = cryptic_qr_generator::generate_qr_ascii(input);
+    println!("{}", ascii_qr);
+}
+

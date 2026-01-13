@@ -1,1 +1,17 @@
-const assert = require('assert');\nconst { generateCalendar } = require('../src/emoji-calendar.js');\n\n// Test: January 2023 – the 1st is a Sunday, so the first token should be ☀️01\nconst lines = generateCalendar(1, 2023);\nassert(lines.length > 0, 'Calendar should contain at least one week');\nassert(lines[0].startsWith('☀️01'), `Expected first day to be ☀️01, got ${lines[0]}`);\n\n// Test: February 2023 – the 1st is a Wednesday (🌞)\nconst febLines = generateCalendar(2, 2023);\n// Find the token for day 1\nconst firstWeekTokens = febLines[0].trim().split(/\s+/);\nconst day1Token = firstWeekTokens.find(tok => tok.endsWith('01'));\nassert(day1Token === '🌞01', `Expected February 1 2023 to be 🌞01, got ${day1Token}`);\n\nconsole.log('All emoji-calendar tests passed.');\n
+const assert = require('assert');
+const { generateCalendar } = require('../src/emoji-calendar.js');
+
+// Test: January 2023 â the 1st is a Sunday, so the first token should be âï¸01
+const lines = generateCalendar(1, 2023);
+assert(lines.length > 0, 'Calendar should contain at least one week');
+assert(lines[0].startsWith('âï¸01'), `Expected first day to be âï¸01, got ${lines[0]}`);
+
+// Test: February 2023 â the 1st is a Wednesday (ð)
+const febLines = generateCalendar(2, 2023);
+// Find the token for day 1
+const firstWeekTokens = febLines[0].trim().split(/\s+/);
+const day1Token = firstWeekTokens.find(tok => tok.endsWith('01'));
+assert(day1Token === 'ð01', `Expected February 1 2023 to be ð01, got ${day1Token}`);
+
+console.log('All emoji-calendar tests passed.');
+

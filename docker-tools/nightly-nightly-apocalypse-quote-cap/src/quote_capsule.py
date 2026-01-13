@@ -1,1 +1,29 @@
-#!/usr/bin/env python3\nimport sys, json, base64, datetime\n\ndef encode(text):\n    return {\n        "quote": text,\n        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",\n        "encoded": base64.b64encode(text.encode()).decode()\n    }\n\ndef decode(b64):\n    try:\n        decoded = base64.b64decode(b64).decode()\n        return {"decoded": decoded}\n    except Exception as e:\n        return {"error": str(e)}\n\ndef main():\n    if "--decode" in sys.argv:\n        b64 = sys.stdin.read().strip()\n        result = decode(b64)\n    else:\n        text = sys.stdin.read().strip()\n        result = encode(text)\n    json.dump(result, sys.stdout)\n\nif __name__ == "__main__":\n    main()\n
+#!/usr/bin/env python3
+import sys, json, base64, datetime
+
+def encode(text):
+    return {
+        "quote": text,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "encoded": base64.b64encode(text.encode()).decode()
+    }
+
+def decode(b64):
+    try:
+        decoded = base64.b64decode(b64).decode()
+        return {"decoded": decoded}
+    except Exception as e:
+        return {"error": str(e)}
+
+def main():
+    if "--decode" in sys.argv:
+        b64 = sys.stdin.read().strip()
+        result = decode(b64)
+    else:
+        text = sys.stdin.read().strip()
+        result = encode(text)
+    json.dump(result, sys.stdout)
+
+if __name__ == "__main__":
+    main()
+

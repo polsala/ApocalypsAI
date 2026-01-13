@@ -1,1 +1,16 @@
-use nightly_cryptic_clipboard::{encrypt, decrypt};\n\n#[test]\nfn roundtrip_encrypt_decrypt() {\n    let pass = "s3cr3t";\n    let plain = "The quick brown fox jumps over the lazy dog";\n    let enc = encrypt(pass, plain);\n    let dec = decrypt(pass, &enc).expect("decryption failed");\n    assert_eq!(plain, dec);\n}\n\n#[test]\nfn decrypt_invalid_base64() {\n    let err = decrypt("key", "@@@invalid@@@").unwrap_err();\n    assert!(err.contains("Base64"));\n}
+use nightly_cryptic_clipboard::{encrypt, decrypt};
+
+#[test]
+fn roundtrip_encrypt_decrypt() {
+    let pass = "s3cr3t";
+    let plain = "The quick brown fox jumps over the lazy dog";
+    let enc = encrypt(pass, plain);
+    let dec = decrypt(pass, &enc).expect("decryption failed");
+    assert_eq!(plain, dec);
+}
+
+#[test]
+fn decrypt_invalid_base64() {
+    let err = decrypt("key", "@@@invalid@@@").unwrap_err();
+    assert!(err.contains("Base64"));
+}

@@ -1,1 +1,48 @@
-const assert = require('assert');\nconst { computeBarterValue } = require('../src/index.js');\n\n// Mock rationale: deterministic values based on known base values and rarity multipliers\n\nfunction testSimple() {\n  const items = [\n    { name: 'canned-beans', qty: 10 },\n    { name: 'water', qty: 5 }\n  ];\n  // canned-beans: 2 * 1 * 10 = 20\n  // water: 3 * 1 * 5 = 15\n  const result = computeBarterValue(items);\n  assert.strictEqual(result, 35, 'Simple items total should be 35');\n}\n\nfunction testMixed() {\n  const items = [\n    { name: 'medicine', qty: 2 },   // 10 * 1.5 * 2 = 30\n    { name: 'fuel', qty: 1 },       // 8 * 2 * 1 = 16\n    { name: 'scrap-metal', qty: 4 } // 1 * 1 * 4 = 4\n  ];\n  const result = computeBarterValue(items);\n  // Expected total: 30 + 16 + 4 = 50\n  assert.strictEqual(result, 50, 'Mixed items total should be 50');\n}\n\nfunction testUnknownItem() {\n  const items = [\n    { name: 'unknown-item', qty: 3 } // defaults to base 1, common multiplier 1\n  ];\n  const result = computeBarterValue(items);\n  assert.strictEqual(result, 3, 'Unknown item defaults to base 1 and common rarity');\n}\n\nfunction run() {\n  try {\n    testSimple();\n    testMixed();\n    testUnknownItem();\n    console.log('All tests passed');\n  } catch (e) {\n    console.error('Test failed:', e.message);\n    process.exit(1);\n  }\n}\n\nrun();
+const assert = require('assert');
+const { computeBarterValue } = require('../src/index.js');
+
+// Mock rationale: deterministic values based on known base values and rarity multipliers
+
+function testSimple() {
+  const items = [
+    { name: 'canned-beans', qty: 10 },
+    { name: 'water', qty: 5 }
+  ];
+  // canned-beans: 2 * 1 * 10 = 20
+  // water: 3 * 1 * 5 = 15
+  const result = computeBarterValue(items);
+  assert.strictEqual(result, 35, 'Simple items total should be 35');
+}
+
+function testMixed() {
+  const items = [
+    { name: 'medicine', qty: 2 },   // 10 * 1.5 * 2 = 30
+    { name: 'fuel', qty: 1 },       // 8 * 2 * 1 = 16
+    { name: 'scrap-metal', qty: 4 } // 1 * 1 * 4 = 4
+  ];
+  const result = computeBarterValue(items);
+  // Expected total: 30 + 16 + 4 = 50
+  assert.strictEqual(result, 50, 'Mixed items total should be 50');
+}
+
+function testUnknownItem() {
+  const items = [
+    { name: 'unknown-item', qty: 3 } // defaults to base 1, common multiplier 1
+  ];
+  const result = computeBarterValue(items);
+  assert.strictEqual(result, 3, 'Unknown item defaults to base 1 and common rarity');
+}
+
+function run() {
+  try {
+    testSimple();
+    testMixed();
+    testUnknownItem();
+    console.log('All tests passed');
+  } catch (e) {
+    console.error('Test failed:', e.message);
+    process.exit(1);
+  }
+}
+
+run();

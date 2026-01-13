@@ -1,1 +1,63 @@
-# nightly-qr-code-cli\n\nA tiny TypeScript CLI that turns any input string into a deterministic, whimsical ASCII art representation.\n\n## How it works\n\n1. The input is hashed with SHA‑256.\n2. Each hex digit (0‑f) is mapped to a pair of Unicode block characters.\n3. The resulting patterns are laid out in rows of eight pairs, producing a compact, eye‑catching block art.\n\nThe utility is pure TypeScript, has **no external runtime dependencies** (only Node's built‑in `crypto` module), and can be used as a library or a command‑line tool.\n\n## Installation\n\n```bash\n# Clone the repository (or copy this folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-qr-code-cli\n\n# Install dev tools (ts-node & typescript)\nnpm install\n```\n\n## Usage\n\n### As a CLI\n\n```bash\n# Run directly with ts-node\nnpx ts-node src/main.ts "Hello, apocalypse!"\n```\n\n### As a library\n\n```ts\nimport { hashArt } from "./src/main";\n\nconst art = hashArt("Hello, apocalypse!");\nconsole.log(art);\n```\n\n## Example\n\n```bash\n$ npx ts-node src/main.ts "test"\n▐▐▛▛▏▏▊▊▙▙  ▏▏░░\n▏▏▏▏██▘▘▍▍▙▙▊▊▉▉\n▐▐▖▖▒▒▛▛▚▚▖▖▖▖  \n▘▘▉▉▉▉▖▖▙▙  ░░▉▉\n▖▖▓▓▗▗▛▛██▛▛░░▗▗\n▒▒▗▗  ▗▗▏▏▒▒▒▒▘▘\n▙▙░░▉▉▙▙▊▊▘▘░░▉▉\n▗▗  ▛▛  ▖▖  ▏▏\n```\n\n## Testing\n\n```bash\nnpm test\n```\n\nThe test suite verifies that the deterministic mapping produces the expected art for a known input.\n
+# nightly-qr-code-cli
+
+A tiny TypeScript CLI that turns any input string into a deterministic, whimsical ASCII art representation.
+
+## How it works
+
+1. The input is hashed with SHAâ256.
+2. Each hex digit (0âf) is mapped to a pair of Unicode block characters.
+3. The resulting patterns are laid out in rows of eight pairs, producing a compact, eyeâcatching block art.
+
+The utility is pure TypeScript, has **no external runtime dependencies** (only Node's builtâin `crypto` module), and can be used as a library or a commandâline tool.
+
+## Installation
+
+```bash
+# Clone the repository (or copy this folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-qr-code-cli
+
+# Install dev tools (ts-node & typescript)
+npm install
+```
+
+## Usage
+
+### As a CLI
+
+```bash
+# Run directly with ts-node
+npx ts-node src/main.ts "Hello, apocalypse!"
+```
+
+### As a library
+
+```ts
+import { hashArt } from "./src/main";
+
+const art = hashArt("Hello, apocalypse!");
+console.log(art);
+```
+
+## Example
+
+```bash
+$ npx ts-node src/main.ts "test"
+ââââââââââ  ââââ
+ââââââââââââââââ
+ââââââââââââââ  
+ââââââââââ  ââââ
+ââââââââââââââââ
+ââââ  ââââââââââ
+ââââââââââââââââ
+ââ  ââ  ââ  ââ
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+The test suite verifies that the deterministic mapping produces the expected art for a known input.
+

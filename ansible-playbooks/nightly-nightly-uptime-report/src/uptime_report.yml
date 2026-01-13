@@ -1,1 +1,24 @@
----\n- name: Gather uptime from targets and generate report\n  hosts: targets\n  gather_facts: false\n  vars:\n    report_path: "{{ playbook_dir }}/../uptime_report.txt"\n  tasks:\n    - name: Retrieve uptime (simulated)\n      command: echo "up 10 days"\n      register: uptime_cmd\n      changed_when: false\n\n    - name: Set host uptime fact\n      set_fact:\n        host_uptime: "{{ uptime_cmd.stdout }}"\n\n    - name: Render uptime report\n      template:\n        src: "{{ playbook_dir }}/templates/uptime_report.j2"\n        dest: "{{ report_path }}"\n      vars:\n        host_name: "{{ inventory_hostname }}"\n        host_uptime: "{{ host_uptime }}"\n
+---
+- name: Gather uptime from targets and generate report
+  hosts: targets
+  gather_facts: false
+  vars:
+    report_path: "{{ playbook_dir }}/../uptime_report.txt"
+  tasks:
+    - name: Retrieve uptime (simulated)
+      command: echo "up 10 days"
+      register: uptime_cmd
+      changed_when: false
+
+    - name: Set host uptime fact
+      set_fact:
+        host_uptime: "{{ uptime_cmd.stdout }}"
+
+    - name: Render uptime report
+      template:
+        src: "{{ playbook_dir }}/templates/uptime_report.j2"
+        dest: "{{ report_path }}"
+      vars:
+        host_name: "{{ inventory_hostname }}"
+        host_uptime: "{{ host_uptime }}"
+

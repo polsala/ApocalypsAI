@@ -1,1 +1,48 @@
-use std::env;\n\nfn parse_args() -> Result<(usize, Vec<(usize, usize)>), String> {\n    let args: Vec<String> = env::args().skip(1).collect();\n    if args.is_empty() {\n        return Err("Usage: <capacity> <weight>:<value> ...".into());\n    }\n    let capacity = args[0].parse::<usize>()\n        .map_err(|_| "Invalid capacity".to_string())?;\n    let mut items = Vec::new();\n    for token in args.iter().skip(1) {\n        let parts: Vec<&str> = token.split(':').collect();\n        if parts.len() != 2 {\n            return Err(format!("Invalid item format: {}", token));\n        }\n        let w = parts[0].parse::<usize>()\n            .map_err(|_| format!("Invalid weight in {}", token))?;\n        let v = parts[1].parse::<usize>()\n            .map_err(|_| format!("Invalid value in {}", token))?;\n        items.push((w, v));\n    }\n    Ok((capacity, items))\n}\n\n// 0/1 knapsack DP\npub fn knapsack(capacity: usize, items: &[(usize, usize)]) -> usize {\n    let mut dp = vec![0usize; capacity + 1];\n    for &(weight, value) in items {\n        for w in (weight..=capacity).rev() {\n            let candidate = dp[w - weight] + value;\n            if candidate > dp[w] {\n                dp[w] = candidate;\n            }\n        }\n    }\n    dp[capacity]\n}\n\nfn main() {\n    match parse_args() {\n        Ok((capacity, items)) => {\n            let max_value = knapsack(capacity, &items);\n            println!("{}", max_value);\n        }\n        Err(e) => eprintln!("{}", e),\n    }\n}\n
+use std::env;
+
+fn parse_args() -> Result<(usize, Vec<(usize, usize)>), String> {
+    let args: Vec<String> = env::args().skip(1).collect();
+    if args.is_empty() {
+        return Err("Usage: <capacity> <weight>:<value> ...".into());
+    }
+    let capacity = args[0].parse::<usize>()
+        .map_err(|_| "Invalid capacity".to_string())?;
+    let mut items = Vec::new();
+    for token in args.iter().skip(1) {
+        let parts: Vec<&str> = token.split(':').collect();
+        if parts.len() != 2 {
+            return Err(format!("Invalid item format: {}", token));
+        }
+        let w = parts[0].parse::<usize>()
+            .map_err(|_| format!("Invalid weight in {}", token))?;
+        let v = parts[1].parse::<usize>()
+            .map_err(|_| format!("Invalid value in {}", token))?;
+        items.push((w, v));
+    }
+    Ok((capacity, items))
+}
+
+// 0/1 knapsack DP
+pub fn knapsack(capacity: usize, items: &[(usize, usize)]) -> usize {
+    let mut dp = vec![0usize; capacity + 1];
+    for &(weight, value) in items {
+        for w in (weight..=capacity).rev() {
+            let candidate = dp[w - weight] + value;
+            if candidate > dp[w] {
+                dp[w] = candidate;
+            }
+        }
+    }
+    dp[capacity]
+}
+
+fn main() {
+    match parse_args() {
+        Ok((capacity, items)) => {
+            let max_value = knapsack(capacity, &items);
+            println!("{}", max_value);
+        }
+        Err(e) => eprintln!("{}", e),
+    }
+}
+

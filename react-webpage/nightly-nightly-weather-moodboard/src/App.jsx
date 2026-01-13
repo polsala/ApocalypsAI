@@ -1,1 +1,29 @@
-import React, { useState } from \"react\";\n\nconst weatherOptions = [\n  { condition: \"Acid rain\", emoji: \"☔️\", activity: \"Dance under the drizzle\" },\n  { condition: \"Radiation fog\", emoji: \"🌫️\", activity: \"Play hide‑and‑seek with the glow\" },\n  { condition: \"Solar flare\", emoji: \"☀️\", activity: \"Sun‑bathing with SPF 1000\" },\n  { condition: \"Dust storm\", emoji: \"🌪️\", activity: \"Build a sandcastle\" },\n  { condition: \"Glowing aurora\", emoji: \"🌈\", activity: \"Stargaze and make wishes\" }\n];\n\nfunction getRandom() {\n  return weatherOptions[Math.floor(Math.random() * weatherOptions.length)];\n}\n\nexport default function App() {\n  const [forecast, setForecast] = useState(getRandom());\n\n  const refresh = () => setForecast(getRandom());\n\n  return (\n    <div style={{ fontFamily: \"sans-serif\", textAlign: \"center\", marginTop: \"2rem\" }}>\n      <h1>Apocalypse Weather Moodboard</h1>\n      <p style={{ fontSize: \"2rem\" }}>{forecast.emoji} {forecast.condition}</p>\n      <p>Suggested activity: <strong>{forecast.activity}</strong></p>\n      <button onClick={refresh}>Refresh</button>\n    </div>\n  );\n}\n
+import React, { useState } from "react";
+
+const weatherOptions = [
+  { condition: "Acid rain", emoji: "âï¸", activity: "Dance under the drizzle" },
+  { condition: "Radiation fog", emoji: "ð«ï¸", activity: "Play hideâandâseek with the glow" },
+  { condition: "Solar flare", emoji: "âï¸", activity: "Sunâbathing with SPF 1000" },
+  { condition: "Dust storm", emoji: "ðªï¸", activity: "Build a sandcastle" },
+  { condition: "Glowing aurora", emoji: "ð", activity: "Stargaze and make wishes" }
+];
+
+function getRandom() {
+  return weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
+}
+
+export default function App() {
+  const [forecast, setForecast] = useState(getRandom());
+
+  const refresh = () => setForecast(getRandom());
+
+  return (
+    <div style={{ fontFamily: "sans-serif", textAlign: "center", marginTop: "2rem" }}>
+      <h1>Apocalypse Weather Moodboard</h1>
+      <p style={{ fontSize: "2rem" }}>{forecast.emoji} {forecast.condition}</p>
+      <p>Suggested activity: <strong>{forecast.activity}</strong></p>
+      <button onClick={refresh}>Refresh</button>
+    </div>
+  );
+}
+

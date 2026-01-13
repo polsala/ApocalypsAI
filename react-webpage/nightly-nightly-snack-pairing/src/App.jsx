@@ -1,1 +1,52 @@
-import React, { useState } from 'react';\nimport { getPairings } from './utils/pairings.js';\n\nconst snacks = ['Chocolate', 'Cheese', 'Fruit', 'Nuts', 'Crackers', 'Salsa', 'Popcorn'];\n\nexport default function App() {\n  const [selected, setSelected] = useState([]);\n  const [pairings, setPairings] = useState([]);\n\n  const toggleSnack = (snack) => {\n    const newSelected = selected.includes(snack)\n      ? selected.filter((s) => s !== snack)\n      : [...selected, snack];\n    setSelected(newSelected);\n    setPairings(getPairings(newSelected));\n  };\n\n  return (\n    <div style={{ fontFamily: 'sans-serif', padding: '1rem' }}>\n      <h1>Snack Pairing Calculator</h1>\n      <p>Select your snacks:</p>\n      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>\n        {snacks.map((snack) => (\n          <button\n            key={snack}\n            onClick={() => toggleSnack(snack)}\n            style={{\n              padding: '0.5rem 1rem',\n              backgroundColor: selected.includes(snack) ? '#4caf50' : '#e0e0e0',\n              color: selected.includes(snack) ? '#fff' : '#000',\n              border: 'none',\n              borderRadius: '4px',\n              cursor: 'pointer',\n            }}\n          >\n            {snack}\n          </button>\n        ))}\n      </div>\n      <h2>Suggested Pairings:</h2>\n      {pairings.length === 0 ? (\n        <p>No snacks selected.</p>\n      ) : (\n        <ul>\n          {pairings.map((p, idx) => (\n            <li key={idx}>{p}</li>\n          ))}\n        </ul>\n      )}\n    </div>\n  );\n}
+import React, { useState } from 'react';
+import { getPairings } from './utils/pairings.js';
+
+const snacks = ['Chocolate', 'Cheese', 'Fruit', 'Nuts', 'Crackers', 'Salsa', 'Popcorn'];
+
+export default function App() {
+  const [selected, setSelected] = useState([]);
+  const [pairings, setPairings] = useState([]);
+
+  const toggleSnack = (snack) => {
+    const newSelected = selected.includes(snack)
+      ? selected.filter((s) => s !== snack)
+      : [...selected, snack];
+    setSelected(newSelected);
+    setPairings(getPairings(newSelected));
+  };
+
+  return (
+    <div style={{ fontFamily: 'sans-serif', padding: '1rem' }}>
+      <h1>Snack Pairing Calculator</h1>
+      <p>Select your snacks:</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        {snacks.map((snack) => (
+          <button
+            key={snack}
+            onClick={() => toggleSnack(snack)}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: selected.includes(snack) ? '#4caf50' : '#e0e0e0',
+              color: selected.includes(snack) ? '#fff' : '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            {snack}
+          </button>
+        ))}
+      </div>
+      <h2>Suggested Pairings:</h2>
+      {pairings.length === 0 ? (
+        <p>No snacks selected.</p>
+      ) : (
+        <ul>
+          {pairings.map((p, idx) => (
+            <li key={idx}>{p}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

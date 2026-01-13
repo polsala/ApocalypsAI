@@ -1,1 +1,99 @@
-// emoji‑mood‑tracker – record moods with emojis\n// SPDX‑License‑Identifier: MIT\n\nconst fs = require('fs');\nconst path = require('path');\n\n// Resolve storage file – env var overrides default\nfunction getStoragePath() {\n  const envPath = process.env.EMOJI_MOOD_FILE;\n  if (envPath) return envPath;\n  const home = process.env.HOME || process.env.USERPROFILE;\n  return path.join(home, '.emoji_mood_tracker.json');\n}\n\nfunction loadData() {\n  const file = getStoragePath();\n  try {\n    const raw = fs.readFileSync(file, 'utf8');\n    return JSON.parse(raw);\n  } catch (e) {\n    // If file does not exist or is malformed, start fresh\n    return [];// Mock rationale: start with empty array on any read error\n  }\n}\n\nfunction saveData(data) {\n  const file = getStoragePath();\n  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');\n}\n\n/**\n * Record a new mood entry.\n * @param {string} emoji – single emoji character\n * @param {string} note – optional free‑form note\n */\nfunction logMood(emoji, note = '') {\n  if (!emoji) throw new Error('Emoji is required');\n  const entry = {\n    timestamp: new Date().toISOString(),\n    emoji,\n    note\n  };\n  const data = loadData();\n  data.push(entry);\n  saveData(data);\n  return entry;\n}\n\n/** Return all entries sorted by timestamp */\nfunction listMoods() {\n  const data = loadData();\n  return data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));\n}\n\n/** Return a map of emoji → count */\nfunction getStats() {\n  const data = loadData();\n  const stats = {};\n  for (const e of data) {\n    stats[e.emoji] = (stats[e.emoji] || 0) + 1;\n  }\n  return stats;\n}\n\n// CLI handling\nif (require.main === module) {\n  const [, , cmd, ...args] = process.argv;\n  try {\n    switch (cmd) {\n      case 'log':\n        const [emoji, ...noteParts] = args;\n        const note = noteParts.join(' ');\n        const entry = logMood(emoji, note);\n        console.log('Logged:', entry);\n        break;\n      case 'list':\n        const list = listMoods();\n        list.forEach(e => {\n          console.log(`${e.timestamp}\t${e.emoji}\t${e.note}`);\n        });\n        break;\n      case 'stats':\n        const stats = getStats();\n        console.log('Mood statistics:');\n        for (const [emoji, count] of Object.entries(stats)) {\n          console.log(`${emoji}\t${count}`);\n        }\n        break;\n      default:\n        console.error('Unknown command. Use log|list|stats');\n        process.exit(1);\n    }\n  } catch (err) {\n    console.error('Error:', err.message);\n    process.exit(1);\n  }\n}\n\nmodule.exports = { logMood, listMoods, getStats, getStoragePath };
+// emojiâmoodâtracker â record moods with emojis
+// SPDXâLicenseâIdentifier: MIT
+
+const fs = require('fs');
+const path = require('path');
+
+// Resolve storage file â env var overrides default
+function getStoragePath() {
+  const envPath = process.env.EMOJI_MOOD_FILE;
+  if (envPath) return envPath;
+  const home = process.env.HOME || process.env.USERPROFILE;
+  return path.join(home, '.emoji_mood_tracker.json');
+}
+
+function loadData() {
+  const file = getStoragePath();
+  try {
+    const raw = fs.readFileSync(file, 'utf8');
+    return JSON.parse(raw);
+  } catch (e) {
+    // If file does not exist or is malformed, start fresh
+    return [];// Mock rationale: start with empty array on any read error
+  }
+}
+
+function saveData(data) {
+  const file = getStoragePath();
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+}
+
+/**
+ * Record a new mood entry.
+ * @param {string} emoji â single emoji character
+ * @param {string} note â optional freeâform note
+ */
+function logMood(emoji, note = '') {
+  if (!emoji) throw new Error('Emoji is required');
+  const entry = {
+    timestamp: new Date().toISOString(),
+    emoji,
+    note
+  };
+  const data = loadData();
+  data.push(entry);
+  saveData(data);
+  return entry;
+}
+
+/** Return all entries sorted by timestamp */
+function listMoods() {
+  const data = loadData();
+  return data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+
+/** Return a map of emoji â count */
+function getStats() {
+  const data = loadData();
+  const stats = {};
+  for (const e of data) {
+    stats[e.emoji] = (stats[e.emoji] || 0) + 1;
+  }
+  return stats;
+}
+
+// CLI handling
+if (require.main === module) {
+  const [, , cmd, ...args] = process.argv;
+  try {
+    switch (cmd) {
+      case 'log':
+        const [emoji, ...noteParts] = args;
+        const note = noteParts.join(' ');
+        const entry = logMood(emoji, note);
+        console.log('Logged:', entry);
+        break;
+      case 'list':
+        const list = listMoods();
+        list.forEach(e => {
+          console.log(`${e.timestamp}	${e.emoji}	${e.note}`);
+        });
+        break;
+      case 'stats':
+        const stats = getStats();
+        console.log('Mood statistics:');
+        for (const [emoji, count] of Object.entries(stats)) {
+          console.log(`${emoji}	${count}`);
+        }
+        break;
+      default:
+        console.error('Unknown command. Use log|list|stats');
+        process.exit(1);
+    }
+  } catch (err) {
+    console.error('Error:', err.message);
+    process.exit(1);
+  }
+}
+
+module.exports = { logMood, listMoods, getStats, getStoragePath };

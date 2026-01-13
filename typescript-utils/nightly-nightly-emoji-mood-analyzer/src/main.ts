@@ -1,1 +1,39 @@
-#!/usr/bin/env node\nimport { readFileSync } from "fs";\n\n/**\n * Analyze the mood of a given text and return an emoji.\n * Positive words increase the score, negative words decrease it.\n *   score > 0  => 😊\n *   score < 0  => 😞\n *   otherwise => 😐\n */\nexport function analyzeMood(text: string): string {\n  const positive = [\n    "happy","joy","love","awesome","great","fantastic","good","wonderful","excellent","pleased","delight"\n  ];\n  const negative = [\n    "sad","bad","terrible","hate","angry","upset","depressed","awful","horrible","pain","sorrow"\n  ];\n  const words = text.toLowerCase().match(/\b\w+\b/g) ?? [];\n  let score = 0;\n  for (const w of words) {\n    if (positive.includes(w)) score++;\n    if (negative.includes(w)) score--;\n  }\n  if (score > 0) return "😊";\n  if (score < 0) return "😞";\n  return "😐";\n}\n\n// CLI handling\nif (require.main === module) {\n  const args = process.argv.slice(2);\n  if (args.length === 0) {\n    console.error("Usage: emoji-mood <text>");\n    process.exit(1);\n  }\n  const input = args.join(" ");\n  console.log(analyzeMood(input));\n}\n
+#!/usr/bin/env node
+import { readFileSync } from "fs";
+
+/**
+ * Analyze the mood of a given text and return an emoji.
+ * Positive words increase the score, negative words decrease it.
+ *   score > 0  => ð
+ *   score < 0  => ð
+ *   otherwise => ð
+ */
+export function analyzeMood(text: string): string {
+  const positive = [
+    "happy","joy","love","awesome","great","fantastic","good","wonderful","excellent","pleased","delight"
+  ];
+  const negative = [
+    "sad","bad","terrible","hate","angry","upset","depressed","awful","horrible","pain","sorrow"
+  ];
+  const words = text.toLowerCase().match(/\w+/g) ?? [];
+  let score = 0;
+  for (const w of words) {
+    if (positive.includes(w)) score++;
+    if (negative.includes(w)) score--;
+  }
+  if (score > 0) return "ð";
+  if (score < 0) return "ð";
+  return "ð";
+}
+
+// CLI handling
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    console.error("Usage: emoji-mood <text>");
+    process.exit(1);
+  }
+  const input = args.join(" ");
+  console.log(analyzeMood(input));
+}
+

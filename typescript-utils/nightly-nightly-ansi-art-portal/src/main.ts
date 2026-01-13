@@ -1,1 +1,86 @@
-#!/usr/bin/env node\nimport { argv } from 'process';\n\ntype Color = 'red' | 'green' | 'yellow';\nconst colorCodes: Record<Color, string> = {\n  red: '\\x1b[31m',\n  green: '\\x1b[32m',\n  yellow: '\\x1b[33m',\n};\nconst reset = '\\x1b[0m';\n\nfunction mulberry32(a: number): () => number {\n  return function() {\n    let t = (a += 0x6d2b79f5);\n    t = Math.imul(t ^ (t >>> 15), t | 1);\n    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n  };\n}\n\nfunction getRandomColor(rng: () => number): Color {\n  const colors: Color[] = ['red', 'green', 'yellow'];\n  const idx = Math.floor(rng() * colors.length);\n  return colors[idx];\n}\n\nconst font: Record<string, string[]> = {\n  A: [\n    '  #  ',\n    ' # # ',\n    '#####',\n    '#   #',\n    '#   #',\n  ],\n  B: [\n    '#### ',\n    '#   #',\n    '#### ',\n    '#   #',\n    '#### ',\n  ],\n  // Add more letters as needed. For now only A, B and space are defined.\n  ' ': [\n    '     ',\n    '     ',\n    '     ',\n    '     ',\n    '     ',\n  ],\n};\n\nexport function render(text: string, seed?: number): string {\n  const rng = seed !== undefined ? mulberry32(seed) : mulberry32(Date.now() & 0xffffffff);\n  const chars = text.toUpperCase().split('');\n  const lines = Array(5).fill('');\n  for (const ch of chars) {\n    const pattern = font[ch] || font[' '];\n    const color = getRandomColor(rng);\n    const code = colorCodes[color];\n    for (let i = 0; i < 5; i++) {\n      lines[i] += code + pattern[i] + reset + ' ';\n    }\n  }\n  return lines.join('\\n');\n}\n\nfunction main() {\n  const args = argv.slice(2);\n  if (args.length === 0) {\n    console.error('Usage: node main.ts "text" [--seed <number>]');\n    process.exit(1);\n  }\n  const text = args[0];\n  let seed: number | undefined;\n  const seedIdx = args.indexOf('--seed');\n  if (seedIdx !== -1 && args[seedIdx + 1]) {\n    seed = parseInt(args[seedIdx + 1], 10);\n  }\n  const output = render(text, seed);\n  console.log(output);\n}\n\nif (require.main === module) {\n  main();\n}\n
+#!/usr/bin/env node
+import { argv } from 'process';
+
+type Color = 'red' | 'green' | 'yellow';
+const colorCodes: Record<Color, string> = {
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+};
+const reset = '\x1b[0m';
+
+function mulberry32(a: number): () => number {
+  return function() {
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function getRandomColor(rng: () => number): Color {
+  const colors: Color[] = ['red', 'green', 'yellow'];
+  const idx = Math.floor(rng() * colors.length);
+  return colors[idx];
+}
+
+const font: Record<string, string[]> = {
+  A: [
+    '  #  ',
+    ' # # ',
+    '#####',
+    '#   #',
+    '#   #',
+  ],
+  B: [
+    '#### ',
+    '#   #',
+    '#### ',
+    '#   #',
+    '#### ',
+  ],
+  // Add more letters as needed. For now only A, B and space are defined.
+  ' ': [
+    '     ',
+    '     ',
+    '     ',
+    '     ',
+    '     ',
+  ],
+};
+
+export function render(text: string, seed?: number): string {
+  const rng = seed !== undefined ? mulberry32(seed) : mulberry32(Date.now() & 0xffffffff);
+  const chars = text.toUpperCase().split('');
+  const lines = Array(5).fill('');
+  for (const ch of chars) {
+    const pattern = font[ch] || font[' '];
+    const color = getRandomColor(rng);
+    const code = colorCodes[color];
+    for (let i = 0; i < 5; i++) {
+      lines[i] += code + pattern[i] + reset + ' ';
+    }
+  }
+  return lines.join('\n');
+}
+
+function main() {
+  const args = argv.slice(2);
+  if (args.length === 0) {
+    console.error('Usage: node main.ts "text" [--seed <number>]');
+    process.exit(1);
+  }
+  const text = args[0];
+  let seed: number | undefined;
+  const seedIdx = args.indexOf('--seed');
+  if (seedIdx !== -1 && args[seedIdx + 1]) {
+    seed = parseInt(args[seedIdx + 1], 10);
+  }
+  const output = render(text, seed);
+  console.log(output);
+}
+
+if (require.main === module) {
+  main();
+}
+

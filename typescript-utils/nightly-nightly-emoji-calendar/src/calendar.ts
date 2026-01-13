@@ -1,1 +1,63 @@
-const WEEKDAY_EMOJIS = ["☀️", "🌙", "🌟", "🌈", "🍀", "🎉", "🛸"]; // Sun to Sat\n\n/**\n * Returns a string representing the calendar for the given month/year.\n * The first line is a centered month header, the second line lists the weekday emojis,\n * followed by rows of day numbers aligned under their emojis.\n */\nexport function generateCalendar(month: number, year: number): string {\n  // Validate inputs (basic)\n  if (month < 1 || month > 12) {\n    throw new Error("Month must be between 1 and 12");\n  }\n  if (year < 1) {\n    throw new Error("Year must be a positive integer");\n  }\n\n  const firstDay = new Date(year, month - 1, 1);\n  const daysInMonth = new Date(year, month, 0).getDate();\n  const startWeekday = firstDay.getDay(); // 0 = Sun\n\n  // Header centered to width of 20 characters (approx)\n  const monthNames = [\n    "January", "February", "March", "April", "May", "June",\n    "July", "August", "September", "October", "November", "December"\n  ];\n  const header = `${monthNames[month - 1]} ${year}`;\n  const headerLine = header.padStart(Math.floor((20 + header.length) / 2)).padEnd(20);\n\n  const emojiLine = WEEKDAY_EMOJIS.join(" ");\n\n  const weeks: string[] = [];\n  let week = new Array(7).fill("");\n  // Fill initial empty slots before the first day\n  for (let i = 0; i < startWeekday; i++) {\n    week[i] = "   ";\n  }\n  let day = 1;\n  for (let i = startWeekday; i < 7; i++) {\n    week[i] = day.toString().padStart(2, " ") + " ";\n    day++;\n  }\n  weeks.push(week.join(""));\n\n  while (day <= daysInMonth) {\n    week = new Array(7).fill("");\n    for (let i = 0; i < 7 && day <= daysInMonth; i++) {\n      week[i] = day.toString().padStart(2, " ") + " ";\n      day++;\n    }\n    // Fill trailing empty slots\n    for (let i = 0; i < 7; i++) {\n      if (week[i] === "") {\n        week[i] = "   ";\n      }\n    }\n    weeks.push(week.join(""));\n  }\n\n  const calendarLines = [headerLine, emojiLine, ...weeks];\n  return calendarLines.join("\n");\n}\n
+const WEEKDAY_EMOJIS = ["âï¸", "ð", "ð", "ð", "ð", "ð", "ð¸"]; // Sun to Sat
+
+/**
+ * Returns a string representing the calendar for the given month/year.
+ * The first line is a centered month header, the second line lists the weekday emojis,
+ * followed by rows of day numbers aligned under their emojis.
+ */
+export function generateCalendar(month: number, year: number): string {
+  // Validate inputs (basic)
+  if (month < 1 || month > 12) {
+    throw new Error("Month must be between 1 and 12");
+  }
+  if (year < 1) {
+    throw new Error("Year must be a positive integer");
+  }
+
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const startWeekday = firstDay.getDay(); // 0 = Sun
+
+  // Header centered to width of 20 characters (approx)
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const header = `${monthNames[month - 1]} ${year}`;
+  const headerLine = header.padStart(Math.floor((20 + header.length) / 2)).padEnd(20);
+
+  const emojiLine = WEEKDAY_EMOJIS.join(" ");
+
+  const weeks: string[] = [];
+  let week = new Array(7).fill("");
+  // Fill initial empty slots before the first day
+  for (let i = 0; i < startWeekday; i++) {
+    week[i] = "   ";
+  }
+  let day = 1;
+  for (let i = startWeekday; i < 7; i++) {
+    week[i] = day.toString().padStart(2, " ") + " ";
+    day++;
+  }
+  weeks.push(week.join(""));
+
+  while (day <= daysInMonth) {
+    week = new Array(7).fill("");
+    for (let i = 0; i < 7 && day <= daysInMonth; i++) {
+      week[i] = day.toString().padStart(2, " ") + " ";
+      day++;
+    }
+    // Fill trailing empty slots
+    for (let i = 0; i < 7; i++) {
+      if (week[i] === "") {
+        week[i] = "   ";
+      }
+    }
+    weeks.push(week.join(""));
+  }
+
+  const calendarLines = [headerLine, emojiLine, ...weeks];
+  return calendarLines.join("
+");
+}
+

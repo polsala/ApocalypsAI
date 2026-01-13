@@ -1,1 +1,9 @@
---- Signal Scavenger Report ---\nTimestamp: {{ ansible_date_time.iso8601_micro }}\n{% for beacon in all_beacon_results %}\nBeacon ID: {{ beacon.beacon_id | default('UNKNOWN') }}\n  Signal Status: {{ beacon.signal_status | default('N/A') }}\n  Data Fragment: {{ beacon.fragment_status | default('N/A') }}\n{% endfor %}\n--- End of Report ---\n
+--- Signal Scavenger Report ---
+Timestamp: {{ ansible_date_time.iso8601_micro }}
+{% for beacon in all_beacon_results %}
+Beacon ID: {{ beacon.beacon_id | default('UNKNOWN') }}
+  Signal Status: {{ beacon.signal_status | default('N/A') }}
+  Data Fragment: {{ beacon.fragment_status | default('N/A') }}
+{% endfor %}
+--- End of Report ---
+

@@ -1,1 +1,44 @@
-import unittest\nimport json\nimport os\nimport sys\nfrom unittest import mock\nfrom io import StringIO\n\n# Ensure src is on path for import\nsys.path.append(os.path.join(os.path.dirname(__file__), \"..\", \"src\"))\nimport main\n\nclass TestIssueEmojiBooster(unittest.TestCase):\n    @mock.patch(\"main.requests.post\")\n    def test_adds_reaction_success(self, mock_post):\n        mock_resp = mock.Mock()\n        mock_resp.status_code = 201\n        mock_post.return_value = mock_resp\n\n        event = {\"issue\": {\"number\": 42}}\n        with mock.patch(\"builtins.open\", mock.mock_open(read_data=json.dumps(event))):\n            with mock.patch.dict(os.environ, {\n                \"GITHUB_TOKEN\": \"fake-token\",\n                \"GITHUB_REPOSITORY\": \"owner/repo\",\n                \"GITHUB_EVENT_PATH\": \"/path/to/event.json\"\n            }):\n                with mock.patch(\"sys.stdout\", new=StringIO()) as fake_out:\n                    main.main()\n                    output = fake_out.getvalue()\n                    self.assertIn(\"Added reaction\", output)\n        expected_url = \"https://api.github.com/repos/owner/repo/issues/42/reactions\"\n        mock_post.assert_called_once()\n        args, kwargs = mock_post.call_args\n        self.assertEqual(args[0], expected_url)\n        self.assertIn(\"content\", kwargs[\"json\"])\n\n    @mock.patch(\"main.requests.post\")\n    def test_missing_env_vars(self, mock_post):\n        with mock.patch.dict(os.environ, {}, clear=True):\n            with self.assertRaises(SystemExit) as cm:\n                main.main()\n            self.assertEqual(cm.exception.code, 1)\n\nif __name__ == \"__main__\":\n    unittest.main()
+import unittest
+import json
+import os
+import sys
+from unittest import mock
+from io import StringIO
+
+# Ensure src is on path for import
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+import main
+
+class TestIssueEmojiBooster(unittest.TestCase):
+    @mock.patch("main.requests.post")
+    def test_adds_reaction_success(self, mock_post):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 201
+        mock_post.return_value = mock_resp
+
+        event = {"issue": {"number": 42}}
+        with mock.patch("builtins.open", mock.mock_open(read_data=json.dumps(event))):
+            with mock.patch.dict(os.environ, {
+                "GITHUB_TOKEN": "fake-token",
+                "GITHUB_REPOSITORY": "owner/repo",
+                "GITHUB_EVENT_PATH": "/path/to/event.json"
+            }):
+                with mock.patch("sys.stdout", new=StringIO()) as fake_out:
+                    main.main()
+                    output = fake_out.getvalue()
+                    self.assertIn("Added reaction", output)
+        expected_url = "https://api.github.com/repos/owner/repo/issues/42/reactions"
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertEqual(args[0], expected_url)
+        self.assertIn("content", kwargs["json"])
+
+    @mock.patch("main.requests.post")
+    def test_missing_env_vars(self, mock_post):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(SystemExit) as cm:
+                main.main()
+            self.assertEqual(cm.exception.code, 1)
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,1 +1,49 @@
-# PR Language Labeler\n\nA GitHub Action that automatically adds labels to a pull request based on the programming languages of the files changed.\n\n## Features\n- Detects common programming languages from file extensions.\n- Adds a label in the form `lang:<language>` (e.g., `lang:python`).\n- Works out‑of‑the‑box with the default `GITHUB_TOKEN`.\n- Optional `files` input for testing or custom file lists.\n\n## Usage\n```yaml\nname: PR Language Labeler\non:\n  pull_request:\n    types: [opened, synchronize]\njobs:\n  label:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Label PR by language\n        uses: ./\.github/actions/pr-language-labeler\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n```\n\n## Inputs\n| Name | Description | Required |\n|------|-------------|----------|\n| `github-token` | Token with repo scope (usually `GITHUB_TOKEN`). | Yes |\n| `files` | Optional JSON array of filenames to analyze (useful for testing). | No |\n\n## How it works\n1. The action receives a list of changed files (either via the `files` input or by calling the GitHub API).\n2. It maps file extensions to language names.\n3. It creates labels like `lang:python` and adds them to the PR.\n\n## Development\nThe action is written in JavaScript and uses the official `@actions/core` and `@actions/github` packages.\n\n### Running tests\n```bash\nnpm install\nnpm test\n```\n\n## License\nMIT
+# PR Language Labeler
+
+A GitHub Action that automatically adds labels to a pull request based on the programming languages of the files changed.
+
+## Features
+- Detects common programming languages from file extensions.
+- Adds a label in the form `lang:<language>` (e.g., `lang:python`).
+- Works outâofâtheâbox with the default `GITHUB_TOKEN`.
+- Optional `files` input for testing or custom file lists.
+
+## Usage
+```yaml
+name: PR Language Labeler
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Label PR by language
+        uses: ./\.github/actions/pr-language-labeler
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Inputs
+| Name | Description | Required |
+|------|-------------|----------|
+| `github-token` | Token with repo scope (usually `GITHUB_TOKEN`). | Yes |
+| `files` | Optional JSON array of filenames to analyze (useful for testing). | No |
+
+## How it works
+1. The action receives a list of changed files (either via the `files` input or by calling the GitHub API).
+2. It maps file extensions to language names.
+3. It creates labels like `lang:python` and adds them to the PR.
+
+## Development
+The action is written in JavaScript and uses the official `@actions/core` and `@actions/github` packages.
+
+### Running tests
+```bash
+npm install
+npm test
+```
+
+## License
+MIT

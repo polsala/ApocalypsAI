@@ -1,1 +1,11 @@
-import React from \"react\";\nimport { createRoot } from \"react-dom/client\";\nimport App from \"./App\";\n\nconst container = document.getElementById(\"root\");\nif (!container) {\n  throw new Error(\"Root element not found\");\n}\nconst root = createRoot(container);\nroot.render(<App />);\n
+import React from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+const container = document.getElementById("root");
+if (!container) {
+  throw new Error("Root element not found");
+}
+const root = createRoot(container);
+root.render(<App />);
+

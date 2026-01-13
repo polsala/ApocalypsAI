@@ -1,1 +1,40 @@
-package main\n\nimport (\n\t\"os\"\n\t\"path/filepath\"\n\t\"testing\"\n)\n\nfunc TestCreateSkeleton(t *testing.T) {\n\ttmpDir := t.TempDir()\n\terr := createSkeleton(tmpDir)\n\tif err != nil {\n\t\tt.Fatalf(\"createSkeleton returned error: %v\", err)\n\t}\n\texpectedFiles := []string{\n\t\t\"main.tf\",\n\t\t\"variables.tf\",\n\t\t\"outputs.tf\",\n\t\t\"README.md\",\n\t\t\".gitignore\",\n\t}\n\tfor _, f := range expectedFiles {\n\t\tpath := filepath.Join(tmpDir, f)\n\t\tinfo, err := os.Stat(path)\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"expected file %s to exist, but got error: %v\", f, err)\n\t\t}\n\t\tif info.IsDir() {\n\t\t\tt.Fatalf(\"expected %s to be a file, but it's a directory\", f)\n\t\t}\n\t\tcontent, err := os.ReadFile(path)\n\t\tif err != nil {\n\t\t\tt.Fatalf(\"failed to read file %s: %v\", f, err)\n\t\t}\n\t\tif len(content) == 0 {\n\t\t\tt.Fatalf(\"file %s is empty\", f)\n\t\t}\n\t}\n}\n
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestCreateSkeleton(t *testing.T) {
+	tmpDir := t.TempDir()
+	err := createSkeleton(tmpDir)
+	if err != nil {
+		t.Fatalf("createSkeleton returned error: %v", err)
+	}
+	expectedFiles := []string{
+		"main.tf",
+		"variables.tf",
+		"outputs.tf",
+		"README.md",
+		".gitignore",
+	}
+	for _, f := range expectedFiles {
+		path := filepath.Join(tmpDir, f)
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("expected file %s to exist, but got error: %v", f, err)
+		}
+		if info.IsDir() {
+			t.Fatalf("expected %s to be a file, but it's a directory", f)
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read file %s: %v", f, err)
+		}
+		if len(content) == 0 {
+			t.Fatalf("file %s is empty", f)
+		}
+	}
+}
+

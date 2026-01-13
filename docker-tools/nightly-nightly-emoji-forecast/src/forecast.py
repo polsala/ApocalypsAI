@@ -1,1 +1,24 @@
-import os\nimport sys\nimport random\n\ndef get_fake_weather(city: str) -> str:\n    """Return a whimsical weather string for *city* using emojis."""\n    conditions = ["☀️", "🌤️", "⛅", "🌧️", "⛈️", "❄️", "🌪️"]\n    temps = ["🥶", "❄️", "🧊", "🌡️", "🔥", "🥵"]\n    condition = random.choice(conditions)\n    temp = random.choice(temps)\n    return f"{city}: {condition} {temp}"\n\ndef main() -> None:\n    city = os.getenv("CITY")\n    if not city and len(sys.argv) > 1:\n        city = sys.argv[1]\n    if not city:\n        print("Usage: set CITY env var or pass city name as argument", file=sys.stderr)\n        sys.exit(1)\n    print(get_fake_weather(city))\n\nif __name__ == "__main__":\n    main()\n
+import os
+import sys
+import random
+
+def get_fake_weather(city: str) -> str:
+    """Return a whimsical weather string for *city* using emojis."""
+    conditions = ["☀️", "🌤️", "⛅", "🌧️", "⛈️", "❄️", "🌪️"]
+    temps = ["🥶", "❄️", "🧊", "🌡️", "🔥", "🥵"]
+    condition = random.choice(conditions)
+    temp = random.choice(temps)
+    return f"{city}: {condition} {temp}"
+
+def main() -> None:
+    city = os.getenv("CITY")
+    if not city and len(sys.argv) > 1:
+        city = sys.argv[1]
+    if not city:
+        print("Usage: set CITY env var or pass city name as argument", file=sys.stderr)
+        sys.exit(1)
+    print(get_fake_weather(city))
+
+if __name__ == "__main__":
+    main()
+

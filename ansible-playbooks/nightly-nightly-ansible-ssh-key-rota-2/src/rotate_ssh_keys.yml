@@ -1,1 +1,32 @@
-- name: Rotate SSH host keys\n  hosts: all\n  become: true\n  vars_files:\n    - vars.yml\n  tasks:\n    - name: Ensure key directory exists\n      file:\n        path: "{{ key_dir }}"\n        state: directory\n        mode: '0700'\n\n    - name: Generate new RSA key pair\n      openssh_keypair:\n        path: "{{ key_dir }}/id_rsa"\n        type: "{{ key_type }}"\n        size: "{{ key_size }}"\n        force: true\n      register: keypair\n\n    - name: Deploy new public key to authorized_keys\n      authorized_key:\n        user: "{{ ansible_user | default('root') }}"\n        state: present\n        key: "{{ lookup('file', keypair.public_key) }}"\n\n    - name: Remove old private key if exists\n      file:\n        path: "{{ old_key_path | default('') }}"\n        state: absent\n      when: old_key_path != ''\n
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Ensure key directory exists
+      file:
+        path: "{{ key_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Generate new RSA key pair
+      openssh_keypair:
+        path: "{{ key_dir }}/id_rsa"
+        type: "{{ key_type }}"
+        size: "{{ key_size }}"
+        force: true
+      register: keypair
+
+    - name: Deploy new public key to authorized_keys
+      authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ lookup('file', keypair.public_key) }}"
+
+    - name: Remove old private key if exists
+      file:
+        path: "{{ old_key_path | default('') }}"
+        state: absent
+      when: old_key_path != ''
+

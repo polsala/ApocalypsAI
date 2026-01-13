@@ -1,1 +1,34 @@
-export const environments = {\n  Desert: [\n    "Water purification tablets",\n    "Sun hat",\n    "Sunscreen",\n    "Lightweight tarp",\n    "Sand goggles"\n  ],\n  Tundra: [\n    "Thermal blanket",\n    "Insulated jacket",\n    "Snow shovel",\n    "Hand warmers",\n    "High‑calorie rations"\n  ],\n  Urban: [\n    "Multi‑tool",\n    "First‑aid kit",\n    "Portable charger",\n    "Crowbar",\n    "Dust mask"\n  ],\n  Forest: [\n    "Fire starter",\n    "Compass",\n    "Water filter",\n    "Mosquito net",\n    "Durable boots"\n  ]\n};\n\nexport function getKit(env) {\n  return environments[env] || [];\n}
+export const environments = {
+  Desert: [
+    "Water purification tablets",
+    "Sun hat",
+    "Sunscreen",
+    "Lightweight tarp",
+    "Sand goggles"
+  ],
+  Tundra: [
+    "Thermal blanket",
+    "Insulated jacket",
+    "Snow shovel",
+    "Hand warmers",
+    "Highâcalorie rations"
+  ],
+  Urban: [
+    "Multiâtool",
+    "Firstâaid kit",
+    "Portable charger",
+    "Crowbar",
+    "Dust mask"
+  ],
+  Forest: [
+    "Fire starter",
+    "Compass",
+    "Water filter",
+    "Mosquito net",
+    "Durable boots"
+  ]
+};
+
+export function getKit(env) {
+  return environments[env] || [];
+}

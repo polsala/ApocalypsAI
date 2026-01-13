@@ -1,1 +1,69 @@
-# nightly-shelter-optimizer\n\nA whimsical yet practical TypeScript command‑line utility for post‑apocalyptic survivors.\nIt solves a classic 0/1 knapsack problem: given a list of supplies (each with a weight and a value) and a shelter weight limit, it picks the combination of items that yields the highest total value without exceeding the limit.\n\n## Features\n\n- Pure TypeScript, no external runtime dependencies beyond Node.js.\n- Reads input from a JSON file or STDIN.\n- Outputs the chosen items, total weight, and total value in a human‑readable format.\n- Includes a deterministic test suite that can be run with `npm test`.\n\n## Installation\n\n```bash\n# Clone the repository (or let the ApocalypsAI agent add this utility)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-shelter-optimizer\n\n# Install dependencies\nnpm install\n```\n\n## Usage\n\n```bash\n# Using a JSON file\nnode dist/main.js -i supplies.json\n\n# Piping JSON via STDIN\ncat supplies.json | node dist/main.js\n```\n\nThe input JSON must have the following shape:\n\n```json\n{\n  "capacity": 50,\n  "items": [\n    {"name": "Canned Beans", "weight": 5, "value": 10},\n    {"name": "Water Bottle", "weight": 10, "value": 15},\n    {"name": "First‑Aid Kit", "weight": 8, "value": 25}\n  ]\n}\n```\n\n### Example Output\n\n````\nSelected items:\n- Canned Beans (weight: 5, value: 10)\n- First‑Aid Kit (weight: 8, value: 25)\n\nTotal weight: 13\nTotal value: 35\n````\n\n## Testing\n\n```bash\nnpm test\n```\n\nThe test suite validates the knapsack algorithm against a known scenario.\n\n## License\n\nMIT – see LICENSE file in the repository root.\n
+# nightly-shelter-optimizer
+
+A whimsical yet practical TypeScript command‑line utility for post‑apocalyptic survivors.
+It solves a classic 0/1 knapsack problem: given a list of supplies (each with a weight and a value) and a shelter weight limit, it picks the combination of items that yields the highest total value without exceeding the limit.
+
+## Features
+
+- Pure TypeScript, no external runtime dependencies beyond Node.js.
+- Reads input from a JSON file or STDIN.
+- Outputs the chosen items, total weight, and total value in a human‑readable format.
+- Includes a deterministic test suite that can be run with `npm test`.
+
+## Installation
+
+```bash
+# Clone the repository (or let the ApocalypsAI agent add this utility)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-shelter-optimizer
+
+# Install dependencies
+npm install
+```
+
+## Usage
+
+```bash
+# Using a JSON file
+node dist/main.js -i supplies.json
+
+# Piping JSON via STDIN
+cat supplies.json | node dist/main.js
+```
+
+The input JSON must have the following shape:
+
+```json
+{
+  "capacity": 50,
+  "items": [
+    {"name": "Canned Beans", "weight": 5, "value": 10},
+    {"name": "Water Bottle", "weight": 10, "value": 15},
+    {"name": "First‑Aid Kit", "weight": 8, "value": 25}
+  ]
+}
+```
+
+### Example Output
+
+````
+Selected items:
+- Canned Beans (weight: 5, value: 10)
+- First‑Aid Kit (weight: 8, value: 25)
+
+Total weight: 13
+Total value: 35
+````
+
+## Testing
+
+```bash
+npm test
+```
+
+The test suite validates the knapsack algorithm against a known scenario.
+
+## License
+
+MIT – see LICENSE file in the repository root.
+

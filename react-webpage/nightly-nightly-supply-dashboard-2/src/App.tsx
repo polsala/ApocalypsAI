@@ -1,1 +1,103 @@
-import React, { useState } from \"react\";\n\ninterface Item {\n  name: string;\n  weight: number; // kg per unit\n  quantity: number;\n  value: number; // credits per unit\n}\n\nconst App: React.FC = () => {\n  const [items, setItems] = useState<Item[]>([]);\n  const [form, setForm] = useState<Partial<Item>>({});\n\n  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    const { name, value } = e.target;\n    setForm((prev) => ({\n      ...prev,\n      [name]: name === \"name\" ? value : Number(value),\n    }));\n  };\n\n  const addItem = (e: React.FormEvent) => {\n    e.preventDefault();\n    if (!form.name || form.weight == null || form.quantity == null || form.value == null) {\n      return;\n    }\n    setItems((prev) => [...prev, form as Item]);\n    setForm({});\n  };\n\n  const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0);\n  const totalValue = items.reduce((sum, i) => sum + i.value * i.quantity, 0);\n\n  return (\n    <div style={{ padding: \"1rem\", fontFamily: \"sans-serif\" }}>\n      <h1>Supply Dashboard</h1>\n      <form onSubmit={addItem} style={{ marginBottom: \"1rem\" }}>\n        <input\n          name=\"name\"\n          placeholder=\"Item name\"\n          value={form.name ?? \"\"}\n          onChange={handleChange}\n          required\n        />\n        <input\n          name=\"weight\"\n          type=\"number\"\n          placeholder=\"Weight (kg)\"\n          value={form.weight ?? \"\"}\n          onChange={handleChange}\n          required\n        />\n        <input\n          name=\"quantity\"\n          type=\"number\"\n          placeholder=\"Quantity\"\n          value={form.quantity ?? \"\"}\n          onChange={handleChange}\n          required\n        />\n        <input\n          name=\"value\"\n          type=\"number\"\n          placeholder=\"Value (credits)\"\n          value={form.value ?? \"\"}\n          onChange={handleChange}\n          required\n        />\n        <button type=\"submit\">Add</button>\n      </form>\n\n      {items.length > 0 && (\n        <table border={1} cellPadding={4}>\n          <thead>\n            <tr>\n              <th>Name</th>\n              <th>Weight (kg)</th>\n              <th>Qty</th>\n              <th>Value (c)</th>\n            </tr>\n          </thead>\n          <tbody>\n            {items.map((it, idx) => (\n              <tr key={idx}>\n                <td>{it.name}</td>\n                <td>{it.weight}</td>\n                <td>{it.quantity}</td>\n                <td>{it.value}</td>\n              </tr>\n            ))}\n          </tbody>\n        </table>\n      )}\n\n      <h2>Totals</h2>\n      <p>Total weight: {totalWeight} kg</p>\n      <p>Total value: {totalValue} credits</p>\n    </div>\n  );\n};\n\nexport default App;\n
+import React, { useState } from "react";
+
+interface Item {
+  name: string;
+  weight: number; // kg per unit
+  quantity: number;
+  value: number; // credits per unit
+}
+
+const App: React.FC = () => {
+  const [items, setItems] = useState<Item[]>([]);
+  const [form, setForm] = useState<Partial<Item>>({});
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === "name" ? value : Number(value),
+    }));
+  };
+
+  const addItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || form.weight == null || form.quantity == null || form.value == null) {
+      return;
+    }
+    setItems((prev) => [...prev, form as Item]);
+    setForm({});
+  };
+
+  const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0);
+  const totalValue = items.reduce((sum, i) => sum + i.value * i.quantity, 0);
+
+  return (
+    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>
+      <h1>Supply Dashboard</h1>
+      <form onSubmit={addItem} style={{ marginBottom: "1rem" }}>
+        <input
+          name="name"
+          placeholder="Item name"
+          value={form.name ?? ""}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="weight"
+          type="number"
+          placeholder="Weight (kg)"
+          value={form.weight ?? ""}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="quantity"
+          type="number"
+          placeholder="Quantity"
+          value={form.quantity ?? ""}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="value"
+          type="number"
+          placeholder="Value (credits)"
+          value={form.value ?? ""}
+          onChange={handleChange}
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      {items.length > 0 && (
+        <table border={1} cellPadding={4}>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Weight (kg)</th>
+              <th>Qty</th>
+              <th>Value (c)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it, idx) => (
+              <tr key={idx}>
+                <td>{it.name}</td>
+                <td>{it.weight}</td>
+                <td>{it.quantity}</td>
+                <td>{it.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h2>Totals</h2>
+      <p>Total weight: {totalWeight} kg</p>
+      <p>Total value: {totalValue} credits</p>
+    </div>
+  );
+};
+
+export default App;
+

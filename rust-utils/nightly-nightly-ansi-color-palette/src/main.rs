@@ -1,1 +1,65 @@
-use clap::Parser;\nuse serde::Serialize;\n\n#[derive(Parser)]\n#[command(author, version, about, long_about = None)]\nstruct Args {\n    /// Output the palette as JSON instead of a pretty grid\n    #[arg(short, long)]\n    json: bool,\n}\n\n#[derive(Serialize)]\nstruct ColorEntry {\n    code: u8,\n    sample: String,\n}\n\nfn generate_palette() -> Vec<ColorEntry> {\n    (0u8..=255)\n        .map(|code| ColorEntry {\n            code,\n            sample: format!("\u001b[38;5;{}m█\u001b[0m", code),\n        })\n        .collect()\n}\n\nfn print_pretty(palette: &[ColorEntry]) {\n    const ROW_LEN: usize = 16;\n    for (i, entry) in palette.iter().enumerate() {\n        print!("{:>3} {} ", entry.code, entry.sample);\n        if (i + 1) % ROW_LEN == 0 {\n            println!();\n        }\n    }\n}\n\nfn main() {\n    let args = Args::parse();\n    let palette = generate_palette();\n    if args.json {\n        // Serialize only the code and sample fields\n        let json = serde_json::to_string_pretty(&palette).expect("JSON serialization failed");\n        println!("{}", json);\n    } else {\n        print_pretty(&palette);\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use assert_cmd::Command;\n    use predicates::prelude::*;\n\n    #[test]\n    fn json_output_has_256_entries() {\n        let mut cmd = Command::cargo_bin("ansi-color-palette").unwrap();\n        cmd.arg("--json");\n        cmd.assert()\n            .success()\n            .stdout(predicate::str::contains("\"code\": 0"))\n            .stdout(predicate::str::contains("\"code\": 255"));\n    }\n}\n
+use clap::Parser;
+use serde::Serialize;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Output the palette as JSON instead of a pretty grid
+    #[arg(short, long)]
+    json: bool,
+}
+
+#[derive(Serialize)]
+struct ColorEntry {
+    code: u8,
+    sample: String,
+}
+
+fn generate_palette() -> Vec<ColorEntry> {
+    (0u8..=255)
+        .map(|code| ColorEntry {
+            code,
+            sample: format!("[38;5;{}mâ[0m", code),
+        })
+        .collect()
+}
+
+fn print_pretty(palette: &[ColorEntry]) {
+    const ROW_LEN: usize = 16;
+    for (i, entry) in palette.iter().enumerate() {
+        print!("{:>3} {} ", entry.code, entry.sample);
+        if (i + 1) % ROW_LEN == 0 {
+            println!();
+        }
+    }
+}
+
+fn main() {
+    let args = Args::parse();
+    let palette = generate_palette();
+    if args.json {
+        // Serialize only the code and sample fields
+        let json = serde_json::to_string_pretty(&palette).expect("JSON serialization failed");
+        println!("{}", json);
+    } else {
+        print_pretty(&palette);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_cmd::Command;
+    use predicates::prelude::*;
+
+    #[test]
+    fn json_output_has_256_entries() {
+        let mut cmd = Command::cargo_bin("ansi-color-palette").unwrap();
+        cmd.arg("--json");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains(""code": 0"))
+            .stdout(predicate::str::contains(""code": 255"));
+    }
+}
+

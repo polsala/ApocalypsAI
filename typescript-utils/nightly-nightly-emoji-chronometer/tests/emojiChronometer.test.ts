@@ -1,1 +1,21 @@
-import { generateChrono } from "../src/emojiChronometer";\nimport assert from "assert";\n\nfunction arraysEqual(a: any[], b: any[]): boolean {\n  return a.length === b.length && a.every((v, i) => v === b[i]);\n}\n\n// Test 1: 3 seconds, interval 1 → first three phases\nconst result1 = generateChrono(3, 1);\nassert(arraysEqual(result1, ["🌑", "🌒", "🌓"]), "Test 1 failed");\n\n// Test 2: 10 seconds, interval 2 → five ticks\nconst result2 = generateChrono(10, 2);\nassert(arraysEqual(result2, ["🌑", "🌒", "🌓", "🌔", "🌕"]), "Test 2 failed");\n\n// Test 3: zero seconds should yield empty array\nconst result3 = generateChrono(0, 1);\nassert(arraysEqual(result3, []), "Test 3 failed");\n\nconsole.log("All tests passed");\n
+import { generateChrono } from "../src/emojiChronometer";
+import assert from "assert";
+
+function arraysEqual(a: any[], b: any[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+// Test 1: 3 seconds, interval 1 → first three phases
+const result1 = generateChrono(3, 1);
+assert(arraysEqual(result1, ["🌑", "🌒", "🌓"]), "Test 1 failed");
+
+// Test 2: 10 seconds, interval 2 → five ticks
+const result2 = generateChrono(10, 2);
+assert(arraysEqual(result2, ["🌑", "🌒", "🌓", "🌔", "🌕"]), "Test 2 failed");
+
+// Test 3: zero seconds should yield empty array
+const result3 = generateChrono(0, 1);
+assert(arraysEqual(result3, []), "Test 3 failed");
+
+console.log("All tests passed");
+

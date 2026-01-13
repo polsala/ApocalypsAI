@@ -1,1 +1,66 @@
-package main\n\nimport (\n    "errors"\n    "net"\n    "testing"\n    "time"\n)\n\n// mockConn implements net.Conn but does nothing; it satisfies the interface for testing.\ntype mockConn struct{}\n\nfunc (m *mockConn) Read(b []byte) (n int, err error)   { return 0, nil }\nfunc (m *mockConn) Write(b []byte) (n int, err error)  { return len(b), nil }\nfunc (m *mockConn) Close() error                     { return nil }\nfunc (m *mockConn) LocalAddr() net.Addr              { return nil }\nfunc (m *mockConn) RemoteAddr() net.Addr             { return nil }\nfunc (m *mockConn) SetDeadline(t time.Time) error    { return nil }\nfunc (m *mockConn) SetReadDeadline(t time.Time) error { return nil }\nfunc (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }\n\n// mockDialer returns a mockConn instantly for hosts that contain "ok", otherwise returns an error.\ntype mockDialer struct{}\n\nfunc (d *mockDialer) DialContext(_ context.Context, _, address string) (net.Conn, error) {\n    if address == "ok:80" {\n        return &mockConn{}, nil\n    }\n    return nil, errors.New("dial error")\n}\n\nfunc TestPingHostSuccess(t *testing.T) {\n    d := &mockDialer{}\n    dur, err := PingHost(d, "ok:80", 2*time.Second)\n    if err != nil {\n        t.Fatalf("expected no error, got %v", err)\n    }\n    // Since mockDialer returns instantly, duration should be very small.\n    if dur > 10*time.Millisecond {\n        t.Fatalf("expected near‑zero duration, got %v", dur)\n    }\n}\n\nfunc TestPingHostFailure(t *testing.T) {\n    d := &mockDialer{}\n    _, err := PingHost(d, "bad:80", 2*time.Second)\n    if err == nil {\n        t.Fatalf("expected error for bad host, got nil")\n    }\n}\n\nfunc TestPingHostsConcurrent(t *testing.T) {\n    d := &mockDialer{}\n    hosts := []string{"ok:80", "bad:80", "ok:80"}\n    results := PingHosts(d, hosts, 2*time.Second)\n    if len(results) != 3 {\n        t.Fatalf("expected 3 results, got %d", len(results))\n    }\n    if results["ok:80"] == 0 {\n        t.Fatalf("expected non‑zero latency for ok host")\n    }\n    if results["bad:80"] != 0 {\n        t.Fatalf("expected zero latency for unreachable host")\n    }\n}\n
+package main
+
+import (
+    "errors"
+    "net"
+    "testing"
+    "time"
+)
+
+// mockConn implements net.Conn but does nothing; it satisfies the interface for testing.
+type mockConn struct{}
+
+func (m *mockConn) Read(b []byte) (n int, err error)   { return 0, nil }
+func (m *mockConn) Write(b []byte) (n int, err error)  { return len(b), nil }
+func (m *mockConn) Close() error                     { return nil }
+func (m *mockConn) LocalAddr() net.Addr              { return nil }
+func (m *mockConn) RemoteAddr() net.Addr             { return nil }
+func (m *mockConn) SetDeadline(t time.Time) error    { return nil }
+func (m *mockConn) SetReadDeadline(t time.Time) error { return nil }
+func (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }
+
+// mockDialer returns a mockConn instantly for hosts that contain "ok", otherwise returns an error.
+type mockDialer struct{}
+
+func (d *mockDialer) DialContext(_ context.Context, _, address string) (net.Conn, error) {
+    if address == "ok:80" {
+        return &mockConn{}, nil
+    }
+    return nil, errors.New("dial error")
+}
+
+func TestPingHostSuccess(t *testing.T) {
+    d := &mockDialer{}
+    dur, err := PingHost(d, "ok:80", 2*time.Second)
+    if err != nil {
+        t.Fatalf("expected no error, got %v", err)
+    }
+    // Since mockDialer returns instantly, duration should be very small.
+    if dur > 10*time.Millisecond {
+        t.Fatalf("expected nearâzero duration, got %v", dur)
+    }
+}
+
+func TestPingHostFailure(t *testing.T) {
+    d := &mockDialer{}
+    _, err := PingHost(d, "bad:80", 2*time.Second)
+    if err == nil {
+        t.Fatalf("expected error for bad host, got nil")
+    }
+}
+
+func TestPingHostsConcurrent(t *testing.T) {
+    d := &mockDialer{}
+    hosts := []string{"ok:80", "bad:80", "ok:80"}
+    results := PingHosts(d, hosts, 2*time.Second)
+    if len(results) != 3 {
+        t.Fatalf("expected 3 results, got %d", len(results))
+    }
+    if results["ok:80"] == 0 {
+        t.Fatalf("expected nonâzero latency for ok host")
+    }
+    if results["bad:80"] != 0 {
+        t.Fatalf("expected zero latency for unreachable host")
+    }
+}
+

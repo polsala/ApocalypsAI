@@ -1,1 +1,36 @@
-import unittest\nimport subprocess\nimport sys\nimport pathlib\nimport os\n\nclass TestQuote(unittest.TestCase):\n    def test_quote_output(self):\n        # Use the script directly\n        script = pathlib.Path(__file__).parent.parent / "src" / "quote.py"\n        result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)\n        self.assertEqual(result.returncode, 0)\n        output = result.stdout.strip()\n        # The output should be one of the quotes\n        expected_quotes = [\n            "The only limit to our realization of tomorrow is our doubts of today. - Franklin D. Roosevelt",\n            "Life is what happens when you're busy making other plans. - John Lennon",\n            "In the end, we only regret the chances we didn't take. - Unknown",\n        ]\n        self.assertIn(output, expected_quotes)\n\n    def test_no_quotes(self):\n        # Temporarily rename quotes.txt\n        script_dir = pathlib.Path(__file__).parent.parent / "src"\n        quotes_file = script_dir / "quotes.txt"\n        backup = script_dir / "quotes.txt.bak"\n        quotes_file.rename(backup)\n        try:\n            result = subprocess.run([sys.executable, str(script_dir / "quote.py")], capture_output=True, text=True)\n            self.assertNotEqual(result.returncode, 0)\n            self.assertIn("No quotes found.", result.stderr)\n        finally:\n            backup.rename(quotes_file)\n\nif __name__ == "__main__":\n    unittest.main()
+import unittest
+import subprocess
+import sys
+import pathlib
+import os
+
+class TestQuote(unittest.TestCase):
+    def test_quote_output(self):
+        # Use the script directly
+        script = pathlib.Path(__file__).parent.parent / "src" / "quote.py"
+        result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0)
+        output = result.stdout.strip()
+        # The output should be one of the quotes
+        expected_quotes = [
+            "The only limit to our realization of tomorrow is our doubts of today. - Franklin D. Roosevelt",
+            "Life is what happens when you're busy making other plans. - John Lennon",
+            "In the end, we only regret the chances we didn't take. - Unknown",
+        ]
+        self.assertIn(output, expected_quotes)
+
+    def test_no_quotes(self):
+        # Temporarily rename quotes.txt
+        script_dir = pathlib.Path(__file__).parent.parent / "src"
+        quotes_file = script_dir / "quotes.txt"
+        backup = script_dir / "quotes.txt.bak"
+        quotes_file.rename(backup)
+        try:
+            result = subprocess.run([sys.executable, str(script_dir / "quote.py")], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("No quotes found.", result.stderr)
+        finally:
+            backup.rename(quotes_file)
+
+if __name__ == "__main__":
+    unittest.main()

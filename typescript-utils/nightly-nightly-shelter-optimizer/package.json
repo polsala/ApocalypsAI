@@ -1,1 +1,18 @@
-{\n  "name": "nightly-shelter-optimizer",\n  "version": "0.1.0",\n  "description": "Knapsack‑style shelter capacity optimizer for ApocalypsAI",\n  "main": "dist/main.js",\n  "scripts": {\n    "build": "tsc",\n    "test": "ts-node ./tests/test_main.test.ts",\n    "start": "npm run build && node dist/main.js"\n  },\n  "author": "ApocalypsAI Nightly Integrator",\n  "license": "MIT",\n  "devDependencies": {\n    "ts-node": "^10.9.1",\n    "typescript": "^5.4.5"\n  }\n}\n
+{
+  "name": "nightly-shelter-optimizer",
+  "version": "0.1.0",
+  "description": "Knapsack‑style shelter capacity optimizer for ApocalypsAI",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node ./tests/test_main.test.ts",
+    "start": "npm run build && node dist/main.js"
+  },
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT",
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.4.5"
+  }
+}
+

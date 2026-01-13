@@ -1,1 +1,103 @@
----\n- name: Test Nightly Signal Scavenger Playbook\n  hosts: localhost\n  gather_facts: yes\n\n  vars:\n    test_report_dir: "{{ playbook_dir }}/test_reports"\n    test_report_file: "{{ test_report_dir }}/signal_scavenger_report.txt"\n    test_data_dir: "/tmp/signal_scavenger_test"\n    data_present_path: "{{ test_data_dir }}/data_present.txt"\n    data_missing_path: "{{ test_data_dir }}/data_missing.txt"\n\n  pre_tasks:\n    - name: Clean up previous test environment\n      ansible.builtin.file:\n        path: "{{ item }}"\n        state: absent\n      loop:\n        - "{{ test_report_dir }}"\n        - "{{ test_data_dir }}"\n      # Mock rationale: Ensures a clean slate for deterministic testing.\n\n    - name: Create test directories\n      ansible.builtin.file:\n        path: "{{ item }}"\n        state: directory\n        mode: '0755'\n      loop:\n        - "{{ test_report_dir }}"\n        - "{{ test_data_dir }}"\n      # Mock rationale: Provides necessary directories for the playbook to operate and for data fragments.\n\n    - name: Create dummy data fragment for 'present' test case\n      ansible.builtin.copy:\n        content: "Vital signal data fragment"\n        dest: "{{ data_present_path }}"\n        mode: '0644'\n      # Mock rationale: Simulates an existing data fragment for a successful 'data_fragment_verify' check.\n\n    - name: Ensure data fragment for 'missing' test case does NOT exist\n      ansible.builtin.file:\n        path: "{{ data_missing_path }}"\n        state: absent\n      # Mock rationale: Ensures the file is absent to simulate a missing data fragment for a failed 'data_fragment_verify' check.\n\n  tasks:\n    - name: Run the main scavenger playbook against test inventory\n      ansible.builtin.include_playbook:\n        file: ../scavenger_playbook.yml\n      vars:\n        report_dir: "{{ test_report_dir }}" # Override report_dir for testing\n      # Mock rationale: Executes the target playbook in a controlled test environment.\n\n  post_tasks:\n    - name: Verify report file exists\n      ansible.builtin.stat:\n        path: "{{ test_report_file }}"\n      register: report_stat\n      ansible.builtin.assert:\n        that:\n          - report_stat.stat.exists is true\n          - report_stat.stat.isreg is true\n        fail_msg: "Test report file '{{ test_report_file }}' was not created or is not a regular file."\n      # Mock rationale: Checks if the playbook successfully generated the report file.\n\n    - name: Read report content\n      ansible.builtin.slurp:\n        src: "{{ test_report_file }}"\n      register: report_content_b64\n      # Mock rationale: Reads the generated report to assert its content.\n\n    - name: Decode report content\n      set_fact:\n        report_content: "{{ report_content_b64['content'] | b64decode }}"\n      # Mock rationale: Decodes the base64 content for easier assertion.\n\n    - name: Assert content for 'UP' and 'PRESENT' beacon\n      ansible.builtin.assert:\n        that:\n          - "'Beacon ID: TEST_UP_PRESENT' in report_content"\n          - "'Signal Status: UP' in report_content"\n          - "'Data Fragment: PRESENT' in report_content"\n        fail_msg: "Report content for TEST_UP_PRESENT is incorrect."\n      # Mock rationale: Verifies that the report correctly reflects the status of the beacon with a present data fragment.\n\n    - name: Assert content for 'UP' and 'MISSING' beacon\n      ansible.builtin.assert:\n        that:\n          - "'Beacon ID: TEST_UP_MISSING' in report_content"\n          - "'Signal Status: UP' in report_content"\n          - "'Data Fragment: MISSING' in report_content"\n        fail_msg: "Report content for TEST_UP_MISSING is incorrect."\n      # Mock rationale: Verifies that the report correctly reflects the status of the beacon with a missing data fragment.\n\n    - name: Clean up test environment\n      ansible.builtin.file:\n        path: "{{ item }}"\n        state: absent\n      loop:\n        - "{{ test_report_dir }}"\n        - "{{ test_data_dir }}"\n      # Mock rationale: Removes all temporary files and directories created during testing to ensure idempotence and prevent side effects.\n
+---
+- name: Test Nightly Signal Scavenger Playbook
+  hosts: localhost
+  gather_facts: yes
+
+  vars:
+    test_report_dir: "{{ playbook_dir }}/test_reports"
+    test_report_file: "{{ test_report_dir }}/signal_scavenger_report.txt"
+    test_data_dir: "/tmp/signal_scavenger_test"
+    data_present_path: "{{ test_data_dir }}/data_present.txt"
+    data_missing_path: "{{ test_data_dir }}/data_missing.txt"
+
+  pre_tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_report_dir }}"
+        - "{{ test_data_dir }}"
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+    - name: Create test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_report_dir }}"
+        - "{{ test_data_dir }}"
+      # Mock rationale: Provides necessary directories for the playbook to operate and for data fragments.
+
+    - name: Create dummy data fragment for 'present' test case
+      ansible.builtin.copy:
+        content: "Vital signal data fragment"
+        dest: "{{ data_present_path }}"
+        mode: '0644'
+      # Mock rationale: Simulates an existing data fragment for a successful 'data_fragment_verify' check.
+
+    - name: Ensure data fragment for 'missing' test case does NOT exist
+      ansible.builtin.file:
+        path: "{{ data_missing_path }}"
+        state: absent
+      # Mock rationale: Ensures the file is absent to simulate a missing data fragment for a failed 'data_fragment_verify' check.
+
+  tasks:
+    - name: Run the main scavenger playbook against test inventory
+      ansible.builtin.include_playbook:
+        file: ../scavenger_playbook.yml
+      vars:
+        report_dir: "{{ test_report_dir }}" # Override report_dir for testing
+      # Mock rationale: Executes the target playbook in a controlled test environment.
+
+  post_tasks:
+    - name: Verify report file exists
+      ansible.builtin.stat:
+        path: "{{ test_report_file }}"
+      register: report_stat
+      ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists is true
+          - report_stat.stat.isreg is true
+        fail_msg: "Test report file '{{ test_report_file }}' was not created or is not a regular file."
+      # Mock rationale: Checks if the playbook successfully generated the report file.
+
+    - name: Read report content
+      ansible.builtin.slurp:
+        src: "{{ test_report_file }}"
+      register: report_content_b64
+      # Mock rationale: Reads the generated report to assert its content.
+
+    - name: Decode report content
+      set_fact:
+        report_content: "{{ report_content_b64['content'] | b64decode }}"
+      # Mock rationale: Decodes the base64 content for easier assertion.
+
+    - name: Assert content for 'UP' and 'PRESENT' beacon
+      ansible.builtin.assert:
+        that:
+          - "'Beacon ID: TEST_UP_PRESENT' in report_content"
+          - "'Signal Status: UP' in report_content"
+          - "'Data Fragment: PRESENT' in report_content"
+        fail_msg: "Report content for TEST_UP_PRESENT is incorrect."
+      # Mock rationale: Verifies that the report correctly reflects the status of the beacon with a present data fragment.
+
+    - name: Assert content for 'UP' and 'MISSING' beacon
+      ansible.builtin.assert:
+        that:
+          - "'Beacon ID: TEST_UP_MISSING' in report_content"
+          - "'Signal Status: UP' in report_content"
+          - "'Data Fragment: MISSING' in report_content"
+        fail_msg: "Report content for TEST_UP_MISSING is incorrect."
+      # Mock rationale: Verifies that the report correctly reflects the status of the beacon with a missing data fragment.
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_report_dir }}"
+        - "{{ test_data_dir }}"
+      # Mock rationale: Removes all temporary files and directories created during testing to ensure idempotence and prevent side effects.
+

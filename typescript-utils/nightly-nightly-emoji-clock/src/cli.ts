@@ -1,1 +1,21 @@
-#!/usr/bin/env ts-node\nimport { timeToClockEmoji } from "./emojiClock";\n\nfunction main() {\n  const args = process.argv.slice(2);\n  if (args.length !== 1) {\n    console.error("Usage: emoji-clock <HH:MM>");\n    process.exit(1);\n  }\n  try {\n    const emoji = timeToClockEmoji(args[0]);\n    console.log(emoji);\n  } catch (e:any) {\n    console.error(e.message);\n    process.exit(1);\n  }\n}\n\nif (require.main === module) {\n  main();\n}
+#!/usr/bin/env ts-node
+import { timeToClockEmoji } from "./emojiClock";
+
+function main() {
+  const args = process.argv.slice(2);
+  if (args.length !== 1) {
+    console.error("Usage: emoji-clock <HH:MM>");
+    process.exit(1);
+  }
+  try {
+    const emoji = timeToClockEmoji(args[0]);
+    console.log(emoji);
+  } catch (e:any) {
+    console.error(e.message);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main();
+}

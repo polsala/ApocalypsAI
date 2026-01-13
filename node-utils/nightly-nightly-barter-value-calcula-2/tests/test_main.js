@@ -1,1 +1,31 @@
-// Nightly Barter Value Calculator Tests\n// Mock rationale: using Node's built‑in assert for deterministic offline testing.\n\nconst assert = require('assert');\nconst { calculateValue } = require('../src/main');\n\n// Test known items\nassert.strictEqual(calculateValue('water', 3), 30, 'water x3 should be 30');\nassert.strictEqual(calculateValue('Food', 2), 16, 'Food case‑insensitive');\n\n// Test invalid item\nlet threw = false;\ntry {\n  calculateValue('gold', 1);\n} catch (e) {\n  threw = true;\n  assert.strictEqual(e.message, 'Unknown item: gold');\n}\nassert.ok(threw, 'should throw on unknown item');\n\n// Test invalid quantity\nthrew = false;\ntry {\n  calculateValue('ammo', 0);\n} catch (e) {\n  threw = true;\n  assert.strictEqual(e.message, 'Quantity must be a positive integer');\n}\nassert.ok(threw, 'should throw on non‑positive quantity');\n\nconsole.log('All tests passed.');
+// Nightly Barter Value Calculator Tests
+// Mock rationale: using Node's builtâin assert for deterministic offline testing.
+
+const assert = require('assert');
+const { calculateValue } = require('../src/main');
+
+// Test known items
+assert.strictEqual(calculateValue('water', 3), 30, 'water x3 should be 30');
+assert.strictEqual(calculateValue('Food', 2), 16, 'Food caseâinsensitive');
+
+// Test invalid item
+let threw = false;
+try {
+  calculateValue('gold', 1);
+} catch (e) {
+  threw = true;
+  assert.strictEqual(e.message, 'Unknown item: gold');
+}
+assert.ok(threw, 'should throw on unknown item');
+
+// Test invalid quantity
+threw = false;
+try {
+  calculateValue('ammo', 0);
+} catch (e) {
+  threw = true;
+  assert.strictEqual(e.message, 'Quantity must be a positive integer');
+}
+assert.ok(threw, 'should throw on nonâpositive quantity');
+
+console.log('All tests passed.');

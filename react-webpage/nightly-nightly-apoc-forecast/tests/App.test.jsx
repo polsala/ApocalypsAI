@@ -1,1 +1,13 @@
-import React from 'react';\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport '@testing-library/jest-dom';\nimport App from '../src/App';\n\ntest('generates a forecast on button click', () => {\n  render(<App />);\n  const button = screen.getByText(/generate forecast/i);\n  fireEvent.click(button);\n  const forecast = screen.getByTestId('forecast');\n  expect(forecast).toBeInTheDocument();\n  expect(forecast.textContent).toMatch(/: /);\n});
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from '../src/App';
+
+test('generates a forecast on button click', () => {
+  render(<App />);
+  const button = screen.getByText(/generate forecast/i);
+  fireEvent.click(button);
+  const forecast = screen.getByTestId('forecast');
+  expect(forecast).toBeInTheDocument();
+  expect(forecast.textContent).toMatch(/: /);
+});

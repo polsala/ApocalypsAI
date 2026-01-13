@@ -1,1 +1,20 @@
-// nightly-emoji-mood-analyzer tests\nconst { execSync } = require('child_process');\nconst assert = require('assert');\n\nfunction run(input) {\n  // Execute the CLI with given stdin and capture stdout\n  return execSync('node src/main.js', { input, encoding: 'utf8' }).trim();\n}\n\n// Test strong positive sentiment\nassert.strictEqual(run('I love this awesome project'), '😊');\n\n// Test mild negative sentiment\nassert.strictEqual(run('I am sad and angry'), '🙁');\n\n// Test neutral sentiment\nassert.strictEqual(run('Just an ordinary day'), '😐');\n\nconsole.log('All tests passed');\n
+// nightly-emoji-mood-analyzer tests
+const { execSync } = require('child_process');
+const assert = require('assert');
+
+function run(input) {
+  // Execute the CLI with given stdin and capture stdout
+  return execSync('node src/main.js', { input, encoding: 'utf8' }).trim();
+}
+
+// Test strong positive sentiment
+assert.strictEqual(run('I love this awesome project'), 'ð');
+
+// Test mild negative sentiment
+assert.strictEqual(run('I am sad and angry'), 'ð');
+
+// Test neutral sentiment
+assert.strictEqual(run('Just an ordinary day'), 'ð');
+
+console.log('All tests passed');
+

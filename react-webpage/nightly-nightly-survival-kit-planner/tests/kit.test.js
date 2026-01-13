@@ -1,1 +1,13 @@
-import {getKit} from "../src/kit.js";\n\ndescribe(\"getKit\", () => {\n  test(\"returns correct items for Desert\", () => {\n    const kit = getKit(\"Desert\");\n    expect(kit).toContain(\"Sun hat\");\n    expect(kit.length).toBe(5);\n  });\n\n  test(\"returns empty array for unknown environment\", () => {\n    expect(getKit(\"Space\")).toEqual([]);\n  });\n});
+import {getKit} from "../src/kit.js";
+
+describe("getKit", () => {
+  test("returns correct items for Desert", () => {
+    const kit = getKit("Desert");
+    expect(kit).toContain("Sun hat");
+    expect(kit.length).toBe(5);
+  });
+
+  test("returns empty array for unknown environment", () => {
+    expect(getKit("Space")).toEqual([]);
+  });
+});

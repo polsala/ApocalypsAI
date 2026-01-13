@@ -1,1 +1,15 @@
-import { render, screen, fireEvent } from '@testing-library/react';\nimport '@testing-library/jest-dom';\nimport App from '../src/App';\n\ntest('renders checklist and updates progress', () => {\n  render(<App />);\n  const progressBar = screen.getByRole('progressbar');\n  expect(progressBar).toHaveAttribute('value', '0');\n  const checkboxes = screen.getAllByRole('checkbox');\n  expect(checkboxes.length).toBe(4);\n  fireEvent.click(checkboxes[0]);\n  expect(progressBar).toHaveAttribute('value', '25');\n  fireEvent.click(checkboxes[1]);\n  expect(progressBar).toHaveAttribute('value', '50');\n});
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from '../src/App';
+
+test('renders checklist and updates progress', () => {
+  render(<App />);
+  const progressBar = screen.getByRole('progressbar');
+  expect(progressBar).toHaveAttribute('value', '0');
+  const checkboxes = screen.getAllByRole('checkbox');
+  expect(checkboxes.length).toBe(4);
+  fireEvent.click(checkboxes[0]);
+  expect(progressBar).toHaveAttribute('value', '25');
+  fireEvent.click(checkboxes[1]);
+  expect(progressBar).toHaveAttribute('value', '50');
+});

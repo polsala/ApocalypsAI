@@ -1,1 +1,27 @@
-const assert = require('assert');\nconst {detectMood} = require('../src/index');\n\nfunction testCase(text, expected) {\n  const result = detectMood(text);\n  assert.strictEqual(result, expected, `Expected ${expected} for \"${text}\", got ${result}`);\n}\n\n// Happy mood\ntestCase('I am so happy and excited!', '😄');\n\n// Sad mood\ntestCase('It is a sad day.', '😢');\n\n// Angry mood\ntestCase('I am angry about the delay.', '😠');\n\n// Surprised mood\ntestCase('Wow, that was surprising!', '😲');\n\n// Fear mood\ntestCase('I am scared of the dark.', '😱');\n\n// Neutral fallback (no keywords)\ntestCase('Just an ordinary day.', '😐');\n\nconsole.log('All tests passed.');
+const assert = require('assert');
+const {detectMood} = require('../src/index');
+
+function testCase(text, expected) {
+  const result = detectMood(text);
+  assert.strictEqual(result, expected, `Expected ${expected} for "${text}", got ${result}`);
+}
+
+// Happy mood
+testCase('I am so happy and excited!', 'ð');
+
+// Sad mood
+testCase('It is a sad day.', 'ð¢');
+
+// Angry mood
+testCase('I am angry about the delay.', 'ð ');
+
+// Surprised mood
+testCase('Wow, that was surprising!', 'ð²');
+
+// Fear mood
+testCase('I am scared of the dark.', 'ð±');
+
+// Neutral fallback (no keywords)
+testCase('Just an ordinary day.', 'ð');
+
+console.log('All tests passed.');

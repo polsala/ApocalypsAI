@@ -1,1 +1,25 @@
-Nightly Docker Quote\n====================\n\nThis utility builds a Docker image that prints a random quote from a bundled list each time it runs.\n\nUsage\n-----\n\n```bash\ndocker build -t nightly-quote .\ndocker run --rm nightly-quote\n```\n\nThe container will output a single quote and exit.\n\nThe quotes are stored in `src/quotes.txt`. You can add or edit quotes as you wish.\n\nTesting\n-------\n\nRun the tests with:\n\n```bash\npython -m unittest discover -s tests\n```
+Nightly Docker Quote
+====================
+
+This utility builds a Docker image that prints a random quote from a bundled list each time it runs.
+
+Usage
+-----
+
+```bash
+docker build -t nightly-quote .
+docker run --rm nightly-quote
+```
+
+The container will output a single quote and exit.
+
+The quotes are stored in `src/quotes.txt`. You can add or edit quotes as you wish.
+
+Testing
+-------
+
+Run the tests with:
+
+```bash
+python -m unittest discover -s tests
+```

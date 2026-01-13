@@ -1,1 +1,22 @@
-Apocalypse Chrono Chronicle\n\nA whimsical React dashboard that displays the current date and a playful \"future prediction\" based on the day of the week. Perfect for keeping track of your post‑apocalyptic schedule with a smile.\n\nFeatures\n- Shows current date in human‑friendly format.\n- Generates a light‑hearted prediction for the day.\n- Fully responsive and works offline.\n\nGetting Started\n1. Install dependencies:\n   npm install\n2. Run the development server:\n   npm start\n3. Build for production:\n   npm run build\n\nTesting\nThe utility includes a small helper module `date-utils.js` with unit tests.\n\nLicense\nMIT
+Apocalypse Chrono Chronicle
+
+A whimsical React dashboard that displays the current date and a playful "future prediction" based on the day of the week. Perfect for keeping track of your postâapocalyptic schedule with a smile.
+
+Features
+- Shows current date in humanâfriendly format.
+- Generates a lightâhearted prediction for the day.
+- Fully responsive and works offline.
+
+Getting Started
+1. Install dependencies:
+   npm install
+2. Run the development server:
+   npm start
+3. Build for production:
+   npm run build
+
+Testing
+The utility includes a small helper module `date-utils.js` with unit tests.
+
+License
+MIT

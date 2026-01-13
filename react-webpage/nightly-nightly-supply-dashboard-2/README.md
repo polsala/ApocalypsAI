@@ -1,1 +1,25 @@
-# Nightly Supply Dashboard\n\nAn interactive React dashboard for tracking post‑apocalypse supplies. Add items with name, weight (kg), quantity, and value (credits). The app shows a table of items and aggregates total weight and total value.\n\n## Development\n\n```bash\nnpm install\nnpm start   # runs the development server at http://localhost:3000\nnpm test    # runs the test suite\n```\n\n## Build\n\n```bash\nnpm run build   # creates a production build in the `dist` folder\n```\n\n## Tech Stack\n\n- React 18\n- TypeScript\n- Vite (fast dev server)\n- Jest + @testing-library/react for tests\n
+# Nightly Supply Dashboard
+
+An interactive React dashboard for tracking postâapocalypse supplies. Add items with name, weight (kg), quantity, and value (credits). The app shows a table of items and aggregates total weight and total value.
+
+## Development
+
+```bash
+npm install
+npm start   # runs the development server at http://localhost:3000
+npm test    # runs the test suite
+```
+
+## Build
+
+```bash
+npm run build   # creates a production build in the `dist` folder
+```
+
+## Tech Stack
+
+- React 18
+- TypeScript
+- Vite (fast dev server)
+- Jest + @testing-library/react for tests
+

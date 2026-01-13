@@ -1,1 +1,39 @@
-const assert = require('assert');\nconst os = require('os');\nconst path = require('path');\nconst fs = require('fs');\n\n// Import the functions to test\nconst { logMood, getSummary } = require('../src/index.js');\n\n// Helper to create a unique temp file for each test run\nfunction createTempFile() {\n  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mood-test-'));\n  return path.join(tmpDir, 'mood.json');\n}\n\n(async () => {\n  // Set up isolated environment\n  const tempFile = createTempFile();\n  process.env.MOOD_FILE = tempFile;\n\n  // Ensure clean start\n  let summary = await getSummary();\n  assert.deepStrictEqual(summary, {}, 'Initial summary should be empty');\n\n  // Log a few moods\n  await logMood('😊', 'Happy');\n  await logMood('😔', 'Sad');\n  await logMood('😊', 'Even happier');\n\n  // Verify summary counts\n  summary = await getSummary();\n  assert.strictEqual(summary['😊'], 2, '😊 should appear twice');\n  assert.strictEqual(summary['😔'], 1, '😔 should appear once');\n\n  // Clean up\n  delete process.env.MOOD_FILE;\n  fs.rmSync(path.dirname(tempFile), { recursive: true, force: true });\n\n  console.log('All tests passed.');\n})();
+const assert = require('assert');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+
+// Import the functions to test
+const { logMood, getSummary } = require('../src/index.js');
+
+// Helper to create a unique temp file for each test run
+function createTempFile() {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mood-test-'));
+  return path.join(tmpDir, 'mood.json');
+}
+
+(async () => {
+  // Set up isolated environment
+  const tempFile = createTempFile();
+  process.env.MOOD_FILE = tempFile;
+
+  // Ensure clean start
+  let summary = await getSummary();
+  assert.deepStrictEqual(summary, {}, 'Initial summary should be empty');
+
+  // Log a few moods
+  await logMood('ð', 'Happy');
+  await logMood('ð', 'Sad');
+  await logMood('ð', 'Even happier');
+
+  // Verify summary counts
+  summary = await getSummary();
+  assert.strictEqual(summary['ð'], 2, 'ð should appear twice');
+  assert.strictEqual(summary['ð'], 1, 'ð should appear once');
+
+  // Clean up
+  delete process.env.MOOD_FILE;
+  fs.rmSync(path.dirname(tempFile), { recursive: true, force: true });
+
+  console.log('All tests passed.');
+})();

@@ -1,1 +1,35 @@
-const assert = require('assert');\nconst { getUptimeMessage } = require('../src/main');\n\nfunction runTests() {\n  let passed = 0;\n  let failed = 0;\n\n  function test(name, fn) {\n    try {\n      fn();\n      console.log(`✓ ${name}`);\n      passed++;\n    } catch (err) {\n      console.error(`✗ ${name}`);\n      console.error(err);\n      failed++;\n    }\n  }\n\n  test('formats 90061 seconds correctly', () => {\n    const msg = getUptimeMessage(90061); // 1 day 1 hour 1 minute 1 second\n    assert.strictEqual(msg, '🟢 Uptime: 1 day 1 hour 1 minute 1 second');\n  });\n\n  test('omits zero parts', () => {\n    const msg = getUptimeMessage(60); // 1 minute\n    assert.strictEqual(msg, '🟢 Uptime: 1 minute');\n  });\n\n  console.log(`\n${passed} passed, ${failed} failed`);\n  process.exit(failed ? 1 : 0);\n}\n\nrunTests();
+const assert = require('assert');
+const { getUptimeMessage } = require('../src/main');
+
+function runTests() {
+  let passed = 0;
+  let failed = 0;
+
+  function test(name, fn) {
+    try {
+      fn();
+      console.log(`â ${name}`);
+      passed++;
+    } catch (err) {
+      console.error(`â ${name}`);
+      console.error(err);
+      failed++;
+    }
+  }
+
+  test('formats 90061 seconds correctly', () => {
+    const msg = getUptimeMessage(90061); // 1 day 1 hour 1 minute 1 second
+    assert.strictEqual(msg, 'ð¢ Uptime: 1 day 1 hour 1 minute 1 second');
+  });
+
+  test('omits zero parts', () => {
+    const msg = getUptimeMessage(60); // 1 minute
+    assert.strictEqual(msg, 'ð¢ Uptime: 1 minute');
+  });
+
+  console.log(`
+${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+}
+
+runTests();

@@ -1,1 +1,41 @@
-// Nightly Emoji Mood Analyzer\n// Exported function analyzeMood(text) returns an emoji string.\n\nfunction analyzeMood(text) {\n  if (!text) return "🤔";\n  const lower = text.toLowerCase();\n  const happy = ["love", "happy", "joy", "great", "awesome", "fantastic", "good", "wonderful", "glad", "excited"];\n  const sad = ["sad", "unhappy", "depressed", "down", "bad", "terrible", "sorrow", "cry", "tears"];\n  const angry = ["angry", "mad", "furious", "hate", "annoyed", "irritated", "rage"];\n  const scared = ["scared", "fear", "afraid", "terrified", "panic"];\n  const surprised = ["surprised", "shocked", "wow", "amazed", "astonished"];\n  const neutral = ["okay", "fine", "meh", "average", "so-so"];\n\n  const score = { happy: 0, sad: 0, angry: 0, scared: 0, surprised: 0, neutral: 0 };\n\n  for (const word of happy) if (lower.includes(word)) score.happy++;\n  for (const word of sad) if (lower.includes(word)) score.sad++;\n  for (const word of angry) if (lower.includes(word)) score.angry++;\n  for (const word of scared) if (lower.includes(word)) score.scared++;\n  for (const word of surprised) if (lower.includes(word)) score.surprised++;\n  for (const word of neutral) if (lower.includes(word)) score.neutral++;\n\n  const max = Object.entries(score).reduce((a, b) => b[1] > a[1] ? b : a, ["neutral", 0]);\n  const map = {\n    happy: "😊",\n    sad: "😢",\n    angry: "😠",\n    scared: "😱",\n    surprised: "😲",\n    neutral: "😐"\n  };\n  return map[max[0]] || "🤔";\n}\n\n// CLI mode\nif (require.main === module) {\n  const input = process.argv.slice(2).join(" ");\n  console.log(analyzeMood(input));\n}\n\nmodule.exports = { analyzeMood };
+// Nightly Emoji Mood Analyzer
+// Exported function analyzeMood(text) returns an emoji string.
+
+function analyzeMood(text) {
+  if (!text) return "ð¤";
+  const lower = text.toLowerCase();
+  const happy = ["love", "happy", "joy", "great", "awesome", "fantastic", "good", "wonderful", "glad", "excited"];
+  const sad = ["sad", "unhappy", "depressed", "down", "bad", "terrible", "sorrow", "cry", "tears"];
+  const angry = ["angry", "mad", "furious", "hate", "annoyed", "irritated", "rage"];
+  const scared = ["scared", "fear", "afraid", "terrified", "panic"];
+  const surprised = ["surprised", "shocked", "wow", "amazed", "astonished"];
+  const neutral = ["okay", "fine", "meh", "average", "so-so"];
+
+  const score = { happy: 0, sad: 0, angry: 0, scared: 0, surprised: 0, neutral: 0 };
+
+  for (const word of happy) if (lower.includes(word)) score.happy++;
+  for (const word of sad) if (lower.includes(word)) score.sad++;
+  for (const word of angry) if (lower.includes(word)) score.angry++;
+  for (const word of scared) if (lower.includes(word)) score.scared++;
+  for (const word of surprised) if (lower.includes(word)) score.surprised++;
+  for (const word of neutral) if (lower.includes(word)) score.neutral++;
+
+  const max = Object.entries(score).reduce((a, b) => b[1] > a[1] ? b : a, ["neutral", 0]);
+  const map = {
+    happy: "ð",
+    sad: "ð¢",
+    angry: "ð ",
+    scared: "ð±",
+    surprised: "ð²",
+    neutral: "ð"
+  };
+  return map[max[0]] || "ð¤";
+}
+
+// CLI mode
+if (require.main === module) {
+  const input = process.argv.slice(2).join(" ");
+  console.log(analyzeMood(input));
+}
+
+module.exports = { analyzeMood };

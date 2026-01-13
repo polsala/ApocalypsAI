@@ -1,1 +1,49 @@
-import React, { useState } from 'react';\nimport './App.css';\n\nfunction App() {\n  const [water, setWater] = useState(50);\n  const [food, setFood] = useState(50);\n  const [ammo, setAmmo] = useState(50);\n\n  const rating = Math.round((water + food + ammo) / 3);\n\n  return (\n    <div className=\"container\">\n      <h1>🛡️ Resource Barometer</h1>\n      <div className=\"resource\">\n        <label>Water: {water}%</label>\n        <input\n          type=\"range\"\n          min=\"0\"\n          max=\"100\"\n          value={water}\n          onChange={e => setWater(+e.target.value)}\n        />\n      </div>\n      <div className=\"resource\">\n        <label>Food: {food}%</label>\n        <input\n          type=\"range\"\n          min=\"0\"\n          max=\"100\"\n          value={food}\n          onChange={e => setFood(+e.target.value)}\n        />\n      </div>\n      <div className=\"resource\">\n        <label>Ammo: {ammo}%</label>\n        <input\n          type=\"range\"\n          min=\"0\"\n          max=\"100\"\n          value={ammo}\n          onChange={e => setAmmo(+e.target.value)}\n        />\n      </div>\n      <h2>Survival Rating: {rating}%</h2>\n    </div>\n  );\n}\n\nexport default App;
+import React, { useState } from 'react';
+import './App.css';
+
+function App() {
+  const [water, setWater] = useState(50);
+  const [food, setFood] = useState(50);
+  const [ammo, setAmmo] = useState(50);
+
+  const rating = Math.round((water + food + ammo) / 3);
+
+  return (
+    <div className="container">
+      <h1>ð¡ï¸ Resource Barometer</h1>
+      <div className="resource">
+        <label>Water: {water}%</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={water}
+          onChange={e => setWater(+e.target.value)}
+        />
+      </div>
+      <div className="resource">
+        <label>Food: {food}%</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={food}
+          onChange={e => setFood(+e.target.value)}
+        />
+      </div>
+      <div className="resource">
+        <label>Ammo: {ammo}%</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={ammo}
+          onChange={e => setAmmo(+e.target.value)}
+        />
+      </div>
+      <h2>Survival Rating: {rating}%</h2>
+    </div>
+  );
+}
+
+export default App;

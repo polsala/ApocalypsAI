@@ -1,1 +1,14 @@
-{\n  \"name\": \"nightly-ruin-rucksack-optimizer\",\n  \"version\": \"1.0.0\",\n  \"description\": \"0/1 knapsack optimizer for post‑apocalyptic scavenger inventories\",\n  \"main\": \"dist/main.js\",\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"test\": \"node -e \\\"require('ts-node').register({ transpileOnly: true }); require('./tests/test_main.ts');\\\"\"\n  },\n  \"devDependencies\": {\n    \"ts-node\": \"^10.9.1\",\n    \"typescript\": \"^5.2.2\"\n  }\n}
+{
+  "name": "nightly-ruin-rucksack-optimizer",
+  "version": "1.0.0",
+  "description": "0/1 knapsack optimizer for postâapocalyptic scavenger inventories",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node -e \"require('ts-node').register({ transpileOnly: true }); require('./tests/test_main.ts');\""
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}

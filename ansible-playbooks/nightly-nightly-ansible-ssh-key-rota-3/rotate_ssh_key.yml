@@ -1,1 +1,30 @@
----\n- name: Rotate SSH host key (local user)\n  hosts: "{{ target | default('localhost') }}"\n  connection: local\n  vars:\n    ssh_key_path: "{{ key_path | default('~/.ssh/rotated_ssh_host_rsa_key') }}"\n    backup_dir: "{{ backup_dir | default('~/.ssh/backup_keys') }}"\n  tasks:\n    - name: Ensure backup directory exists\n      file:\n        path: "{{ backup_dir }}"\n        state: directory\n        mode: '0700'\n\n    - name: Backup existing SSH key if present\n      copy:\n        src: "{{ ssh_key_path }}"\n        dest: "{{ backup_dir }}/ssh_host_rsa_key_{{ ansible_date_time.iso8601_basic_short }}"\n        remote_src: true\n      when: lookup('file', ssh_key_path, errors='ignore') != ''\n\n    - name: Generate new RSA SSH host key\n      command: ssh-keygen -t rsa -b 4096 -f "{{ ssh_key_path }}" -N ""\n      args:\n        creates: "{{ ssh_key_path }}"\n\n    - name: Ensure correct permissions on new key\n      file:\n        path: "{{ ssh_key_path }}"\n        mode: '0600'
+---
+- name: Rotate SSH host key (local user)
+  hosts: "{{ target | default('localhost') }}"
+  connection: local
+  vars:
+    ssh_key_path: "{{ key_path | default('~/.ssh/rotated_ssh_host_rsa_key') }}"
+    backup_dir: "{{ backup_dir | default('~/.ssh/backup_keys') }}"
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing SSH key if present
+      copy:
+        src: "{{ ssh_key_path }}"
+        dest: "{{ backup_dir }}/ssh_host_rsa_key_{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: true
+      when: lookup('file', ssh_key_path, errors='ignore') != ''
+
+    - name: Generate new RSA SSH host key
+      command: ssh-keygen -t rsa -b 4096 -f "{{ ssh_key_path }}" -N ""
+      args:
+        creates: "{{ ssh_key_path }}"
+
+    - name: Ensure correct permissions on new key
+      file:
+        path: "{{ ssh_key_path }}"
+        mode: '0600'

@@ -1,1 +1,23 @@
-variable "bucket_name" {\n  description = "Name of the S3 bucket (must be globally unique)"\n  type        = string\n}\n\nvariable "index_document" {\n  description = "Index document for the website"\n  type        = string\n  default     = "index.html"\n}\n\nvariable "error_document" {\n  description = "Error document for the website"\n  type        = string\n  default     = "error.html"\n}\n\nvariable "region" {\n  description = "AWS region to create resources in"\n  type        = string\n  default     = "us-east-1"\n}\n
+variable "bucket_name" {
+  description = "Name of the S3 bucket (must be globally unique)"
+  type        = string
+}
+
+variable "index_document" {
+  description = "Index document for the website"
+  type        = string
+  default     = "index.html"
+}
+
+variable "error_document" {
+  description = "Error document for the website"
+  type        = string
+  default     = "error.html"
+}
+
+variable "region" {
+  description = "AWS region to create resources in"
+  type        = string
+  default     = "us-east-1"
+}
+

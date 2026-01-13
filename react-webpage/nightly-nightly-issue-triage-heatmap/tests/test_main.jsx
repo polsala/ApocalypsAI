@@ -1,1 +1,16 @@
-import React from 'react';\nimport { renderToString } from 'react-dom/server';\nimport App from '../src/main.jsx';\n\n// Mock rationale: data is static, so rendering is deterministic\n\ntest('renders heatmap title', () => {\n  const html = renderToString(<App />);\n  expect(html).toContain('Issue Triage Heatmap');\n});\n\ntest('renders data rows', () => {\n  const html = renderToString(<App />);\n  expect(html).toContain('2023-10-01');\n  expect(html).toContain('5');\n});
+import React from 'react';
+import { renderToString } from 'react-dom/server';
+import App from '../src/main.jsx';
+
+// Mock rationale: data is static, so rendering is deterministic
+
+test('renders heatmap title', () => {
+  const html = renderToString(<App />);
+  expect(html).toContain('Issue Triage Heatmap');
+});
+
+test('renders data rows', () => {
+  const html = renderToString(<App />);
+  expect(html).toContain('2023-10-01');
+  expect(html).toContain('5');
+});

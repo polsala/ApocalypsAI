@@ -1,1 +1,57 @@
-#!/usr/bin/env node\n\ninterface Item {\n  name: string;\n  weight: number;\n  utility: number;\n}\n\nconst ITEMS: Item[] = [\n  { name: "Water Bottle", weight: 3, utility: 8 },\n  { name: "Canned Food", weight: 2, utility: 6 },\n  { name: "First Aid Kit", weight: 5, utility: 9 },\n  { name: "Flashlight", weight: 1, utility: 4 },\n  { name: "Radio", weight: 4, utility: 5 },\n  { name: "Knife", weight: 2, utility: 7 },\n  { name: "Blanket", weight: 6, utility: 5 },\n  { name: "Map", weight: 1, utility: 3 },\n];\n\nexport function packSurvivalKit(maxWeight: number): Item[] {\n  const sorted = [...ITEMS].sort((a, b) => (b.utility / b.weight) - (a.utility / a.weight));\n  const result: Item[] = [];\n  let remaining = maxWeight;\n  for (const item of sorted) {\n    if (item.weight <= remaining) {\n      result.push(item);\n      remaining -= item.weight;\n    }\n  }\n  return result;\n}\n\n// CLI handling\nfunction parseArgs(): { maxWeight: number } {\n  const args = process.argv.slice(2);\n  let maxWeight = 10; // default\n  for (let i = 0; i < args.length; i++) {\n    if (args[i] === "--max-weight" && i + 1 < args.length) {\n      const val = parseInt(args[i + 1], 10);\n      if (!isNaN(val) && val > 0) {\n        maxWeight = val;\n      }\n      i++;\n    }\n  }\n  return { maxWeight };\n}\n\nif (require.main === module) {\n  const { maxWeight } = parseArgs();\n  const kit = packSurvivalKit(maxWeight);\n  console.log(`Survival kit (max weight ${maxWeight}):`);\n  for (const item of kit) {\n    console.log(`- ${item.name} (weight ${item.weight}, utility ${item.utility})`);\n  }\n}\n
+#!/usr/bin/env node
+
+interface Item {
+  name: string;
+  weight: number;
+  utility: number;
+}
+
+const ITEMS: Item[] = [
+  { name: "Water Bottle", weight: 3, utility: 8 },
+  { name: "Canned Food", weight: 2, utility: 6 },
+  { name: "First Aid Kit", weight: 5, utility: 9 },
+  { name: "Flashlight", weight: 1, utility: 4 },
+  { name: "Radio", weight: 4, utility: 5 },
+  { name: "Knife", weight: 2, utility: 7 },
+  { name: "Blanket", weight: 6, utility: 5 },
+  { name: "Map", weight: 1, utility: 3 },
+];
+
+export function packSurvivalKit(maxWeight: number): Item[] {
+  const sorted = [...ITEMS].sort((a, b) => (b.utility / b.weight) - (a.utility / a.weight));
+  const result: Item[] = [];
+  let remaining = maxWeight;
+  for (const item of sorted) {
+    if (item.weight <= remaining) {
+      result.push(item);
+      remaining -= item.weight;
+    }
+  }
+  return result;
+}
+
+// CLI handling
+function parseArgs(): { maxWeight: number } {
+  const args = process.argv.slice(2);
+  let maxWeight = 10; // default
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--max-weight" && i + 1 < args.length) {
+      const val = parseInt(args[i + 1], 10);
+      if (!isNaN(val) && val > 0) {
+        maxWeight = val;
+      }
+      i++;
+    }
+  }
+  return { maxWeight };
+}
+
+if (require.main === module) {
+  const { maxWeight } = parseArgs();
+  const kit = packSurvivalKit(maxWeight);
+  console.log(`Survival kit (max weight ${maxWeight}):`);
+  for (const item of kit) {
+    console.log(`- ${item.name} (weight ${item.weight}, utility ${item.utility})`);
+  }
+}
+

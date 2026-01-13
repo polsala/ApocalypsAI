@@ -1,1 +1,21 @@
-export function getPairings(selected) {\n  const pairMap = {\n    Chocolate: ['Cheese', 'Nuts'],\n    Cheese: ['Chocolate', 'Crackers'],\n    Fruit: ['Nuts', 'Salsa'],\n    Nuts: ['Chocolate', 'Fruit'],\n    Crackers: ['Cheese'],\n    Salsa: ['Fruit'],\n    Popcorn: ['Salsa'],\n  };\n  const suggestions = new Set();\n  selected.forEach((snack) => {\n    const pairs = pairMap[snack] || [];\n    pairs.forEach((p) => {\n      if (!selected.includes(p)) {\n        suggestions.add(`${snack} + ${p}`);\n      }\n    });\n  });\n  return Array.from(suggestions);\n}
+export function getPairings(selected) {
+  const pairMap = {
+    Chocolate: ['Cheese', 'Nuts'],
+    Cheese: ['Chocolate', 'Crackers'],
+    Fruit: ['Nuts', 'Salsa'],
+    Nuts: ['Chocolate', 'Fruit'],
+    Crackers: ['Cheese'],
+    Salsa: ['Fruit'],
+    Popcorn: ['Salsa'],
+  };
+  const suggestions = new Set();
+  selected.forEach((snack) => {
+    const pairs = pairMap[snack] || [];
+    pairs.forEach((p) => {
+      if (!selected.includes(p)) {
+        suggestions.add(`${snack} + ${p}`);
+      }
+    });
+  });
+  return Array.from(suggestions);
+}

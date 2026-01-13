@@ -1,1 +1,21 @@
-#!/usr/bin/env python3\nimport random\nimport sys\nimport pathlib\n\n\ndef load_quotes(path: pathlib.Path) -> list[str]:\n    return [line.strip() for line in path.read_text().splitlines() if line.strip()]\n\n\ndef main() -> None:\n    quotes_file = pathlib.Path(__file__).parent / "quotes.txt"\n    quotes = load_quotes(quotes_file)\n    if not quotes:\n        print("No quotes found.", file=sys.stderr)\n        sys.exit(1)\n    print(random.choice(quotes))\n\n\nif __name__ == "__main__":\n    main()
+#!/usr/bin/env python3
+import random
+import sys
+import pathlib
+
+
+def load_quotes(path: pathlib.Path) -> list[str]:
+    return [line.strip() for line in path.read_text().splitlines() if line.strip()]
+
+
+def main() -> None:
+    quotes_file = pathlib.Path(__file__).parent / "quotes.txt"
+    quotes = load_quotes(quotes_file)
+    if not quotes:
+        print("No quotes found.", file=sys.stderr)
+        sys.exit(1)
+    print(random.choice(quotes))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,1 +1,51 @@
-#!/usr/bin/env node\n/**\n * Nightly Barter Value Calculator\n * Calculates barter points for items based on predefined scores.\n */\n\nconst ITEMS = {\n  water: 10,\n  food: 8,\n  medicine: 15,\n  ammo: 12,\n  fuel: 14,\n  tools: 9,\n  scrap: 5\n};\n\n/**\n * Calculate total barter value.\n * @param {string} item - Item name (case‑insensitive).\n * @param {number} qty - Quantity (positive integer).\n * @returns {number} total value.\n * @throws {Error} if item unknown or qty invalid.\n */\nfunction calculateValue(item, qty) {\n  if (!item || typeof item !== 'string') {\n    throw new Error('Item must be a non‑empty string');\n  }\n  const key = item.toLowerCase();\n  if (!Object.prototype.hasOwnProperty.call(ITEMS, key)) {\n    throw new Error(`Unknown item: ${item}`);\n  }\n  const quantity = Number(qty);\n  if (!Number.isInteger(quantity) || quantity <= 0) {\n    throw new Error('Quantity must be a positive integer');\n  }\n  return ITEMS[key] * quantity;\n}\n\n// CLI handling\nif (require.main === module) {\n  const [,, itemArg, qtyArg] = process.argv;\n  try {\n    const value = calculateValue(itemArg, qtyArg);\n    console.log(`${qtyArg} units of ${itemArg} are worth ${value} barter points.`);\n  } catch (e) {\n    console.error('Error:', e.message);\n    process.exit(1);\n  }\n}\n\nmodule.exports = { calculateValue };
+#!/usr/bin/env node
+/**
+ * Nightly Barter Value Calculator
+ * Calculates barter points for items based on predefined scores.
+ */
+
+const ITEMS = {
+  water: 10,
+  food: 8,
+  medicine: 15,
+  ammo: 12,
+  fuel: 14,
+  tools: 9,
+  scrap: 5
+};
+
+/**
+ * Calculate total barter value.
+ * @param {string} item - Item name (caseâinsensitive).
+ * @param {number} qty - Quantity (positive integer).
+ * @returns {number} total value.
+ * @throws {Error} if item unknown or qty invalid.
+ */
+function calculateValue(item, qty) {
+  if (!item || typeof item !== 'string') {
+    throw new Error('Item must be a nonâempty string');
+  }
+  const key = item.toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(ITEMS, key)) {
+    throw new Error(`Unknown item: ${item}`);
+  }
+  const quantity = Number(qty);
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error('Quantity must be a positive integer');
+  }
+  return ITEMS[key] * quantity;
+}
+
+// CLI handling
+if (require.main === module) {
+  const [,, itemArg, qtyArg] = process.argv;
+  try {
+    const value = calculateValue(itemArg, qtyArg);
+    console.log(`${qtyArg} units of ${itemArg} are worth ${value} barter points.`);
+  } catch (e) {
+    console.error('Error:', e.message);
+    process.exit(1);
+  }
+}
+
+module.exports = { calculateValue };

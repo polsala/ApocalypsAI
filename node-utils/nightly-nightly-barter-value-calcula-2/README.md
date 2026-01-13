@@ -1,1 +1,31 @@
-# Nightly Barter Value Calculator\n\n## Overview\n\nUtility to compute barter points for items in a post‑apocalyptic setting. Each item has a base rarity/utility score; total value = score * quantity.\n\n## Installation\n\n```sh\nnpm install\nnode src/main.js <item> <quantity>\n```\n\n## Usage\n\n```sh\nnode src/main.js water 3\n# => 3 units of water are worth 30 barter points.\n```\n\n## Adding Items\n\nEdit the `ITEMS` map in `src/main.js` to add or adjust item scores.\n\n## Tests\n\n```sh\nnode tests/test_main.js\n```\n\nThe test suite runs offline using Node's built‑in `assert` module.
+# Nightly Barter Value Calculator
+
+## Overview
+
+Utility to compute barter points for items in a postâapocalyptic setting. Each item has a base rarity/utility score; total value = score * quantity.
+
+## Installation
+
+```sh
+npm install
+node src/main.js <item> <quantity>
+```
+
+## Usage
+
+```sh
+node src/main.js water 3
+# => 3 units of water are worth 30 barter points.
+```
+
+## Adding Items
+
+Edit the `ITEMS` map in `src/main.js` to add or adjust item scores.
+
+## Tests
+
+```sh
+node tests/test_main.js
+```
+
+The test suite runs offline using Node's builtâin `assert` module.

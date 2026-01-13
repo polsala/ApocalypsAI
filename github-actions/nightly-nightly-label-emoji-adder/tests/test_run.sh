@@ -1,1 +1,53 @@
-#!/usr/bin/env bash\nset -euo pipefail\n\n# Mock curl to capture calls and provide fake responses\ndeclare -a CURL_CALLS=()\nfunction curl() {\n  local args=("$@")\n  CURL_CALLS+=("${args[*]}")\n  if [[ "${args[*]}" == *"/issues/42"* && "${args[*]}" != *"-X POST"* ]]; then\n    # Mock GET issue response with labels\n    cat <<'EOF'\n{\n  "labels": [\n    {"name": "enhancement"},\n    {"name": "help wanted"}\n  ]\n}\nEOF\n  elif [[ "${args[*]}" == *"/reactions"* && "${args[*]}" == *"-X POST"* ]]; then\n    # Mock POST reaction response\n    echo '{"id":1}'\n  else\n    echo '{}'\n  fi\n}\nexport -f curl\n\n# Set environment variables for the action\nexport GITHUB_TOKEN="dummy-token"\nexport ISSUE_NUMBER=42\nexport REPO="owner/repo"\nexport LABEL_EMOJI_MAP='{"bug":"+1","enhancement":"rocket"}'\n\n# Execute the script (path relative to repo root)\nbash src/run.sh\n\n# Verify that a POST to the reactions endpoint was made with the correct emoji\nfound=0\nfor call in "${CURL_CALLS[@]}"; do\n  if [[ "$call" == *"/reactions"* && "$call" == *'"content":"rocket"'* ]]; then\n    found=1\n    break\n  fi\n done\n\nif [[ $found -eq 1 ]]; then\n  echo "TEST PASSED"\n  exit 0\nelse\n  echo "TEST FAILED: rocket reaction not sent"\n  exit 1\nfi\n
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Mock curl to capture calls and provide fake responses
+declare -a CURL_CALLS=()
+function curl() {
+  local args=("$@")
+  CURL_CALLS+=("${args[*]}")
+  if [[ "${args[*]}" == *"/issues/42"* && "${args[*]}" != *"-X POST"* ]]; then
+    # Mock GET issue response with labels
+    cat <<'EOF'
+{
+  "labels": [
+    {"name": "enhancement"},
+    {"name": "help wanted"}
+  ]
+}
+EOF
+  elif [[ "${args[*]}" == *"/reactions"* && "${args[*]}" == *"-X POST"* ]]; then
+    # Mock POST reaction response
+    echo '{"id":1}'
+  else
+    echo '{}'
+  fi
+}
+export -f curl
+
+# Set environment variables for the action
+export GITHUB_TOKEN="dummy-token"
+export ISSUE_NUMBER=42
+export REPO="owner/repo"
+export LABEL_EMOJI_MAP='{"bug":"+1","enhancement":"rocket"}'
+
+# Execute the script (path relative to repo root)
+bash src/run.sh
+
+# Verify that a POST to the reactions endpoint was made with the correct emoji
+found=0
+for call in "${CURL_CALLS[@]}"; do
+  if [[ "$call" == *"/reactions"* && "$call" == *'"content":"rocket"'* ]]; then
+    found=1
+    break
+  fi
+ done
+
+if [[ $found -eq 1 ]]; then
+  echo "TEST PASSED"
+  exit 0
+else
+  echo "TEST FAILED: rocket reaction not sent"
+  exit 1
+fi
+

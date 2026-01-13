@@ -1,1 +1,27 @@
-import React from 'react';\n\nconst EMOJIS = ['😀','😐','😔','🤩','😎','🤔','🥳','😴','🤒','🤩'];\n\nfunction getMoodEmoji(dateStr, startDateStr) {\n  const date = new Date(dateStr);\n  const start = new Date(startDateStr);\n  const diff = Math.floor((date - start) / (1000 * 60 * 60 * 24));\n  const index = ((diff % EMOJIS.length) + EMOJIS.length) % EMOJIS.length;\n  return EMOJIS[index];\n}\n\nexport default function MoodCalendar({ startDate, days }) {\n  const rows = [];\n  for (let i = 0; i < days; i++) {\n    const currentDate = new Date(startDate);\n    currentDate.setDate(currentDate.getDate() + i);\n    const iso = currentDate.toISOString().split('T')[0];\n    const emoji = getMoodEmoji(iso, startDate);\n    rows.push(\n      <div key={iso} style={{display:'inline-block',margin:'4px',fontSize:'24px'}}>\n        {iso}: {emoji}\n      </div>\n    );\n  }\n  return <div>{rows}</div>;\n}
+import React from 'react';
+
+const EMOJIS = ['ð','ð','ð','ð¤©','ð','ð¤','ð¥³','ð´','ð¤','ð¤©'];
+
+function getMoodEmoji(dateStr, startDateStr) {
+  const date = new Date(dateStr);
+  const start = new Date(startDateStr);
+  const diff = Math.floor((date - start) / (1000 * 60 * 60 * 24));
+  const index = ((diff % EMOJIS.length) + EMOJIS.length) % EMOJIS.length;
+  return EMOJIS[index];
+}
+
+export default function MoodCalendar({ startDate, days }) {
+  const rows = [];
+  for (let i = 0; i < days; i++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(currentDate.getDate() + i);
+    const iso = currentDate.toISOString().split('T')[0];
+    const emoji = getMoodEmoji(iso, startDate);
+    rows.push(
+      <div key={iso} style={{display:'inline-block',margin:'4px',fontSize:'24px'}}>
+        {iso}: {emoji}
+      </div>
+    );
+  }
+  return <div>{rows}</div>;
+}

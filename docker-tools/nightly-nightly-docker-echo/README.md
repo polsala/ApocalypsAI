@@ -1,1 +1,40 @@
-# nightly-docker-echo\n\nA tiny Docker‑friendly HTTP echo service for quick connectivity checks.\n\n## Features\n\n- Exposes `/echo` endpoint that returns the `msg` query parameter or a default greeting.\n- Simple Go implementation, minimal dependencies.\n- Dockerfile included for containerized deployment.\n\n## Usage\n\n```bash\n# Build the image\ndocker build -t nightly-docker-echo .\n\n# Run the container\ndocker run -d -p 8080:8080 nightly-docker-echo\n\n# Test the service\ncurl \"http://localhost:8080/echo?msg=Hello\"\n# => Hello\n\ncurl \"http://localhost:8080/echo\"\n# => Hello, world!\n```\n\n## Testing\n\nRun the Go tests locally:\n\n```bash\ngo test ./...\n```\n\nThe tests are deterministic and do not require Docker.\n\n## License\n\nMIT
+# nightly-docker-echo
+
+A tiny Docker‑friendly HTTP echo service for quick connectivity checks.
+
+## Features
+
+- Exposes `/echo` endpoint that returns the `msg` query parameter or a default greeting.
+- Simple Go implementation, minimal dependencies.
+- Dockerfile included for containerized deployment.
+
+## Usage
+
+```bash
+# Build the image
+docker build -t nightly-docker-echo .
+
+# Run the container
+docker run -d -p 8080:8080 nightly-docker-echo
+
+# Test the service
+curl \"http://localhost:8080/echo?msg=Hello\"
+# => Hello
+
+curl \"http://localhost:8080/echo\"
+# => Hello, world!
+```
+
+## Testing
+
+Run the Go tests locally:
+
+```bash
+go test ./...
+```
+
+The tests are deterministic and do not require Docker.
+
+## License
+
+MIT

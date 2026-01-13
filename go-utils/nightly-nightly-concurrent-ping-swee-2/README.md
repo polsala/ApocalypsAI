@@ -1,1 +1,59 @@
-# Nightly Concurrent Ping Sweeper\n\n## Overview\n\n`nightly-concurrent-ping-sweeper` is a lightweight Go command‑line utility that pings (via a TCP connect) a list of hosts concurrently and prints the latency results as JSON.  It is useful for quick network health checks, monitoring multiple services, or debugging connectivity issues without installing heavy tools.\n\n## Features\n\n- **Concurrent**: probes all hosts in parallel using goroutines.\n- **Configurable timeout**: specify how long to wait for each connection.\n- **JSON output**: easy to pipe into other tools or scripts.\n- **Zero external dependencies** – pure Go standard library.\n\n## Installation\n\n```bash\n# Clone the repository (or copy the utility folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-concurrent-ping-sweeper\n\n# Build the binary\ngo build -o ping-sweeper ./src/main.go\n```\n\nThe binary will be named `ping-sweeper` (or `ping-sweeper.exe` on Windows).\n\n## Usage\n\n```bash\n./ping-sweeper -t 5 host1.example.com:80 host2.example.com:443 10.0.0.1:22\n```\n\n- `-t` – timeout in seconds for each connection (default: 3).\n- Hosts are supplied as `address:port` strings.\n\n### Example Output\n\n```json\n{\n  "host1.example.com:80": 12.3,\n  "host2.example.com:443": 45.7,\n  "10.0.0.1:22": 0\n}\n```\n\nThe values are latency in milliseconds. A value of `0` indicates the host was unreachable or timed out.\n\n## Testing\n\n```bash\ngo test ./tests\n```\n\nThe test suite uses a mock dialer to ensure deterministic, offline tests.\n\n## License\n\nMIT – see the repository LICENSE file.\n
+# Nightly Concurrent Ping Sweeper
+
+## Overview
+
+`nightly-concurrent-ping-sweeper` is a lightweight Go commandâline utility that pings (via a TCP connect) a list of hosts concurrently and prints the latency results as JSON.  It is useful for quick network health checks, monitoring multiple services, or debugging connectivity issues without installing heavy tools.
+
+## Features
+
+- **Concurrent**: probes all hosts in parallel using goroutines.
+- **Configurable timeout**: specify how long to wait for each connection.
+- **JSON output**: easy to pipe into other tools or scripts.
+- **Zero external dependencies** â pure Go standard library.
+
+## Installation
+
+```bash
+# Clone the repository (or copy the utility folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-concurrent-ping-sweeper
+
+# Build the binary
+go build -o ping-sweeper ./src/main.go
+```
+
+The binary will be named `ping-sweeper` (or `ping-sweeper.exe` on Windows).
+
+## Usage
+
+```bash
+./ping-sweeper -t 5 host1.example.com:80 host2.example.com:443 10.0.0.1:22
+```
+
+- `-t` â timeout in seconds for each connection (default: 3).
+- Hosts are supplied as `address:port` strings.
+
+### Example Output
+
+```json
+{
+  "host1.example.com:80": 12.3,
+  "host2.example.com:443": 45.7,
+  "10.0.0.1:22": 0
+}
+```
+
+The values are latency in milliseconds. A value of `0` indicates the host was unreachable or timed out.
+
+## Testing
+
+```bash
+go test ./tests
+```
+
+The test suite uses a mock dialer to ensure deterministic, offline tests.
+
+## License
+
+MIT â see the repository LICENSE file.
+

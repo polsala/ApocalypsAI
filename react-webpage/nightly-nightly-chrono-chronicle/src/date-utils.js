@@ -1,1 +1,20 @@
-const formatDate = (date) => {\n  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };\n  return date.toLocaleDateString(undefined, options);\n};\n\nconst getPrediction = (date) => {\n  const day = date.getDay(); // 0 Sunday\n  const predictions = [\n    'The wind whispers of hidden caches.',\n    'A lone wanderer may cross your path.',\n    'The sky is clear, but danger lurks.',\n    'A storm is brewing; stay safe.',\n    'You will find a forgotten relic.',\n    'The silence is deafening; listen closely.',\n    'A new alliance may form today.'\n  ];\n  return predictions[day];\n};\n\nmodule.exports = { formatDate, getPrediction };
+const formatDate = (date) => {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString(undefined, options);
+};
+
+const getPrediction = (date) => {
+  const day = date.getDay(); // 0 Sunday
+  const predictions = [
+    'The wind whispers of hidden caches.',
+    'A lone wanderer may cross your path.',
+    'The sky is clear, but danger lurks.',
+    'A storm is brewing; stay safe.',
+    'You will find a forgotten relic.',
+    'The silence is deafening; listen closely.',
+    'A new alliance may form today.'
+  ];
+  return predictions[day];
+};
+
+module.exports = { formatDate, getPrediction };

@@ -1,1 +1,76 @@
-/*\n  nightly-emoji-mood-analyzer\n  --------------------------------\n  A tiny utility that maps a short piece of text to an emoji representing its mood.\n  No external dependencies – pure JavaScript.\n*/\n\n// Simple word lists for sentiment scoring\nconst POSITIVE_WORDS = [\n  'love', 'happy', 'joy', 'joyful', 'glad', 'great', 'awesome', 'fantastic', 'good', 'wonderful', 'excellent', 'amazing', 'thrilled', 'excited', 'sunny', 'delight', 'pleased', 'cheer', 'smile'\n];\n\nconst NEGATIVE_WORDS = [\n  'sad', 'bad', 'terrible', 'awful', 'hate', 'angry', 'upset', 'depressed', 'gloomy', 'rainy', 'pain', 'hurt', 'sick', 'unhappy', 'miserable', 'worst', 'disappointed', 'cry', 'crying'\n];\n\n/**\n * Normalizes a string: lower‑cases and removes punctuation.\n * @param {string} text\n * @returns {string[]} Array of words\n */\nfunction tokenize(text) {\n  return text\n    .toLowerCase()\n    .replace(/[^a-z0-9\s]/g, ' ')\n    .split(/\s+/)\n    .filter(Boolean);\n}\n\n/**\n * Calculates a simple sentiment score based on the word lists.\n * @param {string} text\n * @returns {number} Positive, zero, or negative integer\n */\nfunction scoreText(text) {\n  const words = tokenize(text);\n  let score = 0;\n  for (const w of words) {\n    if (POSITIVE_WORDS.includes(w)) score += 1;\n    else if (NEGATIVE_WORDS.includes(w)) score -= 1;\n  }\n  return score;\n}\n\n/**\n * Maps a sentiment score to an emoji.\n * @param {number} score\n * @returns {string} Emoji character\n */\nfunction scoreToEmoji(score) {\n  if (score > 0) return '😄';\n  if (score < 0) return '😢';\n  return '😐';\n}\n\n/**\n * Public API – analyzes mood of a given text and returns an emoji.\n * @param {string} text\n * @returns {string} Emoji representing the mood\n */\nfunction analyzeMood(text) {\n  const score = scoreText(text);\n  return scoreToEmoji(score);\n}\n\n// CLI handling – when executed directly\nif (require.main === module) {\n  const input = process.argv.slice(2).join(' ');\n  if (!input) {\n    console.error('Usage: node src/main.js "Your text here"');\n    process.exit(1);\n  }\n  console.log(analyzeMood(input));\n}\n\nmodule.exports = { analyzeMood, scoreText, scoreToEmoji };
+/*
+  nightly-emoji-mood-analyzer
+  --------------------------------
+  A tiny utility that maps a short piece of text to an emoji representing its mood.
+  No external dependencies â pure JavaScript.
+*/
+
+// Simple word lists for sentiment scoring
+const POSITIVE_WORDS = [
+  'love', 'happy', 'joy', 'joyful', 'glad', 'great', 'awesome', 'fantastic', 'good', 'wonderful', 'excellent', 'amazing', 'thrilled', 'excited', 'sunny', 'delight', 'pleased', 'cheer', 'smile'
+];
+
+const NEGATIVE_WORDS = [
+  'sad', 'bad', 'terrible', 'awful', 'hate', 'angry', 'upset', 'depressed', 'gloomy', 'rainy', 'pain', 'hurt', 'sick', 'unhappy', 'miserable', 'worst', 'disappointed', 'cry', 'crying'
+];
+
+/**
+ * Normalizes a string: lowerâcases and removes punctuation.
+ * @param {string} text
+ * @returns {string[]} Array of words
+ */
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * Calculates a simple sentiment score based on the word lists.
+ * @param {string} text
+ * @returns {number} Positive, zero, or negative integer
+ */
+function scoreText(text) {
+  const words = tokenize(text);
+  let score = 0;
+  for (const w of words) {
+    if (POSITIVE_WORDS.includes(w)) score += 1;
+    else if (NEGATIVE_WORDS.includes(w)) score -= 1;
+  }
+  return score;
+}
+
+/**
+ * Maps a sentiment score to an emoji.
+ * @param {number} score
+ * @returns {string} Emoji character
+ */
+function scoreToEmoji(score) {
+  if (score > 0) return 'ð';
+  if (score < 0) return 'ð¢';
+  return 'ð';
+}
+
+/**
+ * Public API â analyzes mood of a given text and returns an emoji.
+ * @param {string} text
+ * @returns {string} Emoji representing the mood
+ */
+function analyzeMood(text) {
+  const score = scoreText(text);
+  return scoreToEmoji(score);
+}
+
+// CLI handling â when executed directly
+if (require.main === module) {
+  const input = process.argv.slice(2).join(' ');
+  if (!input) {
+    console.error('Usage: node src/main.js "Your text here"');
+    process.exit(1);
+  }
+  console.log(analyzeMood(input));
+}
+
+module.exports = { analyzeMood, scoreText, scoreToEmoji };

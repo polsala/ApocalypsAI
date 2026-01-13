@@ -1,1 +1,25 @@
-import json\nimport builtins\nfrom unittest import mock\n\n# Mock rationale: we replace random.choice to return predictable values so the test is deterministic and offline.\n\ndef test_mix_quote_deterministic():\n    import src.app as app_module\n    with mock.patch('random.choice') as mock_choice:\n        # First call returns inspirational, second call returns apocalyptic\n        mock_choice.side_effect = ["Believe in the impossible", "Mutant crows watch over you"]\n        result = app_module.mix_quote()\n        assert result == "Believe in the impossible – Mutant crows watch over you"\n\ndef test_get_quote_endpoint():\n    from src import app\n    client = app.app.test_client()\n    # Mock random.choice to control output\n    with mock.patch('random.choice') as mock_choice:\n        mock_choice.side_effect = ["Hope is the strongest weapon", "The last bunker is opening"]\n        response = client.get('/quote')\n        assert response.status_code == 200\n        data = json.loads(response.data)\n        assert data["quote"] == "Hope is the strongest weapon – The last bunker is opening"\n
+import json
+import builtins
+from unittest import mock
+
+# Mock rationale: we replace random.choice to return predictable values so the test is deterministic and offline.
+
+def test_mix_quote_deterministic():
+    import src.app as app_module
+    with mock.patch('random.choice') as mock_choice:
+        # First call returns inspirational, second call returns apocalyptic
+        mock_choice.side_effect = ["Believe in the impossible", "Mutant crows watch over you"]
+        result = app_module.mix_quote()
+        assert result == "Believe in the impossible – Mutant crows watch over you"
+
+def test_get_quote_endpoint():
+    from src import app
+    client = app.app.test_client()
+    # Mock random.choice to control output
+    with mock.patch('random.choice') as mock_choice:
+        mock_choice.side_effect = ["Hope is the strongest weapon", "The last bunker is opening"]
+        response = client.get('/quote')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data["quote"] == "Hope is the strongest weapon – The last bunker is opening"
+

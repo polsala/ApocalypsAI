@@ -1,1 +1,63 @@
-# nightly-emoji-calendar\n\nA tiny, whimsical TypeScript CLI that prints a month calendar with each weekday replaced by a cute emoji.\n\n## Features\n\n- Generates a calendar for any month/year (defaults to current month).\n- Weekdays are shown as emojis: \n  - Sunday: ☀️\n  - Monday: 🌙\n  - Tuesday: 🌟\n  - Wednesday: 🌈\n  - Thursday: 🍀\n  - Friday: 🎉\n  - Saturday: 🛸\n- Zero‑dependency, runs with `ts-node` (or after compilation).\n\n## Installation\n\n```bash\n# Clone the repository (or copy the utility folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-emoji-calendar\n\n# Install dev dependencies (jest for tests, ts-node for execution)\nnpm install\n```\n\n## Usage\n\n```bash\n# Run directly with ts-node\nnpx ts-node src/index.ts            # current month\nnpx ts-node src/index.ts 9 2025   # September 2025\n\n# After compilation\nnpm run build\nnode dist/index.js 12 2023\n```\n\n## Example Output\n\n```text\n      September 2025\n☀️ 🌙 🌟 🌈 🍀 🎉 🛸\n 1  2  3  4  5  6  7\n 8  9 10 11 12 13 14\n15 16 17 18 19 20 21\n22 23 24 25 26 27 28\n29 30\n```\n\n## Testing\n\n```bash\nnpm test\n```\n\nThe test suite checks that the generated calendar string contains the correct emojis and day counts for known months.\n\n## License\n\nMIT © ApocalypsAI
+# nightly-emoji-calendar
+
+A tiny, whimsical TypeScript CLI that prints a month calendar with each weekday replaced by a cute emoji.
+
+## Features
+
+- Generates a calendar for any month/year (defaults to current month).
+- Weekdays are shown as emojis: 
+  - Sunday: âï¸
+  - Monday: ð
+  - Tuesday: ð
+  - Wednesday: ð
+  - Thursday: ð
+  - Friday: ð
+  - Saturday: ð¸
+- Zeroâdependency, runs with `ts-node` (or after compilation).
+
+## Installation
+
+```bash
+# Clone the repository (or copy the utility folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-emoji-calendar
+
+# Install dev dependencies (jest for tests, ts-node for execution)
+npm install
+```
+
+## Usage
+
+```bash
+# Run directly with ts-node
+npx ts-node src/index.ts            # current month
+npx ts-node src/index.ts 9 2025   # September 2025
+
+# After compilation
+npm run build
+node dist/index.js 12 2023
+```
+
+## Example Output
+
+```text
+      September 2025
+âï¸ ð ð ð ð ð ð¸
+ 1  2  3  4  5  6  7
+ 8  9 10 11 12 13 14
+15 16 17 18 19 20 21
+22 23 24 25 26 27 28
+29 30
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+The test suite checks that the generated calendar string contains the correct emojis and day counts for known months.
+
+## License
+
+MIT Â© ApocalypsAI

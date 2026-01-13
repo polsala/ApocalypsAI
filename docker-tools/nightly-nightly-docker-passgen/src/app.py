@@ -1,1 +1,30 @@
-import secrets\nimport string\nfrom flask import Flask, request, jsonify\n\napp = Flask(__name__)\n\nALLOWED_CHARS = string.ascii_letters + string.digits + string.punctuation\nDEFAULT_LENGTH = 12\nMAX_LENGTH = 64\n\ndef generate_password(length: int) -> str:\n    """Return a cryptographically secure random password of *length* characters."""\n    return ''.join(secrets.choice(ALLOWED_CHARS) for _ in range(length))\n\n@app.route('/generate')\ndef generate_endpoint():\n    # Parse optional length query param\n    try:\n        length = int(request.args.get('length', DEFAULT_LENGTH))\n    except ValueError:\n        return jsonify(error='Invalid length parameter'), 400\n    if length < 1 or length > MAX_LENGTH:\n        return jsonify(error=f'Length must be between 1 and {MAX_LENGTH}'), 400\n    pwd = generate_password(length)\n    return jsonify(password=pwd)\n\nif __name__ == '__main__':\n    # Bind to all interfaces so Docker can expose the port\n    app.run(host='0.0.0.0', port=8080)\n
+import secrets
+import string
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+ALLOWED_CHARS = string.ascii_letters + string.digits + string.punctuation
+DEFAULT_LENGTH = 12
+MAX_LENGTH = 64
+
+def generate_password(length: int) -> str:
+    """Return a cryptographically secure random password of *length* characters."""
+    return ''.join(secrets.choice(ALLOWED_CHARS) for _ in range(length))
+
+@app.route('/generate')
+def generate_endpoint():
+    # Parse optional length query param
+    try:
+        length = int(request.args.get('length', DEFAULT_LENGTH))
+    except ValueError:
+        return jsonify(error='Invalid length parameter'), 400
+    if length < 1 or length > MAX_LENGTH:
+        return jsonify(error=f'Length must be between 1 and {MAX_LENGTH}'), 400
+    pwd = generate_password(length)
+    return jsonify(password=pwd)
+
+if __name__ == '__main__':
+    # Bind to all interfaces so Docker can expose the port
+    app.run(host='0.0.0.0', port=8080)
+

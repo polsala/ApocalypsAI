@@ -1,1 +1,10 @@
----\n- name: Check beacon signal (ping)\n  ansible.builtin.ping:\n  register: ping_result\n  ignore_errors: true\n\n- name: Set signal status fact\n  set_fact:\n    signal_status: "{{ 'UP' if ping_result is success else 'DOWN' }}"\n
+---
+- name: Check beacon signal (ping)
+  ansible.builtin.ping:
+  register: ping_result
+  ignore_errors: true
+
+- name: Set signal status fact
+  set_fact:
+    signal_status: "{{ 'UP' if ping_result is success else 'DOWN' }}"
+

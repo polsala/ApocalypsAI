@@ -1,1 +1,43 @@
-# Auto PR Labeler\n\nA GitHub Action that automatically adds whimsical labels to pull requests based on keywords in the PR title.\n\n## Usage\n\nCreate a workflow file:\n\n```yaml\nname: Auto PR Labeler\non:\n  pull_request:\n    types: [opened, edited, reopened]\n\njobs:\n  label:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: ./github-actions/auto-pr-labeler\n        with:\n          repo-token: ${{ secrets.GITHUB_TOKEN }}\n```\n\nThe action looks for the following keywords (case‑insensitive) and adds the corresponding labels:\n\n- `fix` → 🧟 zombie‑fix\n- `feature` → ☀️ sunrise‑feature\n- `doc` → 📚 documentation\n- `refactor` → 🔧 refactor\n- `test` → ✅ test‑addition\n\nIf no keywords match, the action does nothing.\n\n## Inputs\n\n| Name | Description | Required |\n|------|-------------|----------|\n| `repo-token` | GitHub token with repo scope (usually `GITHUB_TOKEN`) | Yes |\n\n## License\n\nMIT
+# Auto PR Labeler
+
+A GitHub Action that automatically adds whimsical labels to pull requests based on keywords in the PR title.
+
+## Usage
+
+Create a workflow file:
+
+```yaml
+name: Auto PR Labeler
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./github-actions/auto-pr-labeler
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+The action looks for the following keywords (caseâinsensitive) and adds the corresponding labels:
+
+- `fix` â ð§ zombieâfix
+- `feature` â âï¸ sunriseâfeature
+- `doc` â ð documentation
+- `refactor` â ð§ refactor
+- `test` â â testâaddition
+
+If no keywords match, the action does nothing.
+
+## Inputs
+
+| Name | Description | Required |
+|------|-------------|----------|
+| `repo-token` | GitHub token with repo scope (usually `GITHUB_TOKEN`) | Yes |
+
+## License
+
+MIT

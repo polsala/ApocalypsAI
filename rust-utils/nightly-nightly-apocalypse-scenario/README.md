@@ -1,1 +1,21 @@
-Nightly Apocalypse Scenario Generator\n\nThis Rust CLI generates a whimsical apocalypse scenario with a title, cause, and survival tip.\n\nUsage\n\n```bash\ncargo run -- --seed 42\n```\n\nIf no seed is provided, the generator uses a default deterministic sequence.\n\nOutput\n\n````\nTitle: The Great Plague of 2025\nCause: a massive solar flare\nTip: Stay away from electronic devices during a solar flare.\n````\n\nThe generator is deterministic when a seed is supplied, making it suitable for reproducible scenarios.
+Nightly Apocalypse Scenario Generator
+
+This Rust CLI generates a whimsical apocalypse scenario with a title, cause, and survival tip.
+
+Usage
+
+```bash
+cargo run -- --seed 42
+```
+
+If no seed is provided, the generator uses a default deterministic sequence.
+
+Output
+
+````
+Title: The Great Plague of 2025
+Cause: a massive solar flare
+Tip: Stay away from electronic devices during a solar flare.
+````
+
+The generator is deterministic when a seed is supplied, making it suitable for reproducible scenarios.

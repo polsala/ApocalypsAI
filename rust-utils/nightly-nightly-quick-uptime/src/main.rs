@@ -1,1 +1,91 @@
-use std::env;\nuse std::fs::File;\nuse std::io::{self, Read};\n\nfn read_uptime() -> io::Result<f64> {\n    if let Ok(path) = env::var("UPTIME_FILE") {\n        let mut file = File::open(path)?;\n        let mut contents = String::new();\n        file.read_to_string(&mut contents)?;\n        let parts: Vec<&str> = contents.split_whitespace().collect();\n        if let Some(first) = parts.get(0) {\n            return first.parse::<f64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e));\n        }\n    }\n    let mut file = File::open("/proc/uptime")?;\n    let mut contents = String::new();\n    file.read_to_string(&mut contents)?;\n    let parts: Vec<&str> = contents.split_whitespace().collect();\n    if let Some(first) = parts.get(0) {\n        return first.parse::<f64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e));\n    }\n    Err(io::Error::new(io::ErrorKind::Other, "Could not read uptime"))\n}\n\nfn format_uptime(seconds: f64) -> String {\n    let total_seconds = seconds as u64;\n    let days = total_seconds / 86400;\n    let hours = (total_seconds % 86400) / 3600;\n    let minutes = (total_seconds % 3600) / 60;\n    let secs = total_seconds % 60;\n    format!("{} days, {} hours, {} minutes, and {} seconds", days, hours, minutes, secs)\n}\n\nfn main() {\n    match read_uptime() {\n        Ok(seconds) => {\n            let formatted = format_uptime(seconds);\n            println!("The system has been awake for {}. Keep calm and carry on!", formatted);\n        }\n        Err(e) => {\n            eprintln!("Error reading uptime: {}", e);\n            std::process::exit(1);\n        }\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    use std::env;\n    use std::fs::File;\n    use std::io::Write;\n    use std::process::Command;\n    use std::path::PathBuf;\n\n    fn create_temp_uptime_file(contents: &str) -> PathBuf {\n        let mut dir = env::temp_dir();\n        dir.push("nightly-quick-uptime-test");\n        std::fs::create_dir_all(&dir).unwrap();\n        let file_path = dir.join("uptime.txt");\n        let mut file = File::create(&file_path).unwrap();\n        writeln!(file, "{}", contents).unwrap();\n        file_path\n    }\n\n    #[test]\n    fn test_read_uptime_from_env() {\n        let file_path = create_temp_uptime_file("12345.67 0");\n        env::set_var("UPTIME_FILE", file_path.to_str().unwrap());\n        let seconds = read_uptime().unwrap();\n        assert!((seconds - 12345.67).abs() < 0.01);\n    }\n\n    #[test]\n    fn test_format_uptime() {\n        let formatted = format_uptime(12345.0);\n        assert_eq!(formatted, "0 days, 3 hours, 25 minutes, and 45 seconds");\n    }\n\n    #[test]\n    fn test_main_output() {\n        let file_path = create_temp_uptime_file("86400.0 0"); // 1 day\n        env::set_var("UPTIME_FILE", file_path.to_str().unwrap());\n        let output = Command::new("cargo")\n            .args(&["run", "--quiet"])\n            .output()\n            .expect("failed to execute cargo run");\n        let stdout = String::from_utf8_lossy(&output.stdout);\n        assert!(stdout.contains("1 days, 0 hours, 0 minutes, and 0 seconds"));\n    }\n}
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_uptime() -> io::Result<f64> {
+    if let Ok(path) = env::var("UPTIME_FILE") {
+        let mut file = File::open(path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let parts: Vec<&str> = contents.split_whitespace().collect();
+        if let Some(first) = parts.get(0) {
+            return first.parse::<f64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e));
+        }
+    }
+    let mut file = File::open("/proc/uptime")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    let parts: Vec<&str> = contents.split_whitespace().collect();
+    if let Some(first) = parts.get(0) {
+        return first.parse::<f64>().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e));
+    }
+    Err(io::Error::new(io::ErrorKind::Other, "Could not read uptime"))
+}
+
+fn format_uptime(seconds: f64) -> String {
+    let total_seconds = seconds as u64;
+    let days = total_seconds / 86400;
+    let hours = (total_seconds % 86400) / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let secs = total_seconds % 60;
+    format!("{} days, {} hours, {} minutes, and {} seconds", days, hours, minutes, secs)
+}
+
+fn main() {
+    match read_uptime() {
+        Ok(seconds) => {
+            let formatted = format_uptime(seconds);
+            println!("The system has been awake for {}. Keep calm and carry on!", formatted);
+        }
+        Err(e) => {
+            eprintln!("Error reading uptime: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::fs::File;
+    use std::io::Write;
+    use std::process::Command;
+    use std::path::PathBuf;
+
+    fn create_temp_uptime_file(contents: &str) -> PathBuf {
+        let mut dir = env::temp_dir();
+        dir.push("nightly-quick-uptime-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file_path = dir.join("uptime.txt");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "{}", contents).unwrap();
+        file_path
+    }
+
+    #[test]
+    fn test_read_uptime_from_env() {
+        let file_path = create_temp_uptime_file("12345.67 0");
+        env::set_var("UPTIME_FILE", file_path.to_str().unwrap());
+        let seconds = read_uptime().unwrap();
+        assert!((seconds - 12345.67).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_format_uptime() {
+        let formatted = format_uptime(12345.0);
+        assert_eq!(formatted, "0 days, 3 hours, 25 minutes, and 45 seconds");
+    }
+
+    #[test]
+    fn test_main_output() {
+        let file_path = create_temp_uptime_file("86400.0 0"); // 1 day
+        env::set_var("UPTIME_FILE", file_path.to_str().unwrap());
+        let output = Command::new("cargo")
+            .args(&["run", "--quiet"])
+            .output()
+            .expect("failed to execute cargo run");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("1 days, 0 hours, 0 minutes, and 0 seconds"));
+    }
+}

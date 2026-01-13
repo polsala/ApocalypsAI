@@ -1,1 +1,21 @@
-nightly-docker-quote-of-the-day\n\nA tiny Dockerized utility that prints a random quote from a curated list each time it runs.\n\nUsage\n\ndocker run --rm ghcr.io/your-org/nightly-docker-quote-of-the-day\n\nYou can also specify a deterministic quote by setting the QUOTE_INDEX environment variable:\n\ndocker run --rm -e QUOTE_INDEX=3 ghcr.io/your-org/nightly-docker-quote-of-the-day\n\nThe index is zero‑based and wraps around if out of range.\n\nBuilding locally\n\ndocker build -t nightly-docker-quote-of-the-day .\n\nLicense\n\nMIT
+nightly-docker-quote-of-the-day
+
+A tiny Dockerized utility that prints a random quote from a curated list each time it runs.
+
+Usage
+
+docker run --rm ghcr.io/your-org/nightly-docker-quote-of-the-day
+
+You can also specify a deterministic quote by setting the QUOTE_INDEX environment variable:
+
+docker run --rm -e QUOTE_INDEX=3 ghcr.io/your-org/nightly-docker-quote-of-the-day
+
+The index is zero‑based and wraps around if out of range.
+
+Building locally
+
+docker build -t nightly-docker-quote-of-the-day .
+
+License
+
+MIT

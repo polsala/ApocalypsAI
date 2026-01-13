@@ -1,1 +1,26 @@
-import subprocess\nimport os\n\n\ndef run_script(env=None):\n    env_vars = os.environ.copy()\n    if env:\n        env_vars.update(env)\n    result = subprocess.run(['sh', 'src/main.sh'], env=env_vars, capture_output=True, text=True)\n    return result.stdout.strip()\n\n\ndef test_deterministic_index():\n    output = run_script({'QUOTE_INDEX': '2'})\n    assert output == 'Fortune favors the bold.'\n\n\ndef test_random_output_in_list():\n    output = run_script()\n    assert output in [\n        'To be, or not to be, that is the question.',\n        'All that glitters is not gold.',\n        'Fortune favors the bold.',\n        'Knowledge is power.',\n        'Time is money.'\n    ]
+import subprocess
+import os
+
+
+def run_script(env=None):
+    env_vars = os.environ.copy()
+    if env:
+        env_vars.update(env)
+    result = subprocess.run(['sh', 'src/main.sh'], env=env_vars, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def test_deterministic_index():
+    output = run_script({'QUOTE_INDEX': '2'})
+    assert output == 'Fortune favors the bold.'
+
+
+def test_random_output_in_list():
+    output = run_script()
+    assert output in [
+        'To be, or not to be, that is the question.',
+        'All that glitters is not gold.',
+        'Fortune favors the bold.',
+        'Knowledge is power.',
+        'Time is money.'
+    ]

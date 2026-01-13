@@ -1,1 +1,40 @@
----\n- name: Nightly Signal Scavenger - Monitor Beacons and Data Fragments\n  hosts: beacons\n  gather_facts: no\n  vars:\n    report_dir: "{{ playbook_dir }}/reports"\n    report_file: "{{ report_dir }}/signal_scavenger_report.txt"\n\n  pre_tasks:\n    - name: Ensure report directory exists\n      ansible.builtin.file:\n        path: "{{ report_dir }}"\n        state: directory\n        mode: '0755'\n      delegate_to: localhost\n      run_once: true\n\n  roles:\n    - role: signal_check\n    - role: data_fragment_verify\n\n  post_tasks:\n    - name: Generate consolidated status report\n      ansible.builtin.template:\n        src: status_report.j2\n        dest: "{{ report_file }}"\n        mode: '0644'\n      delegate_to: localhost\n      run_once: true\n      vars:\n        all_beacon_results: "{{ hostvars | dict2items | selectattr('key', 'in', groups['beacons']) | map(attribute='value') | list }}"\n      # Mock rationale: This task runs on the control node, collecting results from all target hosts\n      # (which are simulated locally in tests) and compiling them into a single report.\n\n    - name: Display final report path\n      ansible.builtin.debug:\n        msg: "Signal Scavenger Report generated at: {{ report_file }}"\n      delegate_to: localhost\n      run_once: true\n
+---
+- name: Nightly Signal Scavenger - Monitor Beacons and Data Fragments
+  hosts: beacons
+  gather_facts: no
+  vars:
+    report_dir: "{{ playbook_dir }}/reports"
+    report_file: "{{ report_dir }}/signal_scavenger_report.txt"
+
+  pre_tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+  roles:
+    - role: signal_check
+    - role: data_fragment_verify
+
+  post_tasks:
+    - name: Generate consolidated status report
+      ansible.builtin.template:
+        src: status_report.j2
+        dest: "{{ report_file }}"
+        mode: '0644'
+      delegate_to: localhost
+      run_once: true
+      vars:
+        all_beacon_results: "{{ hostvars | dict2items | selectattr('key', 'in', groups['beacons']) | map(attribute='value') | list }}"
+      # Mock rationale: This task runs on the control node, collecting results from all target hosts
+      # (which are simulated locally in tests) and compiling them into a single report.
+
+    - name: Display final report path
+      ansible.builtin.debug:
+        msg: "Signal Scavenger Report generated at: {{ report_file }}"
+      delegate_to: localhost
+      run_once: true
+

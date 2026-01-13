@@ -1,1 +1,48 @@
-<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Survival Kit Planner</title>\n  <script crossorigin src=\"https://unpkg.com/react@18/umd/react.development.js\"></script>\n  <script crossorigin src=\"https://unpkg.com/react-dom@18/umd/react-dom.development.js\"></script>\n  <style>\n    body {font-family: Arial, sans-serif; margin: 2rem;}\n    .kit {margin-top: 1rem;}\n    .kit li {margin: 0.3rem 0;}\n  </style>\n</head>\n<body>\n  <div id=\"root\"></div>\n  <script type=\"module\">\n    import {environments, getKit} from \"./kit.js\";\n    const e = React.createElement;\n    function App() {\n      const [env, setEnv] = React.useState(\"\");\n      const [kit, setKit] = React.useState([]);\n      const generate = () => {\n        setKit(getKit(env));\n      };\n      return e(\"div\", null,\n        e(\"h1\", null, \"Survival Kit Planner\"),\n        e(\"label\", null, \"Choose environment: \",\n          e(\"select\", {value: env, onChange: e => setEnv(e.target.value)},\n            e(\"option\", {value: \"\"}, \"--Select--\"),\n            Object.keys(environments).map(key =>\n              e(\"option\", {key, value: key}, key)\n            )\n          )\n        ),\n        e(\"button\", {onClick: generate, style: {marginLeft: \"0.5rem\"}}, \"Generate\"),\n        kit.length > 0 && e(\"div\", {className: \"kit\"},\n          e(\"h2\", null, `${env} Survival Kit`),\n          e(\"ul\", null,\n            kit.map((item, i) => e(\"li\", {key: i}, item))\n          )\n        )\n      );\n    }\n    const root = ReactDOM.createRoot(document.getElementById(\"root\"));\n    root.render(e(App));\n  </script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Survival Kit Planner</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <style>
+    body {font-family: Arial, sans-serif; margin: 2rem;}
+    .kit {margin-top: 1rem;}
+    .kit li {margin: 0.3rem 0;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import {environments, getKit} from "./kit.js";
+    const e = React.createElement;
+    function App() {
+      const [env, setEnv] = React.useState("");
+      const [kit, setKit] = React.useState([]);
+      const generate = () => {
+        setKit(getKit(env));
+      };
+      return e("div", null,
+        e("h1", null, "Survival Kit Planner"),
+        e("label", null, "Choose environment: ",
+          e("select", {value: env, onChange: e => setEnv(e.target.value)},
+            e("option", {value: ""}, "--Select--"),
+            Object.keys(environments).map(key =>
+              e("option", {key, value: key}, key)
+            )
+          )
+        ),
+        e("button", {onClick: generate, style: {marginLeft: "0.5rem"}}, "Generate"),
+        kit.length > 0 && e("div", {className: "kit"},
+          e("h2", null, `${env} Survival Kit`),
+          e("ul", null,
+            kit.map((item, i) => e("li", {key: i}, item))
+          )
+        )
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(e(App));
+  </script>
+</body>
+</html>

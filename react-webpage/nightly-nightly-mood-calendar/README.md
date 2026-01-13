@@ -1,1 +1,26 @@
-# Nightly Mood Calendar\n\nA whimsical React component that displays a calendar of emojis representing your mood for each day. The mood for each day is deterministically derived from the date, so the same date always shows the same emoji.\n\n## Usage\n\n```bash\nnpm install\nnpm start\n```\n\nImport `MoodCalendar` and embed it:\n\n```jsx\nimport MoodCalendar from './src/App.jsx';\n\n<MoodCalendar startDate=\"2023-01-01\" days={30} />\n```\n\n## How it works\n\nThe component calculates the number of days since the start date and selects an emoji from a fixed list using modulo arithmetic.\n\n## Testing\n\nRun `npm test` to execute the Jest test suite.
+# Nightly Mood Calendar
+
+A whimsical React component that displays a calendar of emojis representing your mood for each day. The mood for each day is deterministically derived from the date, so the same date always shows the same emoji.
+
+## Usage
+
+```bash
+npm install
+npm start
+```
+
+Import `MoodCalendar` and embed it:
+
+```jsx
+import MoodCalendar from './src/App.jsx';
+
+<MoodCalendar startDate="2023-01-01" days={30} />
+```
+
+## How it works
+
+The component calculates the number of days since the start date and selects an emoji from a fixed list using modulo arithmetic.
+
+## Testing
+
+Run `npm test` to execute the Jest test suite.

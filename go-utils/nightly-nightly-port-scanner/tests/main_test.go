@@ -1,1 +1,75 @@
-package main\n\nimport (\n    "net"\n    "os/exec"\n    "strconv"\n    "strings"\n    "testing"\n)\n\nfunc startTestServer(t *testing.T) (int, func()) {\n    ln, err := net.Listen("tcp", "127.0.0.1:0")\n    if err != nil {\n        t.Fatalf("Failed to start test server: %v", err)\n    }\n    addr := ln.Addr().String()\n    parts := strings.Split(addr, ":")\n    p, _ := strconv.Atoi(parts[len(parts)-1])\n    go func() {\n        for {\n            conn, err := ln.Accept()\n            if err != nil {\n                return\n            }\n            conn.Close()\n        }\n    }()\n    return p, func() { ln.Close() }\n}\n\nfunc TestPortScannerFindsOpenPort(t *testing.T) {\n    port, closeSrv := startTestServer(t)\n    defer closeSrv()\n\n    // Build the binary\n    cmdBuild := exec.Command("go", "build", "-o", "scanner", ".")\n    if out, err := cmdBuild.CombinedOutput(); err != nil {\n        t.Fatalf("Build failed: %v, output: %s", err, string(out))\n    }\n    defer exec.Command("rm", "-f", "scanner").Run()\n\n    // Run scanner targeting the open port\n    cmdRun := exec.Command("./scanner", "-host", "127.0.0.1", "-start", strconv.Itoa(port), "-end", strconv.Itoa(port), "-timeout", "500")\n    out, err := cmdRun.CombinedOutput()\n    if err != nil {\n        t.Fatalf("Scanner execution failed: %v, output: %s", err, string(out))\n    }\n    output := string(out)\n    if !strings.Contains(output, strconv.Itoa(port)) {\n        t.Fatalf("Expected output to contain open port %d, got: %s", port, output)\n    }\n}\n\nfunc TestPortScannerNoOpenPorts(t *testing.T) {\n    // Choose a high port range unlikely to be open\n    startPort := 65000\n    endPort := 65002\n\n    cmdBuild := exec.Command("go", "build", "-o", "scanner", ".")\n    if out, err := cmdBuild.CombinedOutput(); err != nil {\n        t.Fatalf("Build failed: %v, output: %s", err, string(out))\n    }\n    defer exec.Command("rm", "-f", "scanner").Run()\n\n    cmdRun := exec.Command("./scanner", "-host", "127.0.0.1", "-start", strconv.Itoa(startPort), "-end", strconv.Itoa(endPort), "-timeout", "200")\n    out, err := cmdRun.CombinedOutput()\n    if err != nil {\n        t.Fatalf("Scanner execution failed: %v, output: %s", err, string(out))\n    }\n    output := string(out)\n    if !strings.Contains(output, "No open ports found.") {\n        t.Fatalf("Expected no open ports message, got: %s", output)\n    }\n}\n
+package main
+
+import (
+    "net"
+    "os/exec"
+    "strconv"
+    "strings"
+    "testing"
+)
+
+func startTestServer(t *testing.T) (int, func()) {
+    ln, err := net.Listen("tcp", "127.0.0.1:0")
+    if err != nil {
+        t.Fatalf("Failed to start test server: %v", err)
+    }
+    addr := ln.Addr().String()
+    parts := strings.Split(addr, ":")
+    p, _ := strconv.Atoi(parts[len(parts)-1])
+    go func() {
+        for {
+            conn, err := ln.Accept()
+            if err != nil {
+                return
+            }
+            conn.Close()
+        }
+    }()
+    return p, func() { ln.Close() }
+}
+
+func TestPortScannerFindsOpenPort(t *testing.T) {
+    port, closeSrv := startTestServer(t)
+    defer closeSrv()
+
+    // Build the binary
+    cmdBuild := exec.Command("go", "build", "-o", "scanner", ".")
+    if out, err := cmdBuild.CombinedOutput(); err != nil {
+        t.Fatalf("Build failed: %v, output: %s", err, string(out))
+    }
+    defer exec.Command("rm", "-f", "scanner").Run()
+
+    // Run scanner targeting the open port
+    cmdRun := exec.Command("./scanner", "-host", "127.0.0.1", "-start", strconv.Itoa(port), "-end", strconv.Itoa(port), "-timeout", "500")
+    out, err := cmdRun.CombinedOutput()
+    if err != nil {
+        t.Fatalf("Scanner execution failed: %v, output: %s", err, string(out))
+    }
+    output := string(out)
+    if !strings.Contains(output, strconv.Itoa(port)) {
+        t.Fatalf("Expected output to contain open port %d, got: %s", port, output)
+    }
+}
+
+func TestPortScannerNoOpenPorts(t *testing.T) {
+    // Choose a high port range unlikely to be open
+    startPort := 65000
+    endPort := 65002
+
+    cmdBuild := exec.Command("go", "build", "-o", "scanner", ".")
+    if out, err := cmdBuild.CombinedOutput(); err != nil {
+        t.Fatalf("Build failed: %v, output: %s", err, string(out))
+    }
+    defer exec.Command("rm", "-f", "scanner").Run()
+
+    cmdRun := exec.Command("./scanner", "-host", "127.0.0.1", "-start", strconv.Itoa(startPort), "-end", strconv.Itoa(endPort), "-timeout", "200")
+    out, err := cmdRun.CombinedOutput()
+    if err != nil {
+        t.Fatalf("Scanner execution failed: %v, output: %s", err, string(out))
+    }
+    output := string(out)
+    if !strings.Contains(output, "No open ports found.") {
+        t.Fatalf("Expected no open ports message, got: %s", output)
+    }
+}
+

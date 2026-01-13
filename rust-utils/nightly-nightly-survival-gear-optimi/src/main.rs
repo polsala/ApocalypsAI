@@ -1,1 +1,54 @@
-use std::env;\nuse std::io::{self, BufRead};\n\nmod lib;\nuse lib::{Item, solve_knapsack};\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <weight_limit>", args[0]);\n        std::process::exit(1);\n    }\n    let capacity: usize = args[1]\n        .parse()\n        .expect("Weight limit must be a positive integer");\n\n    let stdin = io::stdin();\n    let mut items = Vec::new();\n    for line in stdin.lock().lines() {\n        let line = line.expect("Failed to read line");\n        if line.trim().is_empty() {\n            continue;\n        }\n        // Expected format: name,weight,utility\n        let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();\n        if parts.len() != 3 {\n            eprintln!("Invalid line format: {}", line);\n            std::process::exit(1);\n        }\n        let name = parts[0].to_string();\n        let weight: usize = parts[1]\n            .parse()\n            .expect("Weight must be an integer");\n        let utility: usize = parts[2]\n            .parse()\n            .expect("Utility must be an integer");\n        items.push(Item { name, weight, utility });\n    }\n\n    let selected = solve_knapsack(&items, capacity);\n    let total_utility: usize = selected\n        .iter()\n        .map(|name| {\n            items\n                .iter()\n                .find(|it| &it.name == name)\n                .unwrap()\n                .utility\n        })\n        .sum();\n    println!("Selected items: {}", selected.join(", "));\n    println!("Total utility: {}", total_utility);\n}\n
+use std::env;
+use std::io::{self, BufRead};
+
+mod lib;
+use lib::{Item, solve_knapsack};
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <weight_limit>", args[0]);
+        std::process::exit(1);
+    }
+    let capacity: usize = args[1]
+        .parse()
+        .expect("Weight limit must be a positive integer");
+
+    let stdin = io::stdin();
+    let mut items = Vec::new();
+    for line in stdin.lock().lines() {
+        let line = line.expect("Failed to read line");
+        if line.trim().is_empty() {
+            continue;
+        }
+        // Expected format: name,weight,utility
+        let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
+        if parts.len() != 3 {
+            eprintln!("Invalid line format: {}", line);
+            std::process::exit(1);
+        }
+        let name = parts[0].to_string();
+        let weight: usize = parts[1]
+            .parse()
+            .expect("Weight must be an integer");
+        let utility: usize = parts[2]
+            .parse()
+            .expect("Utility must be an integer");
+        items.push(Item { name, weight, utility });
+    }
+
+    let selected = solve_knapsack(&items, capacity);
+    let total_utility: usize = selected
+        .iter()
+        .map(|name| {
+            items
+                .iter()
+                .find(|it| &it.name == name)
+                .unwrap()
+                .utility
+        })
+        .sum();
+    println!("Selected items: {}", selected.join(", "));
+    println!("Total utility: {}", total_utility);
+}
+

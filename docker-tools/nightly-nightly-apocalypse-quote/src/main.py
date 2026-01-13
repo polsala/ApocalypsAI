@@ -1,1 +1,66 @@
-#!/usr/bin/env python3\nimport argparse\nimport datetime\nimport json\nimport sys\nfrom http.server import BaseHTTPRequestHandler, HTTPServer\n\nQUOTES = [\n    "The sky is falling, but the coffee is still hot.",\n    "When the world ends, remember to turn off the lights.",\n    "Apocalypse is just a word; survival is a choice.",\n    "The last sunset will be the brightest.",\n    "In the end, we all become dust and data.",\n    "The apocalypse is a good excuse for a nap.",\n    "When the clocks stop, the jokes start.",\n    "The end is just the beginning of a new playlist.",\n    "If the world ends, at least the Wi-Fi will still work.",\n    "Apocalypse: the ultimate test of patience.\"\n]\n\ndef get_quote_for_date(date: datetime.date) -> str:\n    index = date.toordinal() % len(QUOTES)\n    return QUOTES[index]\n\ndef serve_http(port=8080):\n    class QuoteHandler(BaseHTTPRequestHandler):\n        def do_GET(self):\n            if self.path == "/quote":\n                date = datetime.date.today()\n                quote = get_quote_for_date(date)\n                payload = {"date": date.isoformat(), "quote": quote}\n                response = json.dumps(payload).encode()\n                self.send_response(200)\n                self.send_header("Content-Type", "application/json")\n                self.send_header("Content-Length", str(len(response)))\n                self.end_headers()\n                self.wfile.write(response)\n            else:\n                self.send_response(404)\n                self.end_headers()\n\n        def log_message(self, format, *args):\n            return  # suppress logging\n\n    server = HTTPServer(('', port), QuoteHandler)\n    print(f"Serving on port {port}")\n    server.serve_forever()\n\ndef main():\n    parser = argparse.ArgumentParser(description="Daily apocalypse quote")\n    parser.add_argument("--quote", action="store_true", help="Print today's quote")\n    parser.add_argument("--serve", action="store_true", help="Run HTTP server")\n    args = parser.parse_args()\n\n    if args.quote:\n        date = datetime.date.today()\n        print(get_quote_for_date(date))\n    elif args.serve:\n        serve_http()\n    else:\n        parser.print_help()\n        sys.exit(1)\n\nif __name__ == "__main__":\n    main()\n
+#!/usr/bin/env python3
+import argparse
+import datetime
+import json
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+QUOTES = [
+    "The sky is falling, but the coffee is still hot.",
+    "When the world ends, remember to turn off the lights.",
+    "Apocalypse is just a word; survival is a choice.",
+    "The last sunset will be the brightest.",
+    "In the end, we all become dust and data.",
+    "The apocalypse is a good excuse for a nap.",
+    "When the clocks stop, the jokes start.",
+    "The end is just the beginning of a new playlist.",
+    "If the world ends, at least the Wi-Fi will still work.",
+    "Apocalypse: the ultimate test of patience.\"
+]
+
+def get_quote_for_date(date: datetime.date) -> str:
+    index = date.toordinal() % len(QUOTES)
+    return QUOTES[index]
+
+def serve_http(port=8080):
+    class QuoteHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/quote":
+                date = datetime.date.today()
+                quote = get_quote_for_date(date)
+                payload = {"date": date.isoformat(), "quote": quote}
+                response = json.dumps(payload).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(response)))
+                self.end_headers()
+                self.wfile.write(response)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, format, *args):
+            return  # suppress logging
+
+    server = HTTPServer(('', port), QuoteHandler)
+    print(f"Serving on port {port}")
+    server.serve_forever()
+
+def main():
+    parser = argparse.ArgumentParser(description="Daily apocalypse quote")
+    parser.add_argument("--quote", action="store_true", help="Print today's quote")
+    parser.add_argument("--serve", action="store_true", help="Run HTTP server")
+    args = parser.parse_args()
+
+    if args.quote:
+        date = datetime.date.today()
+        print(get_quote_for_date(date))
+    elif args.serve:
+        serve_http()
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+

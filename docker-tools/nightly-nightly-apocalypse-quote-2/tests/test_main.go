@@ -1,1 +1,46 @@
-package main\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n)\n\nfunc TestQuoteHandler(t *testing.T) {\n\t// Create a test server using the handler\n\tts := httptest.NewServer(http.HandlerFunc(quoteHandler))\n\tdefer ts.Close()\n\n\tresp, err := http.Get(ts.URL + \"/quote\")\n\tif err != nil {\n\t\tt.Fatalf(\"Failed to GET /quote: %v\", err)\n\t}\n\tdefer resp.Body.Close()\n\n\tif resp.StatusCode != http.StatusOK {\n\t\tt.Fatalf(\"Expected status 200, got %d\", resp.StatusCode)\n\t}\n\n\tvar body map[string]string\n\tif err := json.NewDecoder(resp.Body).Decode(&body); err != nil {\n\t\tt.Fatalf(\"Failed to decode JSON: %v\", err)\n\t}\n\n\tquote, ok := body[\"quote\"]\n\tif !ok {\n\t\tt.Fatalf(\"Response JSON missing 'quote' field\")\n\t}\n\n\t// Verify that the quote is one of the predefined quotes\n\tfound := false\n\tfor _, q := range quotes {\n\t\tif q == quote {\n\t\t\tfound = true\n\t\t\tbreak\n\t\t}\n\t}\n\tif !found {\n\t\tt.Fatalf(\"Quote not in predefined list: %s\", quote)\n\t}\n}
+package main
+
+import (
+	\"encoding/json\"
+	\"net/http\"
+	\"net/http/httptest\"
+	\"testing\"
+)
+
+func TestQuoteHandler(t *testing.T) {
+	// Create a test server using the handler
+	ts := httptest.NewServer(http.HandlerFunc(quoteHandler))
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + \"/quote\")
+	if err != nil {
+		t.Fatalf(\"Failed to GET /quote: %v\", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf(\"Expected status 200, got %d\", resp.StatusCode)
+	}
+
+	var body map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf(\"Failed to decode JSON: %v\", err)
+	}
+
+	quote, ok := body[\"quote\"]
+	if !ok {
+		t.Fatalf(\"Response JSON missing 'quote' field\")
+	}
+
+	// Verify that the quote is one of the predefined quotes
+	found := false
+	for _, q := range quotes {
+		if q == quote {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf(\"Quote not in predefined list: %s\", quote)
+	}
+}

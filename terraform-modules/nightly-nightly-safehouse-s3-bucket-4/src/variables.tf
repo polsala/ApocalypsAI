@@ -1,1 +1,28 @@
-variable "bucket_name" {\n  description = "Name of the S3 bucket."\n  type        = string\n}\n\nvariable "aws_region" {\n  description = "AWS region."\n  type        = string\n  default     = "us-east-1"\n}\n\nvariable "aws_access_key" {\n  description = "AWS access key (dummy for testing)."\n  type        = string\n  default     = "FAKEACCESSKEY"\n}\n\nvariable "aws_secret_key" {\n  description = "AWS secret key (dummy for testing)."\n  type        = string\n  default     = "FAKESECRETKEY"\n}\n\nvariable "environment" {\n  description = "Environment tag."\n  type        = string\n  default     = "dev"\n}
+variable "bucket_name" {
+  description = "Name of the S3 bucket."
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "aws_access_key" {
+  description = "AWS access key (dummy for testing)."
+  type        = string
+  default     = "FAKEACCESSKEY"
+}
+
+variable "aws_secret_key" {
+  description = "AWS secret key (dummy for testing)."
+  type        = string
+  default     = "FAKESECRETKEY"
+}
+
+variable "environment" {
+  description = "Environment tag."
+  type        = string
+  default     = "dev"
+}
