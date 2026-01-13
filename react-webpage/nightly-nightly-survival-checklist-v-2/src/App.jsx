@@ -1,1 +1,43 @@
-import React, { useState } from 'react';\n\nconst tasks = [\n  { id: 1, text: 'Find water' },\n  { id: 2, text: 'Build shelter' },\n  { id: 3, text: 'Collect firewood' },\n  { id: 4, text: 'Secure food' },\n];\n\nfunction App() {\n  const [completed, setCompleted] = useState([]);\n\n  const toggle = id => {\n    setCompleted(prev =>\n      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]\n    );\n  };\n\n  const progress = Math.round((completed.length / tasks.length) * 100);\n\n  return (\n    <div>\n      <h1>Survival Checklist</h1>\n      <progress role=\"progressbar\" value={progress} max=\"100\">{progress}%</progress>\n      <ul>\n        {tasks.map(task => (\n          <li key={task.id}>\n            <label>\n              <input\n                type=\"checkbox\"\n                checked={completed.includes(task.id)}\n                onChange={() => toggle(task.id)}\n              />\n              {task.text}\n            </label>\n          </li>\n        ))}\n      </ul>\n    </div>\n  );\n}\n\nexport default App;
+import React, { useState } from 'react';
+
+const tasks = [
+  { id: 1, text: 'Find water' },
+  { id: 2, text: 'Build shelter' },
+  { id: 3, text: 'Collect firewood' },
+  { id: 4, text: 'Secure food' },
+];
+
+function App() {
+  const [completed, setCompleted] = useState([]);
+
+  const toggle = id => {
+    setCompleted(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const progress = Math.round((completed.length / tasks.length) * 100);
+
+  return (
+    <div>
+      <h1>Survival Checklist</h1>
+      <progress role="progressbar" value={progress} max="100">{progress}%</progress>
+      <ul>
+        {tasks.map(task => (
+          <li key={task.id}>
+            <label>
+              <input
+                type="checkbox"
+                checked={completed.includes(task.id)}
+                onChange={() => toggle(task.id)}
+              />
+              {task.text}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default App;

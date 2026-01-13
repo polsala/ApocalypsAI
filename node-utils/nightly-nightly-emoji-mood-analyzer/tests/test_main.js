@@ -1,1 +1,39 @@
-// Tests for Nightly Emoji Mood Analyzer\nconst assert = require('assert');\nconst { analyzeMood } = require('../src/main');\n\n// Mock rationale: deterministic keyword matching ensures consistent output.\n\nfunction testCase(input, expected) {\n  const result = analyzeMood(input);\n  assert.strictEqual(result, expected, `Input: "${input}"`);\n}\n\n// Happy cases\ntestCase('I am so happy and excited!', '😊');\ntestCase('What a wonderful day', '😊');\n\n// Sad cases\ntestCase('I feel sad and down', '😢');\ntestCase('It was a terrible mistake', '😢');\n\n// Angry cases\ntestCase('I am angry about this', '😠');\ntestCase('He is mad and furious', '😠');\n\n// Scared cases\ntestCase('I am scared of the dark', '😱');\ntestCase('That was terrifying', '😱');\n\n// Surprised cases\ntestCase('Wow, that was amazing!', '😲');\ntestCase('I am shocked', '😲');\n\n// Neutral cases\ntestCase('It is okay, nothing special', '😐');\ntestCase('Meh, just average', '😐');\n\n// Empty input\ntestCase('', '🤔');\n\nconsole.log('All tests passed.');
+// Tests for Nightly Emoji Mood Analyzer
+const assert = require('assert');
+const { analyzeMood } = require('../src/main');
+
+// Mock rationale: deterministic keyword matching ensures consistent output.
+
+function testCase(input, expected) {
+  const result = analyzeMood(input);
+  assert.strictEqual(result, expected, `Input: "${input}"`);
+}
+
+// Happy cases
+testCase('I am so happy and excited!', 'ð');
+testCase('What a wonderful day', 'ð');
+
+// Sad cases
+testCase('I feel sad and down', 'ð¢');
+testCase('It was a terrible mistake', 'ð¢');
+
+// Angry cases
+testCase('I am angry about this', 'ð ');
+testCase('He is mad and furious', 'ð ');
+
+// Scared cases
+testCase('I am scared of the dark', 'ð±');
+testCase('That was terrifying', 'ð±');
+
+// Surprised cases
+testCase('Wow, that was amazing!', 'ð²');
+testCase('I am shocked', 'ð²');
+
+// Neutral cases
+testCase('It is okay, nothing special', 'ð');
+testCase('Meh, just average', 'ð');
+
+// Empty input
+testCase('', 'ð¤');
+
+console.log('All tests passed.');

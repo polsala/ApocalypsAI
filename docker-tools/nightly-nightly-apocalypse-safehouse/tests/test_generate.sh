@@ -1,1 +1,30 @@
-#!/usr/bin/env bash\n\n# nightly‑apocalypse‑safehouse‑generator test suite\n# This test runs the generator with a known seed and checks that the\n# number of "Room" entries matches the requested count.\n\nset -e\n\n# Ensure script is executable\nchmod +x src/generate.sh\n\n# Run generator with deterministic seed\noutput=$(src/generate.sh --rooms 3 --seed 42)\n\n# Count occurrences of "Room"\nroom_count=$(echo "$output" | grep -c "Room")\n\nif [[ $room_count -ne 3 ]]; then\n  echo "FAIL: Expected 3 rooms, got $room_count"\n  echo "$output"\n  exit 1\nfi\n\n# Simple sanity check: ensure top border starts with '+'\nif [[ $(echo "$output" | head -n1) != "+"* ]]; then\n  echo "FAIL: Output does not start with top border"\n  exit 1\nfi\n\necho "PASS"
+#!/usr/bin/env bash
+
+# nightly‑apocalypse‑safehouse‑generator test suite
+# This test runs the generator with a known seed and checks that the
+# number of "Room" entries matches the requested count.
+
+set -e
+
+# Ensure script is executable
+chmod +x src/generate.sh
+
+# Run generator with deterministic seed
+output=$(src/generate.sh --rooms 3 --seed 42)
+
+# Count occurrences of "Room"
+room_count=$(echo "$output" | grep -c "Room")
+
+if [[ $room_count -ne 3 ]]; then
+  echo "FAIL: Expected 3 rooms, got $room_count"
+  echo "$output"
+  exit 1
+fi
+
+# Simple sanity check: ensure top border starts with '+'
+if [[ $(echo "$output" | head -n1) != "+"* ]]; then
+  echo "FAIL: Output does not start with top border"
+  exit 1
+fi
+
+echo "PASS"

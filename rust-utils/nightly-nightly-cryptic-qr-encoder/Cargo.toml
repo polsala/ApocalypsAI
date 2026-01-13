@@ -1,1 +1,10 @@
-[package]\nname = "nightly-cryptic-qr-encoder"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\nclap = { version = "4.4", features = ["derive"] }\nqrcode = "0.13"\nunicode-width = "0.1"\n
+[package]
+name = "nightly-cryptic-qr-encoder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+qrcode = "0.13"
+unicode-width = "0.1"
+

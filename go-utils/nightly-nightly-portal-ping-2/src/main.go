@@ -1,1 +1,76 @@
-package main\n\nimport (\n    \"fmt\"\n    \"net\"\n    \"os\"\n    \"strings\"\n    \"sync\"\n    \"time\"\n)\n\ntype result struct {\n    host    string\n    latency time.Duration\n    err     error\n}\n\n// pingHost attempts a TCP connection to the given address (host[:port])\n// using the provided timeout and returns the latency.\nfunc pingHost(address string, timeout time.Duration) (time.Duration, error) {\n    start := time.Now()\n    conn, err := net.DialTimeout(\"tcp\", address, timeout)\n    if err != nil {\n        return 0, err\n    }\n    conn.Close()\n    return time.Since(start), nil\n}\n\n// PingHosts concurrently pings a slice of hosts and returns a map of host to latency.\n// If a host cannot be reached, the latency will be zero and the error recorded.\nfunc PingHosts(hosts []string, timeout time.Duration) map[string]result {\n    results := make(map[string]result)\n    var wg sync.WaitGroup\n    mu := sync.Mutex{}\n    for _, h := range hosts {\n        wg.Add(1)\n        go func(host string) {\n            defer wg.Done()\n            // If no port is specified, default to 80.\n            address := host\n            if !strings.Contains(host, \":\") {\n                address = fmt.Sprintf(\"%s:80\", host)\n            }\n            lat, err := pingHost(address, timeout)\n            mu.Lock()\n            results[host] = result{host: host, latency: lat, err: err}\n            mu.Unlock()\n        }(h)\n    }\n    wg.Wait()\n    return results\n}\n\nfunc main() {\n    if len(os.Args) < 2 {\n        fmt.Println(\"Usage: portal-ping host1 [host2 ...]\")\n        os.Exit(1)\n    }\n    hosts := os.Args[1:]\n    timeout := 5 * time.Second\n    res := PingHosts(hosts, timeout)\n    fmt.Printf(\"┌─────────────────────┬───────────────┐\\n\")\n    fmt.Printf(\"│ Host                │ Latency (ms)  │\\n\")\n    fmt.Printf(\"├─────────────────────┼───────────────┤\\n\")\n    for _, h := range hosts {\n        r := res[h]\n        if r.err != nil {\n            fmt.Printf(\"│ %-20s │ error         │\\n\", h)\n        } else {\n            fmt.Printf(\"│ %-20s │ %-13d │\\n\", h, r.latency.Milliseconds())\n        }\n    }\n    fmt.Printf(\"└─────────────────────┴───────────────┘\\n\")\n}\n
+package main
+
+import (
+    "fmt"
+    "net"
+    "os"
+    "strings"
+    "sync"
+    "time"
+)
+
+type result struct {
+    host    string
+    latency time.Duration
+    err     error
+}
+
+// pingHost attempts a TCP connection to the given address (host[:port])
+// using the provided timeout and returns the latency.
+func pingHost(address string, timeout time.Duration) (time.Duration, error) {
+    start := time.Now()
+    conn, err := net.DialTimeout("tcp", address, timeout)
+    if err != nil {
+        return 0, err
+    }
+    conn.Close()
+    return time.Since(start), nil
+}
+
+// PingHosts concurrently pings a slice of hosts and returns a map of host to latency.
+// If a host cannot be reached, the latency will be zero and the error recorded.
+func PingHosts(hosts []string, timeout time.Duration) map[string]result {
+    results := make(map[string]result)
+    var wg sync.WaitGroup
+    mu := sync.Mutex{}
+    for _, h := range hosts {
+        wg.Add(1)
+        go func(host string) {
+            defer wg.Done()
+            // If no port is specified, default to 80.
+            address := host
+            if !strings.Contains(host, ":") {
+                address = fmt.Sprintf("%s:80", host)
+            }
+            lat, err := pingHost(address, timeout)
+            mu.Lock()
+            results[host] = result{host: host, latency: lat, err: err}
+            mu.Unlock()
+        }(h)
+    }
+    wg.Wait()
+    return results
+}
+
+func main() {
+    if len(os.Args) < 2 {
+        fmt.Println("Usage: portal-ping host1 [host2 ...]")
+        os.Exit(1)
+    }
+    hosts := os.Args[1:]
+    timeout := 5 * time.Second
+    res := PingHosts(hosts, timeout)
+    fmt.Printf("âââââââââââââââââââââââ¬ââââââââââââââââ\n")
+    fmt.Printf("â Host                â Latency (ms)  â\n")
+    fmt.Printf("âââââââââââââââââââââââ¼ââââââââââââââââ¤\n")
+    for _, h := range hosts {
+        r := res[h]
+        if r.err != nil {
+            fmt.Printf("â %-20s â error         â\n", h)
+        } else {
+            fmt.Printf("â %-20s â %-13d â\n", h, r.latency.Milliseconds())
+        }
+    }
+    fmt.Printf("âââââââââââââââââââââââ´ââââââââââââââââ\n")
+}
+

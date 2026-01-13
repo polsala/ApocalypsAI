@@ -1,1 +1,32 @@
-use nightly_water_purifier_cli::recommended_steps;\n\n#[test]\nfn test_rain_low() {\n    let steps = recommended_steps("rain", 30);\n    assert_eq!(steps, vec![\n        "Collect in clean container",\n        "Boil for 1 minute"\n    ]);\n}\n\n#[test]\nfn test_river_medium() {\n    let steps = recommended_steps("river", 120);\n    assert_eq!(steps, vec![\n        "Pre‑filter through coarse material",\n        "Boil for 5 minutes",\n        "Add chlorine tablets (1 per liter)"\n    ]);\n}\n\n#[test]\nfn test_unknown_high() {\n    let steps = recommended_steps("swamp", 300);\n    assert_eq!(steps, vec![\n        "Assume unknown source; treat cautiously",\n        "Boil for 10 minutes",\n        "Add chlorine tablets (2 per liter)",\n        "Use activated carbon filter"\n    ]);\n}\n
+use nightly_water_purifier_cli::recommended_steps;
+
+#[test]
+fn test_rain_low() {
+    let steps = recommended_steps("rain", 30);
+    assert_eq!(steps, vec![
+        "Collect in clean container",
+        "Boil for 1 minute"
+    ]);
+}
+
+#[test]
+fn test_river_medium() {
+    let steps = recommended_steps("river", 120);
+    assert_eq!(steps, vec![
+        "Preâfilter through coarse material",
+        "Boil for 5 minutes",
+        "Add chlorine tablets (1 per liter)"
+    ]);
+}
+
+#[test]
+fn test_unknown_high() {
+    let steps = recommended_steps("swamp", 300);
+    assert_eq!(steps, vec![
+        "Assume unknown source; treat cautiously",
+        "Boil for 10 minutes",
+        "Add chlorine tablets (2 per liter)",
+        "Use activated carbon filter"
+    ]);
+}
+

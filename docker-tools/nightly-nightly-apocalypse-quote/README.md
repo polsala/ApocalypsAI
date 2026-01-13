@@ -1,1 +1,27 @@
-Nightly Apocalypse Quote\n========================\n\nThis utility provides a daily apocalypse-themed quote. It can be used as a CLI or as a Dockerized HTTP service.\n\nUsage\n-----\n\n### CLI\n\n```bash\npython src/main.py --quote\n```\n\n### Docker\n\n```bash\ndocker build -t nightly-apocalypse-quote .\ndocker run --rm -p 8080:8080 nightly-apocalypse-quote\n```\n\nThe service will expose `http://localhost:8080/quote` returning a JSON payload:\n\n```json\n{ \"date\": \"2025-12-09\", \"quote\": \"...\" }\n```\n
+Nightly Apocalypse Quote
+========================
+
+This utility provides a daily apocalypse-themed quote. It can be used as a CLI or as a Dockerized HTTP service.
+
+Usage
+-----
+
+### CLI
+
+```bash
+python src/main.py --quote
+```
+
+### Docker
+
+```bash
+docker build -t nightly-apocalypse-quote .
+docker run --rm -p 8080:8080 nightly-apocalypse-quote
+```
+
+The service will expose `http://localhost:8080/quote` returning a JSON payload:
+
+```json
+{ \"date\": \"2025-12-09\", \"quote\": \"...\" }
+```
+

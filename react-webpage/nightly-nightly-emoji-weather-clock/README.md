@@ -1,1 +1,47 @@
-# nightly-emoji-weather-clock\n\nA tiny React app that displays a live digital clock with a weather‑themed emoji that changes based on the hour of the day.\n\n## Features\n\n- Updates every second using `setInterval`.\n- Shows a sun 🌞 during daytime (6 am – 5 pm), a moon 🌙 at night (6 pm – 5 am).\n- Shows a cloud ☁️ for the “overcast” hour (12 pm – 1 pm) as a playful surprise.\n- Fully client‑side – no external APIs required.\n- Includes a Jest + React Testing Library test suite that runs offline.\n\n## Getting Started\n\n```bash\n# Clone the repository (or copy the generated folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-emoji-weather-clock\n\n# Install dependencies\nnpm install\n\n# Run the development server\nnpm start\n```\n\nOpen `http://localhost:3000` in your browser to see the clock in action.\n\n## Running Tests\n\n```bash\nnpm test\n```\n\nThe test suite checks that the correct emoji is rendered for mocked times.\n\n## Project Structure\n\n- `src/` – React source files.\n- `public/` – Static HTML template.\n- `tests/` – Jest test files.\n- `package.json` – Project metadata and scripts.\n\n## License\n\nMIT – see the LICENSE file in the root of the main repository.\n
+# nightly-emoji-weather-clock
+
+A tiny React app that displays a live digital clock with a weatherâthemed emoji that changes based on the hour of the day.
+
+## Features
+
+- Updates every second using `setInterval`.
+- Shows a sun ð during daytime (6â¯am â 5â¯pm), a moon ð at night (6â¯pm â 5â¯am).
+- Shows a cloud âï¸ for the âovercastâ hour (12â¯pm â 1â¯pm) as a playful surprise.
+- Fully clientâside â no external APIs required.
+- Includes a Jest + React Testing Library test suite that runs offline.
+
+## Getting Started
+
+```bash
+# Clone the repository (or copy the generated folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-emoji-weather-clock
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm start
+```
+
+Open `http://localhost:3000` in your browser to see the clock in action.
+
+## Running Tests
+
+```bash
+npm test
+```
+
+The test suite checks that the correct emoji is rendered for mocked times.
+
+## Project Structure
+
+- `src/` â React source files.
+- `public/` â Static HTML template.
+- `tests/` â Jest test files.
+- `package.json` â Project metadata and scripts.
+
+## License
+
+MIT â see the LICENSE file in the root of the main repository.
+

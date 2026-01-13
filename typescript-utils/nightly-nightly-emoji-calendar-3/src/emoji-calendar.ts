@@ -1,1 +1,62 @@
-/**\n * Emoji Calendar Generator\n * Generates a month calendar where each day is prefixed with an emoji representing the weekday.\n */\nexport const WEEKDAY_EMOJIS = ['☀️','🌜','🌛','🌞','🌟','🌈','🌙'] as const;\n\n/**\n * Generate a printable calendar for a given month and year.\n * @param month 1‑12\n * @param year full year (e.g., 2023)\n * @returns array of strings, each representing a week line\n */\nexport function generateCalendar(month: number, year: number): string[] {\n  // Validate month\n  if (month < 1 || month > 12) {\n    throw new Error('Month must be between 1 and 12');\n  }\n  const weeks: string[][] = [];\n  const first = new Date(year, month - 1, 1);\n  const daysInMonth = new Date(year, month, 0).getDate();\n  let day = 1;\n  // First week – may have leading blanks\n  const firstWeek: string[] = [];\n  for (let wd = 0; wd < 7; wd++) {\n    if (wd < first.getDay()) {\n      firstWeek.push('   ');\n    } else {\n      const emoji = WEEKDAY_EMOJIS[wd];\n      firstWeek.push(`${emoji}${day.toString().padStart(2, '0')}`);\n      day++;\n    }\n  }\n  weeks.push(firstWeek);\n  // Subsequent weeks\n  while (day <= daysInMonth) {\n    const week: string[] = [];\n    for (let wd = 0; wd < 7 && day <= daysInMonth; wd++) {\n      const emoji = WEEKDAY_EMOJIS[wd];\n      week.push(`${emoji}${day.toString().padStart(2, '0')}`);\n      day++;\n    }\n    // Pad the rest of the week with blanks if month ended early\n    while (week.length < 7) {\n      week.push('   ');\n    }\n    weeks.push(week);\n  }\n  // Convert each week array to a single string line\n  return weeks.map(w => w.join(' '));\n}\n\n// CLI entry point – executed when the file is run directly with Node\nif (require.main === module) {\n  const args = process.argv.slice(2).map(Number);\n  const now = new Date();\n  const month = args[0] && args[0] >= 1 && args[0] <= 12 ? args[0] : now.getMonth() + 1;\n  const year = args[1] && args[1] >= 1970 ? args[1] : now.getFullYear();\n  const lines = generateCalendar(month, year);\n  console.log(`Emoji Calendar for ${month}/${year}`);\n  lines.forEach(l => console.log(l));\n}\n
+/**
+ * Emoji Calendar Generator
+ * Generates a month calendar where each day is prefixed with an emoji representing the weekday.
+ */
+export const WEEKDAY_EMOJIS = ['âï¸','ð','ð','ð','ð','ð','ð'] as const;
+
+/**
+ * Generate a printable calendar for a given month and year.
+ * @param month 1â12
+ * @param year full year (e.g., 2023)
+ * @returns array of strings, each representing a week line
+ */
+export function generateCalendar(month: number, year: number): string[] {
+  // Validate month
+  if (month < 1 || month > 12) {
+    throw new Error('Month must be between 1 and 12');
+  }
+  const weeks: string[][] = [];
+  const first = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let day = 1;
+  // First week â may have leading blanks
+  const firstWeek: string[] = [];
+  for (let wd = 0; wd < 7; wd++) {
+    if (wd < first.getDay()) {
+      firstWeek.push('   ');
+    } else {
+      const emoji = WEEKDAY_EMOJIS[wd];
+      firstWeek.push(`${emoji}${day.toString().padStart(2, '0')}`);
+      day++;
+    }
+  }
+  weeks.push(firstWeek);
+  // Subsequent weeks
+  while (day <= daysInMonth) {
+    const week: string[] = [];
+    for (let wd = 0; wd < 7 && day <= daysInMonth; wd++) {
+      const emoji = WEEKDAY_EMOJIS[wd];
+      week.push(`${emoji}${day.toString().padStart(2, '0')}`);
+      day++;
+    }
+    // Pad the rest of the week with blanks if month ended early
+    while (week.length < 7) {
+      week.push('   ');
+    }
+    weeks.push(week);
+  }
+  // Convert each week array to a single string line
+  return weeks.map(w => w.join(' '));
+}
+
+// CLI entry point â executed when the file is run directly with Node
+if (require.main === module) {
+  const args = process.argv.slice(2).map(Number);
+  const now = new Date();
+  const month = args[0] && args[0] >= 1 && args[0] <= 12 ? args[0] : now.getMonth() + 1;
+  const year = args[1] && args[1] >= 1970 ? args[1] : now.getFullYear();
+  const lines = generateCalendar(month, year);
+  console.log(`Emoji Calendar for ${month}/${year}`);
+  lines.forEach(l => console.log(l));
+}
+

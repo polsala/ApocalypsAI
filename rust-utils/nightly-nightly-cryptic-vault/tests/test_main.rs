@@ -1,1 +1,35 @@
-use assert_cmd::Command;\nuse predicates::prelude::*;\nuse std::fs;\nuse std::path::Path;\n\n#[test]\nfn encrypt_decrypt_roundtrip() {\n    // Ensure a clean environment\n    let out_file = "test_vault.bin";\n    if Path::new(out_file).exists() {\n        fs::remove_file(out_file).unwrap();\n    }\n\n    // Encrypt the secret\n    Command::cargo_bin("nightly-cryptic-vault")\n        .unwrap()\n        .args(&["encrypt", "--passphrase", "s3cr3t", "--output", out_file])\n        .write_stdin("my secret")\n        .assert()\n        .success()\n        .stderr(predicate::str::contains("Encrypted data written to"));\n\n    // Decrypt and capture output\n    let assert = Command::cargo_bin("nightly-cryptic-vault")\n        .unwrap()\n        .args(&["decrypt", "--passphrase", "s3cr3t", "--input", out_file])\n        .assert()\n        .success()\n        .stdout(predicate::eq("my secret"));\n\n    // Clean up\n    fs::remove_file(out_file).unwrap();\n    assert;\n}\n
+use assert_cmd::Command;
+use predicates::prelude::*;
+use std::fs;
+use std::path::Path;
+
+#[test]
+fn encrypt_decrypt_roundtrip() {
+    // Ensure a clean environment
+    let out_file = "test_vault.bin";
+    if Path::new(out_file).exists() {
+        fs::remove_file(out_file).unwrap();
+    }
+
+    // Encrypt the secret
+    Command::cargo_bin("nightly-cryptic-vault")
+        .unwrap()
+        .args(&["encrypt", "--passphrase", "s3cr3t", "--output", out_file])
+        .write_stdin("my secret")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("Encrypted data written to"));
+
+    // Decrypt and capture output
+    let assert = Command::cargo_bin("nightly-cryptic-vault")
+        .unwrap()
+        .args(&["decrypt", "--passphrase", "s3cr3t", "--input", out_file])
+        .assert()
+        .success()
+        .stdout(predicate::eq("my secret"));
+
+    // Clean up
+    fs::remove_file(out_file).unwrap();
+    assert;
+}
+

@@ -1,1 +1,16 @@
-#!/usr/bin/env node\n\nimport { visualizeHash } from './hashVisualizer';\n\nfunction main(): void {\n  const args = process.argv.slice(2);\n  if (args.length === 0) {\n    console.error('Usage: nightly-cryptic-hash-visualizer <string>');\n    process.exit(1);\n  }\n  const input = args.join(' ');\n  console.log(visualizeHash(input));\n}\n\nmain();\n
+#!/usr/bin/env node
+
+import { visualizeHash } from './hashVisualizer';
+
+function main(): void {
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    console.error('Usage: nightly-cryptic-hash-visualizer <string>');
+    process.exit(1);
+  }
+  const input = args.join(' ');
+  console.log(visualizeHash(input));
+}
+
+main();
+

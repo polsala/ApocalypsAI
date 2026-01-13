@@ -1,1 +1,30 @@
-import React from 'react';\n\ntype Supply = {\n  name: string;\n  quantity: number;\n};\n\ntype Props = {\n  supplies: Supply[];\n  onUpdate: (index: number, delta: number) => void;\n};\n\nconst SupplyList: React.FC<Props> = ({ supplies, onUpdate }) => {\n  if (supplies.length === 0) {\n    return <p>No supplies yet.</p>;\n  }\n  return (\n    <ul>\n      {supplies.map((s, i) => (\n        <li key={i}>\n          {s.name}: {s.quantity}{' '}\n          <button onClick={() => onUpdate(i, -1)}>-</button>\n          <button onClick={() => onUpdate(i, 1)}>+</button>\n        </li>\n      ))}\n    </ul>\n  );\n};\n\nexport default SupplyList;
+import React from 'react';
+
+type Supply = {
+  name: string;
+  quantity: number;
+};
+
+type Props = {
+  supplies: Supply[];
+  onUpdate: (index: number, delta: number) => void;
+};
+
+const SupplyList: React.FC<Props> = ({ supplies, onUpdate }) => {
+  if (supplies.length === 0) {
+    return <p>No supplies yet.</p>;
+  }
+  return (
+    <ul>
+      {supplies.map((s, i) => (
+        <li key={i}>
+          {s.name}: {s.quantity}{' '}
+          <button onClick={() => onUpdate(i, -1)}>-</button>
+          <button onClick={() => onUpdate(i, 1)}>+</button>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default SupplyList;

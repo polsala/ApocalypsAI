@@ -1,1 +1,42 @@
-# nightly-snack-pairing\n\nA whimsical React web page that helps you discover delicious snack pairings.\nSelect your favorite snacks and the app will suggest complementary companions.\n\n## Features\n\n- Interactive snack selection\n- Real‑time pairing suggestions\n- Simple, deterministic pairing logic\n- Fully tested JavaScript utilities\n\n## Installation\n\n```bash\nnpm install\n```\n\n## Development\n\n```bash\nnpm run dev\n```\nOpen http://localhost:5173 to view the app.\n\n## Testing\n\n```bash\nnpm test\n```\nAll tests are deterministic and run offline.\n\n## Build\n\n```bash\nnpm run build\n```\nThe production build is in `dist/`.\n\n## License\n\nMIT
+# nightly-snack-pairing
+
+A whimsical React web page that helps you discover delicious snack pairings.
+Select your favorite snacks and the app will suggest complementary companions.
+
+## Features
+
+- Interactive snack selection
+- Realâtime pairing suggestions
+- Simple, deterministic pairing logic
+- Fully tested JavaScript utilities
+
+## Installation
+
+```bash
+npm install
+```
+
+## Development
+
+```bash
+npm run dev
+```
+Open http://localhost:5173 to view the app.
+
+## Testing
+
+```bash
+npm test
+```
+All tests are deterministic and run offline.
+
+## Build
+
+```bash
+npm run build
+```
+The production build is in `dist/`.
+
+## License
+
+MIT

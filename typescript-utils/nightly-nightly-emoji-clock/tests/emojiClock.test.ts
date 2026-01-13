@@ -1,1 +1,32 @@
-import { strict as assert } from "assert";\nimport { timeToClockEmoji } from "../src/emojiClock";\n\nfunction test(time: string, expected: string) {\n  const result = timeToClockEmoji(time);\n  assert.equal(result, expected, `time ${time} => ${expected}`);\n}\n\n// Full hour cases\ntest("00:00", "🕛");\ntest("03:00", "🕒");\ntest("12:00", "🕛");\ntest("15:00", "🕒");\n\n// Half hour cases\ntest("02:30", "🕝");\ntest("14:30", "🕝");\n\n// Edge rounding\ntest("02:44", "🕝");\ntest("02:45", "🕒");\n\n// Invalid format should throw\nlet threw = false;\ntry {\n  timeToClockEmoji("invalid");\n} catch {\n  threw = true;\n}\nassert.ok(threw, "should throw on invalid format");\n\nconsole.log("All tests passed");
+import { strict as assert } from "assert";
+import { timeToClockEmoji } from "../src/emojiClock";
+
+function test(time: string, expected: string) {
+  const result = timeToClockEmoji(time);
+  assert.equal(result, expected, `time ${time} => ${expected}`);
+}
+
+// Full hour cases
+test("00:00", "🕛");
+test("03:00", "🕒");
+test("12:00", "🕛");
+test("15:00", "🕒");
+
+// Half hour cases
+test("02:30", "🕝");
+test("14:30", "🕝");
+
+// Edge rounding
+test("02:44", "🕝");
+test("02:45", "🕒");
+
+// Invalid format should throw
+let threw = false;
+try {
+  timeToClockEmoji("invalid");
+} catch {
+  threw = true;
+}
+assert.ok(threw, "should throw on invalid format");
+
+console.log("All tests passed");

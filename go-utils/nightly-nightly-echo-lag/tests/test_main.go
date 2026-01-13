@@ -1,1 +1,92 @@
-package main\n\nimport (\n    "net/http"\n    "sync"\n    "testing"\n)\n\ntype mockRoundTripper struct {\n    responses map[string]*http.Response\n}\n\nfunc (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {\n    if resp, ok := m.responses[req.URL.String()]; ok {\n        return resp, nil\n    }\n    return &http.Response{\n        StatusCode: 404,\n        Body:       http.NoBody,\n        Header:     make(http.Header),\n    }, nil\n}\n\nfunc TestWhimsicalMessage(t *testing.T) {\n    tests := []struct {\n        status int\n        want   string\n    }{\n        {200, "All good!"},\n        {404, "Lost in the void!"},\n        {500, "Server is crying!"},\n        {302, "Mysterious response."},\n    }\n    for _, tt := range tests {\n        got := whimsicalMessage(tt.status)\n        if got != tt.want {\n            t.Errorf("whimsicalMessage(%d) = %q; want %q", tt.status, got, tt.want)\n        }\n    }\n}\n\nfunc TestFetchURLSuccess(t *testing.T) {\n    mock := &mockRoundTripper{\n        responses: map[string]*http.Response{\n            "https://example.com": {\n                StatusCode: 200,\n                Body:       http.NoBody,\n                Header:     make(http.Header),\n            },\n        },\n    }\n    client := &http.Client{Transport: mock}\n    ch := make(chan Result, 1)\n    var wg sync.WaitGroup\n    wg.Add(1)\n    go fetchURL(client, "https://example.com", &wg, ch)\n    wg.Wait()\n    close(ch)\n    res := <-ch\n    if res.StatusCode != 200 {\n        t.Fatalf("expected status 200, got %d", res.StatusCode)\n    }\n    if res.Message != "All good!" {\n        t.Fatalf("unexpected message: %s", res.Message)\n    }\n}\n\nfunc TestFetchURLNotFound(t *testing.T) {\n    mock := &mockRoundTripper{\n        responses: map[string]*http.Response{\n            "https://missing.com": {\n                StatusCode: 404,\n                Body:       http.NoBody,\n                Header:     make(http.Header),\n            },\n        },\n    }\n    client := &http.Client{Transport: mock}\n    ch := make(chan Result, 1)\n    var wg sync.WaitGroup\n    wg.Add(1)\n    go fetchURL(client, "https://missing.com", &wg, ch)\n    wg.Wait()\n    close(ch)\n    res := <-ch\n    if res.StatusCode != 404 {\n        t.Fatalf("expected status 404, got %d", res.StatusCode)\n    }\n    if res.Message != "Lost in the void!" {\n        t.Fatalf("unexpected message: %s", res.Message)\n    }\n}
+package main
+
+import (
+    "net/http"
+    "sync"
+    "testing"
+)
+
+type mockRoundTripper struct {
+    responses map[string]*http.Response
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+    if resp, ok := m.responses[req.URL.String()]; ok {
+        return resp, nil
+    }
+    return &http.Response{
+        StatusCode: 404,
+        Body:       http.NoBody,
+        Header:     make(http.Header),
+    }, nil
+}
+
+func TestWhimsicalMessage(t *testing.T) {
+    tests := []struct {
+        status int
+        want   string
+    }{
+        {200, "All good!"},
+        {404, "Lost in the void!"},
+        {500, "Server is crying!"},
+        {302, "Mysterious response."},
+    }
+    for _, tt := range tests {
+        got := whimsicalMessage(tt.status)
+        if got != tt.want {
+            t.Errorf("whimsicalMessage(%d) = %q; want %q", tt.status, got, tt.want)
+        }
+    }
+}
+
+func TestFetchURLSuccess(t *testing.T) {
+    mock := &mockRoundTripper{
+        responses: map[string]*http.Response{
+            "https://example.com": {
+                StatusCode: 200,
+                Body:       http.NoBody,
+                Header:     make(http.Header),
+            },
+        },
+    }
+    client := &http.Client{Transport: mock}
+    ch := make(chan Result, 1)
+    var wg sync.WaitGroup
+    wg.Add(1)
+    go fetchURL(client, "https://example.com", &wg, ch)
+    wg.Wait()
+    close(ch)
+    res := <-ch
+    if res.StatusCode != 200 {
+        t.Fatalf("expected status 200, got %d", res.StatusCode)
+    }
+    if res.Message != "All good!" {
+        t.Fatalf("unexpected message: %s", res.Message)
+    }
+}
+
+func TestFetchURLNotFound(t *testing.T) {
+    mock := &mockRoundTripper{
+        responses: map[string]*http.Response{
+            "https://missing.com": {
+                StatusCode: 404,
+                Body:       http.NoBody,
+                Header:     make(http.Header),
+            },
+        },
+    }
+    client := &http.Client{Transport: mock}
+    ch := make(chan Result, 1)
+    var wg sync.WaitGroup
+    wg.Add(1)
+    go fetchURL(client, "https://missing.com", &wg, ch)
+    wg.Wait()
+    close(ch)
+    res := <-ch
+    if res.StatusCode != 404 {
+        t.Fatalf("expected status 404, got %d", res.StatusCode)
+    }
+    if res.Message != "Lost in the void!" {
+        t.Fatalf("unexpected message: %s", res.Message)
+    }
+}

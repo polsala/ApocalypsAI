@@ -1,1 +1,35 @@
-import sys, json, pathlib\n\ndef compute_rations(data):\n    days = data.get("days")\n    if not isinstance(days, int) or days <= 0:\n        raise ValueError("days must be a positive integer")\n    items = data.get("items", [])\n    result = {"days": days, "daily_rations": []}\n    for item in items:\n        name = item.get("name")\n        qty = item.get("quantity")\n        if not isinstance(qty, (int, float)):\n            raise ValueError(f"quantity for {name} must be number")\n        per_day = qty / days\n        result["daily_rations"].append({"name": name, "per_day": per_day})\n    return result\n\ndef main():\n    if len(sys.argv) != 2:\n        print("Usage: app.py <input_json_path>")\n        sys.exit(1)\n    input_path = pathlib.Path(sys.argv[1])\n    if not input_path.is_file():\n        print(f"File not found: {input_path}")\n        sys.exit(1)\n    data = json.loads(input_path.read_text())\n    try:\n        out = compute_rations(data)\n        print(json.dumps(out, indent=2))\n    except Exception as e:\n        print(f"Error: {e}")\n        sys.exit(1)\n\nif __name__ == "__main__":\n    main()
+import sys, json, pathlib
+
+def compute_rations(data):
+    days = data.get("days")
+    if not isinstance(days, int) or days <= 0:
+        raise ValueError("days must be a positive integer")
+    items = data.get("items", [])
+    result = {"days": days, "daily_rations": []}
+    for item in items:
+        name = item.get("name")
+        qty = item.get("quantity")
+        if not isinstance(qty, (int, float)):
+            raise ValueError(f"quantity for {name} must be number")
+        per_day = qty / days
+        result["daily_rations"].append({"name": name, "per_day": per_day})
+    return result
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: app.py <input_json_path>")
+        sys.exit(1)
+    input_path = pathlib.Path(sys.argv[1])
+    if not input_path.is_file():
+        print(f"File not found: {input_path}")
+        sys.exit(1)
+    data = json.loads(input_path.read_text())
+    try:
+        out = compute_rations(data)
+        print(json.dumps(out, indent=2))
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

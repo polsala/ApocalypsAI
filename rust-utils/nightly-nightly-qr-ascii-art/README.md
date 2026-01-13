@@ -1,1 +1,23 @@
-# nightly-qr-ascii-art\n\nGenerates an ASCII QR code for a given string, perfect for post‑apocalyptic note‑passing.\n\n## Usage\n\n```sh\ncargo run -- <text>\n```\n\nExample:\n\n```sh\ncargo run -- "Hello"\n```\n\nOutputs an ASCII representation of the QR code.\n\n## Build & Test\n\n```sh\ncargo test\n```
+# nightly-qr-ascii-art
+
+Generates an ASCII QR code for a given string, perfect for postâapocalyptic noteâpassing.
+
+## Usage
+
+```sh
+cargo run -- <text>
+```
+
+Example:
+
+```sh
+cargo run -- "Hello"
+```
+
+Outputs an ASCII representation of the QR code.
+
+## Build & Test
+
+```sh
+cargo test
+```

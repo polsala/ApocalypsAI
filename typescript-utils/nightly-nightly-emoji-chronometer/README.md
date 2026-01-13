@@ -1,1 +1,26 @@
-# nightly-emoji-chronometer\n\nA whimsical TypeScript CLI that visualizes the passage of time using moon phase emojis. Useful for adding fun progress indicators to scripts.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n```sh\nnpx nightly-emoji-chronometer 10 --interval 2\n```\n\nThe above command will output a moon emoji every 2 seconds for a total of 10 seconds.\n\n## API\n\n```ts\nexport function generateChrono(seconds: number, interval?: number): string[]\n```\n\nReturns an array of moon‑phase emojis representing each tick.\n
+# nightly-emoji-chronometer
+
+A whimsical TypeScript CLI that visualizes the passage of time using moon phase emojis. Useful for adding fun progress indicators to scripts.
+
+## Installation
+
+```sh
+npm install -g .
+```
+
+## Usage
+
+```sh
+npx nightly-emoji-chronometer 10 --interval 2
+```
+
+The above command will output a moon emoji every 2 seconds for a total of 10 seconds.
+
+## API
+
+```ts
+export function generateChrono(seconds: number, interval?: number): string[]
+```
+
+Returns an array of moon‑phase emojis representing each tick.
+

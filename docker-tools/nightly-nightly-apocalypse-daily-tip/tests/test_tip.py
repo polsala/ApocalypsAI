@@ -1,1 +1,13 @@
-import unittest\nfrom unittest.mock import patch\nfrom src import tip\n\nclass TestTip(unittest.TestCase):\n    @patch('random.choice', return_value=\"Always keep a spare bottle of water in your boot.\")\n    def test_get_tip(self, mock_choice):\n        self.assertEqual(tip.get_tip(), \"Always keep a spare bottle of water in your boot.\")\n        mock_choice.assert_called_once_with(tip.TIPS)\n\nif __name__ == \"__main__\":\n    unittest.main()\n
+import unittest
+from unittest.mock import patch
+from src import tip
+
+class TestTip(unittest.TestCase):
+    @patch('random.choice', return_value=\"Always keep a spare bottle of water in your boot.\")
+    def test_get_tip(self, mock_choice):
+        self.assertEqual(tip.get_tip(), \"Always keep a spare bottle of water in your boot.\")
+        mock_choice.assert_called_once_with(tip.TIPS)
+
+if __name__ == \"__main__\":
+    unittest.main()
+

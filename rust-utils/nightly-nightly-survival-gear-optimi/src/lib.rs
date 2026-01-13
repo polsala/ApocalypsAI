@@ -1,1 +1,39 @@
-/// Represents a piece of gear.\n#[derive(Debug, Clone, PartialEq, Eq)]\npub struct Item {\n    pub name: String,\n    pub weight: usize,\n    pub utility: usize,\n}\n\n/// Solve the 0/1 knapsack problem.\n/// Returns the names of the selected items in the order they appear in the input.\npub fn solve_knapsack(items: &[Item], capacity: usize) -> Vec<String> {\n    let n = items.len();\n    let mut dp = vec![vec![0usize; capacity + 1]; n + 1];\n    for i in 0..n {\n        let item = &items[i];\n        for w in 0..=capacity {\n            if item.weight > w {\n                dp[i + 1][w] = dp[i][w];\n            } else {\n                let without = dp[i][w];\n                let with = dp[i][w - item.weight] + item.utility;\n                dp[i + 1][w] = if with > without { with } else { without };\n            }\n        }\n    }\n    // Backtrack to find selected items\n    let mut w = capacity;\n    let mut selected = Vec::new();\n    for i in (0..n).rev() {\n        if dp[i + 1][w] != dp[i][w] {\n            let item = &items[i];\n            selected.push(item.name.clone());\n            w -= item.weight;\n        }\n    }\n    selected.reverse();\n    selected\n}\n
+/// Represents a piece of gear.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Item {
+    pub name: String,
+    pub weight: usize,
+    pub utility: usize,
+}
+
+/// Solve the 0/1 knapsack problem.
+/// Returns the names of the selected items in the order they appear in the input.
+pub fn solve_knapsack(items: &[Item], capacity: usize) -> Vec<String> {
+    let n = items.len();
+    let mut dp = vec![vec![0usize; capacity + 1]; n + 1];
+    for i in 0..n {
+        let item = &items[i];
+        for w in 0..=capacity {
+            if item.weight > w {
+                dp[i + 1][w] = dp[i][w];
+            } else {
+                let without = dp[i][w];
+                let with = dp[i][w - item.weight] + item.utility;
+                dp[i + 1][w] = if with > without { with } else { without };
+            }
+        }
+    }
+    // Backtrack to find selected items
+    let mut w = capacity;
+    let mut selected = Vec::new();
+    for i in (0..n).rev() {
+        if dp[i + 1][w] != dp[i][w] {
+            let item = &items[i];
+            selected.push(item.name.clone());
+            w -= item.weight;
+        }
+    }
+    selected.reverse();
+    selected
+}
+

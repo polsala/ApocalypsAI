@@ -1,1 +1,42 @@
-import React, { useState, useEffect } from 'react';\nimport './App.css';\n\nfunction getEmojiForHour(hour) {\n  // 12 pm – 1 pm is the “overcast” surprise hour\n  if (hour === 12) {\n    return '☁️';\n  }\n  // Daytime: 6 am – 5 pm (inclusive)\n  if (hour >= 6 && hour <= 17) {\n    return '🌞';\n  }\n  // Nighttime: otherwise\n  return '🌙';\n}\n\nfunction formatTime(date) {\n  const hrs = String(date.getHours()).padStart(2, '0');\n  const mins = String(date.getMinutes()).padStart(2, '0');\n  const secs = String(date.getSeconds()).padStart(2, '0');\n  return `${hrs}:${mins}:${secs}`;\n}\n\nexport default function App() {\n  const [now, setNow] = useState(new Date());\n\n  useEffect(() => {\n    const timer = setInterval(() => setNow(new Date()), 1000);\n    return () => clearInterval(timer);\n  }, []);\n\n  const emoji = getEmojiForHour(now.getHours());\n\n  return (\n    <div className=\"clock-container\">\n      <h1 className=\"time\">{formatTime(now)}</h1>\n      <div className=\"emoji\" aria-label=\"weather emoji\">{emoji}</div>\n      <p className=\"caption\">Current hour: {now.getHours()}</p>\n    </div>\n  );\n}\n
+import React, { useState, useEffect } from 'react';
+import './App.css';
+
+function getEmojiForHour(hour) {
+  // 12â¯pm â 1â¯pm is the âovercastâ surprise hour
+  if (hour === 12) {
+    return 'âï¸';
+  }
+  // Daytime: 6â¯am â 5â¯pm (inclusive)
+  if (hour >= 6 && hour <= 17) {
+    return 'ð';
+  }
+  // Nighttime: otherwise
+  return 'ð';
+}
+
+function formatTime(date) {
+  const hrs = String(date.getHours()).padStart(2, '0');
+  const mins = String(date.getMinutes()).padStart(2, '0');
+  const secs = String(date.getSeconds()).padStart(2, '0');
+  return `${hrs}:${mins}:${secs}`;
+}
+
+export default function App() {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const emoji = getEmojiForHour(now.getHours());
+
+  return (
+    <div className="clock-container">
+      <h1 className="time">{formatTime(now)}</h1>
+      <div className="emoji" aria-label="weather emoji">{emoji}</div>
+      <p className="caption">Current hour: {now.getHours()}</p>
+    </div>
+  );
+}
+

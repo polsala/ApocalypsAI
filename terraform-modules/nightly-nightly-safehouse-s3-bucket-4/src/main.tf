@@ -1,1 +1,67 @@
-terraform {\n  required_version = ">= 1.0.0"\n  required_providers {\n    aws = {\n      source  = "hashicorp/aws"\n      version = "~> 5.0"\n    }\n  }\n}\n\nprovider "aws" {\n  # In test environment, use dummy credentials\n  region     = var.aws_region\n  access_key = var.aws_access_key\n  secret_key = var.aws_secret_key\n}\n\nresource "aws_s3_bucket" "safehouse" {\n  bucket        = var.bucket_name\n  force_destroy = true\n\n  tags = {\n    Name        = "Safehouse Bucket"\n    Environment = var.environment\n  }\n}\n\nresource "aws_s3_bucket_versioning" "safehouse" {\n  bucket = aws_s3_bucket.safehouse.id\n  versioning_configuration {\n    status = "Enabled"\n  }\n}\n\nresource "aws_s3_bucket_server_side_encryption_configuration" "safehouse" {\n  bucket = aws_s3_bucket.safehouse.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = "AES256"\n    }\n  }\n}\n\nresource "aws_s3_bucket_lifecycle_configuration" "safehouse" {\n  bucket = aws_s3_bucket.safehouse.id\n\n  rule {\n    id     = "expire-old-objects"\n    status = "Enabled"\n\n    expiration {\n      days = 30\n    }\n\n    filter {}\n  }\n}\n\nresource "aws_s3_bucket_public_access_block" "safehouse" {\n  bucket = aws_s3_bucket.safehouse.id\n\n  block_public_acls   = true\n  block_public_policy = true\n  ignore_public_acls  = true\n  restrict_public_buckets = true\n}
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  # In test environment, use dummy credentials
+  region     = var.aws_region
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+}
+
+resource "aws_s3_bucket" "safehouse" {
+  bucket        = var.bucket_name
+  force_destroy = true
+
+  tags = {
+    Name        = "Safehouse Bucket"
+    Environment = var.environment
+  }
+}
+
+resource "aws_s3_bucket_versioning" "safehouse" {
+  bucket = aws_s3_bucket.safehouse.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "safehouse" {
+  bucket = aws_s3_bucket.safehouse.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "safehouse" {
+  bucket = aws_s3_bucket.safehouse.id
+
+  rule {
+    id     = "expire-old-objects"
+    status = "Enabled"
+
+    expiration {
+      days = 30
+    }
+
+    filter {}
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "safehouse" {
+  bucket = aws_s3_bucket.safehouse.id
+
+  block_public_acls   = true
+  block_public_policy = true
+  ignore_public_acls  = true
+  restrict_public_buckets = true
+}

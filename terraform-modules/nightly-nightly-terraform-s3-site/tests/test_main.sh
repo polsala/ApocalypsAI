@@ -1,1 +1,32 @@
-#!/usr/bin/env bash\nset -e\n\n# Verify that all required Terraform files exist\nrequired_files=(\"src/main.tf\" \"src/variables.tf\" \"src/outputs.tf\")\nfor f in "${required_files[@]}"; do\n  if [[ ! -f "$f" ]]; then\n    echo "Missing required file: $f"\n    exit 1\n  fi\ndone\n\n# Check that main.tf defines the aws_s3_bucket resource\nif ! grep -q 'resource \"aws_s3_bucket\"' src/main.tf; then\n  echo "aws_s3_bucket resource not found in src/main.tf"\n  exit 1\nfi\n\n# Check that variables.tf defines bucket_name variable\nif ! grep -q 'variable \"bucket_name\"' src/variables.tf; then\n  echo "bucket_name variable not defined in src/variables.tf"\n  exit 1\nfi\n\n# Simple sanity check for outputs\nif ! grep -q 'output \"website_endpoint\"' src/outputs.tf; then\n  echo "website_endpoint output missing in src/outputs.tf"\n  exit 1\nfi\n\necho "All checks passed. Terraform module structure looks good."\n
+#!/usr/bin/env bash
+set -e
+
+# Verify that all required Terraform files exist
+required_files=("src/main.tf" "src/variables.tf" "src/outputs.tf")
+for f in "${required_files[@]}"; do
+  if [[ ! -f "$f" ]]; then
+    echo "Missing required file: $f"
+    exit 1
+  fi
+done
+
+# Check that main.tf defines the aws_s3_bucket resource
+if ! grep -q 'resource "aws_s3_bucket"' src/main.tf; then
+  echo "aws_s3_bucket resource not found in src/main.tf"
+  exit 1
+fi
+
+# Check that variables.tf defines bucket_name variable
+if ! grep -q 'variable "bucket_name"' src/variables.tf; then
+  echo "bucket_name variable not defined in src/variables.tf"
+  exit 1
+fi
+
+# Simple sanity check for outputs
+if ! grep -q 'output "website_endpoint"' src/outputs.tf; then
+  echo "website_endpoint output missing in src/outputs.tf"
+  exit 1
+fi
+
+echo "All checks passed. Terraform module structure looks good."
+

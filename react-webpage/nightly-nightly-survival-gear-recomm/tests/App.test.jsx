@@ -1,1 +1,23 @@
-import React from 'react';\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport '@testing-library/jest-dom';\nimport App from '../src/App';\n\ntest('gear list is not shown initially', () => {\n  render(<App />);\n  const gearList = screen.queryByTestId('gear-list');\n  expect(gearList).not.toBeInTheDocument();\n});\n\ntest('displays gear list after selecting an environment', () => {\n  render(<App />);\n  const select = screen.getByTestId('env-select');\n  fireEvent.change(select, { target: { value: 'desert' } });\n  const gearList = screen.getByTestId('gear-list');\n  expect(gearList).toBeInTheDocument();\n  expect(gearList).toHaveTextContent('Sunshade Cloak');\n  expect(gearList).toHaveTextContent('Cactus Water Filter');\n  expect(gearList).toHaveTextContent('Sandstorm Goggles');\n});\n\n// Mock rationale: tests are fully deterministic, no network calls, and use static data.
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from '../src/App';
+
+test('gear list is not shown initially', () => {
+  render(<App />);
+  const gearList = screen.queryByTestId('gear-list');
+  expect(gearList).not.toBeInTheDocument();
+});
+
+test('displays gear list after selecting an environment', () => {
+  render(<App />);
+  const select = screen.getByTestId('env-select');
+  fireEvent.change(select, { target: { value: 'desert' } });
+  const gearList = screen.getByTestId('gear-list');
+  expect(gearList).toBeInTheDocument();
+  expect(gearList).toHaveTextContent('Sunshade Cloak');
+  expect(gearList).toHaveTextContent('Cactus Water Filter');
+  expect(gearList).toHaveTextContent('Sandstorm Goggles');
+});
+
+// Mock rationale: tests are fully deterministic, no network calls, and use static data.

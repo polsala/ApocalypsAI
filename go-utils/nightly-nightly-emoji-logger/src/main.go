@@ -1,1 +1,38 @@
-package main\n\nimport (\n    "bufio"\n    "fmt"\n    "io"\n    "os"\n)\n\nvar emojis = []string{"😀", "🐱", "🚀", "🌟", "🍕", "🎉"}\n\nfunc main() {\n    var reader io.Reader\n    if len(os.Args) > 1 {\n        f, err := os.Open(os.Args[1])\n        if err != nil {\n            fmt.Fprintln(os.Stderr, "Error opening file:", err)\n            os.Exit(1)\n        }\n        defer f.Close()\n        reader = f\n    } else {\n        reader = os.Stdin\n    }\n    scanner := bufio.NewScanner(reader)\n    lineIndex := 0\n    for scanner.Scan() {\n        line := scanner.Text()\n        emoji := emojis[lineIndex%len(emojis)]\n        fmt.Println(emoji, line)\n        lineIndex++\n    }\n    if err := scanner.Err(); err != nil {\n        fmt.Fprintln(os.Stderr, "Error reading:", err)\n        os.Exit(1)\n    }\n}\n
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "io"
+    "os"
+)
+
+var emojis = []string{"ð", "ð±", "ð", "ð", "ð", "ð"}
+
+func main() {
+    var reader io.Reader
+    if len(os.Args) > 1 {
+        f, err := os.Open(os.Args[1])
+        if err != nil {
+            fmt.Fprintln(os.Stderr, "Error opening file:", err)
+            os.Exit(1)
+        }
+        defer f.Close()
+        reader = f
+    } else {
+        reader = os.Stdin
+    }
+    scanner := bufio.NewScanner(reader)
+    lineIndex := 0
+    for scanner.Scan() {
+        line := scanner.Text()
+        emoji := emojis[lineIndex%len(emojis)]
+        fmt.Println(emoji, line)
+        lineIndex++
+    }
+    if err := scanner.Err(); err != nil {
+        fmt.Fprintln(os.Stderr, "Error reading:", err)
+        os.Exit(1)
+    }
+}
+

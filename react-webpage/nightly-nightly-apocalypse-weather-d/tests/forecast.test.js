@@ -1,1 +1,8 @@
-const assert = require('assert');\nconst { getForecast } = require('../src/forecast');\n\n// Expected output computed from the deterministic hash algorithm\nconst expected = 'Silent snowfall of ash with a temperature of 3°C';\nconst actual = getForecast('Radiated Ruins');\nassert.strictEqual(actual, expected);\nconsole.log('All tests passed');
+const assert = require('assert');
+const { getForecast } = require('../src/forecast');
+
+// Expected output computed from the deterministic hash algorithm
+const expected = 'Silent snowfall of ash with a temperature of 3Â°C';
+const actual = getForecast('Radiated Ruins');
+assert.strictEqual(actual, expected);
+console.log('All tests passed');

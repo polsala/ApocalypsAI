@@ -1,1 +1,29 @@
-# Nightly PR Motivator\n\nA GitHub Action that posts a random motivational quote as a comment on a pull request. Useful for keeping contributors upbeat during code reviews.\n\n## Usage\n\n```yaml\nname: PR Motivator\non:\n  pull_request:\n    types: [opened, reopened]\n\njobs:\n  motivate:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: ./.github/actions/nightly-pr-motivator\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n```\n\n## Inputs\n\n- `github-token` (required): Token with repo scope to post comment.\n\n## How it works\n\nThe action selects a quote from `quotes.txt` using a deterministic pseudo‑random algorithm based on the PR number, ensuring the same PR always gets the same quote.\n
+# Nightly PR Motivator
+
+A GitHub Action that posts a random motivational quote as a comment on a pull request. Useful for keeping contributors upbeat during code reviews.
+
+## Usage
+
+```yaml
+name: PR Motivator
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  motivate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/nightly-pr-motivator
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Inputs
+
+- `github-token` (required): Token with repo scope to post comment.
+
+## How it works
+
+The action selects a quote from `quotes.txt` using a deterministic pseudoârandom algorithm based on the PR number, ensuring the same PR always gets the same quote.
+

@@ -1,1 +1,72 @@
-const core = require('@actions/core');\nconst github = require('@actions/github');\n\nfunction detectLanguages(files) {\n  const extMap = {\n    '.js': 'javascript',\n    '.ts': 'typescript',\n    '.py': 'python',\n    '.go': 'go',\n    '.rs': 'rust',\n    '.java': 'java',\n    '.cpp': 'cpp',\n    '.c': 'c',\n    '.rb': 'ruby',\n    '.php': 'php',\n    '.sh': 'shell',\n    '.html': 'html',\n    '.css': 'css',\n    '.json': 'json',\n    '.yml': 'yaml',\n    '.yaml': 'yaml'\n  };\n  const langs = new Set();\n  files.forEach(f => {\n    const ext = f.slice(f.lastIndexOf('.')).toLowerCase();\n    if (extMap[ext]) langs.add(extMap[ext]);\n  });\n  return Array.from(langs);\n}\n\nasync function run() {\n  try {\n    const token = core.getInput('github-token', { required: true });\n    const filesInput = core.getInput('files');\n    let files = [];\n    if (filesInput) {\n      files = JSON.parse(filesInput);\n    } else {\n      const context = github.context;\n      const prNumber = context.payload.pull_request.number;\n      const octokit = github.getOctokit(token);\n      const { data } = await octokit.rest.pulls.listFiles({\n        owner: context.repo.owner,\n        repo: context.repo.repo,\n        pull_number: prNumber\n      });\n      files = data.map(f => f.filename);\n    }\n    const languages = detectLanguages(files);\n    if (languages.length === 0) {\n      core.info('No recognizable languages found.');\n      return;\n    }\n    const labels = languages.map(l => `lang:${l}`);\n    const context = github.context;\n    const prNumber = context.payload.pull_request.number;\n    const octokit = github.getOctokit(token);\n    await octokit.rest.issues.addLabels({\n      owner: context.repo.owner,\n      repo: context.repo.repo,\n      issue_number: prNumber,\n      labels\n    });\n    core.info(`Added labels: ${labels.join(', ')}`);\n  } catch (error) {\n    core.setFailed(error.message);\n  }\n}\n\nrun();\n\nmodule.exports = { detectLanguages, run };
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+function detectLanguages(files) {
+  const extMap = {
+    '.js': 'javascript',
+    '.ts': 'typescript',
+    '.py': 'python',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.rb': 'ruby',
+    '.php': 'php',
+    '.sh': 'shell',
+    '.html': 'html',
+    '.css': 'css',
+    '.json': 'json',
+    '.yml': 'yaml',
+    '.yaml': 'yaml'
+  };
+  const langs = new Set();
+  files.forEach(f => {
+    const ext = f.slice(f.lastIndexOf('.')).toLowerCase();
+    if (extMap[ext]) langs.add(extMap[ext]);
+  });
+  return Array.from(langs);
+}
+
+async function run() {
+  try {
+    const token = core.getInput('github-token', { required: true });
+    const filesInput = core.getInput('files');
+    let files = [];
+    if (filesInput) {
+      files = JSON.parse(filesInput);
+    } else {
+      const context = github.context;
+      const prNumber = context.payload.pull_request.number;
+      const octokit = github.getOctokit(token);
+      const { data } = await octokit.rest.pulls.listFiles({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: prNumber
+      });
+      files = data.map(f => f.filename);
+    }
+    const languages = detectLanguages(files);
+    if (languages.length === 0) {
+      core.info('No recognizable languages found.');
+      return;
+    }
+    const labels = languages.map(l => `lang:${l}`);
+    const context = github.context;
+    const prNumber = context.payload.pull_request.number;
+    const octokit = github.getOctokit(token);
+    await octokit.rest.issues.addLabels({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: prNumber,
+      labels
+    });
+    core.info(`Added labels: ${labels.join(', ')}`);
+  } catch (error) {
+    core.setFailed(error.message);
+  }
+}
+
+run();
+
+module.exports = { detectLanguages, run };

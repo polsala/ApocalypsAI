@@ -1,1 +1,20 @@
-{\n  \"name\": \"nightly-emoji-commit-suggester\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Suggests an emoji for a commit message\",\n  \"main\": \"dist/main.js\",\n  \"bin\": {\n    \"emoji-commit\": \"./dist/main.js\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"test\": \"jest\"\n  },\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.5.2\",\n    \"jest\": \"^29.7.0\",\n    \"ts-jest\": \"^29.1.0\",\n    \"typescript\": \"^5.4.5\"\n  }\n}\n
+{
+  "name": "nightly-emoji-commit-suggester",
+  "version": "1.0.0",
+  "description": "Suggests an emoji for a commit message",
+  "main": "dist/main.js",
+  "bin": {
+    "emoji-commit": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.4.5"
+  }
+}
+

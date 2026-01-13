@@ -1,1 +1,29 @@
-# Nightly Apocalypse Forecast\n\nA whimsical React dashboard that generates random post‑apocalyptic weather forecasts for fictional locations. Perfect for world‑builders, game masters, or anyone who loves a good dystopian weather report.\n\n## Features\n\n- Randomly picks a location from a curated list of post‑apocalyptic sites.\n- Generates a quirky weather description (e.g., \"acid rain\", \"radioactive dust storm\").\n- One‑click refresh to get a new forecast.\n- Fully client‑side, no external API calls.\n\n## Getting Started\n\n```bash\nnpm install\nnpm start\n```\n\nOpen http://localhost:3000 in your browser.\n\n## Running Tests\n\n```bash\nnpm test\n```\n\n## License\n\nMIT
+# Nightly Apocalypse Forecast
+
+A whimsical React dashboard that generates random postâapocalyptic weather forecasts for fictional locations. Perfect for worldâbuilders, game masters, or anyone who loves a good dystopian weather report.
+
+## Features
+
+- Randomly picks a location from a curated list of postâapocalyptic sites.
+- Generates a quirky weather description (e.g., "acid rain", "radioactive dust storm").
+- Oneâclick refresh to get a new forecast.
+- Fully clientâside, no external API calls.
+
+## Getting Started
+
+```bash
+npm install
+npm start
+```
+
+Open http://localhost:3000 in your browser.
+
+## Running Tests
+
+```bash
+npm test
+```
+
+## License
+
+MIT

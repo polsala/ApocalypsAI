@@ -1,1 +1,47 @@
-package main\n\nimport (\n    "encoding/json"\n    "log"\n    "math/rand"\n    "net/http"\n    "time"\n)\n\nvar inspirational = []string{\n    "The early bird catches the worm",\n    "A journey of a thousand miles begins with a single step",\n    "Fortune favors the bold",\n}\n\nvar apocalyptic = []string{\n    "as the sky cracks open",\n    "while the earth trembles",\n    "when the shadows swallow the sun",\n}\n\n// rng is a package‑level random source; it can be overridden in tests for determinism.\nvar rng = rand.New(rand.NewSource(time.Now().UnixNano()))\n\ntype QuoteResponse struct {\n    Quote string `json:"quote"`\n}\n\nfunc mixQuote() string {\n    i := rng.Intn(len(inspirational))\n    a := rng.Intn(len(apocalyptic))\n    return inspirational[i] + " " + apocalyptic[a] + "."\n}\n\nfunc quoteHandler(w http.ResponseWriter, r *http.Request) {\n    resp := QuoteResponse{Quote: mixQuote()}\n    w.Header().Set(\"Content-Type\", \"application/json\")\n    json.NewEncoder(w).Encode(resp)\n}\n\nfunc main() {\n    http.HandleFunc(\"/quote\", quoteHandler)\n    log.Println(\"Starting server on :8080\")\n    log.Fatal(http.ListenAndServe(\":8080\", nil))\n}\n
+package main
+
+import (
+    "encoding/json"
+    "log"
+    "math/rand"
+    "net/http"
+    "time"
+)
+
+var inspirational = []string{
+    "The early bird catches the worm",
+    "A journey of a thousand miles begins with a single step",
+    "Fortune favors the bold",
+}
+
+var apocalyptic = []string{
+    "as the sky cracks open",
+    "while the earth trembles",
+    "when the shadows swallow the sun",
+}
+
+// rng is a package‑level random source; it can be overridden in tests for determinism.
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+type QuoteResponse struct {
+    Quote string `json:"quote"`
+}
+
+func mixQuote() string {
+    i := rng.Intn(len(inspirational))
+    a := rng.Intn(len(apocalyptic))
+    return inspirational[i] + " " + apocalyptic[a] + "."
+}
+
+func quoteHandler(w http.ResponseWriter, r *http.Request) {
+    resp := QuoteResponse{Quote: mixQuote()}
+    w.Header().Set(\"Content-Type\", \"application/json\")
+    json.NewEncoder(w).Encode(resp)
+}
+
+func main() {
+    http.HandleFunc(\"/quote\", quoteHandler)
+    log.Println(\"Starting server on :8080\")
+    log.Fatal(http.ListenAndServe(\":8080\", nil))
+}
+

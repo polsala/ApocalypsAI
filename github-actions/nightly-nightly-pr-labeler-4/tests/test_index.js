@@ -1,1 +1,41 @@
-// Simple test runner – no external test framework required\nconst assert = require('assert');\nconst { getLabelsForTitle } = require('../src/index');\n\nfunction test(description, fn) {\n  try {\n    fn();\n    console.log(`✅ ${description}`);\n  } catch (err) {\n    console.error(`❌ ${description}`);\n    console.error(err);\n    process.exitCode = 1;\n  }\n}\n\n// Mock rationale: deterministic, no network calls\nconst mapping = {\n  bug: 'bug',\n  feat: 'feature',\n  doc: 'documentation'\n};\n\ntest('Single keyword match', () => {\n  const labels = getLabelsForTitle('Fix critical bug in parser', mapping);\n  assert.deepStrictEqual(labels, ['bug']);\n});\n\ntest('Multiple keyword matches (order preserved)', () => {\n  const labels = getLabelsForTitle('Add new feat and update docs', mapping);\n  assert.deepStrictEqual(labels, ['feature', 'documentation']);\n});\n\ntest('Case‑insensitive matching', () => {\n  const labels = getLabelsForTitle('DOC: improve readme', mapping);\n  assert.deepStrictEqual(labels, ['documentation']);\n});\n\ntest('No matches yields empty array', () => {\n  const labels = getLabelsForTitle('Refactor codebase', mapping);\n  assert.deepStrictEqual(labels, []);\n});
+// Simple test runner â no external test framework required
+const assert = require('assert');
+const { getLabelsForTitle } = require('../src/index');
+
+function test(description, fn) {
+  try {
+    fn();
+    console.log(`â ${description}`);
+  } catch (err) {
+    console.error(`â ${description}`);
+    console.error(err);
+    process.exitCode = 1;
+  }
+}
+
+// Mock rationale: deterministic, no network calls
+const mapping = {
+  bug: 'bug',
+  feat: 'feature',
+  doc: 'documentation'
+};
+
+test('Single keyword match', () => {
+  const labels = getLabelsForTitle('Fix critical bug in parser', mapping);
+  assert.deepStrictEqual(labels, ['bug']);
+});
+
+test('Multiple keyword matches (order preserved)', () => {
+  const labels = getLabelsForTitle('Add new feat and update docs', mapping);
+  assert.deepStrictEqual(labels, ['feature', 'documentation']);
+});
+
+test('Caseâinsensitive matching', () => {
+  const labels = getLabelsForTitle('DOC: improve readme', mapping);
+  assert.deepStrictEqual(labels, ['documentation']);
+});
+
+test('No matches yields empty array', () => {
+  const labels = getLabelsForTitle('Refactor codebase', mapping);
+  assert.deepStrictEqual(labels, []);
+});

@@ -1,1 +1,79 @@
-package main\n\nimport (\n    "flag"\n    "fmt"\n    "net/http"\n    "os"\n    "sync"\n    "time"\n)\n\ntype Result struct {\n    URL        string\n    StatusCode int\n    Message    string\n}\n\nfunc whimsicalMessage(status int) string {\n    switch {\n    case status >= 200 && status < 300:\n        return "All good!"\n    case status == 404:\n        return "Lost in the void!"\n    case status >= 500 && status < 600:\n        return "Server is crying!"\n    default:\n        return "Mysterious response."\n    }\n}\n\nfunc fetchURL(client *http.Client, url string, wg *sync.WaitGroup, ch chan<- Result) {\n    defer wg.Done()\n    req, err := http.NewRequest("HEAD", url, nil)\n    if err != nil {\n        ch <- Result{URL: url, StatusCode: 0, Message: fmt.Sprintf("Request error: %v", err)}\n        return\n    }\n    resp, err := client.Do(req)\n    if err != nil {\n        ch <- Result{URL: url, StatusCode: 0, Message: fmt.Sprintf("Request error: %v", err)}\n        return\n    }\n    defer resp.Body.Close()\n    ch <- Result{URL: url, StatusCode: resp.StatusCode, Message: whimsicalMessage(resp.StatusCode)}\n}\n\nfunc main() {\n    flag.Usage = func() {\n        fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [URL ...]\n", os.Args[0])\n        flag.PrintDefaults()\n    }\n    flag.Parse()\n    urls := flag.Args()\n    if len(urls) == 0 {\n        flag.Usage()\n        os.Exit(1)\n    }\n\n    client := &http.Client{\n        Timeout: 5 * time.Second,\n    }\n\n    var wg sync.WaitGroup\n    resultsCh := make(chan Result, len(urls))\n\n    for _, url := range urls {\n        wg.Add(1)\n        go fetchURL(client, url, &wg, resultsCh)\n    }\n\n    wg.Wait()\n    close(resultsCh)\n\n    for res := range resultsCh {\n        fmt.Printf("%s -> %d: %s\n", res.URL, res.StatusCode, res.Message)\n    }\n}
+package main
+
+import (
+    "flag"
+    "fmt"
+    "net/http"
+    "os"
+    "sync"
+    "time"
+)
+
+type Result struct {
+    URL        string
+    StatusCode int
+    Message    string
+}
+
+func whimsicalMessage(status int) string {
+    switch {
+    case status >= 200 && status < 300:
+        return "All good!"
+    case status == 404:
+        return "Lost in the void!"
+    case status >= 500 && status < 600:
+        return "Server is crying!"
+    default:
+        return "Mysterious response."
+    }
+}
+
+func fetchURL(client *http.Client, url string, wg *sync.WaitGroup, ch chan<- Result) {
+    defer wg.Done()
+    req, err := http.NewRequest("HEAD", url, nil)
+    if err != nil {
+        ch <- Result{URL: url, StatusCode: 0, Message: fmt.Sprintf("Request error: %v", err)}
+        return
+    }
+    resp, err := client.Do(req)
+    if err != nil {
+        ch <- Result{URL: url, StatusCode: 0, Message: fmt.Sprintf("Request error: %v", err)}
+        return
+    }
+    defer resp.Body.Close()
+    ch <- Result{URL: url, StatusCode: resp.StatusCode, Message: whimsicalMessage(resp.StatusCode)}
+}
+
+func main() {
+    flag.Usage = func() {
+        fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [URL ...]
+", os.Args[0])
+        flag.PrintDefaults()
+    }
+    flag.Parse()
+    urls := flag.Args()
+    if len(urls) == 0 {
+        flag.Usage()
+        os.Exit(1)
+    }
+
+    client := &http.Client{
+        Timeout: 5 * time.Second,
+    }
+
+    var wg sync.WaitGroup
+    resultsCh := make(chan Result, len(urls))
+
+    for _, url := range urls {
+        wg.Add(1)
+        go fetchURL(client, url, &wg, resultsCh)
+    }
+
+    wg.Wait()
+    close(resultsCh)
+
+    for res := range resultsCh {
+        fmt.Printf("%s -> %d: %s
+", res.URL, res.StatusCode, res.Message)
+    }
+}

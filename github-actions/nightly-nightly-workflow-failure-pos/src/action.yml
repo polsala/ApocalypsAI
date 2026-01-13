@@ -1,1 +1,19 @@
-name: Workflow Failure Postmortem\ndescription: Create an issue when a workflow run fails\ninputs:\n  github-token:\n    description: GitHub token with repo scope\n    required: true\nruns:\n  using: composite\n  steps:\n    - name: Run postmortem script\n      shell: bash\n      env:\n        GITHUB_TOKEN: ${{ inputs.github-token }}\n        GITHUB_REPOSITORY: ${{ github.repository }}\n        GITHUB_RUN_ID: ${{ github.run_id }}\n        GITHUB_WORKFLOW: ${{ github.workflow }}\n        GITHUB_SERVER_URL: ${{ github.server_url }}\n      run: |\n        "${{ github.action_path }}/postmortem.sh"
+name: Workflow Failure Postmortem
+description: Create an issue when a workflow run fails
+inputs:
+  github-token:
+    description: GitHub token with repo scope
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Run postmortem script
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_WORKFLOW: ${{ github.workflow }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+      run: |
+        "${{ github.action_path }}/postmortem.sh"

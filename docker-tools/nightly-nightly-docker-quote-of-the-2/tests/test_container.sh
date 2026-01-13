@@ -1,1 +1,16 @@
-#!/usr/bin/env bash\nset -e\n\n# Build the Docker image (quiet output)\ndocker build -t nightly-docker-quote-test . > /dev/null\n\n# Run the container with a known seed to get a deterministic quote\noutput=$(docker run --rm -e SEED=0 nightly-docker-quote-test)\nexpected='The stars whisper, "Stay hydrated."'\n\nif [ "$output" != "$expected" ]; then\n  echo "Test failed: expected '$expected' but got '$output'"\n  exit 1\nfi\n\necho "Test passed: deterministic quote matches expected output."
+#!/usr/bin/env bash
+set -e
+
+# Build the Docker image (quiet output)
+docker build -t nightly-docker-quote-test . > /dev/null
+
+# Run the container with a known seed to get a deterministic quote
+output=$(docker run --rm -e SEED=0 nightly-docker-quote-test)
+expected='The stars whisper, "Stay hydrated."'
+
+if [ "$output" != "$expected" ]; then
+  echo "Test failed: expected '$expected' but got '$output'"
+  exit 1
+fi
+
+echo "Test passed: deterministic quote matches expected output."

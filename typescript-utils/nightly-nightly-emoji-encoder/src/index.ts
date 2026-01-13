@@ -1,1 +1,105 @@
-import { Buffer } from 'buffer';\n\n// Mapping from hex digit to emoji\nconst hexToEmoji: Record<string, string> = {\n  '0': '0️⃣',\n  '1': '1️⃣',\n  '2': '2️⃣',\n  '3': '3️⃣',\n  '4': '4️⃣',\n  '5': '5️⃣',\n  '6': '6️⃣',\n  '7': '7️⃣',\n  '8': '8️⃣',\n  '9': '9️⃣',\n  'a': '🅰️',\n  'b': '🅱️',\n  'c': '🆑',\n  'd': '🆒',\n  'e': '🆓',\n  'f': '🆔'\n};\n\n// Reverse mapping for decoding\nconst emojiToHex: Record<string, string> = Object.fromEntries(\n  Object.entries(hexToEmoji).map(([hex, emoji]) => [emoji, hex])\n);\n\n/**\n * Encode a UTF‑8 string into an emoji sequence.\n * @param input Plain text\n * @returns Emoji string\n */\nexport function encode(input: string): string {\n  const bytes = Buffer.from(input, 'utf8');\n  let result = '';\n  for (const byte of bytes) {\n    const hex = byte.toString(16).padStart(2, '0');\n    result += hexToEmoji[hex[0]] + hexToEmoji[hex[1]];\n  }\n  return result;\n}\n\n/**\n * Decode an emoji sequence back to the original UTF‑8 string.\n * @param emojis Emoji string produced by {@link encode}\n * @returns Decoded plain text\n */\nexport function decode(emojis: string): string {\n  let hexStr = '';\n  let i = 0;\n  while (i < emojis.length) {\n    let matched = false;\n    for (const [emoji, hex] of Object.entries(emojiToHex)) {\n      if (emojis.startsWith(emoji, i)) {\n        hexStr += hex;\n        i += emoji.length;\n        matched = true;\n        break;\n      }\n    }\n    if (!matched) {\n      throw new Error('Invalid emoji sequence at position ' + i);\n    }\n  }\n  if (hexStr.length % 2 !== 0) {\n    throw new Error('Corrupted hex string length');\n  }\n  const bytes = [] as number[];\n  for (let j = 0; j < hexStr.length; j += 2) {\n    const byte = parseInt(hexStr.slice(j, j + 2), 16);\n    bytes.push(byte);\n  }\n  return Buffer.from(bytes).toString('utf8');\n}\n\n/** Simple CLI handling */\nfunction printUsage(): void {\n  console.log('Usage:');\n  console.log('  node index.ts encode <text>   # Encode text to emojis');\n  console.log('  node index.ts decode <emoji>  # Decode emojis back to text');\n}\n\nif (require.main === module) {\n  const args = process.argv.slice(2);\n  if (args.length < 2) {\n    printUsage();\n    process.exit(1);\n  }\n  const command = args[0];\n  const payload = args.slice(1).join(' ');\n  try {\n    if (command === 'encode') {\n      console.log(encode(payload));\n    } else if (command === 'decode') {\n      console.log(decode(payload));\n    } else {\n      printUsage();\n      process.exit(1);\n    }\n  } catch (err) {\n    console.error('Error:', (err as Error).message);\n    process.exit(1);\n  }\n}\n
+import { Buffer } from 'buffer';
+
+// Mapping from hex digit to emoji
+const hexToEmoji: Record<string, string> = {
+  '0': '0️⃣',
+  '1': '1️⃣',
+  '2': '2️⃣',
+  '3': '3️⃣',
+  '4': '4️⃣',
+  '5': '5️⃣',
+  '6': '6️⃣',
+  '7': '7️⃣',
+  '8': '8️⃣',
+  '9': '9️⃣',
+  'a': '🅰️',
+  'b': '🅱️',
+  'c': '🆑',
+  'd': '🆒',
+  'e': '🆓',
+  'f': '🆔'
+};
+
+// Reverse mapping for decoding
+const emojiToHex: Record<string, string> = Object.fromEntries(
+  Object.entries(hexToEmoji).map(([hex, emoji]) => [emoji, hex])
+);
+
+/**
+ * Encode a UTF‑8 string into an emoji sequence.
+ * @param input Plain text
+ * @returns Emoji string
+ */
+export function encode(input: string): string {
+  const bytes = Buffer.from(input, 'utf8');
+  let result = '';
+  for (const byte of bytes) {
+    const hex = byte.toString(16).padStart(2, '0');
+    result += hexToEmoji[hex[0]] + hexToEmoji[hex[1]];
+  }
+  return result;
+}
+
+/**
+ * Decode an emoji sequence back to the original UTF‑8 string.
+ * @param emojis Emoji string produced by {@link encode}
+ * @returns Decoded plain text
+ */
+export function decode(emojis: string): string {
+  let hexStr = '';
+  let i = 0;
+  while (i < emojis.length) {
+    let matched = false;
+    for (const [emoji, hex] of Object.entries(emojiToHex)) {
+      if (emojis.startsWith(emoji, i)) {
+        hexStr += hex;
+        i += emoji.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      throw new Error('Invalid emoji sequence at position ' + i);
+    }
+  }
+  if (hexStr.length % 2 !== 0) {
+    throw new Error('Corrupted hex string length');
+  }
+  const bytes = [] as number[];
+  for (let j = 0; j < hexStr.length; j += 2) {
+    const byte = parseInt(hexStr.slice(j, j + 2), 16);
+    bytes.push(byte);
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
+/** Simple CLI handling */
+function printUsage(): void {
+  console.log('Usage:');
+  console.log('  node index.ts encode <text>   # Encode text to emojis');
+  console.log('  node index.ts decode <emoji>  # Decode emojis back to text');
+}
+
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  if (args.length < 2) {
+    printUsage();
+    process.exit(1);
+  }
+  const command = args[0];
+  const payload = args.slice(1).join(' ');
+  try {
+    if (command === 'encode') {
+      console.log(encode(payload));
+    } else if (command === 'decode') {
+      console.log(decode(payload));
+    } else {
+      printUsage();
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error('Error:', (err as Error).message);
+    process.exit(1);
+  }
+}
+

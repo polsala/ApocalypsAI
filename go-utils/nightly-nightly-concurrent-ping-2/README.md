@@ -1,1 +1,42 @@
-# Nightly Concurrent Ping\n\nA whimsical Go utility that pings multiple hosts concurrently and reports each latency.\n\n## What it does\n- Spawns a goroutine for every host you provide\n- Uses the system `ping` command (single packet, short timeout)\n- Prints the latency (e.g., `12.3ms`) or `error` if the host is unreachable\n\n## Why it’s useful\nWhen you need a quick sanity‑check of several endpoints, running `ping` sequentially can be slow. This tool demonstrates Go's lightweight concurrency while giving you a handy network‑status snapshot.\n\n## Installation\n```bash\n# Clone the repository (or copy the utility folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-concurrent-ping\n\n# Build the binary\ngo build -o concurrent-ping ./src/main.go\n```\n\n## Usage\n```bash\n./concurrent-ping example.com google.com 8.8.8.8\n```\n\nOutput example:\n````\nPing results:\nexample.com: 23ms\ngoogle.com: 15ms\n8.8.8.8: error\n````\n\n## Testing\n```bash\ngo test ./tests\n```\n\nThe test suite uses a mock ping executor so it runs offline and deterministically.\n
+# Nightly Concurrent Ping
+
+A whimsical Go utility that pings multiple hosts concurrently and reports each latency.
+
+## What it does
+- Spawns a goroutine for every host you provide
+- Uses the system `ping` command (single packet, short timeout)
+- Prints the latency (e.g., `12.3ms`) or `error` if the host is unreachable
+
+## Why itâs useful
+When you need a quick sanityâcheck of several endpoints, running `ping` sequentially can be slow. This tool demonstrates Go's lightweight concurrency while giving you a handy networkâstatus snapshot.
+
+## Installation
+```bash
+# Clone the repository (or copy the utility folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-concurrent-ping
+
+# Build the binary
+go build -o concurrent-ping ./src/main.go
+```
+
+## Usage
+```bash
+./concurrent-ping example.com google.com 8.8.8.8
+```
+
+Output example:
+````
+Ping results:
+example.com: 23ms
+google.com: 15ms
+8.8.8.8: error
+````
+
+## Testing
+```bash
+go test ./tests
+```
+
+The test suite uses a mock ping executor so it runs offline and deterministically.
+

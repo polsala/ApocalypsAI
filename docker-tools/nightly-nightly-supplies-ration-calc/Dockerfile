@@ -1,1 +1,4 @@
-FROM python:3.11-slim\nWORKDIR /app\nCOPY src/ .\nENTRYPOINT ["python", "app.py"]
+FROM python:3.11-slim
+WORKDIR /app
+COPY src/ .
+ENTRYPOINT ["python", "app.py"]

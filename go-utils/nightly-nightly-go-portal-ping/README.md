@@ -1,1 +1,33 @@
-# Portal Ping\n\nA whimsical concurrent network latency checker written in Go.\nIt dials multiple hosts in parallel (default TCP port) and reports latency, helping you test the fabric of reality.\n\n## Build\n\n```sh\ngo build -o portal-ping ./src\n```\n\n## Usage\n\n```sh\n./portal-ping host1:80,host2:443,example.com:22\n```\n\nThe tool prints a table with latency and status for each host.\n\n## Testing\n\n```sh\ngo test ./tests\n```\n\n## How it works\n\n- Parses a comma‑separated list of host:port.\n- Launches a goroutine per host using `net.DialTimeout`.\n- Collects results via a `sync.WaitGroup`.\n- Displays a formatted table.\n\nEnjoy probing the multiverse, one TCP handshake at a time!
+# Portal Ping
+
+A whimsical concurrent network latency checker written in Go.
+It dials multiple hosts in parallel (default TCP port) and reports latency, helping you test the fabric of reality.
+
+## Build
+
+```sh
+go build -o portal-ping ./src
+```
+
+## Usage
+
+```sh
+./portal-ping host1:80,host2:443,example.com:22
+```
+
+The tool prints a table with latency and status for each host.
+
+## Testing
+
+```sh
+go test ./tests
+```
+
+## How it works
+
+- Parses a commaâseparated list of host:port.
+- Launches a goroutine per host using `net.DialTimeout`.
+- Collects results via a `sync.WaitGroup`.
+- Displays a formatted table.
+
+Enjoy probing the multiverse, one TCP handshake at a time!

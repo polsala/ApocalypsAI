@@ -1,1 +1,40 @@
-# Nightly Apoc Forecast\n\nA whimsical React dashboard that generates random apocalyptic weather forecasts for fictional zones.\n\n## Features\n- Randomly picks a fictional zone and a catastrophic weather condition.\n- One‑click generation of a new forecast.\n- Fully testable with Jest and React Testing Library.\n\n## Installation\n```bash\n# Clone the utility (if you are browsing the repo)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-apoc-forecast\n\n# Install dependencies\nnpm install\n```\n\n## Development\n```bash\n# Start the development server (webpack‑dev‑server)\nnpm start\n```\nOpen http://localhost:8080 in your browser.\n\n## Build\n```bash\nnpm run build\n```\nThe production bundle will be placed in the `dist/` folder.\n\n## Testing\n```bash\nnpm test\n```\nRuns the Jest test suite located in `tests/`.\n\n## License\nMIT
+# Nightly Apoc Forecast
+
+A whimsical React dashboard that generates random apocalyptic weather forecasts for fictional zones.
+
+## Features
+- Randomly picks a fictional zone and a catastrophic weather condition.
+- Oneâclick generation of a new forecast.
+- Fully testable with Jest and React Testing Library.
+
+## Installation
+```bash
+# Clone the utility (if you are browsing the repo)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-apoc-forecast
+
+# Install dependencies
+npm install
+```
+
+## Development
+```bash
+# Start the development server (webpackâdevâserver)
+npm start
+```
+Open http://localhost:8080 in your browser.
+
+## Build
+```bash
+npm run build
+```
+The production bundle will be placed in the `dist/` folder.
+
+## Testing
+```bash
+npm test
+```
+Runs the Jest test suite located in `tests/`.
+
+## License
+MIT

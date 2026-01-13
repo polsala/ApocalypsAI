@@ -1,1 +1,27 @@
-import assert from 'assert';\nimport generatePassphrase from '../src/index';\n\n/**\n * Mock Math.random to return a predefined sequence.\n * After the sequence is exhausted, it falls back to 0.5 (arbitrary).\n */\nfunction mockRandom(sequence: number[]): void {\n  let idx = 0;\n  (global as any).Math.random = () => {\n    if (idx < sequence.length) {\n      return sequence[idx++];\n    }\n    return 0.5;\n  };\n}\n\n// Test 1 – deterministic output with a known random sequence\nmockRandom([0.1, 0.2, 0.9]); // word1, word2, emoji1\nconst phrase = generatePassphrase(2, 1);\nassert.strictEqual(phrase, 'bravo charlie ☢️', 'Passphrase should match the mocked selection');\n\n// Test 2 – zero words / emojis should return empty string\nmockRandom([]);\nassert.strictEqual(generatePassphrase(0, 0), '', 'Zero counts should yield empty string');\n\nconsole.log('All tests passed.');
+import assert from 'assert';
+import generatePassphrase from '../src/index';
+
+/**
+ * Mock Math.random to return a predefined sequence.
+ * After the sequence is exhausted, it falls back to 0.5 (arbitrary).
+ */
+function mockRandom(sequence: number[]): void {
+  let idx = 0;
+  (global as any).Math.random = () => {
+    if (idx < sequence.length) {
+      return sequence[idx++];
+    }
+    return 0.5;
+  };
+}
+
+// Test 1 â deterministic output with a known random sequence
+mockRandom([0.1, 0.2, 0.9]); // word1, word2, emoji1
+const phrase = generatePassphrase(2, 1);
+assert.strictEqual(phrase, 'bravo charlie â¢ï¸', 'Passphrase should match the mocked selection');
+
+// Test 2 â zero words / emojis should return empty string
+mockRandom([]);
+assert.strictEqual(generatePassphrase(0, 0), '', 'Zero counts should yield empty string');
+
+console.log('All tests passed.');

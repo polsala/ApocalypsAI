@@ -1,1 +1,25 @@
-name: "Label Emoji Adder"\ndescription: "Add an emoji reaction to an issue/PR based on its labels"\ninputs:\n  token:\n    description: "GitHub token"\n    required: true\n  issue-number:\n    description: "Issue or PR number"\n    required: true\n  label-emoji-map:\n    description: "JSON string mapping label names to emojis"\n    required: true\nruns:\n  using: "composite"\n  steps:\n    - name: Add Emoji Reaction\n      shell: bash\n      env:\n        GITHUB_TOKEN: ${{{{ inputs.token }}}}\n        ISSUE_NUMBER: ${{{{ inputs.issue-number }}}}\n        LABEL_EMOJI_MAP: ${{{{ inputs.label-emoji-map }}}}\n        REPO: ${{{{ github.repository }}}}\n      run: |\n        bash "${{{{ github.action_path }}}}/src/run.sh"\n
+name: "Label Emoji Adder"
+description: "Add an emoji reaction to an issue/PR based on its labels"
+inputs:
+  token:
+    description: "GitHub token"
+    required: true
+  issue-number:
+    description: "Issue or PR number"
+    required: true
+  label-emoji-map:
+    description: "JSON string mapping label names to emojis"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Add Emoji Reaction
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{{{ inputs.token }}}}
+        ISSUE_NUMBER: ${{{{ inputs.issue-number }}}}
+        LABEL_EMOJI_MAP: ${{{{ inputs.label-emoji-map }}}}
+        REPO: ${{{{ github.repository }}}}
+      run: |
+        bash "${{{{ github.action_path }}}}/src/run.sh"
+

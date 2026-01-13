@@ -1,1 +1,28 @@
-use std::env;\nuse qrcode::QrCode;\nuse qrcode::render::unicode;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    let input = if args.len() > 1 {\n        &args[1]\n    } else {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    };\n    match generate_qr_ascii(input) {\n        Ok(s) => println!("{}", s),\n        Err(e) => {\n            eprintln!("Error generating QR: {}", e);\n            std::process::exit(1);\n        }\n    }\n}\n\nfn generate_qr_ascii(data: &str) -> Result<String, Box<dyn std::error::Error>> {\n    let code = QrCode::new(data.as_bytes())?;\n    let string = code.render::<unicode::Dense1x2>()\n        .quiet_zone(false)\n        .build();\n    Ok(string)\n}
+use std::env;
+use qrcode::QrCode;
+use qrcode::render::unicode;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let input = if args.len() > 1 {
+        &args[1]
+    } else {
+        eprintln!("Usage: {} <text>", args[0]);
+        std::process::exit(1);
+    };
+    match generate_qr_ascii(input) {
+        Ok(s) => println!("{}", s),
+        Err(e) => {
+            eprintln!("Error generating QR: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn generate_qr_ascii(data: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let code = QrCode::new(data.as_bytes())?;
+    let string = code.render::<unicode::Dense1x2>()
+        .quiet_zone(false)
+        .build();
+    Ok(string)
+}

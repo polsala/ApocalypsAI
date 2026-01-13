@@ -1,1 +1,26 @@
-const assert = require('assert');\nconst { formatDate, getPrediction } = require('../src/date-utils');\n\nfunction testFormatDate() {\n  const date = new Date('2023-01-01T00:00:00Z');\n  const formatted = formatDate(date);\n  if (!formatted.includes('January')) throw new Error('Month missing');\n  if (!formatted.includes('1, 2023')) throw new Error('Year or day missing');\n}\n\nfunction testPredictions() {\n  for (let d = 0; d < 7; d++) {\n    const date = new Date(2023, 0, 2 + d);\n    const pred = getPrediction(date);\n    if (typeof pred !== 'string' || pred.length === 0) throw new Error('Invalid prediction');\n  }\n}\n\ntry {\n  testFormatDate();\n  testPredictions();\n  console.log('All tests passed');\n} catch (e) {\n  console.error(e);\n  process.exit(1);\n}
+const assert = require('assert');
+const { formatDate, getPrediction } = require('../src/date-utils');
+
+function testFormatDate() {
+  const date = new Date('2023-01-01T00:00:00Z');
+  const formatted = formatDate(date);
+  if (!formatted.includes('January')) throw new Error('Month missing');
+  if (!formatted.includes('1, 2023')) throw new Error('Year or day missing');
+}
+
+function testPredictions() {
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(2023, 0, 2 + d);
+    const pred = getPrediction(date);
+    if (typeof pred !== 'string' || pred.length === 0) throw new Error('Invalid prediction');
+  }
+}
+
+try {
+  testFormatDate();
+  testPredictions();
+  console.log('All tests passed');
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+}

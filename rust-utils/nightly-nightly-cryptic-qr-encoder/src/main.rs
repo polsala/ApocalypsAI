@@ -1,1 +1,23 @@
-use clap::Parser;\n\nmod lib;\n\n#[derive(Parser)]\n#[command(author, version, about, long_about = None)]\nstruct Args {\n    /// Text to encode into a QR code\n    text: String,\n    /// Add a radiation border around the QR code\n    #[arg(short, long)]\n    radiation: bool,\n}\n\nfn main() {\n    let args = Args::parse();\n    let mut output = lib::generate_qr_ascii(&args.text);\n    if args.radiation {\n        output = lib::add_radiation_border(&output);\n    }\n    println!("{}", output);\n}\n
+use clap::Parser;
+
+mod lib;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Text to encode into a QR code
+    text: String,
+    /// Add a radiation border around the QR code
+    #[arg(short, long)]
+    radiation: bool,
+}
+
+fn main() {
+    let args = Args::parse();
+    let mut output = lib::generate_qr_ascii(&args.text);
+    if args.radiation {
+        output = lib::add_radiation_border(&output);
+    }
+    println!("{}", output);
+}
+

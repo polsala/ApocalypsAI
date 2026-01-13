@@ -1,1 +1,33 @@
-use assert_cmd::Command;\nuse predicates::prelude::*;\n\n#[test]\nfn test_to_seconds() {\n    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();\n    cmd.arg("to-seconds")\n        .arg("1d2h3m4s")\n        .assert()\n        .success()\n        .stdout(predicate::str::contains("93784"));\n}\n\n#[test]\nfn test_from_seconds() {\n    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();\n    cmd.arg("from-seconds")\n        .arg("93784")\n        .assert()\n        .success()\n        .stdout(predicate::str::contains("1d2h3m4s"));\n}\n\n#[test]\nfn test_invalid_input() {\n    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();\n    cmd.arg("to-seconds")\n        .arg("10x")\n        .assert()\n        .failure()\n        .stderr(predicate::str::contains("Unknown unit"));\n}\n
+use assert_cmd::Command;
+use predicates::prelude::*;
+
+#[test]
+fn test_to_seconds() {
+    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();
+    cmd.arg("to-seconds")
+        .arg("1d2h3m4s")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("93784"));
+}
+
+#[test]
+fn test_from_seconds() {
+    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();
+    cmd.arg("from-seconds")
+        .arg("93784")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("1d2h3m4s"));
+}
+
+#[test]
+fn test_invalid_input() {
+    let mut cmd = Command::cargo_bin("chrono-converter").unwrap();
+    cmd.arg("to-seconds")
+        .arg("10x")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Unknown unit"));
+}
+

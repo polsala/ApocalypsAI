@@ -1,1 +1,19 @@
-use std::io::Cursor;\nuse nightly_emoji_logger::process;\n\n#[test]\nfn test_process() {\n    let input = "First line\nSecond line\nThird line\n";\n    let mut output = Vec::new();\n    process(Cursor::new(input), &mut output).unwrap();\n    let output_str = String::from_utf8(output).unwrap();\n    let expected = "🚀 First line\n🌟 Second line\n💥 Third line\n";\n    assert_eq!(output_str, expected);\n}\n
+use std::io::Cursor;
+use nightly_emoji_logger::process;
+
+#[test]
+fn test_process() {
+    let input = "First line
+Second line
+Third line
+";
+    let mut output = Vec::new();
+    process(Cursor::new(input), &mut output).unwrap();
+    let output_str = String::from_utf8(output).unwrap();
+    let expected = "ð First line
+ð Second line
+ð¥ Third line
+";
+    assert_eq!(output_str, expected);
+}
+

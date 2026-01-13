@@ -1,1 +1,19 @@
-import React from 'react';\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport '@testing-library/jest-dom';\nimport App from '../src/App';\n\ntest('renders app and adds a supply item', () => {\n  render(<App />);\n  expect(screen.getByText(/Supply Dashboard/i)).toBeInTheDocument();\n\n  const nameInput = screen.getByPlaceholderText('Item name') as HTMLInputElement;\n  const qtyInput = screen.getByDisplayValue('1') as HTMLInputElement;\n  const addButton = screen.getByText('Add');\n\n  fireEvent.change(nameInput, { target: { value: 'Water' } });\n  fireEvent.change(qtyInput, { target: { value: '5' } });\n  fireEvent.click(addButton);\n\n  expect(screen.getByText('Water: 5')).toBeInTheDocument();\n});
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from '../src/App';
+
+test('renders app and adds a supply item', () => {
+  render(<App />);
+  expect(screen.getByText(/Supply Dashboard/i)).toBeInTheDocument();
+
+  const nameInput = screen.getByPlaceholderText('Item name') as HTMLInputElement;
+  const qtyInput = screen.getByDisplayValue('1') as HTMLInputElement;
+  const addButton = screen.getByText('Add');
+
+  fireEvent.change(nameInput, { target: { value: 'Water' } });
+  fireEvent.change(qtyInput, { target: { value: '5' } });
+  fireEvent.click(addButton);
+
+  expect(screen.getByText('Water: 5')).toBeInTheDocument();
+});

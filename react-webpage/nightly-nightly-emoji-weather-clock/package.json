@@ -1,1 +1,38 @@
-{\n  "name": "nightly-emoji-weather-clock",\n  "version": "1.0.0",\n  "private": true,\n  "description": "A whimsical React clock with weather‑themed emojis.",\n  "scripts": {\n    "start": "webpack serve --mode development --open",\n    "build": "webpack --mode production",\n    "test": "jest"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  },\n  "devDependencies": {\n    "@babel/core": "^7.22.5",\n    "@babel/preset-env": "^7.22.5",\n    "@babel/preset-react": "^7.22.5",\n    "babel-jest": "^29.5.0",\n    "babel-loader": "^9.1.2",\n    "css-loader": "^6.8.1",\n    "html-webpack-plugin": "^5.5.3",\n    "jest": "^29.5.0",\n    "style-loader": "^3.3.3",\n    "webpack": "^5.88.2",\n    "webpack-cli": "^5.1.4",\n    "webpack-dev-server": "^4.15.1",\n    "@testing-library/react": "^14.0.0",\n    "@testing-library/jest-dom": "^6.1.5"\n  },\n  "babel": {\n    "presets": [\n      "@babel/preset-env",\n      "@babel/preset-react"\n    ]\n  }\n}\n
+{
+  "name": "nightly-emoji-weather-clock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A whimsical React clock with weatherâthemed emojis.",
+  "scripts": {
+    "start": "webpack serve --mode development --open",
+    "build": "webpack --mode production",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
+    "@babel/preset-react": "^7.22.5",
+    "babel-jest": "^29.5.0",
+    "babel-loader": "^9.1.2",
+    "css-loader": "^6.8.1",
+    "html-webpack-plugin": "^5.5.3",
+    "jest": "^29.5.0",
+    "style-loader": "^3.3.3",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.1.5"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env",
+      "@babel/preset-react"
+    ]
+  }
+}
+

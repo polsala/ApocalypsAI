@@ -1,1 +1,21 @@
-# Apocalypse Daily Tip\n\nA tiny Dockerized utility that prints a random post‑apocalyptic survival tip each time the container runs. Great for a daily morale boost in the wasteland.\n\n## Usage\n\n```sh\ndocker build -t apocalypse-tip .\ndocker run --rm apocalypse-tip\n```\n\nThe container will output one tip, e.g.:\n\n```\nAlways keep a spare bottle of water in your boot.\n```\n\n## How it works\n\nThe container runs a small Python module (`src.tip`) that selects a tip at random from a built‑in list.\n
+# Apocalypse Daily Tip
+
+A tiny Dockerized utility that prints a random post‑apocalyptic survival tip each time the container runs. Great for a daily morale boost in the wasteland.
+
+## Usage
+
+```sh
+docker build -t apocalypse-tip .
+docker run --rm apocalypse-tip
+```
+
+The container will output one tip, e.g.:
+
+```
+Always keep a spare bottle of water in your boot.
+```
+
+## How it works
+
+The container runs a small Python module (`src.tip`) that selects a tip at random from a built‑in list.
+

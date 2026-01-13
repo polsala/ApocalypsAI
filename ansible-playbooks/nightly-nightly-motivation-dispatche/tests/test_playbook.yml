@@ -1,1 +1,16 @@
-- import_playbook: ../playbook.yml\n  vars:\n    selected_quote: "Stay hungry, stay foolish."\n\n- hosts: localhost\n  gather_facts: false\n  tasks:\n    - name: Read the generated file\n      slurp:\n        src: /tmp/motivation.txt\n      register: file_content\n\n    - name: Assert the file contains the forced quote\n      assert:\n        that:\n          - file_content.content | b64decode == "Stay hungry, stay foolish."
+- import_playbook: ../playbook.yml
+  vars:
+    selected_quote: "Stay hungry, stay foolish."
+
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read the generated file
+      slurp:
+        src: /tmp/motivation.txt
+      register: file_content
+
+    - name: Assert the file contains the forced quote
+      assert:
+        that:
+          - file_content.content | b64decode == "Stay hungry, stay foolish."

@@ -1,1 +1,38 @@
-pub struct GearItem {\n    pub name: &'static str,\n    pub rarity: &'static str,\n    pub description: &'static str,\n}\n\npub fn generate_item<R: rand::Rng + ?Sized>(rng: &mut R) -> GearItem {\n    let names = [\n        "Rusty Pipe Wrench",\n        "Makeshift Gas Mask",\n        "Scrap Metal Shield",\n        "Improvised Flamethrower",\n        "Salvaged Solar Panel",\n        "Worn Leather Boots",\n        "Radiation Detector",\n        "Jury‑Rigged Drone",\n        "Canned Food Stash",\n        "Water Purifier Kit",\n    ];\n    let rarities = ["Common", "Uncommon", "Rare", "Legendary"];\n    let descriptions = [\n        "A battered item, still functional enough for survival.",\n        "A piece of equipment cobbled together from scavenged parts.",\n        "An essential tool for navigating the wastelands.",\n        "A rare find that could turn the tide of any encounter.",\n        "A legendary artifact whispered about in survivor tales.",\n    ];\n\n    let name = names.choose(rng).unwrap();\n    let rarity = rarities.choose(rng).unwrap();\n    let description = descriptions.choose(rng).unwrap();\n\n    GearItem {\n        name,\n        rarity,\n        description,\n    }\n}
+pub struct GearItem {
+    pub name: &'static str,
+    pub rarity: &'static str,
+    pub description: &'static str,
+}
+
+pub fn generate_item<R: rand::Rng + ?Sized>(rng: &mut R) -> GearItem {
+    let names = [
+        "Rusty Pipe Wrench",
+        "Makeshift Gas Mask",
+        "Scrap Metal Shield",
+        "Improvised Flamethrower",
+        "Salvaged Solar Panel",
+        "Worn Leather Boots",
+        "Radiation Detector",
+        "JuryâRigged Drone",
+        "Canned Food Stash",
+        "Water Purifier Kit",
+    ];
+    let rarities = ["Common", "Uncommon", "Rare", "Legendary"];
+    let descriptions = [
+        "A battered item, still functional enough for survival.",
+        "A piece of equipment cobbled together from scavenged parts.",
+        "An essential tool for navigating the wastelands.",
+        "A rare find that could turn the tide of any encounter.",
+        "A legendary artifact whispered about in survivor tales.",
+    ];
+
+    let name = names.choose(rng).unwrap();
+    let rarity = rarities.choose(rng).unwrap();
+    let description = descriptions.choose(rng).unwrap();
+
+    GearItem {
+        name,
+        rarity,
+        description,
+    }
+}

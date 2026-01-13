@@ -1,1 +1,66 @@
-const core = require('@actions/core')\nconst github = require('@actions/github')\n\n/**\n * Determine which labels to apply based on a list of changed file paths.\n * @param {string[]} files - Array of file paths changed in the PR.\n * @returns {string[]} Array of label names (unique).\n */\nfunction determineLabels(files) {\n  const labels = new Set()\n  for (const file of files) {\n    if (file.startsWith('docs/') || file.endsWith('.md')) {\n      labels.add('documentation')\n    } else if (file.startsWith('tests/') || file.endsWith('.test.js') || file.endsWith('_test.py')) {\n      labels.add('tests')\n    } else if (file.startsWith('.github/') || file.endsWith('.yml') || file.endsWith('.yaml')) {\n      labels.add('ci')\n    } else if (file.endsWith('.py') || file.endsWith('.js') || file.endsWith('.ts') || file.endsWith('.rs')) {\n      labels.add('code')\n    }\n  }\n  return Array.from(labels)\n}\n\nasync function run() {\n  try {\n    const token = core.getInput('repo-token', { required: true })\n    const octokit = github.getOctokit(token)\n    const context = github.context\n\n    if (!context.payload.pull_request) {\n      core.setFailed('No pull request found in the context.')\n      return\n    }\n\n    const prNumber = context.payload.pull_request.number\n    const { owner, repo } = context.repo\n\n    // Gather all changed files (paginate in case of many files)\n    const changedFiles = await octokit.paginate(\n      octokit.rest.pulls.listFiles,\n      { owner, repo, pull_number: prNumber },\n      response => response.data.map(f => f.filename)\n    )\n\n    const labels = determineLabels(changedFiles)\n    if (labels.length === 0) {\n      core.info('No matching labels to add.')\n      return\n    }\n\n    await octokit.rest.issues.addLabels({\n      owner,\n      repo,\n      issue_number: prNumber,\n      labels\n    })\n    core.info(`Added labels: ${labels.join(', ')}`)\n  } catch (error) {\n    core.setFailed(error.message)\n  }\n}\n\nrun()\n\nmodule.exports = { determineLabels, run }
+const core = require('@actions/core')
+const github = require('@actions/github')
+
+/**
+ * Determine which labels to apply based on a list of changed file paths.
+ * @param {string[]} files - Array of file paths changed in the PR.
+ * @returns {string[]} Array of label names (unique).
+ */
+function determineLabels(files) {
+  const labels = new Set()
+  for (const file of files) {
+    if (file.startsWith('docs/') || file.endsWith('.md')) {
+      labels.add('documentation')
+    } else if (file.startsWith('tests/') || file.endsWith('.test.js') || file.endsWith('_test.py')) {
+      labels.add('tests')
+    } else if (file.startsWith('.github/') || file.endsWith('.yml') || file.endsWith('.yaml')) {
+      labels.add('ci')
+    } else if (file.endsWith('.py') || file.endsWith('.js') || file.endsWith('.ts') || file.endsWith('.rs')) {
+      labels.add('code')
+    }
+  }
+  return Array.from(labels)
+}
+
+async function run() {
+  try {
+    const token = core.getInput('repo-token', { required: true })
+    const octokit = github.getOctokit(token)
+    const context = github.context
+
+    if (!context.payload.pull_request) {
+      core.setFailed('No pull request found in the context.')
+      return
+    }
+
+    const prNumber = context.payload.pull_request.number
+    const { owner, repo } = context.repo
+
+    // Gather all changed files (paginate in case of many files)
+    const changedFiles = await octokit.paginate(
+      octokit.rest.pulls.listFiles,
+      { owner, repo, pull_number: prNumber },
+      response => response.data.map(f => f.filename)
+    )
+
+    const labels = determineLabels(changedFiles)
+    if (labels.length === 0) {
+      core.info('No matching labels to add.')
+      return
+    }
+
+    await octokit.rest.issues.addLabels({
+      owner,
+      repo,
+      issue_number: prNumber,
+      labels
+    })
+    core.info(`Added labels: ${labels.join(', ')}`)
+  } catch (error) {
+    core.setFailed(error.message)
+  }
+}
+
+run()
+
+module.exports = { determineLabels, run }

@@ -1,1 +1,15 @@
-import { visualizeHash } from '../src/hashVisualizer';\nimport assert from 'assert';\n\n// Mock rationale: we use a fixed input and compare against a pre‑computed expected string.\nconst input = 'test';\n// Expected visual hash for the string "test" (computed with the same algorithm).\nconst expected = '▓█▓▒█░▓░▓▓▒█▒█▒▒\n▓▓░██▓▓░█▒▒▓█░░▒\n▓░▓█▒█░▓░▓░▓▓░░█\n██░▒█▒░▒▓░█░░▓░▓';\n\nconst actual = visualizeHash(input);\nassert.strictEqual(actual, expected, 'Visual hash does not match expected output');\nconsole.log('All tests passed.');\n
+import { visualizeHash } from '../src/hashVisualizer';
+import assert from 'assert';
+
+// Mock rationale: we use a fixed input and compare against a preâcomputed expected string.
+const input = 'test';
+// Expected visual hash for the string "test" (computed with the same algorithm).
+const expected = 'ââââââââââââââââ
+ââââââââââââââââ
+ââââââââââââââââ
+ââââââââââââââââ';
+
+const actual = visualizeHash(input);
+assert.strictEqual(actual, expected, 'Visual hash does not match expected output');
+console.log('All tests passed.');
+

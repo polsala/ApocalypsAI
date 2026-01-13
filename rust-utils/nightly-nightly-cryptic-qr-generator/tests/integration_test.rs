@@ -1,1 +1,21 @@
-#[cfg(test)]\nmod tests {\n    use super::*;\n    use cryptic_qr_generator::generate_qr_ascii;\n\n    #[test]\n    fn test_qr_ascii_is_nonempty_and_valid_chars() {\n        let out = generate_qr_ascii("hello");\n        // Ensure something was produced\n        assert!(!out.is_empty(), "Output should not be empty");\n        // Only allowed characters (full block, space, newline) should appear\n        for ch in out.chars() {\n            assert!(ch == '█' || ch == ' ' || ch == '\n', "Unexpected character in output");\n        }\n        // At least one newline indicates rows were rendered\n        assert!(out.contains('\n'), "Output should contain newlines");\n    }\n}\n
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cryptic_qr_generator::generate_qr_ascii;
+
+    #[test]
+    fn test_qr_ascii_is_nonempty_and_valid_chars() {
+        let out = generate_qr_ascii("hello");
+        // Ensure something was produced
+        assert!(!out.is_empty(), "Output should not be empty");
+        // Only allowed characters (full block, space, newline) should appear
+        for ch in out.chars() {
+            assert!(ch == 'â' || ch == ' ' || ch == '
+', "Unexpected character in output");
+        }
+        // At least one newline indicates rows were rendered
+        assert!(out.contains('
+'), "Output should contain newlines");
+    }
+}
+

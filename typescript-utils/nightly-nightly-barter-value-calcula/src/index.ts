@@ -1,1 +1,68 @@
-type Resource = keyof typeof PRICE_TABLE;\n\n/**\n * Static price table for known resources. Adjust as needed.\n */\nexport const PRICE_TABLE = {\n  water: 2,\n  food: 5,\n  ammo: 10,\n  medicine: 20\n} as const;\n\n/**\n * Calculates the total barter value for a given resource map.\n *\n * @param resources - An object where keys are resource names and values are quantities.\n * @returns The total value as a number.\n * @throws If an unknown resource is encountered or a quantity is negative/non‑numeric.\n */\nexport function calculateValue(resources: Record<string, unknown>): number {\n  if (typeof resources !== 'object' || resources === null) {\n    throw new Error('Resources must be a non‑null object');\n  }\n\n  let total = 0;\n  for (const [key, rawQty] of Object.entries(resources)) {\n    const resource = key as Resource;\n    if (!(resource in PRICE_TABLE)) {\n      throw new Error(`Unknown resource: ${resource}`);\n    }\n    const qty = Number(rawQty);\n    if (!Number.isFinite(qty) || qty < 0) {\n      throw new Error(`Invalid quantity for ${resource}: ${rawQty}`);\n    }\n    total += PRICE_TABLE[resource] * qty;\n  }\n  return total;\n}\n\n/**\n * CLI entry point. Expects a single argument: a JSON string representing the resources map.\n */\nfunction main() {\n  const args = process.argv.slice(2);\n  if (args.length !== 1) {\n    console.error('Usage: node index.js \'{\"water\":10,\"food\":5}\'');\n    process.exit(1);\n  }\n  let resources: Record<string, unknown>;\n  try {\n    resources = JSON.parse(args[0]);\n  } catch (e) {\n    console.error('Failed to parse JSON input:', e.message);\n    process.exit(1);\n  }\n  try {\n    const total = calculateValue(resources);\n    console.log(`Total barter value: ${total}`);\n  } catch (e) {\n    console.error('Error calculating value:', e.message);\n    process.exit(1);\n  }\n}\n\nif (import.meta.url === `file://${process.argv[1]}`) {\n  main();\n}\n
+type Resource = keyof typeof PRICE_TABLE;
+
+/**
+ * Static price table for known resources. Adjust as needed.
+ */
+export const PRICE_TABLE = {
+  water: 2,
+  food: 5,
+  ammo: 10,
+  medicine: 20
+} as const;
+
+/**
+ * Calculates the total barter value for a given resource map.
+ *
+ * @param resources - An object where keys are resource names and values are quantities.
+ * @returns The total value as a number.
+ * @throws If an unknown resource is encountered or a quantity is negative/non‑numeric.
+ */
+export function calculateValue(resources: Record<string, unknown>): number {
+  if (typeof resources !== 'object' || resources === null) {
+    throw new Error('Resources must be a non‑null object');
+  }
+
+  let total = 0;
+  for (const [key, rawQty] of Object.entries(resources)) {
+    const resource = key as Resource;
+    if (!(resource in PRICE_TABLE)) {
+      throw new Error(`Unknown resource: ${resource}`);
+    }
+    const qty = Number(rawQty);
+    if (!Number.isFinite(qty) || qty < 0) {
+      throw new Error(`Invalid quantity for ${resource}: ${rawQty}`);
+    }
+    total += PRICE_TABLE[resource] * qty;
+  }
+  return total;
+}
+
+/**
+ * CLI entry point. Expects a single argument: a JSON string representing the resources map.
+ */
+function main() {
+  const args = process.argv.slice(2);
+  if (args.length !== 1) {
+    console.error('Usage: node index.js \'{\"water\":10,\"food\":5}\'');
+    process.exit(1);
+  }
+  let resources: Record<string, unknown>;
+  try {
+    resources = JSON.parse(args[0]);
+  } catch (e) {
+    console.error('Failed to parse JSON input:', e.message);
+    process.exit(1);
+  }
+  try {
+    const total = calculateValue(resources);
+    console.log(`Total barter value: ${total}`);
+  } catch (e) {
+    console.error('Error calculating value:', e.message);
+    process.exit(1);
+  }
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
+

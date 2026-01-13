@@ -1,1 +1,58 @@
-import React from 'react';\nimport { render, screen } from '@testing-library/react';\nimport '@testing-library/jest-dom';\nimport App from '../src/App.jsx';\n\n// Mock Date globally – deterministic tests\nfunction mockDate(isoString) {\n  const mock = new Date(isoString);\n  const OriginalDate = global.Date;\n  // eslint-disable-next-line no-global-assign\n  global.Date = class extends OriginalDate {\n    constructor(...args) {\n      if (args.length) {\n        return new OriginalDate(...args);\n      }\n      return mock;\n    }\n    static now() {\n      return mock.getTime();\n    }\n  };\n}\n\nafterEach(() => {\n  // Restore original Date after each test\n  jest.restoreAllMocks();\n  // eslint-disable-next-line no-global-assign\n  global.Date = Date;\n});\n\ntest('renders correct time format', () => {\n  mockDate('2023-01-01T08:05:09Z'); // 08:05:09 UTC\n  render(<App />);\n  const timeElement = screen.getByText('08:05:09');\n  expect(timeElement).toBeInTheDocument();\n});\n\ntest('shows sun emoji during daytime (hour 9)', () => {\n  mockDate('2023-01-01T09:15:00Z'); // hour 9\n  render(<App />);\n  const emoji = screen.getByLabelText('weather emoji');\n  expect(emoji).toHaveTextContent('🌞');\n});\n\ntest('shows moon emoji during night (hour 22)', () => {\n  mockDate('2023-01-01T22:45:00Z'); // hour 22\n  render(<App />);\n  const emoji = screen.getByLabelText('weather emoji');\n  expect(emoji).toHaveTextContent('🌙');\n});\n\ntest('shows cloud emoji for the overcast hour (12 pm)', () => {\n  mockDate('2023-01-01T12:00:00Z'); // hour 12\n  render(<App />);\n  const emoji = screen.getByLabelText('weather emoji');\n  expect(emoji).toHaveTextContent('☁️');\n});\n
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from '../src/App.jsx';
+
+// Mock Date globally â deterministic tests
+function mockDate(isoString) {
+  const mock = new Date(isoString);
+  const OriginalDate = global.Date;
+  // eslint-disable-next-line no-global-assign
+  global.Date = class extends OriginalDate {
+    constructor(...args) {
+      if (args.length) {
+        return new OriginalDate(...args);
+      }
+      return mock;
+    }
+    static now() {
+      return mock.getTime();
+    }
+  };
+}
+
+afterEach(() => {
+  // Restore original Date after each test
+  jest.restoreAllMocks();
+  // eslint-disable-next-line no-global-assign
+  global.Date = Date;
+});
+
+test('renders correct time format', () => {
+  mockDate('2023-01-01T08:05:09Z'); // 08:05:09 UTC
+  render(<App />);
+  const timeElement = screen.getByText('08:05:09');
+  expect(timeElement).toBeInTheDocument();
+});
+
+test('shows sun emoji during daytime (hour 9)', () => {
+  mockDate('2023-01-01T09:15:00Z'); // hour 9
+  render(<App />);
+  const emoji = screen.getByLabelText('weather emoji');
+  expect(emoji).toHaveTextContent('ð');
+});
+
+test('shows moon emoji during night (hour 22)', () => {
+  mockDate('2023-01-01T22:45:00Z'); // hour 22
+  render(<App />);
+  const emoji = screen.getByLabelText('weather emoji');
+  expect(emoji).toHaveTextContent('ð');
+});
+
+test('shows cloud emoji for the overcast hour (12 pm)', () => {
+  mockDate('2023-01-01T12:00:00Z'); // hour 12
+  render(<App />);
+  const emoji = screen.getByLabelText('weather emoji');
+  expect(emoji).toHaveTextContent('âï¸');
+});
+

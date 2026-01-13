@@ -1,1 +1,10 @@
-Nightly Ping of Doom\nA whimsical concurrent ping utility that measures TCP latency to multiple hosts and reports min/avg/max.\n\nUsage:\n  ping-of-doom host1 host2 ...\n\nThe tool attempts a TCP connection to port 80 with a 2 second timeout.\nResults are printed in milliseconds.\n\nIt runs pings concurrently, making it fast even for many hosts.
+Nightly Ping of Doom
+A whimsical concurrent ping utility that measures TCP latency to multiple hosts and reports min/avg/max.
+
+Usage:
+  ping-of-doom host1 host2 ...
+
+The tool attempts a TCP connection to port 80 with a 2 second timeout.
+Results are printed in milliseconds.
+
+It runs pings concurrently, making it fast even for many hosts.

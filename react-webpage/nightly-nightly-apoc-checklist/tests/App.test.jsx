@@ -1,1 +1,34 @@
-import React from "react";\nimport { render, screen, fireEvent } from "@testing-library/react";\nimport App from "../src/App";\n\n// Mock localStorage to keep tests deterministic\nbeforeEach(() => {\n  const store = {};\n  const localStorageMock = {\n    getItem: key => (key in store ? store[key] : null),\n    setItem: (key, value) => { store[key] = value.toString(); },\n    clear: () => { Object.keys(store).forEach(key => delete store[key]); },\n    removeItem: key => { delete store[key]; }\n  };\n  Object.defineProperty(window, "localStorage", { value: localStorageMock });\n});\n\ntest("renders initial items and toggles completion", () => {\n  render(<App />);\n  const waterItem = screen.getByText(/Water filter/i);\n  expect(waterItem).toBeInTheDocument();\n\n  const checkboxes = screen.getAllByRole("checkbox");\n  expect(checkboxes[0]).not.toBeChecked();\n  fireEvent.click(checkboxes[0]);\n  expect(checkboxes[0]).toBeChecked();\n});\n\ntest("adds a new checklist item", () => {\n  render(<App />);\n  const input = screen.getByPlaceholderText(/New item/i);\n  fireEvent.change(input, { target: { value: "Radiation suit" } });\n  fireEvent.click(screen.getByText(/Add/i));\n  expect(screen.getByText(/Radiation suit/i)).toBeInTheDocument();\n});
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import App from "../src/App";
+
+// Mock localStorage to keep tests deterministic
+beforeEach(() => {
+  const store = {};
+  const localStorageMock = {
+    getItem: key => (key in store ? store[key] : null),
+    setItem: (key, value) => { store[key] = value.toString(); },
+    clear: () => { Object.keys(store).forEach(key => delete store[key]); },
+    removeItem: key => { delete store[key]; }
+  };
+  Object.defineProperty(window, "localStorage", { value: localStorageMock });
+});
+
+test("renders initial items and toggles completion", () => {
+  render(<App />);
+  const waterItem = screen.getByText(/Water filter/i);
+  expect(waterItem).toBeInTheDocument();
+
+  const checkboxes = screen.getAllByRole("checkbox");
+  expect(checkboxes[0]).not.toBeChecked();
+  fireEvent.click(checkboxes[0]);
+  expect(checkboxes[0]).toBeChecked();
+});
+
+test("adds a new checklist item", () => {
+  render(<App />);
+  const input = screen.getByPlaceholderText(/New item/i);
+  fireEvent.change(input, { target: { value: "Radiation suit" } });
+  fireEvent.click(screen.getByText(/Add/i));
+  expect(screen.getByText(/Radiation suit/i)).toBeInTheDocument();
+});

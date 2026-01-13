@@ -1,1 +1,53 @@
-import React, { useState } from 'react';\nimport SupplyList from './components/SupplyList';\n\ntype Supply = {\n  name: string;\n  quantity: number;\n};\n\nconst App: React.FC = () => {\n  const [supplies, setSupplies] = useState<Supply[]>([]);\n  const [newName, setNewName] = useState('');\n  const [newQty, setNewQty] = useState(1);\n\n  const addSupply = () => {\n    if (!newName.trim()) return;\n    setSupplies([...supplies, { name: newName.trim(), quantity: newQty }]);\n    setNewName('');\n    setNewQty(1);\n  };\n\n  const updateQuantity = (index: number, delta: number) => {\n    const updated = supplies.map((s, i) =>\n      i === index ? { ...s, quantity: Math.max(s.quantity + delta, 0) } : s\n    );\n    setSupplies(updated);\n  };\n\n  return (\n    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>\n      <h1>Supply Dashboard</h1>\n      <div>\n        <input\n          placeholder=\"Item name\"\n          value={newName}\n          onChange={(e) => setNewName(e.target.value)}\n        />\n        <input\n          type=\"number\"\n          min={1}\n          value={newQty}\n          onChange={(e) => setNewQty(parseInt(e.target.value, 10) || 1)}\n          style={{ width: '4rem', marginLeft: '0.5rem' }}\n        />\n        <button onClick={addSupply} style={{ marginLeft: '0.5rem' }}>\n          Add\n        </button>\n      </div>\n      <SupplyList supplies={supplies} onUpdate={updateQuantity} />\n    </div>\n  );\n};\n\nexport default App;
+import React, { useState } from 'react';
+import SupplyList from './components/SupplyList';
+
+type Supply = {
+  name: string;
+  quantity: number;
+};
+
+const App: React.FC = () => {
+  const [supplies, setSupplies] = useState<Supply[]>([]);
+  const [newName, setNewName] = useState('');
+  const [newQty, setNewQty] = useState(1);
+
+  const addSupply = () => {
+    if (!newName.trim()) return;
+    setSupplies([...supplies, { name: newName.trim(), quantity: newQty }]);
+    setNewName('');
+    setNewQty(1);
+  };
+
+  const updateQuantity = (index: number, delta: number) => {
+    const updated = supplies.map((s, i) =>
+      i === index ? { ...s, quantity: Math.max(s.quantity + delta, 0) } : s
+    );
+    setSupplies(updated);
+  };
+
+  return (
+    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+      <h1>Supply Dashboard</h1>
+      <div>
+        <input
+          placeholder="Item name"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <input
+          type="number"
+          min={1}
+          value={newQty}
+          onChange={(e) => setNewQty(parseInt(e.target.value, 10) || 1)}
+          style={{ width: '4rem', marginLeft: '0.5rem' }}
+        />
+        <button onClick={addSupply} style={{ marginLeft: '0.5rem' }}>
+          Add
+        </button>
+      </div>
+      <SupplyList supplies={supplies} onUpdate={updateQuantity} />
+    </div>
+  );
+};
+
+export default App;

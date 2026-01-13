@@ -1,1 +1,32 @@
-package main\n\nimport (\n\t\"encoding/json\"\n\t\"math/rand\"\n\t\"net/http\"\n\t\"time\"\n)\n\nvar quotes = []string{\n\t\"When the world ends, the jokes are still funny.\",\n\t\"Apocalypse is just a reset button for humanity.\",\n\t\"Survive the end, then enjoy the afterlife.\",\n\t\"Even in ruin, hope finds a way.\",\n\t\"Remember: the apocalypse is only a new beginning.\",\n}\n\nfunc init() {\n\trand.Seed(time.Now().UnixNano())\n}\n\nfunc quoteHandler(w http.ResponseWriter, r *http.Request) {\n\tindex := rand.Intn(len(quotes))\n\tresp := map[string]string{\"quote\": quotes[index]}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(resp)\n}\n\nfunc main() {\n\thttp.HandleFunc(\"/quote\", quoteHandler)\n\thttp.ListenAndServe(\":8080\", nil)\n}
+package main
+
+import (
+	\"encoding/json\"
+	\"math/rand\"
+	\"net/http\"
+	\"time\"
+)
+
+var quotes = []string{
+	\"When the world ends, the jokes are still funny.\",
+	\"Apocalypse is just a reset button for humanity.\",
+	\"Survive the end, then enjoy the afterlife.\",
+	\"Even in ruin, hope finds a way.\",
+	\"Remember: the apocalypse is only a new beginning.\",
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func quoteHandler(w http.ResponseWriter, r *http.Request) {
+	index := rand.Intn(len(quotes))
+	resp := map[string]string{\"quote\": quotes[index]}
+	w.Header().Set(\"Content-Type\", \"application/json\")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func main() {
+	http.HandleFunc(\"/quote\", quoteHandler)
+	http.ListenAndServe(\":8080\", nil)
+}

@@ -1,1 +1,34 @@
-#!/usr/bin/env node\n\nconst os = require('os');\n\n/**\n * Formats uptime in seconds into a human‑readable string with emojis.\n * @param {number} seconds - Uptime in seconds.\n * @returns {string} Formatted uptime message.\n */\nfunction getUptimeMessage(seconds) {\n  const days = Math.floor(seconds / 86400);\n  const hours = Math.floor((seconds % 86400) / 3600);\n  const minutes = Math.floor((seconds % 3600) / 60);\n  const secs = Math.floor(seconds % 60);\n\n  const parts = [];\n  if (days) parts.push(`${days} day${days !== 1 ? 's' : ''}`);\n  if (hours) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);\n  if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);\n  if (secs) parts.push(`${secs} second${secs !== 1 ? 's' : ''}`);\n\n  return `🟢 Uptime: ${parts.join(' ')}`;\n}\n\nfunction main() {\n  const uptimeSeconds = os.uptime();\n  console.log(getUptimeMessage(uptimeSeconds));\n}\n\nif (require.main === module) {\n  main();\n}\n\nmodule.exports = { getUptimeMessage };
+#!/usr/bin/env node
+
+const os = require('os');
+
+/**
+ * Formats uptime in seconds into a humanâreadable string with emojis.
+ * @param {number} seconds - Uptime in seconds.
+ * @returns {string} Formatted uptime message.
+ */
+function getUptimeMessage(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const parts = [];
+  if (days) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+  if (hours) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+  if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+  if (secs) parts.push(`${secs} second${secs !== 1 ? 's' : ''}`);
+
+  return `ð¢ Uptime: ${parts.join(' ')}`;
+}
+
+function main() {
+  const uptimeSeconds = os.uptime();
+  console.log(getUptimeMessage(uptimeSeconds));
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { getUptimeMessage };

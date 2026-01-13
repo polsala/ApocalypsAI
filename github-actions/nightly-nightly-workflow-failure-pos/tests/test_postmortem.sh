@@ -1,1 +1,29 @@
-#!/usr/bin/env bash\nset -euo pipefail\n\n# Mock curl to capture request\nfunction curl() {\n  echo "curl called with args: $@"\n  # Simulate successful response\n  echo '{"html_url":"https://github.com/owner/repo/issues/1"}'\n}\nexport -f curl\n\n# Set environment variables for test\nexport GITHUB_TOKEN="test-token"\nexport GITHUB_REPOSITORY="owner/repo"\nexport GITHUB_RUN_ID="12345"\nexport GITHUB_WORKFLOW="CI"\nexport GITHUB_SERVER_URL="https://github.com"\n\n# Run script\noutput=$(bash "$(dirname \"$0\")/../postmortem.sh")\n\n# Verify that curl was called\nif [[ "$output" == *"curl called with args:"* ]]; then\n  echo "Test passed"\n  exit 0\nelse\n  echo "Test failed"\n  exit 1\nfi
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Mock curl to capture request
+function curl() {
+  echo "curl called with args: $@"
+  # Simulate successful response
+  echo '{"html_url":"https://github.com/owner/repo/issues/1"}'
+}
+export -f curl
+
+# Set environment variables for test
+export GITHUB_TOKEN="test-token"
+export GITHUB_REPOSITORY="owner/repo"
+export GITHUB_RUN_ID="12345"
+export GITHUB_WORKFLOW="CI"
+export GITHUB_SERVER_URL="https://github.com"
+
+# Run script
+output=$(bash "$(dirname "$0")/../postmortem.sh")
+
+# Verify that curl was called
+if [[ "$output" == *"curl called with args:"* ]]; then
+  echo "Test passed"
+  exit 0
+else
+  echo "Test failed"
+  exit 1
+fi

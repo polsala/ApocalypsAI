@@ -1,1 +1,20 @@
-import React from \"react\";\nimport { render, screen, fireEvent } from \"@testing-library/react\";\nimport App from \"../src/App.jsx\";\n\ntest(\"renders initial forecast\", () => {\n  render(<App />);\n  const conditionRegex = /(Acid rain|Radiation fog|Solar flare|Dust storm|Glowing aurora)/;\n  const conditionElement = screen.getByText(conditionRegex);\n  expect(conditionElement).toBeInTheDocument();\n});\n\ntest(\"refresh button exists and can be clicked\", () => {\n  render(<App />);\n  const button = screen.getByText(\"Refresh\");\n  expect(button).toBeInTheDocument();\n  // Mock rationale: The forecast may randomly stay the same after a click; we only verify the button works without error.\n  fireEvent.click(button);\n  expect(button).toBeInTheDocument();\n});\n
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import App from "../src/App.jsx";
+
+test("renders initial forecast", () => {
+  render(<App />);
+  const conditionRegex = /(Acid rain|Radiation fog|Solar flare|Dust storm|Glowing aurora)/;
+  const conditionElement = screen.getByText(conditionRegex);
+  expect(conditionElement).toBeInTheDocument();
+});
+
+test("refresh button exists and can be clicked", () => {
+  render(<App />);
+  const button = screen.getByText("Refresh");
+  expect(button).toBeInTheDocument();
+  // Mock rationale: The forecast may randomly stay the same after a click; we only verify the button works without error.
+  fireEvent.click(button);
+  expect(button).toBeInTheDocument();
+});
+

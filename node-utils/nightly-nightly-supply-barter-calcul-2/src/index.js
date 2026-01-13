@@ -1,1 +1,80 @@
-#!/usr/bin/env node\n\nconst fs = require('fs');\n\n// Base barter values for known supplies\nconst baseValues = {\n  "canned-beans": 2,\n  "water": 3,\n  "medicine": 10,\n  "ammo": 5,\n  "fuel": 8,\n  "scrap-metal": 1,\n  "electronics": 7\n};\n\n// Rarity multipliers\nconst rarityMultipliers = {\n  "common": 1,\n  "uncommon": 1.5,\n  "rare": 2,\n  "legendary": 5\n};\n\n// Simple mapping of item -> rarity\nconst rarityMap = {\n  "canned-beans": "common",\n  "water": "common",\n  "medicine": "uncommon",\n  "ammo": "uncommon",\n  "fuel": "rare",\n  "scrap-metal": "common",\n  "electronics": "rare"\n};\n\nfunction getItemValue(name, qty) {\n  const base = baseValues[name] !== undefined ? baseValues[name] : 1;\n  const rarity = rarityMap[name] || "common";\n  const multiplier = rarityMultipliers[rarity] || 1;\n  return base * multiplier * qty;\n}\n\nfunction computeBarterValue(items) {\n  if (!Array.isArray(items)) {\n    throw new Error("Items must be an array");\n  }\n  return items.reduce((sum, item) => {\n    const name = item.name;\n    const qty = Number(item.qty);\n    if (!name || isNaN(qty)) {\n      throw new Error("Invalid item format");\n    }\n    return sum + getItemValue(name, qty);\n  }, 0);\n}\n\n// CLI handling\nfunction main() {\n  let input = '';\n  if (process.argv.length > 2) {\n    // JSON string supplied as first argument after script name\n    input = process.argv[2];\n  } else {\n    // Read from STDIN (file descriptor 0)\n    input = fs.readFileSync(0, 'utf-8');\n  }\n  try {\n    const items = JSON.parse(input);\n    const total = computeBarterValue(items);\n    console.log(`Total barter value: ${total}`);\n  } catch (e) {\n    console.error('Error:', e.message);\n    process.exit(1);\n  }\n}\n\nif (require.main === module) {\n  main();\n}\n\nmodule.exports = { computeBarterValue };
+#!/usr/bin/env node
+
+const fs = require('fs');
+
+// Base barter values for known supplies
+const baseValues = {
+  "canned-beans": 2,
+  "water": 3,
+  "medicine": 10,
+  "ammo": 5,
+  "fuel": 8,
+  "scrap-metal": 1,
+  "electronics": 7
+};
+
+// Rarity multipliers
+const rarityMultipliers = {
+  "common": 1,
+  "uncommon": 1.5,
+  "rare": 2,
+  "legendary": 5
+};
+
+// Simple mapping of item -> rarity
+const rarityMap = {
+  "canned-beans": "common",
+  "water": "common",
+  "medicine": "uncommon",
+  "ammo": "uncommon",
+  "fuel": "rare",
+  "scrap-metal": "common",
+  "electronics": "rare"
+};
+
+function getItemValue(name, qty) {
+  const base = baseValues[name] !== undefined ? baseValues[name] : 1;
+  const rarity = rarityMap[name] || "common";
+  const multiplier = rarityMultipliers[rarity] || 1;
+  return base * multiplier * qty;
+}
+
+function computeBarterValue(items) {
+  if (!Array.isArray(items)) {
+    throw new Error("Items must be an array");
+  }
+  return items.reduce((sum, item) => {
+    const name = item.name;
+    const qty = Number(item.qty);
+    if (!name || isNaN(qty)) {
+      throw new Error("Invalid item format");
+    }
+    return sum + getItemValue(name, qty);
+  }, 0);
+}
+
+// CLI handling
+function main() {
+  let input = '';
+  if (process.argv.length > 2) {
+    // JSON string supplied as first argument after script name
+    input = process.argv[2];
+  } else {
+    // Read from STDIN (file descriptor 0)
+    input = fs.readFileSync(0, 'utf-8');
+  }
+  try {
+    const items = JSON.parse(input);
+    const total = computeBarterValue(items);
+    console.log(`Total barter value: ${total}`);
+  } catch (e) {
+    console.error('Error:', e.message);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { computeBarterValue };

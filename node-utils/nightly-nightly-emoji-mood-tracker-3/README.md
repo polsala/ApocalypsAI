@@ -1,1 +1,67 @@
-# nightly-emoji-mood-tracker\n\nA tiny, whimsical CLI utility for tracking your mood with emojis.\n\n## Features\n\n- Log a mood entry with an emoji and an optional note.\n- Store entries locally in a JSON file (default: `./mood.json`).\n- Retrieve a summary that counts how many times each emoji was used.\n\n## Installation\n\n```bash\n# Clone the repository (or copy the utility folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-emoji-mood-tracker\n\n# Install (no external deps required)\nnpm install\n```\n\n## Usage\n\nThe utility can be invoked via Node:\n\n```bash\n# Log a mood\nnode src/index.js log "😊" "Feeling great after a coffee"\n\n# Log another mood (no note)\nnode src/index.js log "😔"\n\n# Show summary\nnode src/index.js summary\n```\n\n### Environment variable\n\nYou can override the storage file by setting `MOOD_FILE`:\n\n```bash\nMOOD_FILE=/tmp/my_mood.json node src/index.js log "🤖"\n```\n\n## API (for developers)\n\nThe module exports two async functions you can require in your own code:\n\n- `logMood(emoji, note)` – adds a new entry.\n- `getSummary()` – returns an object mapping emojis to counts.\n\nBoth functions return Promises.\n\n## Testing\n\nRun the test suite with Node (no test runner required):\n\n```bash\nnode tests/test_index.js\n```\n\nThe tests are deterministic and use a temporary file via the `MOOD_FILE` env var.\n\n## License\n\nMIT – see LICENSE file in the repository root.\n
+# nightly-emoji-mood-tracker
+
+A tiny, whimsical CLI utility for tracking your mood with emojis.
+
+## Features
+
+- Log a mood entry with an emoji and an optional note.
+- Store entries locally in a JSON file (default: `./mood.json`).
+- Retrieve a summary that counts how many times each emoji was used.
+
+## Installation
+
+```bash
+# Clone the repository (or copy the utility folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-emoji-mood-tracker
+
+# Install (no external deps required)
+npm install
+```
+
+## Usage
+
+The utility can be invoked via Node:
+
+```bash
+# Log a mood
+node src/index.js log "ð" "Feeling great after a coffee"
+
+# Log another mood (no note)
+node src/index.js log "ð"
+
+# Show summary
+node src/index.js summary
+```
+
+### Environment variable
+
+You can override the storage file by setting `MOOD_FILE`:
+
+```bash
+MOOD_FILE=/tmp/my_mood.json node src/index.js log "ð¤"
+```
+
+## API (for developers)
+
+The module exports two async functions you can require in your own code:
+
+- `logMood(emoji, note)` â adds a new entry.
+- `getSummary()` â returns an object mapping emojis to counts.
+
+Both functions return Promises.
+
+## Testing
+
+Run the test suite with Node (no test runner required):
+
+```bash
+node tests/test_index.js
+```
+
+The tests are deterministic and use a temporary file via the `MOOD_FILE` env var.
+
+## License
+
+MIT â see LICENSE file in the repository root.
+

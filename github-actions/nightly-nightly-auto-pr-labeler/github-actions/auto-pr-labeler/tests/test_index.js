@@ -1,1 +1,47 @@
-const core = require('@actions/core');\nconst github = require('@actions/github');\n\njest.mock('@actions/core');\njest.mock('@actions/github');\n\ndescribe('Auto PR Labeler', () => {\n  const mockAddLabels = jest.fn().mockResolvedValue({});\n  const mockGetOctokit = jest.fn(() => ({\n    rest: {\n      issues: {\n        addLabels: mockAddLabels\n      }\n    }\n  }));\n\n  beforeEach(() => {\n    jest.clearAllMocks();\n    github.getOctokit = mockGetOctokit;\n    core.getInput.mockImplementation(name => {\n      if (name === 'repo-token') return 'fake-token';\n      return '';\n    });\n    github.context = {\n      repo: { owner: 'owner', repo: 'repo' },\n      payload: {\n        pull_request: {\n          number: 42,\n          title: 'Fix: zombie apocalypse'\n        }\n      }\n    };\n  });\n\n  test('adds correct label for fix keyword', async () => {\n    // Require after mocks are set – the action runs on import\n    require('../src/index.js');\n    // Wait for the async run to complete\n    await new Promise(process.nextTick);\n    expect(mockAddLabels).toHaveBeenCalledWith({\n      owner: 'owner',\n      repo: 'repo',\n      issue_number: 42,\n      labels: ['🧟 zombie-fix']\n    });\n  });\n});
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+jest.mock('@actions/core');
+jest.mock('@actions/github');
+
+describe('Auto PR Labeler', () => {
+  const mockAddLabels = jest.fn().mockResolvedValue({});
+  const mockGetOctokit = jest.fn(() => ({
+    rest: {
+      issues: {
+        addLabels: mockAddLabels
+      }
+    }
+  }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    github.getOctokit = mockGetOctokit;
+    core.getInput.mockImplementation(name => {
+      if (name === 'repo-token') return 'fake-token';
+      return '';
+    });
+    github.context = {
+      repo: { owner: 'owner', repo: 'repo' },
+      payload: {
+        pull_request: {
+          number: 42,
+          title: 'Fix: zombie apocalypse'
+        }
+      }
+    };
+  });
+
+  test('adds correct label for fix keyword', async () => {
+    // Require after mocks are set â the action runs on import
+    require('../src/index.js');
+    // Wait for the async run to complete
+    await new Promise(process.nextTick);
+    expect(mockAddLabels).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      issue_number: 42,
+      labels: ['ð§ zombie-fix']
+    });
+  });
+});

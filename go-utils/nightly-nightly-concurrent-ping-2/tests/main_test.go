@@ -1,1 +1,41 @@
-package main\n\nimport (\n    "fmt"\n    "reflect"\n    "testing"\n)\n\n// MockExecutor implements PingExecutor with predefined responses.\ntype MockExecutor struct {\n    responses map[string]string\n    errors    map[string]bool\n}\n\nfunc (m MockExecutor) Ping(host string) (string, error) {\n    if m.errors[host] {\n        return "", fmt.Errorf("mock error")\n    }\n    return m.responses[host], nil\n}\n\nfunc TestRun(t *testing.T) {\n    hosts := []string{"alpha", "beta"}\n    mock := MockExecutor{\n        responses: map[string]string{\n            "alpha": "5ms",\n        },\n        errors: map[string]bool{\n            "beta": true,\n        },\n    }\n    got := run(hosts, mock)\n    want := map[string]string{\n        "alpha": "5ms",\n        "beta":  "error",\n    }\n    if !reflect.DeepEqual(got, want) {\n        t.Fatalf("run() = %v, want %v", got, want)\n    }\n}\n
+package main
+
+import (
+    "fmt"
+    "reflect"
+    "testing"
+)
+
+// MockExecutor implements PingExecutor with predefined responses.
+type MockExecutor struct {
+    responses map[string]string
+    errors    map[string]bool
+}
+
+func (m MockExecutor) Ping(host string) (string, error) {
+    if m.errors[host] {
+        return "", fmt.Errorf("mock error")
+    }
+    return m.responses[host], nil
+}
+
+func TestRun(t *testing.T) {
+    hosts := []string{"alpha", "beta"}
+    mock := MockExecutor{
+        responses: map[string]string{
+            "alpha": "5ms",
+        },
+        errors: map[string]bool{
+            "beta": true,
+        },
+    }
+    got := run(hosts, mock)
+    want := map[string]string{
+        "alpha": "5ms",
+        "beta":  "error",
+    }
+    if !reflect.DeepEqual(got, want) {
+        t.Fatalf("run() = %v, want %v", got, want)
+    }
+}
+

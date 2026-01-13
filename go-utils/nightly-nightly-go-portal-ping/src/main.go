@@ -1,1 +1,62 @@
-package main\n\nimport (\n    \"fmt\"\n    \"net\"\n    \"os\"\n    \"strings\"\n    \"sync\"\n    \"time\"\n)\n\ntype Result struct {\n    Host    string\n    Latency time.Duration\n    Err     error\n}\n\nfunc pingHost(host string, timeout time.Duration) Result {\n    start := time.Now()\n    conn, err := net.DialTimeout(\"tcp\", host, timeout)\n    latency := time.Since(start)\n    if err == nil {\n        conn.Close()\n    }\n    return Result{Host: host, Latency: latency, Err: err}\n}\n\nfunc pingHosts(hosts []string, timeout time.Duration) []Result {\n    var wg sync.WaitGroup\n    results := make([]Result, len(hosts))\n    for i, h := range hosts {\n        wg.Add(1)\n        go func(idx int, host string) {\n            defer wg.Done()\n            results[idx] = pingHost(host, timeout)\n        }(i, h)\n    }\n    wg.Wait()\n    return results\n}\n\nfunc main() {\n    if len(os.Args) < 2 {\n        fmt.Println(\"Usage: portal-ping <host1:port,host2:port,...>\")\n        os.Exit(1)\n    }\n    input := os.Args[1]\n    hosts := strings.Split(input, \",\")\n    timeout := 2 * time.Second\n    results := pingHosts(hosts, timeout)\n    fmt.Printf(\"%-25s %-10s %s\n\", \"HOST\", \"LATENCY\", \"STATUS\")\n    for _, r := range results {\n        status := \"OK\"\n        if r.Err != nil {\n            status = r.Err.Error()\n        }\n        fmt.Printf(\"%-25s %-10s %s\n\", r.Host, r.Latency, status)\n    }\n}\n
+package main
+
+import (
+    "fmt"
+    "net"
+    "os"
+    "strings"
+    "sync"
+    "time"
+)
+
+type Result struct {
+    Host    string
+    Latency time.Duration
+    Err     error
+}
+
+func pingHost(host string, timeout time.Duration) Result {
+    start := time.Now()
+    conn, err := net.DialTimeout("tcp", host, timeout)
+    latency := time.Since(start)
+    if err == nil {
+        conn.Close()
+    }
+    return Result{Host: host, Latency: latency, Err: err}
+}
+
+func pingHosts(hosts []string, timeout time.Duration) []Result {
+    var wg sync.WaitGroup
+    results := make([]Result, len(hosts))
+    for i, h := range hosts {
+        wg.Add(1)
+        go func(idx int, host string) {
+            defer wg.Done()
+            results[idx] = pingHost(host, timeout)
+        }(i, h)
+    }
+    wg.Wait()
+    return results
+}
+
+func main() {
+    if len(os.Args) < 2 {
+        fmt.Println("Usage: portal-ping <host1:port,host2:port,...>")
+        os.Exit(1)
+    }
+    input := os.Args[1]
+    hosts := strings.Split(input, ",")
+    timeout := 2 * time.Second
+    results := pingHosts(hosts, timeout)
+    fmt.Printf("%-25s %-10s %s
+", "HOST", "LATENCY", "STATUS")
+    for _, r := range results {
+        status := "OK"
+        if r.Err != nil {
+            status = r.Err.Error()
+        }
+        fmt.Printf("%-25s %-10s %s
+", r.Host, r.Latency, status)
+    }
+}
+

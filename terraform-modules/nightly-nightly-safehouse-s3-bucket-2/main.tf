@@ -1,1 +1,31 @@
-resource "aws_s3_bucket" "safehouse" {\n  bucket = var.bucket_name\n\n  versioning {\n    enabled = true\n  }\n\n  server_side_encryption_configuration {\n    rule {\n      apply_server_side_encryption_by_default {\n        sse_algorithm = "AES256"\n      }\n    }\n  }\n\n  lifecycle_rule {\n    id      = "expire-old-objects"\n    enabled = true\n\n    expiration {\n      days = 30\n    }\n  }\n\n  tags = {\n    Purpose = "Post‑Apocalyptic Safehouse"\n  }\n}\n\n# Provider configuration is intentionally omitted; users must supply it in their root module.\n
+resource "aws_s3_bucket" "safehouse" {
+  bucket = var.bucket_name
+
+  versioning {
+    enabled = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  lifecycle_rule {
+    id      = "expire-old-objects"
+    enabled = true
+
+    expiration {
+      days = 30
+    }
+  }
+
+  tags = {
+    Purpose = "PostâApocalyptic Safehouse"
+  }
+}
+
+# Provider configuration is intentionally omitted; users must supply it in their root module.
+

@@ -1,1 +1,50 @@
-import React, { useState } from \"react\";\n\nconst locations = [\n  \"Radiated Ruins\",\n  \"Dusty Wasteland\",\n  \"Neon‑lit Megacity\",\n  \"Frozen Bunker\",\n  \"Sunken Subway\",\n  \"Crumbling Cathedral\"\n];\n\nconst weatherConditions = [\n  \"acid rain\",\n  \"radioactive dust storm\",\n  \"electric sandstorm\",\n  \"glowing fog\",\n  \"mutated pollen bloom\",\n  \"thermal vortex\",\n  \"silent snowfall of ash\"\n];\n\nfunction getRandomItem(arr) {\n  return arr[Math.floor(Math.random() * arr.length)];\n}\n\nexport default function App() {\n  const [forecast, setForecast] = useState(() => ({\n    location: getRandomItem(locations),\n    condition: getRandomItem(weatherConditions)\n  }));\n\n  const refresh = () => {\n    setForecast({\n      location: getRandomItem(locations),\n      condition: getRandomItem(weatherConditions)\n    });\n  };\n\n  return (\n    <div style={{ fontFamily: \"sans-serif\", textAlign: \"center\", marginTop: \"2rem\" }}>\n      <h1>🌀 Apocalypse Weather Forecast 🌀</h1>\n      <p>\n        <strong>{forecast.location}</strong> is experiencing{' '}\n        <em>{forecast.condition}</em>.\n      </p>\n      <button onClick={refresh}>Generate New Forecast</button>\n    </div>\n  );\n}\n
+import React, { useState } from "react";
+
+const locations = [
+  "Radiated Ruins",
+  "Dusty Wasteland",
+  "Neonâlit Megacity",
+  "Frozen Bunker",
+  "Sunken Subway",
+  "Crumbling Cathedral"
+];
+
+const weatherConditions = [
+  "acid rain",
+  "radioactive dust storm",
+  "electric sandstorm",
+  "glowing fog",
+  "mutated pollen bloom",
+  "thermal vortex",
+  "silent snowfall of ash"
+];
+
+function getRandomItem(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export default function App() {
+  const [forecast, setForecast] = useState(() => ({
+    location: getRandomItem(locations),
+    condition: getRandomItem(weatherConditions)
+  }));
+
+  const refresh = () => {
+    setForecast({
+      location: getRandomItem(locations),
+      condition: getRandomItem(weatherConditions)
+    });
+  };
+
+  return (
+    <div style={{ fontFamily: "sans-serif", textAlign: "center", marginTop: "2rem" }}>
+      <h1>ð Apocalypse Weather Forecast ð</h1>
+      <p>
+        <strong>{forecast.location}</strong> is experiencing{' '}
+        <em>{forecast.condition}</em>.
+      </p>
+      <button onClick={refresh}>Generate New Forecast</button>
+    </div>
+  );
+}
+

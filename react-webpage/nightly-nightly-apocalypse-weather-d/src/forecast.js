@@ -1,1 +1,26 @@
-function hashString(str) {\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    hash = ((hash << 5) - hash) + str.charCodeAt(i);\n    hash |= 0; // Convert to 32‑bit integer\n  }\n  return Math.abs(hash);\n}\n\nconst conditions = [\n  \"Acid rain\",\n  \"Radioactive dust storm\",\n  \"Scorching sun\",\n  \"Glowing fog\",\n  \"Electromagnetic turbulence\",\n  \"Silent snowfall of ash\"\n];\n\nfunction getForecast(location) {\n  const h = hashString(location);\n  const condition = conditions[h % conditions.length];\n  const temperature = (h % 80) - 30; // -30 to 49°C\n  return `${condition} with a temperature of ${temperature}°C`;\n}\n\nmodule.exports = { getForecast };
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0; // Convert to 32âbit integer
+  }
+  return Math.abs(hash);
+}
+
+const conditions = [
+  "Acid rain",
+  "Radioactive dust storm",
+  "Scorching sun",
+  "Glowing fog",
+  "Electromagnetic turbulence",
+  "Silent snowfall of ash"
+];
+
+function getForecast(location) {
+  const h = hashString(location);
+  const condition = conditions[h % conditions.length];
+  const temperature = (h % 80) - 30; // -30 to 49Â°C
+  return `${condition} with a temperature of ${temperature}Â°C`;
+}
+
+module.exports = { getForecast };

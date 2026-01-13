@@ -1,1 +1,53 @@
-import React, { useState } from \"react\";\n\nconst memes = [\n  \"https://i.imgur.com/1.jpg\",\n  \"https://i.imgur.com/2.jpg\",\n  \"https://i.imgur.com/3.jpg\"\n];\n\nconst fakeWeather = (city) => {\n  const temps = [\"☀️ Sunny\", \"🌧️ Rainy\", \"⛈️ Stormy\", \"❄️ Snowy\"];\n  const idx = Math.floor(Math.random() * temps.length);\n  return `${temps[idx]} in ${city}`;\n};\n\nexport default function App() {\n  const [city, setCity] = useState(\"\");\n  const [weather, setWeather] = useState(\"\");\n  const [memeIdx, setMemeIdx] = useState(0);\n\n  const handleCityChange = (e) => setCity(e.target.value);\n  const handleShowWeather = () => setWeather(fakeWeather(city));\n  const nextMeme = () => setMemeIdx((memeIdx + 1) % memes.length);\n\n  return (\n    <div style={{ fontFamily: \"sans-serif\", padding: \"1rem\" }}>\n      <h1>🧭 Meme Weather Dashboard</h1>\n      <div>\n        <input\n          placeholder=\"Enter city\"\n          value={city}\n          onChange={handleCityChange}\n          data-testid=\"city-input\"\n        />\n        <button onClick={handleShowWeather} data-testid=\"weather-btn\">\n          Show Weather\n        </button>\n      </div>\n      {weather && <p data-testid=\"weather-output\">{weather}</p>}\n      <div style={{ marginTop: \"1rem\" }}>\n        <img\n          src={memes[memeIdx]}\n          alt=\"meme\"\n          width={300}\n          data-testid=\"meme-image\"\n        />\n        <br />\n        <button onClick={nextMeme} data-testid=\"meme-btn\">\n          New Meme\n        </button>\n      </div>\n    </div>\n  );\n}
+import React, { useState } from "react";
+
+const memes = [
+  "https://i.imgur.com/1.jpg",
+  "https://i.imgur.com/2.jpg",
+  "https://i.imgur.com/3.jpg"
+];
+
+const fakeWeather = (city) => {
+  const temps = ["âï¸ Sunny", "ð§ï¸ Rainy", "âï¸ Stormy", "âï¸ Snowy"];
+  const idx = Math.floor(Math.random() * temps.length);
+  return `${temps[idx]} in ${city}`;
+};
+
+export default function App() {
+  const [city, setCity] = useState("");
+  const [weather, setWeather] = useState("");
+  const [memeIdx, setMemeIdx] = useState(0);
+
+  const handleCityChange = (e) => setCity(e.target.value);
+  const handleShowWeather = () => setWeather(fakeWeather(city));
+  const nextMeme = () => setMemeIdx((memeIdx + 1) % memes.length);
+
+  return (
+    <div style={{ fontFamily: "sans-serif", padding: "1rem" }}>
+      <h1>ð§­ Meme Weather Dashboard</h1>
+      <div>
+        <input
+          placeholder="Enter city"
+          value={city}
+          onChange={handleCityChange}
+          data-testid="city-input"
+        />
+        <button onClick={handleShowWeather} data-testid="weather-btn">
+          Show Weather
+        </button>
+      </div>
+      {weather && <p data-testid="weather-output">{weather}</p>}
+      <div style={{ marginTop: "1rem" }}>
+        <img
+          src={memes[memeIdx]}
+          alt="meme"
+          width={300}
+          data-testid="meme-image"
+        />
+        <br />
+        <button onClick={nextMeme} data-testid="meme-btn">
+          New Meme
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,1 +1,17 @@
-use std::process::Command;\nuse std::str;\n\n#[test]\nfn test_deterministic_output() {\n    let output = Command::new("cargo")\n        .args(&["run", "--quiet", "--", "--seed", "42"])\n        .output()\n        .expect("Failed to execute command");\n    assert!(output.status.success());\n    let stdout = str::from_utf8(&output.stdout).unwrap();\n    let expected = "Title: The Rise of the Machines\nCause: AI takeover\nTip: Find a sturdy shelter and stock up on water.\n";\n    assert_eq!(stdout, expected);\n}
+use std::process::Command;
+use std::str;
+
+#[test]
+fn test_deterministic_output() {
+    let output = Command::new("cargo")
+        .args(&["run", "--quiet", "--", "--seed", "42"])
+        .output()
+        .expect("Failed to execute command");
+    assert!(output.status.success());
+    let stdout = str::from_utf8(&output.stdout).unwrap();
+    let expected = "Title: The Rise of the Machines
+Cause: AI takeover
+Tip: Find a sturdy shelter and stock up on water.
+";
+    assert_eq!(stdout, expected);
+}

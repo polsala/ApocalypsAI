@@ -1,1 +1,27 @@
-use rand::seq::SliceRandom;\nuse rand::Rng;\nuse std::env;\n\nmod lib;\nuse lib::{generate_item, GearItem};\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    let mut count = 1usize;\n    if args.len() > 1 {\n        if let Some(pos) = args.iter().position(|a| a == "-n" || a == "--number") {\n            if let Some(val) = args.get(pos + 1) {\n                count = val.parse().unwrap_or(1);\n            }\n        }\n    }\n\n    let mut rng = rand::thread_rng();\n    for _ in 0..count {\n        let item = generate_item(&mut rng);\n        println!("Item: {}", item.name);\n        println!("Rarity: {}", item.rarity);\n        println!("Description: {}", item.description);\n        println!();\n    }\n}
+use rand::seq::SliceRandom;
+use rand::Rng;
+use std::env;
+
+mod lib;
+use lib::{generate_item, GearItem};
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let mut count = 1usize;
+    if args.len() > 1 {
+        if let Some(pos) = args.iter().position(|a| a == "-n" || a == "--number") {
+            if let Some(val) = args.get(pos + 1) {
+                count = val.parse().unwrap_or(1);
+            }
+        }
+    }
+
+    let mut rng = rand::thread_rng();
+    for _ in 0..count {
+        let item = generate_item(&mut rng);
+        println!("Item: {}", item.name);
+        println!("Rarity: {}", item.rarity);
+        println!("Description: {}", item.description);
+        println!();
+    }
+}

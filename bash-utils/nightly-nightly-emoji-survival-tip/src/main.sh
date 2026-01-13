@@ -1,1 +1,77 @@
-#!/usr/bin/env bash\n# nightly-emoji-survival-tip\n# A Bash utility that outputs a random survival tip with an emoji.\n# Supports deterministic output via --seed.\n\nset -euo pipefail\n\n# Tips and emojis\nTIPS=(\n    \"Carry a multi-tool for unexpected repairs.\"\n    \"Keep a small stash of high-energy snacks.\"\n    \"Learn basic first-aid skills.\"\n    \"Maintain a clean water source.\"\n    \"Practice silent communication.\"\n)\n\nEMOJIS=(\n    \"🛠️\"\n    \"🍫\"\n    \"🩹\"\n    \"💧\"\n    \"🤐\"\n)\n\n# Functions\nusage() {\n    echo \"Usage: $0 [--seed <int>] [-l]\"\n    echo \"  --seed <int>  Provide a seed for deterministic tip selection.\"\n    echo \"  -l            List all available tips.\"\n    exit 1\n}\n\n# Parse arguments\nSEED=\"\"\nLIST=false\n\nwhile [[ $# -gt 0 ]]; do\n    case \"$1\" in\n        --seed)\n            shift\n            SEED=\"$1\"\n            ;;\n        -l)\n            LIST=true\n            ;;\n        -* )\n            usage\n            ;;\n        *)\n            usage\n            ;;\n    esac\n    shift\ndone\n\nif $LIST; then\n    echo \"Available tips:\"\n    for i in \"${!TIPS[@]}\"; do\n        printf \"%d: %s\\n\" \"$((i+1))\" \"${TIPS[$i]}\"\n    done\n    exit 0\nfi\n\n# Determine random number\nif [[ -n \"$SEED\" ]]; then\n    # Simple linear congruential generator\n    RAND=$(( (SEED * 1103515245 + 12345) % 2147483648 ))\nelse\n    RAND=$RANDOM\nfi\n\nTIP_INDEX=$(( RAND % ${#TIPS[@]} ))\nEMOJI_INDEX=$(( RAND % ${#EMOJIS[@]} ))\n\necho \"🌟 Tip: ${TIPS[$TIP_INDEX]} ${EMOJIS[$EMOJI_INDEX]}\"\n
+#!/usr/bin/env bash
+# nightly-emoji-survival-tip
+# A Bash utility that outputs a random survival tip with an emoji.
+# Supports deterministic output via --seed.
+
+set -euo pipefail
+
+# Tips and emojis
+TIPS=(
+    \"Carry a multi-tool for unexpected repairs.\"
+    \"Keep a small stash of high-energy snacks.\"
+    \"Learn basic first-aid skills.\"
+    \"Maintain a clean water source.\"
+    \"Practice silent communication.\"
+)
+
+EMOJIS=(
+    \"🛠️\"
+    \"🍫\"
+    \"🩹\"
+    \"💧\"
+    \"🤐\"
+)
+
+# Functions
+usage() {
+    echo \"Usage: $0 [--seed <int>] [-l]\"
+    echo \"  --seed <int>  Provide a seed for deterministic tip selection.\"
+    echo \"  -l            List all available tips.\"
+    exit 1
+}
+
+# Parse arguments
+SEED=\"\"
+LIST=false
+
+while [[ $# -gt 0 ]]; do
+    case \"$1\" in
+        --seed)
+            shift
+            SEED=\"$1\"
+            ;;
+        -l)
+            LIST=true
+            ;;
+        -* )
+            usage
+            ;;
+        *)
+            usage
+            ;;
+    esac
+    shift
+done
+
+if $LIST; then
+    echo \"Available tips:\"
+    for i in \"${!TIPS[@]}\"; do
+        printf \"%d: %s\
+\" \"$((i+1))\" \"${TIPS[$i]}\"
+    done
+    exit 0
+fi
+
+# Determine random number
+if [[ -n \"$SEED\" ]]; then
+    # Simple linear congruential generator
+    RAND=$(( (SEED * 1103515245 + 12345) % 2147483648 ))
+else
+    RAND=$RANDOM
+fi
+
+TIP_INDEX=$(( RAND % ${#TIPS[@]} ))
+EMOJI_INDEX=$(( RAND % ${#EMOJIS[@]} ))
+
+echo \"🌟 Tip: ${TIPS[$TIP_INDEX]} ${EMOJIS[$EMOJI_INDEX]}\"
+

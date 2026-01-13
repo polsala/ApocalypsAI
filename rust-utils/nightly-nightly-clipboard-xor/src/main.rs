@@ -1,1 +1,46 @@
-use std::env;\nuse std::process;\n\nuse clipboard_xor::{decrypt, encrypt};\n\nfn print_usage() {\n    eprintln!("Usage:");\n    eprintln!("  clipboard-xor encrypt -k <key> <text>");\n    eprintln!("  clipboard-xor decrypt -k <key> <hex>");\n}\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() < 5 {\n        print_usage();\n        process::exit(1);\n    }\n    let mode = &args[1];\n    let key_flag = &args[2];\n    if key_flag != "-k" {\n        print_usage();\n        process::exit(1);\n    }\n    let key = &args[3];\n    let payload = &args[4];\n    match mode.as_str() {\n        "encrypt" => {\n            let out = encrypt(payload, key);\n            println!("{}", out);\n        }\n        "decrypt" => {\n            match decrypt(payload, key) {\n                Ok(txt) => println!("{}", txt),\n                Err(e) => {\n                    eprintln!("Error: {}", e);\n                    process::exit(1);\n                }\n            }\n        }\n        _ => {\n            print_usage();\n            process::exit(1);\n        }\n    }\n}\n
+use std::env;
+use std::process;
+
+use clipboard_xor::{decrypt, encrypt};
+
+fn print_usage() {
+    eprintln!("Usage:");
+    eprintln!("  clipboard-xor encrypt -k <key> <text>");
+    eprintln!("  clipboard-xor decrypt -k <key> <hex>");
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 5 {
+        print_usage();
+        process::exit(1);
+    }
+    let mode = &args[1];
+    let key_flag = &args[2];
+    if key_flag != "-k" {
+        print_usage();
+        process::exit(1);
+    }
+    let key = &args[3];
+    let payload = &args[4];
+    match mode.as_str() {
+        "encrypt" => {
+            let out = encrypt(payload, key);
+            println!("{}", out);
+        }
+        "decrypt" => {
+            match decrypt(payload, key) {
+                Ok(txt) => println!("{}", txt),
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            }
+        }
+        _ => {
+            print_usage();
+            process::exit(1);
+        }
+    }
+}
+

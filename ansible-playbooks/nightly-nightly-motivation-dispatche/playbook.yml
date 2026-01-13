@@ -1,1 +1,13 @@
-- hosts: localhost\n  gather_facts: false\n  vars_files:\n    - vars/quotes.yml\n  tasks:\n    - name: Select a random quote\n      set_fact:\n        selected_quote: "{{ quotes | random }}"\n\n    - name: Write quote to file\n      copy:\n        dest: /tmp/motivation.txt\n        content: "{{ selected_quote }}"
+- hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/quotes.yml
+  tasks:
+    - name: Select a random quote
+      set_fact:
+        selected_quote: "{{ quotes | random }}"
+
+    - name: Write quote to file
+      copy:
+        dest: /tmp/motivation.txt
+        content: "{{ selected_quote }}"

@@ -1,1 +1,42 @@
-#!/usr/bin/env bash\nset -euo pipefail\n\n# Default values\nCOMMENT="nightly-key"\nOUTPUT_DIR="."\n\n# Parse arguments\nwhile [[ $# -gt 0 ]]; do\n  case "$1" in\n    --comment)\n      shift\n      COMMENT="$1"\n      ;;\n    --output)\n      shift\n      OUTPUT_DIR="$1"\n      ;;\n    *)\n      echo "Unknown option: $1" >&2\n      exit 1\n      ;;\n  esac\n  shift\ndone\n\n# Ensure output directory exists\nmkdir -p "$OUTPUT_DIR"\n\n# Generate a unique key name based on timestamp\nTIMESTAMP=$(date +%s%N)\nKEY_PATH="$OUTPUT_DIR/nightly_key_$TIMESTAMP"\n\n# Generate the key pair\nssh-keygen -t rsa -b 2048 -N "" -C "$COMMENT" -f "$KEY_PATH" -q\n\n# Output paths\necho "Private key: $KEY_PATH"\necho "Public key: $KEY_PATH.pub"\n\n# Print public key content\ncat "$KEY_PATH.pub"
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Default values
+COMMENT="nightly-key"
+OUTPUT_DIR="."
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --comment)
+      shift
+      COMMENT="$1"
+      ;;
+    --output)
+      shift
+      OUTPUT_DIR="$1"
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+# Ensure output directory exists
+mkdir -p "$OUTPUT_DIR"
+
+# Generate a unique key name based on timestamp
+TIMESTAMP=$(date +%s%N)
+KEY_PATH="$OUTPUT_DIR/nightly_key_$TIMESTAMP"
+
+# Generate the key pair
+ssh-keygen -t rsa -b 2048 -N "" -C "$COMMENT" -f "$KEY_PATH" -q
+
+# Output paths
+echo "Private key: $KEY_PATH"
+echo "Public key: $KEY_PATH.pub"
+
+# Print public key content
+cat "$KEY_PATH.pub"

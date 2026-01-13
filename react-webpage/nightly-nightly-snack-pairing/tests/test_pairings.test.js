@@ -1,1 +1,28 @@
-import { getPairings } from '../src/utils/pairings.js';\n\ndescribe('getPairings', () => {\n  test('returns empty array when no snacks selected', () => {\n    expect(getPairings([])).toEqual([]);\n  });\n\n  test('suggests complementary snacks', () => {\n    const result = getPairings(['Chocolate']);\n    expect(result).toContain('Chocolate + Cheese');\n    expect(result).toContain('Chocolate + Nuts');\n    expect(result).not.toContain('Chocolate + Chocolate');\n  });\n\n  test('does not suggest already selected snacks', () => {\n    const result = getPairings(['Chocolate', 'Cheese']);\n    expect(result).toContain('Chocolate + Nuts');\n    expect(result).not.toContain('Chocolate + Cheese');\n    expect(result).not.toContain('Cheese + Chocolate');\n  });\n\n  test('handles multiple selections', () => {\n    const result = getPairings(['Fruit', 'Nuts']);\n    expect(result).toContain('Fruit + Salsa');\n    expect(result).toContain('Fruit + Nuts');\n    expect(result).toContain('Nuts + Chocolate');\n  });\n});
+import { getPairings } from '../src/utils/pairings.js';
+
+describe('getPairings', () => {
+  test('returns empty array when no snacks selected', () => {
+    expect(getPairings([])).toEqual([]);
+  });
+
+  test('suggests complementary snacks', () => {
+    const result = getPairings(['Chocolate']);
+    expect(result).toContain('Chocolate + Cheese');
+    expect(result).toContain('Chocolate + Nuts');
+    expect(result).not.toContain('Chocolate + Chocolate');
+  });
+
+  test('does not suggest already selected snacks', () => {
+    const result = getPairings(['Chocolate', 'Cheese']);
+    expect(result).toContain('Chocolate + Nuts');
+    expect(result).not.toContain('Chocolate + Cheese');
+    expect(result).not.toContain('Cheese + Chocolate');
+  });
+
+  test('handles multiple selections', () => {
+    const result = getPairings(['Fruit', 'Nuts']);
+    expect(result).toContain('Fruit + Salsa');
+    expect(result).toContain('Fruit + Nuts');
+    expect(result).toContain('Nuts + Chocolate');
+  });
+});

@@ -1,1 +1,43 @@
-# Nightly Quote Mixer\n\nA whimsical Dockerized HTTP service that returns a randomly mixed inspirational and apocalyptic quote.\n\n## Usage\n\n```sh\n# Build the Docker image\ndocker build -t nightly-quote-mixer .\n\n# Run the container (exposes port 8080)\ndocker run -p 8080:8080 nightly-quote-mixer\n```\n\nThe service will start and listen on port **8080**.\n\n### Get a quote\n\n```sh\ncurl http://localhost:8080/quote\n# Example output: {\"quote\":\"Fortune favors the bold while the earth trembles.\"}\n```\n\n## How it works\n\nThe service maintains two hard‑coded lists – one of inspirational sayings and one of apocalyptic fragments. For each request it picks one entry from each list at random and concatenates them into a single sentence.\n\n## Testing\n\nThe utility includes a Go test suite that can be run locally (requires Go 1.22 or later) or inside the container.\n\n```sh\n# Run tests locally\ngo test ./...\n```\n\n## Files\n\n- `Dockerfile` – multi‑stage build for the Go binary\n- `src/main.go` – HTTP server implementation\n- `src/go.mod` – minimal Go module definition\n- `tests/main_test.go` – deterministic unit tests using a fixed random seed\n
+# Nightly Quote Mixer
+
+A whimsical Dockerized HTTP service that returns a randomly mixed inspirational and apocalyptic quote.
+
+## Usage
+
+```sh
+# Build the Docker image
+docker build -t nightly-quote-mixer .
+
+# Run the container (exposes port 8080)
+docker run -p 8080:8080 nightly-quote-mixer
+```
+
+The service will start and listen on port **8080**.
+
+### Get a quote
+
+```sh
+curl http://localhost:8080/quote
+# Example output: {\"quote\":\"Fortune favors the bold while the earth trembles.\"}
+```
+
+## How it works
+
+The service maintains two hard‑coded lists – one of inspirational sayings and one of apocalyptic fragments. For each request it picks one entry from each list at random and concatenates them into a single sentence.
+
+## Testing
+
+The utility includes a Go test suite that can be run locally (requires Go 1.22 or later) or inside the container.
+
+```sh
+# Run tests locally
+go test ./...
+```
+
+## Files
+
+- `Dockerfile` – multi‑stage build for the Go binary
+- `src/main.go` – HTTP server implementation
+- `src/go.mod` – minimal Go module definition
+- `tests/main_test.go` – deterministic unit tests using a fixed random seed
+

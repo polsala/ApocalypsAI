@@ -1,1 +1,39 @@
-package main\n\nimport (\n    \"bytes\"\n    \"fmt\"\n    \"math/rand\"\n    \"os\"\n    \"testing\"\n)\n\nfunc TestPickQuoteDeterministic(t *testing.T) {\n    rand.Seed(1)\n    q := pickQuote()\n    expected := quotes[1]\n    if q != expected {\n        t.Fatalf("expected %v, got %v", expected, q)\n    }\n}\n\nfunc TestMainOutput(t *testing.T) {\n    rand.Seed(1)\n    oldStdout := os.Stdout\n    r, w, _ := os.Pipe()\n    os.Stdout = w\n\n    main()\n\n    w.Close()\n    var buf bytes.Buffer\n    buf.ReadFrom(r)\n    os.Stdout = oldStdout\n\n    got := buf.String()\n    expected := fmt.Sprintf("%s %s\\n", quotes[1].Emoji, quotes[1].Text)\n    if got != expected {\n        t.Fatalf("expected %q, got %q", expected, got)\n    }\n}\n
+package main
+
+import (
+    "bytes"
+    "fmt"
+    "math/rand"
+    "os"
+    "testing"
+)
+
+func TestPickQuoteDeterministic(t *testing.T) {
+    rand.Seed(1)
+    q := pickQuote()
+    expected := quotes[1]
+    if q != expected {
+        t.Fatalf("expected %v, got %v", expected, q)
+    }
+}
+
+func TestMainOutput(t *testing.T) {
+    rand.Seed(1)
+    oldStdout := os.Stdout
+    r, w, _ := os.Pipe()
+    os.Stdout = w
+
+    main()
+
+    w.Close()
+    var buf bytes.Buffer
+    buf.ReadFrom(r)
+    os.Stdout = oldStdout
+
+    got := buf.String()
+    expected := fmt.Sprintf("%s %s\n", quotes[1].Emoji, quotes[1].Text)
+    if got != expected {
+        t.Fatalf("expected %q, got %q", expected, got)
+    }
+}
+

@@ -1,1 +1,80 @@
-package main\n\nimport (\n    "bufio"\n    "fmt"\n    "os"\n    "os/exec"\n    "strings"\n    "sync"\n)\n\n// PingExecutor abstracts the ping operation – useful for testing.\ntype PingExecutor interface {\n    Ping(host string) (string, error)\n}\n\n// RealPingExecutor uses the system `ping` command.\ntype RealPingExecutor struct{}\n\nfunc (r RealPingExecutor) Ping(host string) (string, error) {\n    // -c 1 : send one packet\n    // -W 2 : wait up to 2 seconds for a reply\n    cmd := exec.Command("ping", "-c", "1", "-W", "2", host)\n    out, err := cmd.CombinedOutput()\n    if err != nil {\n        return "", fmt.Errorf("ping failed: %s", strings.TrimSpace(string(out)))\n    }\n    scanner := bufio.NewScanner(strings.NewReader(string(out)))\n    for scanner.Scan() {\n        line := scanner.Text()\n        if strings.Contains(line, "time=") {\n            // Example line: 64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=12.3 ms\n            parts := strings.Split(line, "time=")\n            if len(parts) > 1 {\n                timePart := strings.Fields(parts[1])[0]\n                return timePart, nil\n            }\n        }\n    }\n    return "", fmt.Errorf("could not parse ping output")\n}\n\n// run performs the concurrent ping logic and returns a map of host→latency (or "error").\nfunc run(hosts []string, exec PingExecutor) map[string]string {\n    var wg sync.WaitGroup\n    mu := &sync.Mutex{}\n    results := make(map[string]string)\n    for _, h := range hosts {\n        wg.Add(1)\n        go func(host string) {\n            defer wg.Done()\n            latency, err := exec.Ping(host)\n            mu.Lock()\n            if err != nil {\n                results[host] = "error"\n            } else {\n                results[host] = latency\n            }\n            mu.Unlock()\n        }(h)\n    }\n    wg.Wait()\n    return results\n}\n\nfunc main() {\n    if len(os.Args) < 2 {\n        fmt.Println("Usage: concurrent-ping <host1> [host2] ...")\n        os.Exit(1)\n    }\n    hosts := os.Args[1:]\n    executor := RealPingExecutor{}\n    results := run(hosts, executor)\n    fmt.Println("Ping results:")\n    for _, h := range hosts {\n        fmt.Printf("%s: %s\n", h, results[h])\n    }\n}\n
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+    "os/exec"
+    "strings"
+    "sync"
+)
+
+// PingExecutor abstracts the ping operation â useful for testing.
+type PingExecutor interface {
+    Ping(host string) (string, error)
+}
+
+// RealPingExecutor uses the system `ping` command.
+type RealPingExecutor struct{}
+
+func (r RealPingExecutor) Ping(host string) (string, error) {
+    // -c 1 : send one packet
+    // -W 2 : wait up to 2 seconds for a reply
+    cmd := exec.Command("ping", "-c", "1", "-W", "2", host)
+    out, err := cmd.CombinedOutput()
+    if err != nil {
+        return "", fmt.Errorf("ping failed: %s", strings.TrimSpace(string(out)))
+    }
+    scanner := bufio.NewScanner(strings.NewReader(string(out)))
+    for scanner.Scan() {
+        line := scanner.Text()
+        if strings.Contains(line, "time=") {
+            // Example line: 64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=12.3 ms
+            parts := strings.Split(line, "time=")
+            if len(parts) > 1 {
+                timePart := strings.Fields(parts[1])[0]
+                return timePart, nil
+            }
+        }
+    }
+    return "", fmt.Errorf("could not parse ping output")
+}
+
+// run performs the concurrent ping logic and returns a map of hostâlatency (or "error").
+func run(hosts []string, exec PingExecutor) map[string]string {
+    var wg sync.WaitGroup
+    mu := &sync.Mutex{}
+    results := make(map[string]string)
+    for _, h := range hosts {
+        wg.Add(1)
+        go func(host string) {
+            defer wg.Done()
+            latency, err := exec.Ping(host)
+            mu.Lock()
+            if err != nil {
+                results[host] = "error"
+            } else {
+                results[host] = latency
+            }
+            mu.Unlock()
+        }(h)
+    }
+    wg.Wait()
+    return results
+}
+
+func main() {
+    if len(os.Args) < 2 {
+        fmt.Println("Usage: concurrent-ping <host1> [host2] ...")
+        os.Exit(1)
+    }
+    hosts := os.Args[1:]
+    executor := RealPingExecutor{}
+    results := run(hosts, executor)
+    fmt.Println("Ping results:")
+    for _, h := range hosts {
+        fmt.Printf("%s: %s
+", h, results[h])
+    }
+}
+

@@ -1,1 +1,39 @@
-import subprocess\nimport pathlib\nimport os\n\n\ndef test_uptime_report(tmp_path, monkeypatch):\n    # Change to a temporary directory to avoid polluting the repo\n    cwd = pathlib.Path.cwd()\n    os.chdir(tmp_path)\n    try:\n        # Copy playbook, inventory and template into the temp dir preserving relative layout\n        src_dir = pathlib.Path(__file__).parents[1] / "src"\n        (tmp_path / "src").mkdir()\n        (tmp_path / "src" / "templates").mkdir()\n        for file_name in ["uptime_report.yml", "inventory.ini"]:\n            content = (src_dir / file_name).read_text()\n            (tmp_path / "src" / file_name).write_text(content)\n        # Copy template\n        tmpl_content = (src_dir / "templates" / "uptime_report.j2").read_text()\n        (tmp_path / "src" / "templates" / "uptime_report.j2").write_text(tmpl_content)\n\n        # Run the playbook\n        result = subprocess.run(\n            ["ansible-playbook", "-i", "src/inventory.ini", "src/uptime_report.yml"],\n            capture_output=True, text=True\n        )\n        # Mock rationale: using localhost and echo ensures deterministic output without external dependencies\n        assert result.returncode == 0, f"Playbook failed: {result.stderr}"\n\n        report_path = pathlib.Path("uptime_report.txt")\n        assert report_path.is_file(), "Report file was not created"\n        content = report_path.read_text()\n        # Verify that the report contains the expected host and uptime string\n        assert "host1" in content\n        assert "up 10 days" in content\n    finally:\n        # Return to original working directory\n        os.chdir(cwd)\n
+import subprocess
+import pathlib
+import os
+
+
+def test_uptime_report(tmp_path, monkeypatch):
+    # Change to a temporary directory to avoid polluting the repo
+    cwd = pathlib.Path.cwd()
+    os.chdir(tmp_path)
+    try:
+        # Copy playbook, inventory and template into the temp dir preserving relative layout
+        src_dir = pathlib.Path(__file__).parents[1] / "src"
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "templates").mkdir()
+        for file_name in ["uptime_report.yml", "inventory.ini"]:
+            content = (src_dir / file_name).read_text()
+            (tmp_path / "src" / file_name).write_text(content)
+        # Copy template
+        tmpl_content = (src_dir / "templates" / "uptime_report.j2").read_text()
+        (tmp_path / "src" / "templates" / "uptime_report.j2").write_text(tmpl_content)
+
+        # Run the playbook
+        result = subprocess.run(
+            ["ansible-playbook", "-i", "src/inventory.ini", "src/uptime_report.yml"],
+            capture_output=True, text=True
+        )
+        # Mock rationale: using localhost and echo ensures deterministic output without external dependencies
+        assert result.returncode == 0, f"Playbook failed: {result.stderr}"
+
+        report_path = pathlib.Path("uptime_report.txt")
+        assert report_path.is_file(), "Report file was not created"
+        content = report_path.read_text()
+        # Verify that the report contains the expected host and uptime string
+        assert "host1" in content
+        assert "up 10 days" in content
+    finally:
+        # Return to original working directory
+        os.chdir(cwd)
+

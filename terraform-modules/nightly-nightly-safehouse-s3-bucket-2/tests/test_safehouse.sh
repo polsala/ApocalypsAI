@@ -1,1 +1,20 @@
-#!/usr/bin/env bash\n\nset -euo pipefail\n\n# Ensure Terraform is available\nif ! command -v terraform >/dev/null 2>&1; then\n  echo "Terraform CLI not found. Please install Terraform to run tests." >&2\n  exit 1\nfi\n\n# Initialize the module without a backend (offline mode)\nterraform init -backend=false >/dev/null\n\n# Validate the configuration\nterraform validate\n\n# Mock rationale: The test runs only local validation; no AWS calls are made, ensuring deterministic offline execution.\n\necho "All tests passed."\n
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Ensure Terraform is available
+if ! command -v terraform >/dev/null 2>&1; then
+  echo "Terraform CLI not found. Please install Terraform to run tests." >&2
+  exit 1
+fi
+
+# Initialize the module without a backend (offline mode)
+terraform init -backend=false >/dev/null
+
+# Validate the configuration
+terraform validate
+
+# Mock rationale: The test runs only local validation; no AWS calls are made, ensuring deterministic offline execution.
+
+echo "All tests passed."
+

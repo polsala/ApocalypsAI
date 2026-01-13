@@ -1,1 +1,28 @@
-# Nightly Meme Weather Dashboard\n\nA whimsical React web app that shows a random meme alongside a mock weather forecast for a city you enter. No external API calls – everything is simulated locally, making it perfect for offline fun.\n\n## Features\n\n- Input a city name to see a fake weather summary.\n- Click "New Meme" to cycle through a collection of pre‑loaded memes.\n- Responsive layout with playful styling.\n\n## Getting Started\n\n```bash\nnpm install\nnpm start\n```\n\nOpen http://localhost:3000 in your browser.\n\n## Running Tests\n\n```bash\nnpm test\n```\n\n## License\n\nMIT
+# Nightly Meme Weather Dashboard
+
+A whimsical React web app that shows a random meme alongside a mock weather forecast for a city you enter. No external API calls â everything is simulated locally, making it perfect for offline fun.
+
+## Features
+
+- Input a city name to see a fake weather summary.
+- Click "New Meme" to cycle through a collection of preâloaded memes.
+- Responsive layout with playful styling.
+
+## Getting Started
+
+```bash
+npm install
+npm start
+```
+
+Open http://localhost:3000 in your browser.
+
+## Running Tests
+
+```bash
+npm test
+```
+
+## License
+
+MIT

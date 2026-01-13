@@ -1,1 +1,37 @@
-import React from 'react';\nimport ReactDOM from 'react-dom/client';\n\nconst data = [\n  { date: '2023-10-01', triage: 5 },\n  { date: '2023-10-02', triage: 3 },\n  { date: '2023-10-03', triage: 8 },\n  { date: '2023-10-04', triage: 2 },\n  { date: '2023-10-05', triage: 6 }\n];\n\nfunction App() {\n  return (\n    <div>\n      <h1>Issue Triage Heatmap</h1>\n      <table border="1">\n        <thead>\n          <tr>\n            <th>Date</th>\n            <th>Triage Count</th>\n          </tr>\n        </thead>\n        <tbody>\n          {data.map((row, idx) => (\n            <tr key={idx}>\n              <td>{row.date}</td>\n              <td>{row.triage}</td>\n            </tr>\n          ))}\n        </tbody>\n      </table>\n    </div>\n  );\n}\n\nconst root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(<App />);
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+
+const data = [
+  { date: '2023-10-01', triage: 5 },
+  { date: '2023-10-02', triage: 3 },
+  { date: '2023-10-03', triage: 8 },
+  { date: '2023-10-04', triage: 2 },
+  { date: '2023-10-05', triage: 6 }
+];
+
+function App() {
+  return (
+    <div>
+      <h1>Issue Triage Heatmap</h1>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Triage Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, idx) => (
+            <tr key={idx}>
+              <td>{row.date}</td>
+              <td>{row.triage}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);

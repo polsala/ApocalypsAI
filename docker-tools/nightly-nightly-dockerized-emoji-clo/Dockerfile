@@ -1,1 +1,4 @@
-FROM python:3.11-slim\nWORKDIR /app\nCOPY src/emoji_clock.py ./\nENTRYPOINT ["python", "emoji_clock.py"]
+FROM python:3.11-slim
+WORKDIR /app
+COPY src/emoji_clock.py ./
+ENTRYPOINT ["python", "emoji_clock.py"]

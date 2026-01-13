@@ -1,1 +1,70 @@
-import * as fs from 'fs';\n\n/**\n * Small static word list – feel free to extend.\n */\nconst WORDS = [\n  'alpha', 'bravo', 'charlie', 'delta', 'echo',\n  'foxtrot', 'golf', 'hotel', 'india', 'juliet'\n];\n\n/**\n * Small static emoji list – post‑apocalyptic vibes included.\n */\nconst EMOJIS = [\n  '😀', '🚀', '🌟', '🔥', '💧',\n  '⚡', '🧩', '🛡️', '🗡️', '☢️'\n];\n\n/**\n * Generate a passphrase consisting of `wordCount` random words and `emojiCount` random emojis.\n * The function is pure – it only depends on `Math.random`.\n */\nexport function generatePassphrase(wordCount: number, emojiCount: number): string {\n  if (wordCount < 0 || emojiCount < 0) {\n    throw new Error('wordCount and emojiCount must be non‑negative');\n  }\n\n  const chosenWords: string[] = [];\n  for (let i = 0; i < wordCount; i++) {\n    const idx = Math.floor(Math.random() * WORDS.length);\n    chosenWords.push(WORDS[idx]);\n  }\n\n  const chosenEmojis: string[] = [];\n  for (let i = 0; i < emojiCount; i++) {\n    const idx = Math.floor(Math.random() * EMOJIS.length);\n    chosenEmojis.push(EMOJIS[idx]);\n  }\n\n  return [...chosenWords, ...chosenEmojis].join(' ');\n}\n\n/**\n * Simple CLI wrapper – parses `--words` and `--emojis` flags.\n */\nfunction parseArgs(): { wordCount: number; emojiCount: number } {\n  const args = process.argv.slice(2);\n  let wordCount = 4;\n  let emojiCount = 2;\n\n  for (let i = 0; i < args.length; i++) {\n    if (args[i] === '--words' && i + 1 < args.length) {\n      wordCount = parseInt(args[i + 1], 10);\n      i++;\n    } else if (args[i] === '--emojis' && i + 1 < args.length) {\n      emojiCount = parseInt(args[i + 1], 10);\n      i++;\n    }\n  }\n\n  return { wordCount, emojiCount };\n}\n\nif (require.main === module) {\n  const { wordCount, emojiCount } = parseArgs();\n  const phrase = generatePassphrase(wordCount, emojiCount);\n  console.log(phrase);\n}\n\nexport default generatePassphrase;
+import * as fs from 'fs';
+
+/**
+ * Small static word list â feel free to extend.
+ */
+const WORDS = [
+  'alpha', 'bravo', 'charlie', 'delta', 'echo',
+  'foxtrot', 'golf', 'hotel', 'india', 'juliet'
+];
+
+/**
+ * Small static emoji list â postâapocalyptic vibes included.
+ */
+const EMOJIS = [
+  'ð', 'ð', 'ð', 'ð¥', 'ð§',
+  'â¡', 'ð§©', 'ð¡ï¸', 'ð¡ï¸', 'â¢ï¸'
+];
+
+/**
+ * Generate a passphrase consisting of `wordCount` random words and `emojiCount` random emojis.
+ * The function is pure â it only depends on `Math.random`.
+ */
+export function generatePassphrase(wordCount: number, emojiCount: number): string {
+  if (wordCount < 0 || emojiCount < 0) {
+    throw new Error('wordCount and emojiCount must be nonânegative');
+  }
+
+  const chosenWords: string[] = [];
+  for (let i = 0; i < wordCount; i++) {
+    const idx = Math.floor(Math.random() * WORDS.length);
+    chosenWords.push(WORDS[idx]);
+  }
+
+  const chosenEmojis: string[] = [];
+  for (let i = 0; i < emojiCount; i++) {
+    const idx = Math.floor(Math.random() * EMOJIS.length);
+    chosenEmojis.push(EMOJIS[idx]);
+  }
+
+  return [...chosenWords, ...chosenEmojis].join(' ');
+}
+
+/**
+ * Simple CLI wrapper â parses `--words` and `--emojis` flags.
+ */
+function parseArgs(): { wordCount: number; emojiCount: number } {
+  const args = process.argv.slice(2);
+  let wordCount = 4;
+  let emojiCount = 2;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--words' && i + 1 < args.length) {
+      wordCount = parseInt(args[i + 1], 10);
+      i++;
+    } else if (args[i] === '--emojis' && i + 1 < args.length) {
+      emojiCount = parseInt(args[i + 1], 10);
+      i++;
+    }
+  }
+
+  return { wordCount, emojiCount };
+}
+
+if (require.main === module) {
+  const { wordCount, emojiCount } = parseArgs();
+  const phrase = generatePassphrase(wordCount, emojiCount);
+  console.log(phrase);
+}
+
+export default generatePassphrase;

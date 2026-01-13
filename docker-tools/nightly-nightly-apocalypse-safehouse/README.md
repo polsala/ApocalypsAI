@@ -1,1 +1,57 @@
-# Apocalypse Safe‑House Generator\n\nA tiny Docker‑based utility that spits out a random ASCII safe‑house layout. Perfect for tabletop games, story‑telling, or just a bit of fun between code reviews.\n\n## Features\n\n- Choose the number of rooms (default: 5)\n- Provide a seed for reproducible layouts\n- Runs on a minimal Alpine image (≈5 MB)\n\n## Usage\n\n```bash\n# Build the image (only needed once)\ndocker build -t safehouse-generator .\n\n# Run with defaults (5 rooms, random seed)\ndocker run --rm safehouse-generator\n\n# Specify number of rooms\ndocker run --rm safehouse-generator --rooms 8\n\n# Reproducible layout with a seed\ndocker run --rm safehouse-generator --rooms 4 --seed 12345\n```\n\nThe output looks like:\n\n````\n+----------------------+\n| Room 1 | Room 2 | ...|\n+----------------------+\n| ...                 |\n+----------------------+\n````\n\n## Development\n\nThe generator is a single Bash script (`src/generate.sh`).\n\n### Run locally without Docker\n\n```bash\nchmod +x src/generate.sh\n./src/generate.sh --rooms 3 --seed 42\n```\n\n### Tests\n\n```bash\nchmod +x tests/test_generate.sh\n./tests/test_generate.sh\n```\n\n## License\n\nMIT – see LICENSE file in the repository.
+# Apocalypse Safe‑House Generator
+
+A tiny Docker‑based utility that spits out a random ASCII safe‑house layout. Perfect for tabletop games, story‑telling, or just a bit of fun between code reviews.
+
+## Features
+
+- Choose the number of rooms (default: 5)
+- Provide a seed for reproducible layouts
+- Runs on a minimal Alpine image (≈5 MB)
+
+## Usage
+
+```bash
+# Build the image (only needed once)
+docker build -t safehouse-generator .
+
+# Run with defaults (5 rooms, random seed)
+docker run --rm safehouse-generator
+
+# Specify number of rooms
+docker run --rm safehouse-generator --rooms 8
+
+# Reproducible layout with a seed
+docker run --rm safehouse-generator --rooms 4 --seed 12345
+```
+
+The output looks like:
+
+````
++----------------------+
+| Room 1 | Room 2 | ...|
++----------------------+
+| ...                 |
++----------------------+
+````
+
+## Development
+
+The generator is a single Bash script (`src/generate.sh`).
+
+### Run locally without Docker
+
+```bash
+chmod +x src/generate.sh
+./src/generate.sh --rooms 3 --seed 42
+```
+
+### Tests
+
+```bash
+chmod +x tests/test_generate.sh
+./tests/test_generate.sh
+```
+
+## License
+
+MIT – see LICENSE file in the repository.

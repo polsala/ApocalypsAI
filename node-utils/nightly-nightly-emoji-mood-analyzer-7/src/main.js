@@ -1,1 +1,58 @@
-// nightly-emoji-mood-analyzer\n// Reads a line from stdin and prints an emoji representing the overall mood.\n\nconst readline = require('readline');\n\n// Simple sentiment word lists (feel free to extend)\nconst POSITIVE_WORDS = [\n  'love', 'happy', 'joy', 'awesome', 'great', 'fantastic', 'good', 'wonderful', 'excellent', 'sunny', 'delight', 'pleased', 'cheer', 'smile'\n];\nconst NEGATIVE_WORDS = [\n  'hate', 'sad', 'angry', 'bad', 'terrible', 'awful', 'horrible', 'pain', 'depress', 'rainy', 'storm', 'upset', 'cry', 'sick'\n];\n\nfunction sentimentScore(text) {\n  const words = text.toLowerCase().split(/\s+/);\n  let pos = 0;\n  let neg = 0;\n  for (const w of words) {\n    if (POSITIVE_WORDS.includes(w)) pos++;\n    if (NEGATIVE_WORDS.includes(w)) neg++;\n  }\n  return { pos, neg };\n}\n\nfunction chooseEmoji({ pos, neg }) {\n  if (pos > neg) return '😊';\n  if (neg > pos) return '😢';\n  return '😐';\n}\n\nfunction analyzeAndPrint(line) {\n  const score = sentimentScore(line);\n  const emoji = chooseEmoji(score);\n  console.log(emoji);\n}\n\n// Read from stdin (supports piped input or interactive)\nconst rl = readline.createInterface({\n  input: process.stdin,\n  output: process.stdout,\n  terminal: false\n});\n\nlet collected = '';// accumulate all data (in case of multi‑line)\nrl.on('line', (line) => {\n  if (collected) collected += ' ';\n  collected += line;\n});\n\nrl.on('close', () => {\n  if (collected.trim().length === 0) {\n    // No input provided\n    console.error('No input received. Provide text via stdin.');\n    process.exit(1);\n  }\n  analyzeAndPrint(collected.trim());\n});\n
+// nightly-emoji-mood-analyzer
+// Reads a line from stdin and prints an emoji representing the overall mood.
+
+const readline = require('readline');
+
+// Simple sentiment word lists (feel free to extend)
+const POSITIVE_WORDS = [
+  'love', 'happy', 'joy', 'awesome', 'great', 'fantastic', 'good', 'wonderful', 'excellent', 'sunny', 'delight', 'pleased', 'cheer', 'smile'
+];
+const NEGATIVE_WORDS = [
+  'hate', 'sad', 'angry', 'bad', 'terrible', 'awful', 'horrible', 'pain', 'depress', 'rainy', 'storm', 'upset', 'cry', 'sick'
+];
+
+function sentimentScore(text) {
+  const words = text.toLowerCase().split(/\s+/);
+  let pos = 0;
+  let neg = 0;
+  for (const w of words) {
+    if (POSITIVE_WORDS.includes(w)) pos++;
+    if (NEGATIVE_WORDS.includes(w)) neg++;
+  }
+  return { pos, neg };
+}
+
+function chooseEmoji({ pos, neg }) {
+  if (pos > neg) return 'ð';
+  if (neg > pos) return 'ð¢';
+  return 'ð';
+}
+
+function analyzeAndPrint(line) {
+  const score = sentimentScore(line);
+  const emoji = chooseEmoji(score);
+  console.log(emoji);
+}
+
+// Read from stdin (supports piped input or interactive)
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  terminal: false
+});
+
+let collected = '';// accumulate all data (in case of multiâline)
+rl.on('line', (line) => {
+  if (collected) collected += ' ';
+  collected += line;
+});
+
+rl.on('close', () => {
+  if (collected.trim().length === 0) {
+    // No input provided
+    console.error('No input received. Provide text via stdin.');
+    process.exit(1);
+  }
+  analyzeAndPrint(collected.trim());
+});
+

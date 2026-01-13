@@ -1,1 +1,45 @@
-# nightly-emoji-mood-analyzer\n\nA tiny Node.js command‑line utility that reads a line of text from standard input and prints a single emoji that reflects the overall mood of the message.\n\n## How it works\n\nThe tool uses a handcrafted list of positive and negative words. It counts how many of each appear in the input (case‑insensitive). If the positive count is greater than the negative count, it prints a happy emoji (😊). If the negative count is greater, it prints a sad emoji (😢). If the counts are equal or no sentiment words are found, it prints a neutral emoji (😐).\n\n## Installation\n\n```bash\n# Clone the repository (or copy the utility folder)\ngit clone https://github.com/polsala/ApocalypsAI.git\ncd utils/nightly-emoji-mood-analyzer\n# Install Node.js if you haven't already\n# No external dependencies are required\n```\n\n## Usage\n\n```bash\n# Pipe a sentence into the CLI\necho "I love sunny days but hate traffic" | node src/main.js\n# Output: 😊 (more positive words)\n\n# Directly run and type input (press Ctrl+D to end)\nnode src/main.js\nI am feeling terrible today.\n# Output: 😢\n```\n\n## Testing\n\nRun the test suite with Node's built‑in `assert` module:\n\n```bash\nnpm test\n```\n\nThe tests are located in `tests/test_main.js` and cover several sentiment scenarios.\n\n## License\n\nMIT – see the LICENSE file in the repository root.\n
+# nightly-emoji-mood-analyzer
+
+A tiny Node.js commandâline utility that reads a line of text from standard input and prints a single emoji that reflects the overall mood of the message.
+
+## How it works
+
+The tool uses a handcrafted list of positive and negative words. It counts how many of each appear in the input (caseâinsensitive). If the positive count is greater than the negative count, it prints a happy emoji (ð). If the negative count is greater, it prints a sad emoji (ð¢). If the counts are equal or no sentiment words are found, it prints a neutral emoji (ð).
+
+## Installation
+
+```bash
+# Clone the repository (or copy the utility folder)
+git clone https://github.com/polsala/ApocalypsAI.git
+cd utils/nightly-emoji-mood-analyzer
+# Install Node.js if you haven't already
+# No external dependencies are required
+```
+
+## Usage
+
+```bash
+# Pipe a sentence into the CLI
+echo "I love sunny days but hate traffic" | node src/main.js
+# Output: ð (more positive words)
+
+# Directly run and type input (press Ctrl+D to end)
+node src/main.js
+I am feeling terrible today.
+# Output: ð¢
+```
+
+## Testing
+
+Run the test suite with Node's builtâin `assert` module:
+
+```bash
+npm test
+```
+
+The tests are located in `tests/test_main.js` and cover several sentiment scenarios.
+
+## License
+
+MIT â see the LICENSE file in the repository root.
+

@@ -1,1 +1,38 @@
-#!/usr/bin/env node\n\nconst fs = require('fs');\n\n// Fixed emoji‑to‑letter map\nconst EMOJI_MAP = {\n  '🍎':'A','🍌':'B','🍒':'C','🍇':'D','🍉':'E','🍓':'F','🍑':'G','🍍':'H','🥝':'I','🍅':'J',\n  '🥑':'K','🍆':'L','🥔':'M','🥕':'N','🌽':'O','🌶️':'P','🧄':'Q','🧅':'R','🍄':'S','🥜':'T',\n  '🍞':'U','🥐':'V','🧀':'W','🍖':'X','🍗':'Y','🥩':'Z'\n};\n\n/**\n * Decode a string of emojis into letters. Unknown emojis become '?'.\n * @param {string} input – Emoji sequence\n * @returns {string} Decoded text\n */\nfunction decode(input) {\n  // Array.from correctly splits surrogate‑pair emojis\n  const chars = Array.from(input);\n  return chars.map(ch => EMOJI_MAP[ch] || '?').join('');\n}\n\n// CLI handling – when executed directly\nif (require.main === module) {\n  const args = process.argv.slice(2);\n  let input = '' ;\n  if (args.length > 0) {\n    input = args[0];\n  } else {\n    // Read from stdin (synchronous for simplicity)\n    input = fs.readFileSync(0, 'utf8').trim();\n  }\n  const output = decode(input);\n  console.log(output);\n}\n\nmodule.exports = { decode };\n
+#!/usr/bin/env node
+
+const fs = require('fs');
+
+// Fixed emojiâtoâletter map
+const EMOJI_MAP = {
+  'ð':'A','ð':'B','ð':'C','ð':'D','ð':'E','ð':'F','ð':'G','ð':'H','ð¥':'I','ð':'J',
+  'ð¥':'K','ð':'L','ð¥':'M','ð¥':'N','ð½':'O','ð¶ï¸':'P','ð§':'Q','ð§':'R','ð':'S','ð¥':'T',
+  'ð':'U','ð¥':'V','ð§':'W','ð':'X','ð':'Y','ð¥©':'Z'
+};
+
+/**
+ * Decode a string of emojis into letters. Unknown emojis become '?'.
+ * @param {string} input â Emoji sequence
+ * @returns {string} Decoded text
+ */
+function decode(input) {
+  // Array.from correctly splits surrogateâpair emojis
+  const chars = Array.from(input);
+  return chars.map(ch => EMOJI_MAP[ch] || '?').join('');
+}
+
+// CLI handling â when executed directly
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  let input = '' ;
+  if (args.length > 0) {
+    input = args[0];
+  } else {
+    // Read from stdin (synchronous for simplicity)
+    input = fs.readFileSync(0, 'utf8').trim();
+  }
+  const output = decode(input);
+  console.log(output);
+}
+
+module.exports = { decode };
+

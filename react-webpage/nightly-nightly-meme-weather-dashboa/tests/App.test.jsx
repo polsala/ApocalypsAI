@@ -1,1 +1,23 @@
-import React from \"react\";\nimport { render, fireEvent, screen } from \"@testing-library/react\";\nimport App from \"../src/App\";\n\ntest(\"displays weather after entering city\", () => {\n  render(<App />);\n  const input = screen.getByTestId(\"city-input\");\n  fireEvent.change(input, { target: { value: \"Atlantis\" } });\n  const btn = screen.getByTestId(\"weather-btn\");\n  fireEvent.click(btn);\n  const output = screen.getByTestId(\"weather-output\");\n  expect(output.textContent).toMatch(/Atlantis/);\n});\n\ntest(\"cycles memes on button click\", () => {\n  render(<App />);\n  const img = screen.getByTestId(\"meme-image\");\n  const firstSrc = img.src;\n  const btn = screen.getByTestId(\"meme-btn\");\n  fireEvent.click(btn);\n  const secondSrc = img.src;\n  expect(secondSrc).not.toBe(firstSrc);\n});
+import React from "react";
+import { render, fireEvent, screen } from "@testing-library/react";
+import App from "../src/App";
+
+test("displays weather after entering city", () => {
+  render(<App />);
+  const input = screen.getByTestId("city-input");
+  fireEvent.change(input, { target: { value: "Atlantis" } });
+  const btn = screen.getByTestId("weather-btn");
+  fireEvent.click(btn);
+  const output = screen.getByTestId("weather-output");
+  expect(output.textContent).toMatch(/Atlantis/);
+});
+
+test("cycles memes on button click", () => {
+  render(<App />);
+  const img = screen.getByTestId("meme-image");
+  const firstSrc = img.src;
+  const btn = screen.getByTestId("meme-btn");
+  fireEvent.click(btn);
+  const secondSrc = img.src;
+  expect(secondSrc).not.toBe(firstSrc);
+});

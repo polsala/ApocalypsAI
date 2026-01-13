@@ -1,1 +1,38 @@
-# Emoji Mood Analyzer\n\nA whimsical yet useful command‑line utility that reads a short piece of text and returns an emoji representing its overall mood (positive, neutral, or negative).\n\n## Install\n\n```sh\nnpm install -g nightly-emoji-mood-analyzer\n```\n\n*(The package is not published; copy the source and run with `ts-node` or compile with `tsc`.)*\n\n## Usage\n\n```sh\nemoji-mood "I love sunny days!"\n# => 😊\n```\n\n## How it works\n\nThe analyzer uses a tiny built‑in word list of positive and negative terms. It tokenises the input, counts matches, and decides:\n\n- score > 0 → 😊\n- score < 0 → 😞\n- otherwise → 😐\n\n## Development\n\n```sh\nnpm install\nnpm run build   # compiles TypeScript\nnpm test        # runs the bundled tests\n```\n\n## License\n\nMIT
+# Emoji Mood Analyzer
+
+A whimsical yet useful commandâline utility that reads a short piece of text and returns an emoji representing its overall mood (positive, neutral, or negative).
+
+## Install
+
+```sh
+npm install -g nightly-emoji-mood-analyzer
+```
+
+*(The package is not published; copy the source and run with `ts-node` or compile with `tsc`.)*
+
+## Usage
+
+```sh
+emoji-mood "I love sunny days!"
+# => ð
+```
+
+## How it works
+
+The analyzer uses a tiny builtâin word list of positive and negative terms. It tokenises the input, counts matches, and decides:
+
+- score > 0 â ð
+- score < 0 â ð
+- otherwise â ð
+
+## Development
+
+```sh
+npm install
+npm run build   # compiles TypeScript
+npm test        # runs the bundled tests
+```
+
+## License
+
+MIT

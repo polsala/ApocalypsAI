@@ -1,1 +1,42 @@
-Nightly Quick SSH Keygen\n========================\n\nA whimsical Bash utility that quickly generates an RSA key pair and prints the public key.\n\nUsage\n-----\n\n```bash\n./src/main.sh [--comment <comment>] [--output <path>]\n```\n\nOptions\n-------\n\n- `--comment <comment>`: Comment to add to the public key. Default: `nightly-key`.\n- `--output <path>`: Directory to write the key pair. Default: current directory.\n\nExamples\n--------\n\n```bash\n# Generate a key pair in the current directory\n./src/main.sh\n\n# Generate a key pair with a custom comment\n./src/main.sh --comment "my-awesome-key"\n\n# Generate a key pair in a specific directory\n./src/main.sh --output /tmp/keys\n```\n\nThe script will output the path to the private key and the public key, and will also print the public key content to stdout.\n\nTesting\n-------\n\nRun the test suite:\n\n```bash\nbash tests/test_main.sh\n```
+Nightly Quick SSH Keygen
+========================
+
+A whimsical Bash utility that quickly generates an RSA key pair and prints the public key.
+
+Usage
+-----
+
+```bash
+./src/main.sh [--comment <comment>] [--output <path>]
+```
+
+Options
+-------
+
+- `--comment <comment>`: Comment to add to the public key. Default: `nightly-key`.
+- `--output <path>`: Directory to write the key pair. Default: current directory.
+
+Examples
+--------
+
+```bash
+# Generate a key pair in the current directory
+./src/main.sh
+
+# Generate a key pair with a custom comment
+./src/main.sh --comment "my-awesome-key"
+
+# Generate a key pair in a specific directory
+./src/main.sh --output /tmp/keys
+```
+
+The script will output the path to the private key and the public key, and will also print the public key content to stdout.
+
+Testing
+-------
+
+Run the test suite:
+
+```bash
+bash tests/test_main.sh
+```

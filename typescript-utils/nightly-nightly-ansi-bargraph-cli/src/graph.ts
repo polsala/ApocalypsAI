@@ -1,1 +1,40 @@
-export interface RenderOptions {\n  width?: number;\n  color?: boolean;\n}\n\n/**\n * Render a simple horizontal bar chart using ANSI characters.\n * @param values array of non‑negative numbers\n * @param options optional rendering options\n * @returns string containing the chart (lines separated by \n)\n */\nexport function renderBarChart(values: number[], options: RenderOptions = {}): string {\n  const width = options.width ?? 40;\n  const useColor = options.color ?? false;\n  const max = Math.max(...values, 0);\n  if (max === 0) {\n    return values.map(() => '').join('\n');\n  }\n  const scale = width / max;\n  const barChar = '█';\n  const reset = '\x1b[0m';\n  const red = '\x1b[31m';\n  const green = '\x1b[32m';\n  const blue = '\x1b[34m';\n  const colors = [red, green, blue];\n  return values\n    .map((v, i) => {\n      const len = Math.round(v * scale);\n      const bar = barChar.repeat(len);\n      if (useColor) {\n        const color = colors[i % colors.length];\n        return `${color}${bar}${reset}`;\n      }\n      return bar;\n    })\n    .join('\n');\n}
+export interface RenderOptions {
+  width?: number;
+  color?: boolean;
+}
+
+/**
+ * Render a simple horizontal bar chart using ANSI characters.
+ * @param values array of nonânegative numbers
+ * @param options optional rendering options
+ * @returns string containing the chart (lines separated by 
+)
+ */
+export function renderBarChart(values: number[], options: RenderOptions = {}): string {
+  const width = options.width ?? 40;
+  const useColor = options.color ?? false;
+  const max = Math.max(...values, 0);
+  if (max === 0) {
+    return values.map(() => '').join('
+');
+  }
+  const scale = width / max;
+  const barChar = 'â';
+  const reset = '[0m';
+  const red = '[31m';
+  const green = '[32m';
+  const blue = '[34m';
+  const colors = [red, green, blue];
+  return values
+    .map((v, i) => {
+      const len = Math.round(v * scale);
+      const bar = barChar.repeat(len);
+      if (useColor) {
+        const color = colors[i % colors.length];
+        return `${color}${bar}${reset}`;
+      }
+      return bar;
+    })
+    .join('
+');
+}

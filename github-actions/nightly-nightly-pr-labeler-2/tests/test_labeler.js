@@ -1,1 +1,40 @@
-// Mock rationale: we test the pure function `determineLabels` without contacting GitHub.\nconst assert = require('assert')\nconst { determineLabels } = require('../src/index')\n\nfunction testCase(name, files, expected) {\n  const result = determineLabels(files).sort()\n  const expSorted = expected.sort()\n  try {\n    assert.deepStrictEqual(result, expSorted)\n    console.log(`✅ ${name}`)\n  } catch (e) {\n    console.error(`❌ ${name}`)\n    console.error(e.message)\n    process.exit(1)\n  }\n}\n\n// 1. Documentation files\ntestCase('Docs detection', ['README.md', 'docs/guide/introduction.md'], ['documentation'])\n\n// 2. Test files\ntestCase('Test detection', ['tests/unit/example_test.py', 'src/foo.test.js'], ['tests'])\n\n// 3. CI configuration files\ntestCase('CI detection', ['.github/workflows/build.yml', 'ci/config.yaml'], ['ci'])\n\n// 4. Source code files\ntestCase('Code detection', ['src/main.py', 'lib/util.js', 'src/main.rs'], ['code'])\n\n// 5. Mixed files – should combine labels without duplicates\ntestCase('Mixed detection', [\n  'README.md',\n  'docs/usage.md',\n  'tests/unit/foo_test.py',\n  '.github/workflows/ci.yml',\n  'src/app.js'\n], ['documentation', 'tests', 'ci', 'code'])\n\n// 6. No matching files – expect empty array\ntestCase('No match', ['assets/logo.png', 'LICENSE'], [])
+// Mock rationale: we test the pure function `determineLabels` without contacting GitHub.
+const assert = require('assert')
+const { determineLabels } = require('../src/index')
+
+function testCase(name, files, expected) {
+  const result = determineLabels(files).sort()
+  const expSorted = expected.sort()
+  try {
+    assert.deepStrictEqual(result, expSorted)
+    console.log(`â ${name}`)
+  } catch (e) {
+    console.error(`â ${name}`)
+    console.error(e.message)
+    process.exit(1)
+  }
+}
+
+// 1. Documentation files
+testCase('Docs detection', ['README.md', 'docs/guide/introduction.md'], ['documentation'])
+
+// 2. Test files
+testCase('Test detection', ['tests/unit/example_test.py', 'src/foo.test.js'], ['tests'])
+
+// 3. CI configuration files
+testCase('CI detection', ['.github/workflows/build.yml', 'ci/config.yaml'], ['ci'])
+
+// 4. Source code files
+testCase('Code detection', ['src/main.py', 'lib/util.js', 'src/main.rs'], ['code'])
+
+// 5. Mixed files â should combine labels without duplicates
+testCase('Mixed detection', [
+  'README.md',
+  'docs/usage.md',
+  'tests/unit/foo_test.py',
+  '.github/workflows/ci.yml',
+  'src/app.js'
+], ['documentation', 'tests', 'ci', 'code'])
+
+// 6. No matching files â expect empty array
+testCase('No match', ['assets/logo.png', 'LICENSE'], [])

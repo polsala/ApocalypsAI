@@ -1,1 +1,27 @@
-# nightly-duration-converter\n\nConvert between human‑readable duration strings (e.g., `2h30m15s`) and total seconds.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n```sh\nnode src/index.js parse 2h30m   # => 9000\nnode src/index.js format 9000   # => 2h 30m\n```\n\n## API\n\n- `parseDuration(str): number` – returns total seconds.\n- `formatDuration(seconds): string` – returns formatted string.\n\n## Tests\n\n```sh\nnode tests/test_index.js\n```
+# nightly-duration-converter
+
+Convert between humanâreadable duration strings (e.g., `2h30m15s`) and total seconds.
+
+## Installation
+
+```sh
+npm install -g .
+```
+
+## Usage
+
+```sh
+node src/index.js parse 2h30m   # => 9000
+node src/index.js format 9000   # => 2h 30m
+```
+
+## API
+
+- `parseDuration(str): number` â returns total seconds.
+- `formatDuration(seconds): string` â returns formatted string.
+
+## Tests
+
+```sh
+node tests/test_index.js
+```
