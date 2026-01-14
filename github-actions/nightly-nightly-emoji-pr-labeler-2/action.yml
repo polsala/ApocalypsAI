@@ -1,0 +1,1 @@
+name: "Emoji PR Labeler"\ndescription: "Auto‑label PRs based on emojis in the title"\nauthor: "ApocalypsAI"\ninputs:\n  github-token:\n    description: "GitHub token"\n    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"
