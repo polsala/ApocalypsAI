@@ -1,0 +1,15 @@
+name: "Nightly PR Labeler"
+description: "Automatically label PRs based on title prefixes and add a whimsical emoji label."
+author: "ApocalypsAI"
+inputs:
+  github_token:
+    description: "GitHub token with repo scope"
+    required: true
+    default: ${{ github.token }}
+  emoji_labels:
+    description: "Comma‑separated list of emoji labels to choose from"
+    required: false
+    default: "✨,🚀,🧪,🐛"
+runs:
+  using: "node12"
+  main: "src/index.js"
