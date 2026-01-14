@@ -1,0 +1,30 @@
+name: 'Nightly GitHub Action Lint Runner'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+description: 'Lints and validates YAML files, including GitHub Actions workflows.'
+
+inputs:
+  paths:
+    description: 'Space-separated list of paths to lint (files or directories).'
+    required: false
+    default: '.'
+  exclude_paths:
+    description: 'Space-separated list of paths to exclude from linting.'
+    required: false
+    default: ''
+  fail_on_error:
+    description: 'Whether to fail the workflow on any linting or validation error.'
+    required: false
+    default: 'true'
+
+outputs:
+  lint_status:
+    description: 'Overall status of the linting process (success/failure).'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  entrypoint: '/entrypoint.sh'
