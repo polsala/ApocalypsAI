@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install bash and coreutils (wc)\nRUN apk add --no-cache bash coreutils\n\n# Copy the counting script into the image\nCOPY src/count.sh /usr/local/bin/count.sh\n\n# Make it executable\nRUN chmod +x /usr/local/bin/count.sh\n\n# Set the entrypoint\nENTRYPOINT [\"/usr/local/bin/count.sh\"]
