@@ -1,0 +1,63 @@
+.App {
+  text-align: center;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-family: 'Courier New', monospace;
+}
+
+.App-header {
+  padding: 20px;
+  width: 90%;
+  max-width: 600px;
+}
+
+.App-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px #00eeff;
+  letter-spacing: 3px;
+}
+
+.affirmation-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #00eeff;
+  border-radius: 10px;
+  padding: 30px;
+  margin: 20px 0;
+  box-shadow: 0 0 20px rgba(0, 238, 255, 0.3);
+}
+
+.affirmation-text {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.whisper-button {
+  background: transparent;
+  color: #00eeff;
+  border: 2px solid #00eeff;
+  padding: 12px 25px;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  margin: 20px 0;
+}
+
+.whisper-button:hover {
+  background: rgba(0, 238, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.footer-note {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-top: 30px;
+}
