@@ -1,0 +1,15 @@
+---
+file_age_threshold_days: 365
+scan_directories:
+  - /tmp
+  - /var/log
+  - /opt
+package_ignore_patterns:
+  - "^kernel-"
+  - "^ansible"
+  - "^python3"
+  - "^systemd"
+service_ignore_patterns:
+  - "ssh"
+  - "systemd-journald"
+  - "cron"

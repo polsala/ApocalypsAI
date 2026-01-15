@@ -1,0 +1,35 @@
+Digital Dust Bunny Report for {{ ansible_hostname }} ({{ ansible_distribution }} {{ ansible_distribution_version }})
+Generated: {{ ansible_date_time.iso8601_micro }}
+
+---
+Old Files (older than {{ file_age_threshold_days }} days in {{ scan_directories | join(', ') }}):
+{% if found_old_files is defined and found_old_files | length > 0 %}
+{% for file in found_old_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+  No ancient digital artifacts found. Good job!
+{% endif %}
+
+---
+Potentially Unused Packages (excluding patterns: {{ package_ignore_patterns | join(', ') }}):
+{% if filtered_unused_packages is defined and filtered_unused_packages | length > 0 %}
+{% for pkg in filtered_unused_packages %}
+- {{ pkg }}
+{% endfor %}
+{% else %}
+  All packages seem to be actively used or are essential. Keep up the good work!
+{% endif %}
+
+---
+Inactive Services (excluding patterns: {{ service_ignore_patterns | join(', ') }}):
+{% if filtered_inactive_services is defined and filtered_inactive_services | length > 0 %}
+{% for service in filtered_inactive_services %}
+- {{ service }}
+{% endfor %}
+{% else %}
+  All critical services are purring along nicely. No sleepy services found!
+{% endif %}
+
+---
+End of Report. Time to grab your digital broom!

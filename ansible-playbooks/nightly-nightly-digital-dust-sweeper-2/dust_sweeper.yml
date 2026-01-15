@@ -1,0 +1,76 @@
+---
+- name: Sweep for Digital Dust Bunnies
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/dust_rules.yml
+
+  tasks:
+    - name: Ensure dust_rules variables are defined
+      ansible.builtin.assert:
+        that:
+          - file_age_threshold_days is defined
+          - scan_directories is defined
+          - package_ignore_patterns is defined
+          - service_ignore_patterns is defined
+        fail_msg: "Missing required variables in vars/dust_rules.yml"
+      run_once: true
+      delegate_to: localhost
+
+    - name: Find old files
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ file_age_threshold_days }}d"
+        recurse: yes
+        hidden: yes
+        file_type: file
+      loop: "{{ scan_directories }}"
+      register: old_files_results
+      ignore_errors: true # Some paths might not exist or be accessible
+
+    - name: Collect old files
+      ansible.builtin.set_fact:
+        found_old_files: "{{ found_old_files | default([]) + item.files | map(attribute='path') | list }}"
+      loop: "{{ old_files_results.results }}"
+      when: item.files is defined and item.files | length > 0
+
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+      ignore_errors: true # Manager might not be found on some systems
+
+    - name: Identify potentially unused packages
+      ansible.builtin.set_fact:
+        unused_packages: "{{ ansible_facts.packages | dict2items | map(attribute='key') | list }}"
+      when: ansible_facts.packages is defined
+
+    - name: Filter out ignored packages
+      ansible.builtin.set_fact:
+        filtered_unused_packages: "{{ unused_packages | default([]) | reject('match', item) | list }}"
+      loop: "{{ package_ignore_patterns }}"
+      loop_control:
+        label: "Filtering {{ item }}"
+      when: unused_packages is defined
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+      ignore_errors: true
+
+    - name: Identify inactive services
+      ansible.builtin.set_fact:
+        inactive_services: "{{ ansible_facts.services | dict2items | selectattr('value.state', '==', 'stopped') | map(attribute='key') | list }}"
+      when: ansible_facts.services is defined
+
+    - name: Filter out ignored services
+      ansible.builtin.set_fact:
+        filtered_inactive_services: "{{ inactive_services | default([]) | reject('match', item) | list }}"
+      loop: "{{ service_ignore_patterns }}"
+      loop_control:
+        label: "Filtering {{ item }}"
+      when: inactive_services is defined
+
+    - name: Generate Digital Dust Report
+      ansible.builtin.template:
+        src: templates/dust_report.j2
+        dest: "dust_report_{{ ansible_hostname }}.txt"
+      delegate_to: localhost
