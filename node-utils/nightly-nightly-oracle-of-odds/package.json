@@ -1,0 +1,27 @@
+{
+  "name": "nightly-oracle-of-odds",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool that provides a 'prophecy' by randomly selecting from a list of options, aiding indecisive survivors.",
+  "main": "src/index.js",
+  "bin": {
+    "oracle-of-odds": "src/index.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "whimsical",
+    "decision-making",
+    "node"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
