@@ -1,0 +1,4 @@
+#!/usr/bin/env bash\nset -euo pipefail\n\n# List of whimsical emojis (GitHub reaction identifiers)\nEMOJIS=("rocket" "tada" "sparkles" "zap" "fire" "star2" "thumbsup" "heart" "eyes" "clap")\n\n# Choose a random emoji\nRANDOM_INDEX=$((RANDOM % ${#EMOJIS[@]}))\nSELECTED=${EMOJIS[$RANDOM_INDEX]}\n\n# Required environment variables\n: "${GITHUB_TOKEN:?Need GITHUB_TOKEN}"\n: "${GITHUB_REPOSITORY:?Need GITHUB_REPOSITORY}"\n: "${COMMENT_ID:?Need COMMENT_ID}"\n\n# GitHub Reactions API endpoint\nAPI_URL=\"https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions\"\n\n# Send the reaction\ncurl -s -X POST \"$API_URL\" \\
+  -H \"Accept: application/vnd.github.squirrel-girl-preview+json\" \\
+  -H \"Authorization: token ${GITHUB_TOKEN}\" \\
+  -d \"{\"content\":\"${SELECTED}\"}\" > /dev/null\n\necho \"Added reaction :${SELECTED}: to comment ${COMMENT_ID}\"\n
