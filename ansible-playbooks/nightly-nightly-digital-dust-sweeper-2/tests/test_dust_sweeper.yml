@@ -1,0 +1,120 @@
+---
+- name: Test Digital Dust Bunny Sweeper Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no # We will mock facts
+
+  vars_files:
+    - vars/dust_rules.yml # Use the same rules for consistency
+
+  tasks:
+    - name: Mock ansible_hostname and other facts
+      ansible.builtin.set_fact:
+        ansible_hostname: "test-host-01"
+        ansible_distribution: "MockOS"
+        ansible_distribution_version: "1.0"
+        ansible_date_time:
+          iso8601_micro: "2023-10-27T10:00:00.123456Z"
+        # Mock the output of the find module
+        found_old_files:
+          - "/tmp/old_log.txt"
+          - "/opt/backup_2020.tar.gz"
+        # Mock the output of package_facts and service_facts
+        ansible_facts:
+          packages:
+            "nginx": [{"version": "1.20.1"}]
+            "apache2": [{"version": "2.4.41"}]
+            "python3-pip": [{"version": "20.0.2"}]
+            "kernel-headers-5.4.0": [{"version": "5.4.0-100"}]
+            "ansible": [{"version": "2.9.6"}]
+            "unwanted-old-package": [{"version": "1.0.0"}]
+          services:
+            "nginx": {"state": "running"}
+            "apache2": {"state": "stopped"}
+            "cron": {"state": "running"}
+            "unwanted-service": {"state": "stopped"}
+            "ssh": {"state": "running"}
+      # Mock rationale: The ansible.builtin.find, ansible.builtin.package_facts, and ansible.builtin.service_facts
+      # modules would normally interact with the filesystem, package manager, and service manager of a remote host.
+      # For deterministic, offline testing, we cannot actually run these commands. Instead, we use
+      # ansible.builtin.set_fact to inject pre-defined "findings" (e.g., a list of old files, a list of installed
+      # packages, and service states) into variables that the main playbook would then process. This allows us to
+      # test the playbook's logic for filtering, processing, and reporting these findings without requiring actual
+      # remote hosts or filesystem operations.
+
+    - name: Identify potentially unused packages (mocked)
+      ansible.builtin.set_fact:
+        unused_packages: "{{ ansible_facts.packages | dict2items | map(attribute='key') | list }}"
+
+    - name: Filter out ignored packages (mocked)
+      ansible.builtin.set_fact:
+        filtered_unused_packages: "{{ unused_packages | default([]) | reject('match', item) | list }}"
+      loop: "{{ package_ignore_patterns }}"
+      loop_control:
+        label: "Filtering {{ item }}"
+
+    - name: Identify inactive services (mocked)
+      ansible.builtin.set_fact:
+        inactive_services: "{{ ansible_facts.services | dict2items | selectattr('value.state', '==', 'stopped') | map(attribute='key') | list }}"
+
+    - name: Filter out ignored services (mocked)
+      ansible.builtin.set_fact:
+        filtered_inactive_services: "{{ inactive_services | default([]) | reject('match', item) | list }}"
+      loop: "{{ service_ignore_patterns }}"
+      loop_control:
+        label: "Filtering {{ item }}"
+
+    - name: Generate Digital Dust Report (test)
+      ansible.builtin.template:
+        src: templates/dust_report.j2
+        dest: "/tmp/test_dust_report_{{ ansible_hostname }}.txt"
+      delegate_to: localhost
+
+    - name: Read generated report content
+      ansible.builtin.slurp:
+        src: "/tmp/test_dust_report_{{ ansible_hostname }}.txt"
+      register: report_content_b64
+      delegate_to: localhost
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        decoded_report: "{{ report_content_b64.content | b64decode }}"
+      delegate_to: localhost
+
+    - name: Assert report content for old files
+      ansible.builtin.assert:
+        that:
+          - "'/tmp/old_log.txt' in decoded_report"
+          - "'/opt/backup_2020.tar.gz' in decoded_report"
+          - "'No ancient digital artifacts found' not in decoded_report"
+        msg: "Report does not contain expected old file entries."
+      delegate_to: localhost
+
+    - name: Assert report content for unused packages
+      ansible.builtin.assert:
+        that:
+          - "'unwanted-old-package' in decoded_report"
+          - "'nginx' in decoded_report" # Nginx is not ignored
+          - "'apache2' in decoded_report" # Apache2 is not ignored
+          - "'kernel-headers-5.4.0' not in decoded_report" # Should be ignored
+          - "'ansible' not in decoded_report" # Should be ignored
+          - "'All packages seem to be actively used' not in decoded_report"
+        msg: "Report does not contain expected unused package entries or failed to filter ignored packages."
+      delegate_to: localhost
+
+    - name: Assert report content for inactive services
+      ansible.builtin.assert:
+        that:
+          - "'unwanted-service' in decoded_report"
+          - "'apache2' in decoded_report" # Apache2 is stopped and not ignored
+          - "'ssh' not in decoded_report" # Should be ignored
+          - "'All critical services are purring along nicely' not in decoded_report"
+        msg: "Report does not contain expected inactive service entries or failed to filter ignored services."
+      delegate_to: localhost
+
+    - name: Clean up test report file
+      ansible.builtin.file:
+        path: "/tmp/test_dust_report_{{ ansible_hostname }}.txt"
+        state: absent
+      delegate_to: localhost
+      changed_when: false
