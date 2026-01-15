@@ -1,0 +1,20 @@
+---
+- name: Test SSL/TLS Certificate Health Checker
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Run cert_checker playbook
+      ansible.builtin.include_tasks: ../cert_checker.yml
+      vars:
+        ansible_host: "example.com"
+
+    - name: Check if report file was created
+      stat:
+        path: "reports/cert_report_*.txt"
+      register: report_file
+
+    - name: Assert report file exists
+      assert:
+        that:
+          - report_file.stat.exists
+        fail_msg: "Report file was not generated."

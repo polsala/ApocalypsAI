@@ -1,0 +1,30 @@
+---
+- name: SSL/TLS Certificate Health Checker
+  hosts: all
+  gather_facts: no
+  vars:
+    report_dir: "reports"
+    report_file: "{{ report_dir }}/cert_report_{{ ansible_date_time.iso8601 }}.txt"
+  tasks:
+    - name: Ensure report directory exists
+      delegate_to: localhost
+      run_once: true
+      file:
+        path: "{{ report_dir }}"
+        state: directory
+
+    - name: Check SSL certificate details
+      shell: |
+        echo | openssl s_client -servername {{ ansible_host }} -connect {{ ansible_host }}:443 2>/dev/null | openssl x509 -noout -dates -subject -issuer
+      register: cert_info
+      ignore_errors: yes
+
+    - name: Write certificate info to report
+      delegate_to: localhost
+      lineinfile:
+        path: "{{ report_file }}"
+        line: |
+          === {{ ansible_host }} ===
+          {{ cert_info.stdout }}
+          ---
+        create: yes
