@@ -1,0 +1,107 @@
+---
+- name: Test Digital Pet Rock Feeder Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    pet_rock_message: "Test Pet Rock is super happy!"
+    pet_rock_status_file: "/tmp/test_pet_rock_status.txt"
+    pet_rock_service_path: "/usr/local/bin/test_pet_rock_service.sh"
+    pet_rock_config_dir: "/etc/test_pet_rock"
+    pet_rock_config_file: "test_pet_rock.conf"
+
+  tasks:
+    - name: Clean up previous test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ pet_rock_service_path }}"
+        - "{{ pet_rock_config_dir }}"
+        - "{{ pet_rock_status_file }}"
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+    - name: Run the main playbook to deploy and feed the pet rock
+      ansible.builtin.include_tasks: ../feed_pet_rock.yml
+      vars:
+        pet_rock_message: "{{ pet_rock_message }}"
+        pet_rock_status_file: "{{ pet_rock_status_file }}"
+        pet_rock_service_path: "{{ pet_rock_service_path }}"
+        pet_rock_config_dir: "{{ pet_rock_config_dir }}"
+        pet_rock_config_file: "{{ pet_rock_config_file }}"
+      # Mock rationale: Executes the target playbook against the local test environment.
+
+    - name: Assert pet rock service script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ pet_rock_service_path }}"
+      register: service_script_stat
+      # Mock rationale: Checks if the file was deployed as expected.
+    - ansible.builtin.assert:
+        that:
+          - service_script_stat.stat.exists
+          - service_script_stat.stat.isreg
+          - service_script_stat.stat.mode == '0755'
+        msg: "Pet rock service script {{ pet_rock_service_path }} not found or not executable."
+
+    - name: Assert pet rock config directory exists
+      ansible.builtin.stat:
+        path: "{{ pet_rock_config_dir }}"
+      register: config_dir_stat
+      # Mock rationale: Checks if the directory was created.
+    - ansible.builtin.assert:
+        that:
+          - config_dir_stat.stat.exists
+          - config_dir_stat.stat.isdir
+          - config_dir_stat.stat.mode == '0755'
+        msg: "Pet rock config directory {{ pet_rock_config_dir }} not found."
+
+    - name: Assert pet rock configuration file exists and has correct content
+      ansible.builtin.slurp:
+        src: "{{ pet_rock_config_dir }}/{{ pet_rock_config_file }}"
+      register: config_file_content
+      # Mock rationale: Reads the deployed config file to verify its content.
+    - ansible.builtin.assert:
+        that:
+          - config_file_content.content | b64decode | regex_search('PET_ROCK_MESSAGE="Test Pet Rock is super happy!"')
+          - config_file_content.content | b64decode | regex_search('PET_ROCK_STATUS_FILE="/tmp/test_pet_rock_status.txt"')
+        msg: "Pet rock config file {{ pet_rock_config_dir }}/{{ pet_rock_config_file }} has incorrect content."
+
+    - name: Assert pet rock status file exists (service is 'running')
+      ansible.builtin.stat:
+        path: "{{ pet_rock_status_file }}"
+      register: status_file_stat
+      # Mock rationale: Verifies that the 'start' command in the main playbook created the status file.
+    - ansible.builtin.assert:
+        that:
+          - status_file_stat.stat.exists
+          - status_file_stat.stat.isreg
+        msg: "Pet rock status file {{ pet_rock_status_file }} not found, service is not 'running'."
+
+    - name: Run the main playbook again to check for idempotency
+      ansible.builtin.include_tasks: ../feed_pet_rock.yml
+      vars:
+        pet_rock_message: "{{ pet_rock_message }}"
+        pet_rock_status_file: "{{ pet_rock_status_file }}"
+        pet_rock_service_path: "{{ pet_rock_service_path }}"
+        pet_rock_config_dir: "{{ pet_rock_config_dir }}"
+        pet_rock_config_file: "{{ pet_rock_config_file }}"
+      register: idempotency_check
+      # Mock rationale: Ensures that running the playbook a second time makes no further changes.
+
+    - name: Assert no changes were made on the second run (idempotency)
+      ansible.builtin.assert:
+        that:
+          - idempotency_check.changed == false
+        msg: "Playbook was not idempotent on second run."
+      # Mock rationale: Verifies that the playbook is idempotent, a key principle of Ansible.
+
+    - name: Clean up test artifacts after successful test
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ pet_rock_service_path }}"
+        - "{{ pet_rock_config_dir }}"
+        - "{{ pet_rock_status_file }}"
+      when: not ansible_check_mode
+      # Mock rationale: Cleans up the local environment to leave no trace.
