@@ -1,0 +1,60 @@
+---
+- name: Digital Dust Bunny Sweeper
+  hosts: all
+  gather_facts: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure report directory exists on localhost
+      ansible.builtin.file:
+        path: "{{ report_path | dirname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Report is generated locally
+
+    - name: Find old files and directories
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ old_file_age_days }}d"
+        age_stamp: atime # Access time is often a better indicator of "unused" than mtime
+        recurse: true
+        file_type: any
+      loop: "{{ scan_paths }}"
+      register: old_files_results
+      ignore_errors: true # Continue if a path doesn't exist or is not accessible
+
+    - name: Consolidate found files
+      ansible.builtin.set_fact:
+        all_dust_bunnies: "{{ all_dust_bunnies | default([]) + item.files }}"
+      loop: "{{ old_files_results.results }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Generate Dust Bunny Report
+      ansible.builtin.template:
+        src: templates/dust_bunny_report.j2
+        dest: "{{ report_path }}"
+      delegate_to: localhost
+      vars:
+        dust_bunnies_to_report: "{{ all_dust_bunnies }}"
+
+    - name: Display report path
+      ansible.builtin.debug:
+        msg: "Digital Dust Bunny Report generated at {{ report_path }}"
+      delegate_to: localhost
+
+    - name: Clean up old files (Dry Run)
+      ansible.builtin.debug:
+        msg: "DRY RUN: Would delete {{ item.path }} (accessed {{ item.atime | to_datetime('%Y-%m-%d %H:%M:%S') | ansible.builtin.timeago }})"
+      loop: "{{ all_dust_bunnies }}"
+      when: dry_run | bool and all_dust_bunnies | length > 0
+
+    - name: Clean up old files (Actual Deletion)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ all_dust_bunnies }}"
+      when: not dry_run | bool and all_dust_bunnies | length > 0
+      # In a real-world scenario, you might add a prompt or a more granular confirmation step.
+      # For this utility, the dry_run flag is the primary safety mechanism.

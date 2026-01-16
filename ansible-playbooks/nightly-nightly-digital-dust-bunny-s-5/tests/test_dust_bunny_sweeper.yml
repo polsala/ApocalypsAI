@@ -1,0 +1,67 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  gather_facts: false
+  connection: local # Mock rationale: Running on localhost to simulate file system state without remote hosts.
+
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies_{{ lookup('pipe', 'date +%s') }}"
+    old_file_age_days: 1 # For testing, make "old" just 1 day
+    report_path: "{{ test_dir }}/test_report.txt"
+    dry_run: true # Always test in dry-run mode first
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create an old file
+      ansible.builtin.copy:
+        content: "This is an old file."
+        dest: "{{ test_dir }}/old_file.txt"
+      # Mock rationale: Setting mtime and atime explicitly to simulate an old file.
+      # This requires a shell command as ansible.builtin.file/copy doesn't directly support atime/mtime setting.
+    - name: Set old_file.txt access/modification time to 2 days ago
+      ansible.builtin.shell: "touch -a -m -d '2 days ago' {{ test_dir }}/old_file.txt"
+      changed_when: false # This is part of setup, not a change to be reported
+
+    - name: Create a new file
+      ansible.builtin.copy:
+        content: "This is a new file."
+        dest: "{{ test_dir }}/new_file.txt"
+
+    - name: Run the dust bunny sweeper playbook in check mode
+      # Mock rationale: Using include_tasks to run the main playbook logic within the test context.
+      # This allows overriding variables like scan_paths and report_path for isolation.
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/../dust_bunny_sweeper.yml"
+      vars:
+        scan_paths: ["{{ test_dir }}"]
+        old_file_age_days: "{{ old_file_age_days }}"
+        report_path: "{{ report_path }}"
+        dry_run: "{{ dry_run }}"
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ report_path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_b64['content'] | b64decode }}"
+
+    - name: Assert old file is in report
+      ansible.builtin.assert:
+        that:
+          - "'old_file.txt' in report_content"
+          - "'new_file.txt' not in report_content"
+          - "'DRY RUN: Enabled' in report_content"
+          - "'Found 1 potential dust bunnies' in report_content"
+        msg: "Report content assertion failed. Report: {{ report_content }}"
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: test_dir is defined and test_dir != '/' # Safety check to prevent accidental deletion of root
