@@ -1,0 +1,9 @@
+---
+# Configuration for the Digital Dust Bunny Sweeper
+scan_paths:
+  - /tmp
+  - /var/log
+  # - /home # Be cautious with /home in production; consider specific user directories.
+old_file_age_days: 30 # Files older than this (by access time) will be considered "dust bunnies"
+dry_run: true # Set to false to actually delete files. ALWAYS TEST WITH dry_run: true FIRST!
+report_path: "/tmp/dust_bunny_report_{{ ansible_hostname }}.txt" # Path on the control machine for the report
