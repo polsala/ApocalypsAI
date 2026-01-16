@@ -1,0 +1,109 @@
+name: Nightly GitHub Action Debugger
+
+# This workflow is designed to be reusable and provide a detailed snapshot
+# of the GitHub Actions runner environment for debugging purposes.
+
+# It can be triggered manually or via a schedule.
+
+# To use this workflow in another repository, add the following to your .github/workflows/ directory:
+#
+# name: Debug My Workflow
+# on:
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '0 3 * * *'
+# jobs:
+#   debug_env:
+#     uses: polsala/ApocalypsAI/.github/workflows/nightly-gh-action-debugger.yml@main
+
+# The 'main' branch is used here for simplicity. In a production scenario, you might want to use a specific tag.
+
+permissions: read-all
+
+jobs:
+  collect_env_info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history to ensure we can inspect the repo state if needed
+          fetch-depth: 0
+
+      - name: Set up Python for environment inspection
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install necessary Python packages
+        run: pip install PyYAML rich
+
+      - name: Collect Environment Variables
+        id: env_vars
+        run: |+
+          echo "::set-output name=output::$(python -c "
+import os, yaml
+print(yaml.dump(dict(os.environ)))")"
+
+      - name: Collect File System Info
+        id: fs_info
+        run: |+
+          python -c "
+import os, yaml
+
+def get_dir_contents(path, max_depth=2, current_depth=0):
+    if current_depth > max_depth or not os.path.isdir(path):
+        return None
+    contents = {}
+    try:
+        for item in os.listdir(path):
+            item_path = os.path.join(path, item)
+            if os.path.isdir(item_path):
+                contents[item] = get_dir_contents(item_path, max_depth, current_depth + 1)
+            else:
+                contents[item] = 'file'
+    except Exception as e:
+        contents['error'] = str(e)
+    return contents
+
+base_dirs = ['.', '.github', 'agents', 'utils']
+fs_data = {}
+for d in base_dirs:
+    if os.path.exists(d):
+        fs_data[d] = get_dir_contents(d)
+
+print(yaml.dump(fs_data))
+"
+        # The output is captured by the step, but we'll also write it to a file.
+
+      - name: Collect Git Information
+        id: git_info
+        run: |+
+          echo "::set-output name=output::$(git log -n 5 --pretty=format:'%h - %an, %ar : %s')"
+
+      - name: Collect GitHub Context
+        id: github_context
+        run: |+
+          echo "::set-output name=output::$(echo '${{ toJson(github) }}')"
+
+      - name: Generate Debug Log
+        run: |+
+          echo "--- Environment Variables ---" > action_environment_debug.log
+          echo "$STEP_ENV_VARS" >> action_environment_debug.log
+          echo "\n--- File System Snapshot (limited depth) ---" >> action_environment_debug.log
+          echo "$STEP_FS_INFO" >> action_environment_debug.log
+          echo "\n--- Latest Git Commits ---" >> action_environment_debug.log
+          echo "$STEP_GIT_INFO" >> action_environment_debug.log
+          echo "\n--- GitHub Context ---" >> action_environment_debug.log
+          echo "$STEP_GITHUB_CONTEXT" >> action_environment_debug.log
+        env:
+          STEP_ENV_VARS: ${{ steps.env_vars.outputs.output }}
+          STEP_FS_INFO: ${{ steps.fs_info.outputs.output }}
+          STEP_GIT_INFO: ${{ steps.git_info.outputs.output }}
+          STEP_GITHUB_CONTEXT: ${{ steps.github_context.outputs.output }}
+
+      - name: Upload Debug Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: action_environment_debug.log
+          path: action_environment_debug.log
