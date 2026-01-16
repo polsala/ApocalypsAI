@@ -1,0 +1,52 @@
+---
+- name: Ensure Digital Pet Rock is fed and happy
+  hosts: pet_rock_hosts
+  become: yes
+  vars:
+    pet_rock_message: "The Digital Pet Rock is content."
+    pet_rock_status_file: "/tmp/pet_rock_status.txt"
+    pet_rock_service_path: "/usr/local/bin/pet_rock_service.sh"
+    pet_rock_config_dir: "/etc/pet_rock"
+    pet_rock_config_file: "pet_rock.conf"
+
+  tasks:
+    - name: Ensure pet rock config directory exists
+      ansible.builtin.file:
+        path: "{{ pet_rock_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy pet rock service script
+      ansible.builtin.template:
+        src: templates/pet_rock_service.sh.j2
+        dest: "{{ pet_rock_service_path }}"
+        mode: '0755'
+      notify: Restart pet rock service
+
+    - name: Deploy pet rock configuration file
+      ansible.builtin.template:
+        src: templates/pet_rock_config.j2
+        dest: "{{ pet_rock_config_dir }}/{{ pet_rock_config_file }}"
+        mode: '0644'
+      notify: Restart pet rock service
+
+    - name: Ensure pet rock service is 'running' (status file exists)
+      ansible.builtin.command: "{{ pet_rock_service_path }} start"
+      args:
+        creates: "{{ pet_rock_status_file }}" # Idempotent: only run if status file doesn't exist
+      environment:
+        PET_ROCK_MESSAGE: "{{ pet_rock_message }}"
+        PET_ROCK_STATUS_FILE: "{{ pet_rock_status_file }}"
+      changed_when: true # Always report change if command runs, even if creates prevents it
+      # Mock rationale: For offline testing, we assume the command would create the file.
+      # The 'creates' argument makes it idempotent for actual runs.
+
+  handlers:
+    - name: Restart pet rock service
+      ansible.builtin.command: "{{ pet_rock_service_path }} restart"
+      environment:
+        PET_ROCK_MESSAGE: "{{ pet_rock_message }}"
+        PET_ROCK_STATUS_FILE: "{{ pet_rock_status_file }}"
+      listen: "Restart pet rock service"
+      # Mock rationale: In a real scenario, this would restart a daemon.
+      # For testing, we just ensure the script is called.

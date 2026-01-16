@@ -1,0 +1,55 @@
+#!/bin/bash
+# Digital Pet Rock Service Script
+# Managed by Ansible
+
+PET_ROCK_STATUS_FILE="${PET_ROCK_STATUS_FILE:-{{ pet_rock_status_file }}}"
+PET_ROCK_MESSAGE="${PET_ROCK_MESSAGE:-{{ pet_rock_message }}}"
+
+start() {
+  if [ ! -f "$PET_ROCK_STATUS_FILE" ]; then
+    echo "$(date): Pet Rock started. Message: $PET_ROCK_MESSAGE" > "$PET_ROCK_STATUS_FILE"
+    echo "Digital Pet Rock is now content at $PET_ROCK_STATUS_FILE"
+  else
+    echo "Digital Pet Rock is already content."
+  fi
+}
+
+stop() {
+  if [ -f "$PET_ROCK_STATUS_FILE" ]; then
+    rm "$PET_ROCK_STATUS_FILE"
+    echo "Digital Pet Rock is now hungry."
+  else
+    echo "Digital Pet Rock was already hungry."
+  fi
+}
+
+restart() {
+  stop
+  start
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    restart
+    ;;
+  status)
+    if [ -f "$PET_ROCK_STATUS_FILE" ]; then
+      echo "Digital Pet Rock is content."
+      exit 0
+    else
+      echo "Digital Pet Rock is hungry."
+      exit 1
+    fi
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+esac
+
+exit 0
