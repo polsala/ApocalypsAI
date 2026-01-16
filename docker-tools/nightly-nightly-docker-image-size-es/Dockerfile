@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\n# Install minimal dependencies\nRUN pip install --no-cache-dir requests\n\n# Create a non‑root user for safety\nRUN useradd -m appuser\nUSER appuser\n\n# Copy source code\nWORKDIR /app\nCOPY src/size_estimator.py ./\n\n# Set entrypoint\nENTRYPOINT ["python", "size_estimator.py"]\n
