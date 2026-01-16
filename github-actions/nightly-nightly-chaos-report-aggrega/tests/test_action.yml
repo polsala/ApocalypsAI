@@ -1,0 +1,31 @@
+name: Test Chaos Report Aggregator
+on: [workflow_dispatch]
+jobs:
+  test-aggregation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Test Reports
+        run: |
+          mkdir -p ./test-reports/playbook-1 ./test-reports/playbook-2
+          echo "### Network Latency Spike" > ./test-reports/playbook-1/chaos_report.md
+          echo "- Latency increased by 200ms" >> ./test-reports/playbook-1/chaos_report.md
+          echo "### CPU Starvation" > ./test-reports/playbook-2/chaos_report.md
+          echo "- CPU throttled to 10%" >> ./test-reports/playbook-2/chaos_report.md
+
+      - name: Run Aggregator
+        id: aggregate
+        uses: ./utils/nightly-chaos-report-aggregator
+        with:
+          reports_dir: ./test-reports
+
+      - name: Validate Output
+        run: |
+          if [ ! -f "${{ steps.aggregate.outputs.summary_path }}" ]; then
+            echo "Summary file not found!"
+            exit 1
+          fi
+          echo "✅ Summary generated at ${{ steps.aggregate.outputs.summary_path }}"
+          cat "${{ steps.aggregate.outputs.summary_path }}"

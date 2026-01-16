@@ -1,0 +1,35 @@
+name: 'Chaos Report Aggregator'
+author: 'ApocalypsAI'
+description: 'Aggregates chaos engineering reports into a unified markdown summary.'
+inputs:
+  reports_dir:
+    description: 'Directory to scan for chaos reports'
+    required: false
+    default: './reports'
+outputs:
+  summary_path:
+    description: 'Path to the aggregated markdown summary'
+runs:
+  using: 'composite'
+  steps:
+    - name: Aggregate Reports
+      shell: bash
+      run: |
+        REPORTS_DIR=${{ inputs.reports_dir }}
+        SUMMARY_PATH="${REPORTS_DIR}/chaos_summary.md"
+        echo "# Chaos Engineering Summary" > "${SUMMARY_PATH}"
+        echo "" >> "${SUMMARY_PATH}"
+        for report in "${REPORTS_DIR}"/*/chaos_report.md; do
+          if [ -f "$report" ]; then
+            PLAYBOOK_NAME=$(basename "$(dirname "$report")")
+            echo "## Playbook: ${PLAYBOOK_NAME}" >> "${SUMMARY_PATH}"
+            cat "$report" >> "${SUMMARY_PATH}"
+            echo "" >> "${SUMMARY_PATH}"
+          fi
+done
+        echo "summary_path=${SUMMARY_PATH}" >> $GITHUB_OUTPUT
+    - name: Upload Summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: chaos-summary
+        path: ${{ inputs.reports_dir }}/chaos_summary.md
