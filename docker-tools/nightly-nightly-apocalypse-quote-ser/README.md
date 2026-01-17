@@ -1,0 +1,1 @@
+# Apocalypse Quote Service\n\nA whimsical Dockerized Flask service that serves random post‑apocalyptic quotes.\n\n## Build\n\n```sh\n docker build -t apocalypse-quote .\n```\n\n## Run\n\n```sh\n docker run -p 8080:8080 apocalypse-quote\n```\n\n## Use\n\n```sh\n curl http://localhost:8080/quote\n```\n\nWill return JSON like `{"quote":"..."}`.
