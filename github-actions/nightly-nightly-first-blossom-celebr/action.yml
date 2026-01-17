@@ -1,0 +1,13 @@
+name: 'First Blossom Celebrator'
+description: 'Celebrates a new contributor''s first merged pull request'
+inputs:
+  github-token:
+    description: 'GitHub token for API requests'
+    required: true
+outputs:
+  is-first-contribution:
+    description: 'True if this was the first contribution by the author'
+    value: ${{ steps.celebrate.outputs.is-first-contribution }}
+runs:
+  using: 'node16'
+  main: 'src/main.js'
