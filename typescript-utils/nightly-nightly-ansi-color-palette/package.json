@@ -1,0 +1,1 @@
+{\n  "name": "nightly-ansi-color-palette",\n  "version": "0.1.0",\n  "description": "Prints ANSI 256‑color palette in the terminal",\n  "bin": {\n    "nacp": "./dist/index.js"\n  },\n  "scripts": {\n    "build": "tsc",\n    "test": "node ./dist/tests/index.test.js"\n  },\n  "devDependencies": {\n    "typescript": "^5.0.0"\n  }\n}
