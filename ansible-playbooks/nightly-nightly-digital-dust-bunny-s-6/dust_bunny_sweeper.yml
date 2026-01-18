@@ -1,0 +1,58 @@
+---
+- name: Digital Dust Bunny Sweeper
+  hosts: all
+  gather_facts: no
+  vars:
+    # Default paths to scan for old files and directories
+    scan_paths:
+      - /tmp
+      - /var/log
+      - /opt/old_data
+
+    # Age threshold in days. Files/directories older than this will be identified.
+    age_threshold_days: 60
+
+    # Set to 'true' to actually remove identified dust bunnies.
+    # Set to 'false' for a dry run (reporting only).
+    cleanup_mode: false
+
+    # Internal variable to store found paths, can be overridden for testing
+    _mock_found_paths: null # List of paths that *would have been found* by 'find'
+
+  tasks:
+    - name: Find old files and directories (real run)
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ age_threshold_days }}d"
+        file_type: any
+        recurse: yes
+      register: find_result_real
+      when: _mock_found_paths is none
+
+    - name: Use mock found paths if provided
+      ansible.builtin.set_fact:
+        dust_bunnies_to_clean: "{{ _mock_found_paths }}"
+      when: _mock_found_paths is not none
+      # Mock rationale: Simulates the output of the 'find' module's filtering,
+      # providing a predefined list of paths that are considered 'old' for testing purposes.
+      # This avoids actual filesystem interaction and ensures deterministic test results.
+
+    - name: Extract paths of identified dust bunnies from real run
+      ansible.builtin.set_fact:
+        dust_bunnies_to_clean: "{{ find_result_real.files | map(attribute='path') | list }}"
+      when: _mock_found_paths is none
+
+    - name: Report identified digital dust bunnies
+      ansible.builtin.debug:
+        msg: "Identified {{ dust_bunnies_to_clean | length }} digital dust bunnies older than {{ age_threshold_days }} days: {{ dust_bunnies_to_clean }}"
+
+    - name: Remove digital dust bunnies (cleanup mode)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ dust_bunnies_to_clean }}"
+      when: cleanup_mode and dust_bunnies_to_clean | length > 0
+      # Mock rationale: In test mode, 'cleanup_mode' will be set to false,
+      # or the 'file' module's effect will be observed via 'check_mode'
+      # or by asserting on the 'dust_bunnies_to_clean' list itself.
+      # For actual cleanup, this task would run.

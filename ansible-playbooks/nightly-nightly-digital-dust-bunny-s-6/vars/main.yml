@@ -1,0 +1,13 @@
+---
+# Default paths to scan for old files and directories
+scan_paths:
+  - /tmp
+  - /var/log
+  - /opt/old_data
+
+# Age threshold in days. Files/directories older than this will be identified.
+age_threshold_days: 60
+
+# Set to 'true' to actually remove identified dust bunnies.
+# Set to 'false' for a dry run (reporting only).
+cleanup_mode: false
