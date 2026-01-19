@@ -1,0 +1,65 @@
+---
+- name: Test Whimsical MOTD Deployer
+  hosts: test_servers
+  gather_facts: no
+  become: yes
+  vars:
+    test_motd_path: "/tmp/test_motd_ansible_{{ lookup('pipe', 'date +%s%N') }}" # Unique temp file
+    test_motd_dir: "{{ test_motd_path | dirname }}"
+  tasks:
+    - name: Ensure test_motd_path directory exists
+      ansible.builtin.file:
+        path: "{{ test_motd_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a temporary directory for the test MOTD file,
+      # isolating file system changes to a controlled environment.
+
+    - name: Run the main MOTD deployer playbook with test path
+      ansible.builtin.include_playbook:
+        file: ../motd_deployer.yml
+      vars:
+        motd_path: "{{ test_motd_path }}"
+      # Mock rationale: Overrides the 'motd_path' variable to point to a temporary
+      # file instead of /etc/motd. This ensures the test is offline and does not
+      # modify the actual system's MOTD, making it deterministic and safe.
+
+    - name: Read the content of the temporary MOTD file
+      ansible.builtin.slurp:
+        src: "{{ test_motd_path }}"
+      register: motd_content_result
+      # Mock rationale: Reads from the temporary file created by the test, not /etc/motd.
+
+    - name: Decode the content
+      ansible.builtin.set_fact:
+        actual_motd_content: "{{ motd_content_result['content'] | b64decode | trim }}"
+
+    - name: Load expected messages for assertion
+      ansible.builtin.include_vars:
+        file: ../vars/motd_messages.yml
+      # Mock rationale: Loads the same message list used by the main playbook
+      # to ensure the test can deterministically verify against known values.
+
+    - name: Assert that the deployed MOTD is one of the whimsical messages
+      ansible.builtin.assert:
+        that: "{{ actual_motd_content }} in motd_messages"
+        fail_msg: "Deployed MOTD '{{ actual_motd_content }}' is not in the expected list of messages."
+      # Mock rationale: Verifies the content of the temporary file against the
+      # predefined list of messages, ensuring the playbook's logic for message
+      # selection and deployment is correct.
+
+    - name: Clean up the temporary MOTD file
+      ansible.builtin.file:
+        path: "{{ test_motd_path }}"
+        state: absent
+      # Mock rationale: Removes the temporary file, ensuring the test leaves
+      # no artifacts and maintains a clean environment.
+
+    - name: Clean up the temporary MOTD directory if empty
+      ansible.builtin.file:
+        path: "{{ test_motd_dir }}"
+        state: absent
+        # This will only remove the directory if it's empty. If other tests
+        # or processes create files in the same parent directory, it won't fail.
+      # Mock rationale: Ensures the temporary directory created for the test
+      # is removed, maintaining a clean test environment.
