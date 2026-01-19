@@ -1,0 +1,36 @@
+---
+- name: Deploy Whimsical Message of the Day
+  hosts: all
+  become: yes
+  vars:
+    motd_path: /etc/motd # Default path for MOTD
+  vars_files:
+    - vars/motd_messages.yml
+
+  tasks:
+    - name: Ensure MOTD messages list is defined
+      ansible.builtin.assert:
+        that:
+          - motd_messages is defined
+          - motd_messages is type_of('list')
+          - motd_messages | length > 0
+        fail_msg: "'motd_messages' list is not defined or is empty in vars/motd_messages.yml"
+
+    - name: Select a random whimsical message
+      ansible.builtin.set_fact:
+        selected_motd: "{{ motd_messages | random }}"
+
+    - name: Copy the selected message to {{ motd_path }}
+      ansible.builtin.copy:
+        content: "{{ selected_motd }}\n"
+        dest: "{{ motd_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      # Mock rationale: In tests, 'motd_path' is overridden to a temporary file
+      # (e.g., /tmp/test_motd_ansible_<timestamp>) to prevent actual system modification
+      # and allow for deterministic content verification. This mocks the target file system.
+
+    - name: Display the deployed MOTD (for verification)
+      ansible.builtin.debug:
+        msg: "Deployed MOTD to {{ motd_path }}: '{{ selected_motd }}'"
