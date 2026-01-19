@@ -1,0 +1,67 @@
+.App {
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  background-color: #282c34;
+  color: #61dafb;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #1e2228;
+  padding: 20px;
+  border-bottom: 2px solid #61dafb;
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.dashboard-section {
+  background-color: #3a3f47;
+  border: 1px solid #4a4f57;
+  border-radius: 8px;
+  padding: 20px;
+  width: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+.dashboard-section:hover {
+  transform: translateY(-5px);
+}
+
+.dashboard-section h2 {
+  margin-top: 0;
+  color: #ffffff;
+  font-size: 1.5em;
+  border-bottom: 1px solid #61dafb;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.dashboard-section p {
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+/* Specific styling for threat levels */
+.dashboard-section p:contains('Critical') {
+  color: #ff4d4d;
+  font-weight: bold;
+}
+
+/* Specific styling for temporal anomalies */
+.dashboard-section p:contains('Unstable') {
+  color: #ffcc00;
+  font-weight: bold;
+}
