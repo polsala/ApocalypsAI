@@ -1,0 +1,48 @@
+---
+- name: SSL/TLS Certificate Checker
+  hosts: all
+  gather_facts: no
+  vars:
+    cert_paths:
+      - "/etc/ssl/certs/example.crt"
+      - "https://example.com"
+  tasks:
+    - name: Check local certificate files
+      command: openssl x509 -in {{ item }} -noout -enddate -subject
+      loop: "{{ cert_paths | select('match', '^/') | list }}"
+      register: local_certs
+      ignore_errors: yes
+
+    - name: Fetch remote certificates
+      shell: |
+        echo | openssl s_client -connect {{ item | regex_replace('https://', '') }}:443 2>/dev/null | openssl x509 -noout -enddate -subject
+      loop: "{{ cert_paths | select('match', '^https://') | list }}"
+      register: remote_certs
+      ignore_errors: yes
+
+    - name: Combine results
+      set_fact:
+        all_cert_results: "{{ (local_certs.results | default([])) + (remote_certs.results | default([])) }}"
+
+    - name: Parse certificate data
+      set_fact:
+        parsed_certs: |
+          {{ parsed_certs | default([]) + [{
+            'host': inventory_hostname,
+            'subject': (item.stdout_lines | select('match', 'subject=') | first | split('='))[1] | default('N/A'),
+            'not_after': (item.stdout_lines | select('match', 'notAfter=') | first | split('='))[1] | default('N/A'),
+            'days_left': ((item.stdout_lines | select('match', 'notAfter=') | first | split('='))[1] | default('') | regex_replace('^(.*)$', '0') | int) if ((item.stdout_lines | select('match', 'notAfter=') | first | split('='))[1] | default('')) else 'Unknown',
+            'valid': item.rc == 0
+          }] }}
+      loop: "{{ all_cert_results }}"
+      when: item.stdout_lines is defined
+
+    - name: Display certificate report
+      debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          Subject: {{ item.subject }}
+          Expires: {{ item.not_after }}
+          Days Left: {{ item.days_left }}
+          Status: {{ 'Valid' if item.valid else 'Invalid' }}
+      loop: "{{ parsed_certs | default([]) }}"

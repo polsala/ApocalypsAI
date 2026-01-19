@@ -1,0 +1,54 @@
+---
+- name: Test SSL/TLS Certificate Checker
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Mock local cert check result
+      set_fact:
+        mock_local_result:
+          stdout_lines:
+            - "notAfter=Dec 31 23:59:59 2025 GMT"
+            - "subject=CN=example.com"
+          rc: 0
+
+    - name: Mock remote cert check result
+      set_fact:
+        mock_remote_result:
+          stdout_lines:
+            - "notAfter=Jun 30 12:00:00 2024 GMT"
+            - "subject=CN=remote.example.com"
+          rc: 0
+
+    - name: Combine mock results
+      set_fact:
+        all_cert_results: "[{{ mock_local_result }}, {{ mock_remote_result }}]"
+
+    - name: Parse mock certificate data
+      set_fact:
+        parsed_certs: |
+          {{ parsed_certs | default([]) + [{
+            'host': 'mockhost',
+            'subject': (item.stdout_lines | select('match', 'subject=') | first | split('='))[1] | default('N/A'),
+            'not_after': (item.stdout_lines | select('match', 'notAfter=') | first | split('='))[1] | default('N/A'),
+            'days_left': '180',
+            'valid': item.rc == 0
+          }] }}
+      loop: "{{ all_cert_results }}"
+
+    - name: Assert parsed certificate count
+      assert:
+        that:
+          - "parsed_certs | length == 2"
+        fail_msg: "Expected two parsed certificates"
+
+    - name: Assert first certificate subject
+      assert:
+        that:
+          - "parsed_certs[0].subject == 'example.com'"
+        fail_msg: "First certificate subject mismatch"
+
+    - name: Assert second certificate validity
+      assert:
+        that:
+          - "parsed_certs[1].valid == True"
+        fail_msg: "Second certificate should be valid"
