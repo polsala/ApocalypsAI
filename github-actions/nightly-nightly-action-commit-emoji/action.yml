@@ -1,0 +1,8 @@
+name: "Emoji Boost"
+description: "Generates a random emoji and outputs it as `emoji`."
+outputs:
+  emoji:
+    description: "The randomly selected emoji."
+runs:
+  using: "node12"
+  main: "src/index.js"
