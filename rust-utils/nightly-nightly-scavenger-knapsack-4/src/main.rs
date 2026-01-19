@@ -1,0 +1,1 @@
+use std::io::{self, Read};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let result = scavenger_knapsack::solve(&input);\n    println!("{}", result);\n}\n
