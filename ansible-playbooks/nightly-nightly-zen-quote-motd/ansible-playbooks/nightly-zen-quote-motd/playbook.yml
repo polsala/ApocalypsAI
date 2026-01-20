@@ -1,0 +1,41 @@
+- name: Install Zen Quote MOTD
+  hosts: all
+  become: true
+  vars:
+    quotes_path: /usr/local/share/zen_quotes.txt
+    motd_path: /etc/motd
+    script_path: /usr/local/bin/update_motd.sh
+  tasks:
+    - name: Ensure quotes file exists
+      copy:
+        dest: "{{ quotes_path }}"
+        content: |
+          The journey of a thousand miles begins with one step.
+          Simplicity is the ultimate sophistication.
+          The only true wisdom is in knowing you know nothing.
+          In the middle of difficulty lies opportunity.
+          Be yourself; everyone else is already taken.
+        mode: '0644'
+
+    - name: Install MOTD update script
+      copy:
+        dest: "{{ script_path }}"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Select a random line from quotes file and write to MOTD
+          shuf -n 1 "{{ quotes_path }}" > "{{ motd_path }}"
+      notify: Restart sshd
+
+    - name: Ensure cron job for daily MOTD update
+      cron:
+        name: "Update MOTD daily"
+        minute: "0"
+        hour: "0"
+        job: "{{ script_path }}"
+
+  handlers:
+    - name: Restart sshd
+      service:
+        name: sshd
+        state: restarted
