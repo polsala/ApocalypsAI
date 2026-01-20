@@ -1,0 +1,53 @@
+name: Test Flaky Command Forgiver
+on: [push, workflow_dispatch]
+
+jobs:
+  test_success_after_retries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup retry counter
+        run: echo 0 > .retry_counter # Initialize counter for deterministic test
+      - name: Use Flaky Command Forgiver (succeeds after retries)
+        id: forgiver_success
+        uses: ./github-actions/nightly-flaky-command-forgiver
+        with:
+          command: |
+            CURRENT_ATTEMPT=$(cat .retry_counter)
+            echo "Internal command attempt: $((CURRENT_ATTEMPT + 1))"
+            echo $((CURRENT_ATTEMPT + 1)) > .retry_counter
+            if [ "$CURRENT_ATTEMPT" -lt 2 ]; then
+              echo "Simulating failure..."
+              exit 1
+            else
+              echo "Simulating success!"
+              exit 0
+          max_retries: 2 # Initial attempt + 2 retries = 3 total attempts
+          delay_seconds: 1
+      - name: Check outcome
+        run: |
+          echo "Outcome was: ${{ steps.forgiver_success.outputs.outcome }}"
+          if [ "${{ steps.forgiver_success.outputs.outcome }}" != "success" ]; then
+            echo "Test failed: Expected outcome 'success', but got '${{ steps.forgiver_success.outputs.outcome }}'"
+            exit 1
+          fi
+          echo "Test passed: Command eventually succeeded."
+  test_permanent_failure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Flaky Command Forgiver (permanent failure)
+        id: forgiver_failure
+        uses: ./github-actions/nightly-flaky-command-forgiver
+        with:
+          command: 'echo "Always failing..."; exit 1'
+          max_retries: 1
+          delay_seconds: 1
+      - name: Check outcome
+        run: |
+          echo "Outcome was: ${{ steps.forgiver_failure.outputs.outcome }}"
+          if [ "${{ steps.forgiver_failure.outputs.outcome }}" != "failure" ]; then
+            echo "Test failed: Expected outcome 'failure', but got '${{ steps.forgiver_failure.outputs.outcome }}'"
+            exit 1
+          fi
+          echo "Test passed: Command permanently failed as expected."

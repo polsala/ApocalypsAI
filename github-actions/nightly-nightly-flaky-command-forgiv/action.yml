@@ -1,0 +1,48 @@
+name: 'Flaky Command Forgiver'
+description: 'Retries a command or script a specified number of times upon failure.'
+inputs:
+  command:
+    description: 'The command or script to execute and retry.'
+    required: true
+  max_retries:
+    description: 'Maximum number of retries.'
+    required: false
+    default: '3'
+  delay_seconds:
+    description: 'Delay in seconds between retries.'
+    required: false
+    default: '5'
+outputs:
+  outcome:
+    description: 'The final outcome of the command: "success" or "failure".'
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: retry_logic
+      run: |
+        MAX_RETRIES=${{ inputs.max_retries }}
+        DELAY_SECONDS=${{ inputs.delay_seconds }}
+        COMMAND="${{ inputs.command }}"
+        RETRY_COUNT=0
+        
+        echo "Attempting command: $COMMAND"
+        
+        while [ $RETRY_COUNT -le $MAX_RETRIES ]; do
+          if eval "$COMMAND"; then
+            echo "Command succeeded on attempt $((RETRY_COUNT + 1))."
+            echo "outcome=success" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "Command failed on attempt $((RETRY_COUNT + 1))."
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "Retrying in $DELAY_SECONDS seconds..."
+              sleep "$DELAY_SECONDS"
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            else
+              echo "Max retries ($MAX_RETRIES) reached. Command failed permanently."
+              echo "outcome=failure" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          fi
+        done
