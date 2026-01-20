@@ -1,0 +1,1 @@
+name: \"Motivational Quote\"\ndescription: \"Generates a deterministic motivational quote based on a name.\"\ninputs:\n  name:\n    description: \"Name to personalize the quote\"\n    required: false\n    default: \"Friend\"\noutputs:\n  compliment:\n    description: \"The generated quote\"\nruns:\n  using: \"node12\"\n  main: \"index.js\"
