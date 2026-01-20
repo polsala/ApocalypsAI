@@ -1,0 +1,37 @@
+.App {
+  text-align: center;
+  background: #0d0d1a;
+  color: #e0e0ff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.App-header {
+  padding: 40px;
+}
+
+.affirmation-text {
+  font-size: 1.5rem;
+  max-width: 600px;
+  margin: 30px auto;
+  line-height: 1.6;
+}
+
+.affirmation-button {
+  background: #4444aa;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.affirmation-button:hover {
+  background: #6666cc;
+}
