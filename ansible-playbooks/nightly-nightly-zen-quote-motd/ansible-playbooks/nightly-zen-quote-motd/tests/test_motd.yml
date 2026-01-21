@@ -1,0 +1,31 @@
+- name: Verify MOTD contains a known quote
+  hosts: localhost
+  become: true
+  vars:
+    quotes:
+      - "The journey of a thousand miles begins with one step."
+      - "Simplicity is the ultimate sophistication."
+      - "The only true wisdom is in knowing you know nothing."
+      - "In the middle of difficulty lies opportunity."
+      - "Be yourself; everyone else is already taken."
+  tasks:
+    - name: Run the main playbook
+      import_playbook: ../playbook.yml
+
+    - name: Run MOTD update script to set a quote immediately
+      command: /usr/local/bin/update_motd.sh
+
+    - name: Read MOTD
+      slurp:
+        src: /etc/motd
+      register: motd_content
+
+    - name: Decode MOTD content
+      set_fact:
+        motd_text: "{{ motd_content.content | b64decode | trim }}"
+
+    - name: Assert MOTD is one of the predefined quotes
+      assert:
+        that:
+          - "motd_text in quotes"
+        fail_msg: "MOTD does not match any expected quote: {{ motd_text }}"
