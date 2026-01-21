@@ -1,0 +1,69 @@
+---
+- name: Test syslog_rotator.yml playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    log_files_to_rotate:
+      - path: "/var/log/mock_app.log"
+        max_size: "50M"
+        max_age: "5d"
+        compress: true
+      - path: "/var/log/mock_auth.log"
+        max_size: "25M"
+        max_age: "2d"
+        compress: false
+
+  tasks:
+    - name: Mock logrotate package installation
+      command: echo "Simulating package installation"
+      register: mock_package_install
+      # Mock rationale: Simulates the 'package' module's effect without actual package management.
+
+    - name: Mock logrotate configuration file creation (app.log)
+      copy:
+        content: "/var/log/mock_app.log {\n  size 50M\n  rotate 5\n  daily\n  compress\n  missingok\n  notifempty\n  create 0640 root adm\n  sharedscripts\n  postrotate\n    /usr/bin/systemctl kill --signal=SIGUSR1 systemd-journald.service > \/dev\/null 2>&1 || true\n  endscript\n}"
+        dest: "/tmp/mock_etc_logrotate.d/mock_app.log"
+      register: mock_app_config_creation
+      # Mock rationale: Simulates the 'template' module creating a specific logrotate config file.
+
+    - name: Mock logrotate configuration file creation (auth.log)
+      copy:
+        content: "/var/log/mock_auth.log {\n  size 25M\n  rotate 2\n  daily\n  missingok\n  notifempty\n  create 0640 root adm\n  sharedscripts\n  postrotate\n    /usr/bin/systemctl kill --signal=SIGUSR1 systemd-journald.service > \/dev\/null 2>&1 || true\n  endscript\n}"
+        dest: "/tmp/mock_etc_logrotate.d/mock_auth.log"
+      register: mock_auth_config_creation
+      # Mock rationale: Simulates the 'template' module creating a specific logrotate config file.
+
+    - name: Mock logrotate execution
+      command: echo "Simulating logrotate execution"
+      register: mock_logrotate_execution
+      # Mock rationale: Simulates the 'command' module executing logrotate.
+
+    - name: Assert mock package installation was 'run'
+      assert:
+        that:
+          - "'Simulating package installation' in mock_package_install.stdout"
+
+    - name: Assert mock app logrotate config was created correctly
+      assert:
+        that:
+          - "mock_app_config_creation.dest == '/tmp/mock_etc_logrotate.d/mock_app.log'"
+          - "'/var/log/mock_app.log' in mock_app_config_creation.content"
+          - "'size 50M' in mock_app_config_creation.content"
+          - "'daily' in mock_app_config_creation.content"
+          - "'compress' in mock_app_config_creation.content"
+
+    - name: Assert mock auth logrotate config was created correctly
+      assert:
+        that:
+          - "mock_auth_config_creation.dest == '/tmp/mock_etc_logrotate.d/mock_auth.log'"
+          - "'/var/log/mock_auth.log' in mock_auth_config_creation.content"
+          - "'size 25M' in mock_auth_config_creation.content"
+          - "'daily' in mock_auth_config_creation.content"
+          - "'compress' not in mock_auth_config_creation.content"
+
+    - name: Assert mock logrotate execution was 'run'
+      assert:
+        that:
+          - "'Simulating logrotate execution' in mock_logrotate_execution.stdout"

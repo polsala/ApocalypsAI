@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: instance
+  gather_facts: true
+  roles:
+    - ../../../
+  vars:
+    log_files_to_rotate:
+      - path: "/var/log/test_syslog.log"
+        max_size: "10M"
+        max_age: "1d"
+        compress: true
+      - path: "/var/log/test_auth.log"
+        max_size: "5M"
+        max_age: "2d"
+        compress: false

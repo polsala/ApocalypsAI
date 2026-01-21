@@ -1,0 +1,27 @@
+{{ item.path }} {
+  {% if item.max_size is defined %}
+  size {{ item.max_size }}
+  {% endif %}
+  {% if item.max_age is defined %}
+  rotate {{ item.max_age | regex_replace('(\d+)(d|w|m|y)', '\1') }}
+  {% endif %}
+  {% if item.max_age is defined and 'd' in item.max_age %}
+  daily
+  {% elif item.max_age is defined and 'w' in item.max_age %}
+  weekly
+  {% elif item.max_age is defined and 'm' in item.max_age %}
+  monthly
+  {% elif item.max_age is defined and 'y' in item.max_age %}
+  yearly
+  {% endif %}
+  {% if item.compress is defined and item.compress %}
+  compress
+  {% endif %}
+  missingok
+  notifempty
+  create 0640 root adm
+  sharedscripts
+  postrotate
+    /usr/bin/systemctl kill --signal=SIGUSR1 systemd-journald.service > /dev/null 2>&1 || true
+  endscript
+}

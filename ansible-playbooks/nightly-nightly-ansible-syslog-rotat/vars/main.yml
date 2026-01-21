@@ -1,0 +1,14 @@
+# vars/main.yml
+log_files_to_rotate:
+  - path: "/var/log/syslog"
+    max_size: "100M"
+    max_age: "7d"
+    compress: true
+  - path: "/var/log/auth.log"
+    max_size: "50M"
+    max_age: "3d"
+    compress: false
+  - path: "/var/log/kern.log"
+    max_size: "20M"
+    max_age: "1d"
+    compress: true
