@@ -1,0 +1,29 @@
+name: 'Nightly Branch Bard'
+description: 'Identifies inactive branches and suggests whimsical names for archival/deletion.'
+inputs:
+  repo-token:
+    description: 'GitHub token for API access.'
+    required: true
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '60'
+  ignore-branches:
+    description: 'Comma-separated list of branch names or glob patterns to ignore (e.g., main,develop,feature/*).'
+    required: false
+    default: 'main,master,develop'
+  output-type:
+    description: 'How to output the suggestions. Can be "summary" or "issue-comment".'
+    required: false
+    default: 'summary'
+  issue-number:
+    description: 'The issue number to comment on if output-type is "issue-comment".'
+    required: false
+outputs:
+  stale-branches-json:
+    description: 'A JSON string of identified stale branches and their whimsical suggestions.'
+  summary-output:
+    description: 'The formatted string output that was added to the job summary or issue comment.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
