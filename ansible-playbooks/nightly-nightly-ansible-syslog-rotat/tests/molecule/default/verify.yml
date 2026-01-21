@@ -1,0 +1,36 @@
+---
+- name: Verify
+  hosts: instance
+  gather_facts: true
+  tasks:
+    - name: Check if logrotate config files exist
+      stat: 
+        path: "/etc/logrotate.d/test_syslog.log"
+      register: test_syslog_config
+      failed_when: not test_syslog_config.stat.exists
+
+    - name: Check if second logrotate config file exists
+      stat: 
+        path: "/etc/logrotate.d/test_auth.log"
+      register: test_auth_config
+      failed_when: not test_auth_config.stat.exists
+
+    - name: Check content of test_syslog.log config
+      command: cat /etc/logrotate.d/test_syslog.log
+      register: test_syslog_content
+      changed_when: false
+      assert:
+        that:
+          - "'size 10M' in test_syslog_content.stdout"
+          - "'daily' in test_syslog_content.stdout"
+          - "'compress' in test_syslog_content.stdout"
+
+    - name: Check content of test_auth.log config
+      command: cat /etc/logrotate.d/test_auth.log
+      register: test_auth_content
+      changed_when: false
+      assert:
+        that:
+          - "'size 5M' in test_auth_content.stdout"
+          - "'daily' in test_auth_content.stdout"
+          - "'compress' not in test_auth_content.stdout"
