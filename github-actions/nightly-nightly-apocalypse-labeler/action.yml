@@ -1,0 +1,16 @@
+name: "Apocalypse Labeler"
+description: "Detect end‑of‑world keywords in PR titles and emit a label output."
+inputs:
+  keywords:
+    description: "Comma‑separated list of keywords to match."
+    required: true
+  label:
+    description: "Label to output when a match is found."
+    required: false
+    default: "apocalypse-ready"
+outputs:
+  apocalypse_label:
+    description: "The label to apply, or empty if no match."
+runs:
+  using: "node12"
+  main: "src/index.js"
