@@ -1,0 +1,20 @@
+name: 'Nightly Build Omen Oracle'
+description: 'Posts a whimsical omen or prophecy upon successful workflow completion.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN)'
+    required: true
+  target-type:
+    description: 'Where to post the omen: "pr-comment" or "commit-status"'
+    required: false
+    default: 'pr-comment'
+  status-context:
+    description: 'Context for the commit status (if target-type is commit-status)'
+    required: false
+    default: 'build-omen-oracle'
+outputs:
+  omen:
+    description: 'The generated omen.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
