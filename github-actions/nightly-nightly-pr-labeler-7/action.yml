@@ -1,0 +1,16 @@
+name: Nightly PR Labeler
+description: Auto‑label PRs based on title keywords
+inputs:
+  mapping:
+    description: |
+      Multiline string where each line is "keyword:label".
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Label PR
+      shell: bash
+      env:
+        GITHUB_EVENT_PATH: ${{ env.GITHUB_EVENT_PATH }}
+      run: |
+        ./src/label_pr.sh "${{ inputs.mapping }}"
