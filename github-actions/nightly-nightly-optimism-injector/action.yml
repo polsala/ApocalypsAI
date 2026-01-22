@@ -1,0 +1,26 @@
+name: 'Nightly Optimism Injector'
+description: 'Scans PRs/Issues for negative sentiment and injects a customizable message of hope.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN)'
+    required: true
+  optimism-messages:
+    description: 'Newline-separated list of optimistic messages to choose from.'
+    required: false
+    default: |
+      "Even in the darkest void, a single byte of hope can illuminate the path!"
+      "Fear not, fellow survivor! Every bug squashed is a victory for humanity (or AI-kind)!"
+      "The future is unwritten, but with your code, it's looking brighter than a supernova!"
+      "Remember, even a broken clock is right twice a day. Your code is far more reliable!"
+      "Keep calm and commit on! We're building a better tomorrow, one line at a time."
+  negative-keywords:
+    description: 'Comma-separated list of keywords to detect negative sentiment.'
+    required: false
+    default: 'fail,broken,impossible,despair,doom,gloom,crisis,catastrophe,ruined,stuck,deadlock,nightmare,unfixable'
+  threshold:
+    description: 'Number of negative keywords required to trigger an optimism message.'
+    required: false
+    default: '1'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
