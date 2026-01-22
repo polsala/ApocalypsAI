@@ -1,0 +1,1 @@
+function shouldLabel(title, body, keywords) {\n  if (!Array.isArray(keywords) || keywords.length === 0) {\n    return false;\n  }\n  const text = `${title || ''} ${body || ''}`.toLowerCase();\n  return keywords.some(k => text.includes(k.toLowerCase()));\n}\n\nmodule.exports = { shouldLabel };
