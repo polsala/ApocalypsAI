@@ -1,0 +1,38 @@
+---
+- name: Ensure survival cache integrity
+  hosts: caches
+  connection: local # For local testing, can be removed or changed for remote hosts
+  gather_facts: yes
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure base cache path exists
+      ansible.builtin.file:
+        path: "{{ cache_base_path }}"
+        state: directory
+        mode: "{{ cache_mode }}"
+        owner: "{{ cache_owner }}"
+        group: "{{ cache_group }}"
+      become: yes # May require sudo to create in /tmp or other system paths
+
+    - name: Ensure individual cache locations exist and have correct permissions
+      ansible.builtin.file:
+        path: "{{ cache_base_path }}/{{ item }}"
+        state: directory
+        mode: "{{ cache_mode }}"
+        owner: "{{ cache_owner }}"
+        group: "{{ cache_group }}"
+      loop: "{{ cache_locations }}"
+      become: yes
+
+    - name: Create or update cache manifest file
+      ansible.builtin.copy:
+        dest: "{{ cache_base_path }}/{{ item }}/{{ manifest_filename }}"
+        content: "{{ manifest_content }}"
+        mode: "0644"
+        owner: "{{ cache_owner }}"
+        group: "{{ cache_group }}"
+      loop: "{{ cache_locations }}"
+      become: yes

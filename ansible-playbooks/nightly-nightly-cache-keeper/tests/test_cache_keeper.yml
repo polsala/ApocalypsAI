@@ -1,0 +1,91 @@
+---
+- name: Test Nightly Cache Keeper Playbook
+  hosts: test_hosts
+  connection: local
+  gather_facts: yes
+
+  vars_files:
+    - ../vars/main.yml # Relative path to the main vars file
+
+  tasks:
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ cache_base_path }}"
+        state: absent
+      become: yes
+      ignore_errors: yes # In case path doesn't exist
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+    - name: Run the main cache_keeper playbook
+      ansible.builtin.include_tasks: ../cache_keeper.yml
+      # Mock rationale: Running the actual playbook is the most direct way to test its effects.
+      # We ensure determinism by cleaning up before and asserting after. This tests the playbook's actual execution.
+
+    - name: Verify base cache path exists
+      ansible.builtin.stat:
+        path: "{{ cache_base_path }}"
+      register: base_path_stat
+      # Mock rationale: `stat` module operates on the local filesystem, making it deterministic and offline.
+
+    - name: Assert base cache path exists and has correct permissions
+      ansible.builtin.assert:
+        that:
+          - base_path_stat.stat.exists is true
+          - base_path_stat.stat.isdir is true
+          - base_path_stat.stat.mode == '0755' # Ansible returns octal as string
+          - base_path_stat.stat.pw_name == cache_owner
+          - base_path_stat.stat.gr_name == cache_group
+        msg: "Base cache path {{ cache_base_path }} does not exist or has incorrect permissions/owner/group."
+      # Mock rationale: `assert` module provides deterministic verification of the playbook's outcome.
+
+    - name: Verify individual cache locations and manifest files
+      loop: "{{ cache_locations }}"
+      loop_control:
+        loop_var: cache_name
+      block:
+        - name: Stat cache directory {{ cache_name }}
+          ansible.builtin.stat:
+            path: "{{ cache_base_path }}/{{ cache_name }}"
+          register: cache_dir_stat
+          # Mock rationale: `stat` module operates on the local filesystem, making it deterministic and offline.
+
+        - name: Assert cache directory {{ cache_name }} exists and has correct permissions
+          ansible.builtin.assert:
+            that:
+              - cache_dir_stat.stat.exists is true
+              - cache_dir_stat.stat.isdir is true
+              - cache_dir_stat.stat.mode == '0755'
+              - cache_dir_stat.stat.pw_name == cache_owner
+              - cache_dir_stat.stat.gr_name == cache_group
+            msg: "Cache directory {{ cache_name }} does not exist or has incorrect permissions/owner/group."
+          # Mock rationale: `assert` module provides deterministic verification of the playbook's outcome.
+
+        - name: Stat manifest file in {{ cache_name }}
+          ansible.builtin.stat:
+            path: "{{ cache_base_path }}/{{ cache_name }}/{{ manifest_filename }}"
+          register: manifest_file_stat
+          # Mock rationale: `stat` module operates on the local filesystem, making it deterministic and offline.
+
+        - name: Assert manifest file in {{ cache_name }} exists and has correct permissions
+          ansible.builtin.assert:
+            that:
+              - manifest_file_stat.stat.exists is true
+              - manifest_file_stat.stat.isreg is true
+              - manifest_file_stat.stat.mode == '0644'
+              - manifest_file_stat.stat.pw_name == cache_owner
+              - manifest_file_stat.stat.gr_name == cache_group
+            msg: "Manifest file in {{ cache_name }} does not exist or has incorrect permissions/owner/group."
+          # Mock rationale: `assert` module provides deterministic verification of the playbook's outcome.
+
+        - name: Read content of manifest file in {{ cache_name }}
+          ansible.builtin.slurp:
+            src: "{{ cache_base_path }}/{{ cache_name }}/{{ manifest_filename }}"
+          register: manifest_content_read
+          # Mock rationale: `slurp` module reads local file content, making it deterministic and offline.
+
+        - name: Assert manifest file content in {{ cache_name }} is correct
+          ansible.builtin.assert:
+            that:
+              - (manifest_content_read.content | b64decode | trim) == (manifest_content | trim)
+            msg: "Manifest content in {{ cache_name }} is incorrect."
+          # Mock rationale: `assert` module provides deterministic verification of the playbook's outcome.
