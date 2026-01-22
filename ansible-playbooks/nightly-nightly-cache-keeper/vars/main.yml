@@ -1,0 +1,16 @@
+---
+cache_base_path: "/tmp/apocalypsai_caches" # Base directory for all caches
+cache_locations:
+  - "food_stash"
+  - "water_reserve"
+  - "tool_depot"
+cache_owner: "{{ ansible_user_id | default('root') }}" # Owner of the cache directories
+cache_group: "{{ ansible_user_gid | default('root') }}" # Group of the cache directories
+cache_mode: "0755" # Permissions for the cache directories (octal string)
+manifest_filename: "cache_manifest.txt"
+manifest_content: |
+  # ApocalypsAI Cache Manifest
+  # This file ensures the cache structure is maintained.
+  # Add your actual inventory here.
+  - Item A: 5 units
+  - Item B: 10 units
