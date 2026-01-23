@@ -1,0 +1,34 @@
+---
+- name: Rotate SSH keys on target hosts
+  hosts: all
+  become: true
+  vars:
+    new_key_path: "{{ lookup('env','HOME') }}/.ssh/id_rsa_rotated"
+    target_user: root
+  tasks:
+    - name: Generate new RSA key pair if not present
+      openssh_keypair:
+        path: "{{ new_key_path }}"
+        type: rsa
+        size: 4096
+      register: keypair
+      when: not lookup('file', new_key_path, errors='ignore')
+
+    - name: Read public key
+      slurp:
+        src: "{{ new_key_path }}.pub"
+      register: pubkey_content
+
+    - name: Ensure new public key is in authorized_keys
+      authorized_key:
+        user: "{{ target_user }}"
+        state: present
+        key: "{{ pubkey_content.content | b64decode }}"
+
+    - name: Remove old keys (optional, keep only the new one)
+      authorized_key:
+        user: "{{ target_user }}"
+        state: absent
+        key: "{{ item }}"
+      loop: []
+      when: false  # Set to true and provide a list of old keys to enable removal
