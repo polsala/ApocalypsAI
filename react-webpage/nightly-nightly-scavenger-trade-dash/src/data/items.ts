@@ -1,0 +1,1 @@
+const items = [\n  { id: 1, name: 'Canned Beans', baseValue: 5, rarity: 1 },\n  { id: 2, name: 'Rusty Pipe', baseValue: 2, rarity: 0.8 },\n  { id: 3, name: 'Water Filter', baseValue: 15, rarity: 1.5 },\n  { id: 4, name: 'Solar Panel', baseValue: 50, rarity: 2 },\n  { id: 5, name: 'Medical Kit', baseValue: 30, rarity: 1.8 },\n] as const;\n\nexport default items;
