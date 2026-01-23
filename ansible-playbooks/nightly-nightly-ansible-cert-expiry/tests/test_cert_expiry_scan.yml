@@ -1,0 +1,31 @@
+---
+# Mock rationale: Simulate openssl output to test parsing and logic without real network calls.
+- name: Test cert expiry scan logic
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Mock certificate end date output
+      set_fact:
+        cert_enddate_raw:
+          stdout: "notAfter=Jun 30 12:00:00 2025 GMT"
+
+    - name: Parse certificate end date
+      set_fact:
+        cert_enddate: "{{ cert_enddate_raw.stdout | regex_replace('notAfter=', '') }}"
+
+    - name: Mock current time and convert dates
+      set_fact:
+        cert_enddate_epoch: "{{ (cert_enddate | to_datetime('%b %d %H:%M:%S %Y %Z')).timestamp() | int }}"
+        now_epoch: "{{ '2025-06-01 00:00:00' | to_datetime('%Y-%m-%d %H:%M:%S').timestamp() | int }}"
+
+    - name: Calculate days until expiry
+      set_fact:
+        cert_days_left: "{{ ((cert_enddate_epoch - now_epoch) / 86400) | int }}"
+
+    - name: Assert certificate is not expiring soon
+      assert:
+        that:
+          - cert_days_left == 29
+          - cert_days_left >= 10
+        success_msg: "Test passed: Certificate has 29 days left."
+        fail_msg: "Test failed: Unexpected certificate expiry calculation."

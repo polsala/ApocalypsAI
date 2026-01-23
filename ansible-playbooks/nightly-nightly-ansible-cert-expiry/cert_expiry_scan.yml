@@ -1,0 +1,36 @@
+---
+- name: Scan SSL/TLS certificates for expiration
+  hosts: all
+  gather_facts: no
+  vars:
+    cert_scan_days_warning: 30
+  tasks:
+    - name: Check certificate expiration
+      shell: echo | openssl s_client -connect {{ inventory_hostname }}:443 2>/dev/null | openssl x509 -noout -enddate
+      register: cert_enddate_raw
+      ignore_errors: yes
+
+    - name: Parse certificate end date
+      set_fact:
+        cert_enddate: "{{ cert_enddate_raw.stdout | regex_replace('notAfter=', '') }}"
+      when: cert_enddate_raw.stdout != ""
+
+    - name: Convert to epoch
+      set_fact:
+        cert_enddate_epoch: "{{ (cert_enddate | to_datetime('%b %d %H:%M:%S %Y %Z')).timestamp() | int }}"
+        now_epoch: "{{ ansible_date_time.epoch | int }}"
+      when: cert_enddate is defined
+
+    - name: Calculate days until expiry
+      set_fact:
+        cert_days_left: "{{ ((cert_enddate_epoch - now_epoch) / 86400) | int }}"
+      when: cert_enddate_epoch is defined
+
+    - name: Report certificate status
+      debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          Certificate Expiry: {{ cert_enddate }}
+          Days Left: {{ cert_days_left }}
+          Status: {% if cert_days_left < cert_scan_days_warning %}⚠️ Expiring Soon{% else %}✅ OK{% endif %}
+      when: cert_days_left is defined
