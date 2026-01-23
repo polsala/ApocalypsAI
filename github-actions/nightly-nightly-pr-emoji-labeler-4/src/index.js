@@ -1,0 +1,1 @@
+const emojis = ['🚀','🐛','✨','🔥','💡','🎉'];\nconst title = process.env['INPUT_TITLE'] || '';\nconst idx = title.length % emojis.length;\nconst emoji = emojis[idx];\nconsole.log(`::set-output name=emoji::${emoji}`);\n

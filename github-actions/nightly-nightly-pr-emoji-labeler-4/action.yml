@@ -1,0 +1,1 @@
+name: "PR Emoji Labeler"\ndescription: "Adds an emoji label to a PR based on its title length."\ninputs:\n  title:\n    description: "Pull request title"\n    required: true\nruns:\n  using: "node16"\n  main: "src/index.js"\n
