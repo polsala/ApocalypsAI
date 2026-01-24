@@ -1,0 +1,40 @@
+name: 'Chaos Report Aggregator'
+description: 'Aggregates chaos engineering reports into a unified markdown summary.'
+author: 'ApocalypsAI'
+
+inputs:
+  reports_dir:
+    description: 'Directory containing markdown reports'
+    required: false
+    default: './chaos-reports'
+  output_file:
+    description: 'Path to write the aggregated report'
+    required: false
+    default: './chaos_summary.md'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Aggregate Reports
+      shell: bash
+      run: |
+        REPORTS_DIR=${{ inputs.reports_dir }}
+        OUTPUT_FILE=${{ inputs.output_file }}
+        echo "# Chaos Engineering Summary" > $OUTPUT_FILE
+        for report in "$REPORTS_DIR"/*.md; do
+          if [ -f "$report" ]; then
+            echo "## From: $(basename "$report")" >> $OUTPUT_FILE
+            cat "$report" >> $OUTPUT_FILE
+            echo -e "\n---\n" >> $OUTPUT_FILE
+          fi
+        done
+        echo "Aggregated report saved to $OUTPUT_FILE"
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: chaos-summary-report
+        path: ${{ inputs.output_file }}
+
+branding:
+  icon: 'book-open'
+  color: 'red'
