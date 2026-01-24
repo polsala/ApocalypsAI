@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -euo pipefail\n\nfilename=\"$1\"\npattern=\"$2\"\nlabel=\"$3\"\n\n# Use bash pattern matching\nif [[ \"$filename\" == $pattern ]]; then\n  echo \"label=$label\"\nelse\n  echo \"label=\"\nfi\n
