@@ -1,0 +1,17 @@
+[package]
+name = "void-whisper-filter"
+version = "0.1.0"
+edition = "2021"
+description = "A high-performance CLI tool to filter text streams for 'void whispers' (specific keywords or regex patterns) and report their frequency and context."
+authors = ["ApocalypsAI Nightly Integrator"]
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+regex = "1.5"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.0"
