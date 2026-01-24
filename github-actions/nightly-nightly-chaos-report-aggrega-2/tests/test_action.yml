@@ -1,0 +1,36 @@
+# Mock rationale: Tests simulate file system behavior using temporary directories and known input files.
+name: Test Chaos Report Aggregator
+on: [workflow_dispatch]
+
+jobs:
+  test-aggregation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Test Environment
+        run: |
+          mkdir -p ./test-reports
+          echo "# Network Latency Spike" > ./test-reports/network.md
+          echo "Latency increased by 500ms during test." >> ./test-reports/network.md
+          echo "# CPU Spike" > ./test-reports/cpu.md
+          echo "CPU usage peaked at 98% for 30 seconds." >> ./test-reports/cpu.md
+
+      - name: Run Chaos Report Aggregator
+        uses: ./.github/actions/chaos-report-aggregator
+        with:
+          reports_dir: ./test-reports
+          output_file: ./test_summary.md
+
+      - name: Validate Output
+        run: |
+          if ! grep -q "Network Latency Spike" ./test_summary.md; then
+            echo "ERROR: Missing content from network.md"
+            exit 1
+          fi
+          if ! grep -q "CPU Spike" ./test_summary.md; then
+            echo "ERROR: Missing content from cpu.md"
+            exit 1
+          fi
+          echo "Test passed: Aggregation successful."
