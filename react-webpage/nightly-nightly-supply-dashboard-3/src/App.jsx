@@ -1,0 +1,1 @@
+import React from \"react\";\nimport SupplyTracker from \"./components/SupplyTracker\";\n\nfunction App() {\n  return (\n    <div style={{ padding: \"1rem\", fontFamily: \"sans-serif\" }}>\n      <h1>🧪 Post‑Apocalypse Supply Dashboard</h1>\n      <SupplyTracker />\n    </div>\n  );\n}\n\nexport default App;
