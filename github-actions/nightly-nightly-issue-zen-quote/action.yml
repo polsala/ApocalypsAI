@@ -1,0 +1,16 @@
+name: "Nightly Issue Zen Quote"
+description: "Posts a random Zen quote as a comment on newly opened issues."
+author: "ApocalypsAI"
+inputs:
+  token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Add Zen Quote
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: bash "${{ github.action_path }}/src/add-quote.sh"
