@@ -1,0 +1,146 @@
+.App {
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  font-size: 2.5em;
+  color: #61dafb;
+}
+
+.App-header p {
+  font-style: italic;
+  color: #bbb;
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.input-section,
+.visualizer-section {
+  background-color: #3a3f47;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  flex: 1;
+  min-width: 300px;
+}
+
+.input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-section h2,
+.visualizer-section h2 {
+  color: #61dafb;
+  margin-bottom: 20px;
+}
+
+.clear-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+}
+
+.clear-button:hover {
+  background-color: #c82333;
+}
+
+.echo-list {
+  list-style: none;
+  padding: 0;
+}
+
+.echo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #4a4f57;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  border-radius: 5px;
+}
+
+.echo-item span:first-child {
+  font-weight: bold;
+  color: #f8f9fa;
+}
+
+.echo-item span:last-child {
+  background-color: #61dafb;
+  color: #282c34;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: stretch;
+}
+
+form label {
+  text-align: left;
+  font-weight: bold;
+  color: #f8f9fa;
+}
+
+form input[type="text"],
+form input[type="datetime-local"],
+form textarea {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #282c34;
+  color: white;
+  font-size: 1em;
+}
+
+form input[type="text"]:focus,
+form input[type="datetime-local"]:focus,
+form textarea:focus {
+  outline: none;
+  border-color: #61dafb;
+  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.5);
+}
+
+form button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: background-color 0.3s ease;
+}
+
+form button:hover {
+  background-color: #218838;
+}
