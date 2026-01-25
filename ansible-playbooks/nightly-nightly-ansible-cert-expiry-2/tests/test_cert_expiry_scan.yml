@@ -1,0 +1,40 @@
+---
+# Mock rationale: Avoid real network calls and SSL handshake; simulate shell output.
+- name: Test cert expiry scan logic
+  hosts: localhost
+  gather_facts: no
+  vars:
+    cert_expiry_warning_days: 30
+    ansible_date_time:
+      date: "2025-04-01"
+  tasks:
+    - name: Mock cert_expiry_raw results
+      ansible.builtin.set_fact:
+        cert_expiry_raw:
+          results:
+            - item: 443
+              stdout: "notAfter=Apr 10 12:00:00 2025 GMT"
+            - item: 8443
+              stdout: "notAfter=Mar 15 12:00:00 2025 GMT"
+
+    - name: Parse mock certificate expiry dates
+      ansible.builtin.set_fact:
+        cert_expiry_parsed: >-
+          {{ cert_expiry_parsed | default([]) + [{
+            'host': 'mockhost.local',
+            'port': item.item,
+            'expiry': (item.stdout | regex_replace('notAfter=', '') | to_datetime('%b %d %H:%M:%S %Y %Z')).date()
+          }] }}
+      loop: "{{ cert_expiry_raw.results }}"
+      when: item.stdout != ""
+
+    - name: Identify expiring certificates
+      ansible.builtin.set_fact:
+        expiring_certs: >-
+          {{ cert_expiry_parsed | selectattr('expiry', '<=', (ansible_date_time.date | to_datetime('%Y-%m-%d')).date() + cert_expiry_warning_days) | list }}
+
+    - name: Assert expiring certs found
+      ansible.builtin.assert:
+        that:
+          - expiring_certs | length == 1
+          - expiring_certs[0].port == 8443

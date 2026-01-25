@@ -1,0 +1,38 @@
+---
+- name: Scan SSL/TLS Certificate Expiry
+  hosts: all
+  gather_facts: no
+  vars:
+    cert_scan_ports: [443]
+    cert_expiry_warning_days: 30
+  tasks:
+    - name: Check certificate expiry for each port
+      ansible.builtin.shell: |
+        echo | openssl s_client -connect {{ inventory_hostname }}:{{ item }} 2>/dev/null | openssl x509 -noout -enddate
+      loop: "{{ cert_scan_ports }}"
+      register: cert_expiry_raw
+      ignore_errors: yes
+
+    - name: Parse certificate expiry dates
+      ansible.builtin.set_fact:
+        cert_expiry_parsed: >-
+          {{ cert_expiry_parsed | default([]) + [{
+            'host': inventory_hostname,
+            'port': item.item,
+            'expiry': (item.stdout | regex_replace('notAfter=', '') | to_datetime('%b %d %H:%M:%S %Y %Z')).date()
+          }] }}
+      loop: "{{ cert_expiry_raw.results }}"
+      when: item.stdout != ""
+
+    - name: Identify expiring certificates
+      ansible.builtin.set_fact:
+        expiring_certs: >-
+          {{ cert_expiry_parsed | selectattr('expiry', '<=', (ansible_date_time.date | to_datetime('%Y-%m-%d')).date() + cert_expiry_warning_days) | list }}
+
+    - name: Generate expiry report
+      ansible.builtin.copy:
+        content: |
+          {{ expiring_certs | to_nice_json }}
+        dest: "./cert_expiry_report.json"
+      delegate_to: localhost
+      run_once: yes
