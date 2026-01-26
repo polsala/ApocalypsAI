@@ -1,0 +1,16 @@
+name: "Nightly PR Labeler"
+description: "Automatically adds whimsical labels to PRs based on changed file types."
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Run labeler script"
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        bash ${{ github.action_path }}/src/labeler.sh
