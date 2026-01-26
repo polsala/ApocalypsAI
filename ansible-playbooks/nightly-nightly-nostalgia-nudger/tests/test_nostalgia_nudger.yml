@@ -1,0 +1,98 @@
+---
+- name: Test Nightly Nostalgia Nudger
+  hosts: localhost
+  connection: local
+  gather_facts: false # No need to gather facts for a local test
+  vars:
+    test_dir: "{{ lookup('env', 'TMPDIR') | default('/tmp') }}/ansible_test_comfort_files"
+    comfort_file_path: "{{ test_dir }}/.test_comfort_message.txt"
+    comfort_message_title: "Test Whisper"
+    comfort_message_content: "This is a test message for idempotency."
+    comfort_message_author: "Test Integrator"
+    include_timestamp: false # Override to ensure idempotency for testing
+
+  tasks:
+    - name: Clean up previous test run
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: This is a cleanup task, not directly mocking external calls.
+
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: This is a setup task for the test environment.
+
+    - name: Run the main playbook (first time - should create)
+      ansible.builtin.include_tasks:
+        file: ../nostalgia_nudger.yml
+      vars:
+        comfort_file_path: "{{ comfort_file_path }}"
+        comfort_message_title: "{{ comfort_message_title }}"
+        comfort_message_content: "{{ comfort_message_content }}"
+        comfort_message_author: "{{ comfort_message_author }}"
+        include_timestamp: "{{ include_timestamp }}"
+      register: first_run_result
+      # Mock rationale: The included playbook's file and template modules are deterministic.
+
+    - name: Assert file was created
+      ansible.builtin.stat:
+        path: "{{ comfort_file_path }}"
+      register: stat_result
+      # Mock rationale: This checks local file system, no external calls.
+
+    - name: Verify file exists
+      ansible.builtin.assert:
+        that:
+          - stat_result.stat.exists
+          - stat_result.stat.isreg
+        fail_msg: "Comfort file was not created."
+      # Mock rationale: This is an assertion, no external calls.
+
+    - name: Read file content
+      ansible.builtin.slurp:
+        src: "{{ comfort_file_path }}"
+      register: file_content_b64
+      # Mock rationale: This reads local file system, no external calls.
+
+    - name: Decode and verify content
+      ansible.builtin.set_fact:
+        decoded_content: "{{ file_content_b64.content | b64decode }}"
+      # Mock rationale: This is a data transformation, no external calls.
+
+    - name: Assert content matches template
+      ansible.builtin.assert:
+        that:
+          - decoded_content is search("{{ comfort_message_title }}")
+          - decoded_content is search("{{ comfort_message_content }}")
+          - decoded_content is search("{{ comfort_message_author }}")
+          - not (decoded_content is search("Generated on")) # Ensure timestamp is not present when include_timestamp is false
+        fail_msg: "Comfort file content does not match expected template or contains timestamp when it shouldn't."
+      # Mock rationale: This is an assertion, no external calls.
+
+    - name: Run the main playbook again (second time - should be idempotent)
+      ansible.builtin.include_tasks:
+        file: ../nostalgia_nudger.yml
+      vars:
+        comfort_file_path: "{{ comfort_file_path }}"
+        comfort_message_title: "{{ comfort_message_title }}"
+        comfort_message_content: "{{ comfort_message_content }}"
+        comfort_message_author: "{{ comfort_message_author }}"
+        include_timestamp: "{{ include_timestamp }}"
+      register: second_run_result
+      # Mock rationale: The included playbook's file and template modules are deterministic.
+
+    - name: Assert second run was idempotent (no changes)
+      ansible.builtin.assert:
+        that:
+          - not second_run_result.changed
+        fail_msg: "Playbook was not idempotent on second run."
+      # Mock rationale: This is an assertion, no external calls.
+
+    - name: Clean up after test
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: This is a cleanup task, not directly mocking external calls.

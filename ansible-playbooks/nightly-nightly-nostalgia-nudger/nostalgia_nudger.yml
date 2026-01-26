@@ -1,0 +1,27 @@
+---
+- name: Nightly Nostalgia Nudger
+  hosts: all
+  become: false # No root privileges needed for user files
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure comfort file directory exists
+      ansible.builtin.file:
+        path: "{{ comfort_file_path | dirname }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: In tests, this will operate on a temporary directory.
+
+    - name: Render and deploy comfort file
+      ansible.builtin.template:
+        src: templates/comfort_message.j2
+        dest: "{{ comfort_file_path }}"
+        mode: '0644'
+      register: file_status
+      # Mock rationale: In tests, this will operate on a temporary file path.
+      # The template module is deterministic and doesn't require external mocks.
+
+    - name: Report comfort file status
+      ansible.builtin.debug:
+        msg: "Comfort file '{{ comfort_file_path }}' {{ 'updated' if file_status.changed else 'already up-to-date' }}."
