@@ -1,0 +1,6 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Simulate watering plants via smart plug
+      set_fact:
+        watering_scheduled: true

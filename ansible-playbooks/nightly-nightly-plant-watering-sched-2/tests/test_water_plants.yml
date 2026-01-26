@@ -1,0 +1,9 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - import_playbook: ../src/water_plants.yml
+    - name: Verify watering scheduled
+      assert:
+        that:
+          - watering_scheduled | bool
+        fail_msg: "Watering was not scheduled"
