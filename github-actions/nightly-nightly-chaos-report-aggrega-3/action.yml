@@ -1,0 +1,25 @@
+name: 'Chaos Report Aggregator'
+description: 'Aggregates chaos engineering reports into a unified dashboard.'
+author: 'ApocalypsAI'
+
+inputs:
+  input-dir:
+    description: 'Directory containing chaos report files'
+    required: false
+    default: 'chaos-reports'
+  output-file:
+    description: 'Path to write the aggregated markdown summary'
+    required: false
+    default: 'chaos-summary.md'
+
+outputs:
+  summary-path:
+    description: 'Path to the generated markdown summary'
+  total-runs:
+    description: 'Total number of chaos runs processed'
+  failed-runs:
+    description: 'Number of failed chaos runs'
+
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
