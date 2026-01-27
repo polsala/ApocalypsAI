@@ -1,0 +1,10 @@
+name: PR Celebration
+description: Posts a celebratory comment when a PR is merged.
+author: ApocalypsAI
+runs:
+  using: "composite"
+  steps:
+    - name: Run celebration script
+      shell: bash
+      run: |
+        "${{ github.action_path }}/src/entrypoint.sh"
