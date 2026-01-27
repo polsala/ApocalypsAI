@@ -1,0 +1,23 @@
+---
+- name: Apt Cleanup Playbook
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Ensure host is Debian/Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] == "Debian"
+        fail_msg: "This playbook only supports Debian/Ubuntu systems."
+
+    - name: Autoremove unused packages
+      ansible.builtin.apt:
+        autoremove: yes
+        update_cache: no
+        state: absent
+      register: apt_cleanup_result
+
+    - name: Show cleanup summary
+      ansible.builtin.debug:
+        msg: "Apt autoremove completed. Changed: {{ apt_cleanup_result.changed }}, Packages removed: {{ apt_cleanup_result.stdout_lines | default([]) }}"
