@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\n# Install runtime dependencies\nCOPY requirements.txt ./\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Copy source code\nCOPY src/ ./src/\n\nEXPOSE 5000\n\n# Run the Flask app\nCMD ["python", "-m", "src.app"]\n
