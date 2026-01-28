@@ -1,0 +1,22 @@
+name: 'Nightly Branch Graveyard Keeper'
+description: 'Identifies stale branches based on age and suggests whimsical actions for repository cleanup.'
+inputs:
+  repo-token:
+    description: 'GitHub token with `contents: read` permission.'
+    required: true
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  ignore-branches:
+    description: 'Comma-separated list of branch names to ignore (e.g., main,develop).'
+    required: false
+    default: 'main,master'
+outputs:
+  stale-branches-count:
+    description: 'The total number of stale branches found.'
+  stale-branches-report:
+    description: 'A JSON string array of objects, each containing branchName, lastCommitDate, and whimsicalSuggestion.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
