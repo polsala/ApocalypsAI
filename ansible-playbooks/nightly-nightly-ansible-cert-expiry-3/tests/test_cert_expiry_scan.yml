@@ -1,0 +1,33 @@
+---
+- name: Test SSL/TLS Certificate Expiry Scanner
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Mock cert_info output
+      ansible.builtin.set_fact:
+        cert_info:
+          stdout: |
+            notBefore=Jan  1 00:00:00 2023 GMT
+            notAfter=Jan  1 00:00:00 2025 GMT
+          stdout_lines:
+            - "notBefore=Jan  1 00:00:00 2023 GMT"
+            - "notAfter=Jan  1 00:00:00 2025 GMT"
+        ansible_date_time:
+          epoch: "1700000000"
+        ansible_host: "test.example.com"
+        ansible_port: 443
+
+    - name: Run cert parsing logic
+      ansible.builtin.include_tasks: ../cert_expiry_scan.yml
+
+    - name: Assert days_until_expiry is calculated correctly
+      ansible.builtin.assert:
+        that:
+          - "days_until_expiry == 365"
+        fail_msg: "Expected 365 days until expiry"
+
+    - name: Assert expiry_status is ok
+      ansible.builtin.assert:
+        that:
+          - "expiry_status == 'ok'"
+        fail_msg: "Expected status to be 'ok'"
