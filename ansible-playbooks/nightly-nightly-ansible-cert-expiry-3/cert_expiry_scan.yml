@@ -1,0 +1,55 @@
+---
+- name: SSL/TLS Certificate Expiry Scanner
+  hosts: all
+  gather_facts: no
+  vars:
+    report_template: "templates/cert_report.j2"
+    report_output: "cert_report.html"
+  tasks:
+    - name: Fetch certificate details
+      ansible.builtin.shell: |
+        echo | openssl s_client -connect {{ ansible_host }}:{{ ansible_port | default(443) }} 2>/dev/null | openssl x509 -noout -dates
+      register: cert_info
+      ignore_errors: yes
+
+    - name: Parse certificate dates
+      ansible.builtin.set_fact:
+        not_before: "{{ (cert_info.stdout_lines | select('match', 'notBefore=') | first | split('='))[1] }}"
+        not_after: "{{ (cert_info.stdout_lines | select('match', 'notAfter=') | first | split('='))[1] }}"
+      when: cert_info.stdout != ""
+
+    - name: Convert dates to epoch
+      ansible.builtin.set_fact:
+        expiry_epoch: "{{ (not_after | to_datetime('%b %d %H:%M:%S %Y %Z')).timestamp() | int }}"
+        now_epoch: "{{ ansible_date_time.epoch | int }}"
+      when: cert_info.stdout != ""
+
+    - name: Calculate days until expiry
+      ansible.builtin.set_fact:
+        days_until_expiry: "{{ ((expiry_epoch - now_epoch) / 86400) | int }}"
+      when: cert_info.stdout != ""
+
+    - name: Set expiry status
+      ansible.builtin.set_fact:
+        expiry_status: >-
+          {{ 'critical' if days_until_expiry < 30 else 'warning' if days_until_expiry < 90 else 'ok' }}
+      when: cert_info.stdout != ""
+
+    - name: Collect cert data
+      ansible.builtin.set_fact:
+        cert_data: |
+          {{ cert_data | default([]) + [{
+            'host': ansible_host,
+            'port': ansible_port | default(443),
+            'not_after': not_after,
+            'days_left': days_until_expiry,
+            'status': expiry_status
+          }] }}
+      when: cert_info.stdout != ""
+
+    - name: Generate HTML report
+      ansible.builtin.template:
+        src: "{{ report_template }}"
+        dest: "{{ report_output }}"
+      run_once: yes
+      delegate_to: localhost

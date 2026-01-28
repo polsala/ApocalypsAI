@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Certificate Expiry Report</title>
+  <style>
+    body { font-family: sans-serif; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .critical { background-color: #ffcccc; }
+    .warning { background-color: #fff3cd; }
+    .ok { background-color: #d4edda; }
+  </style>
+</head>
+<body>
+  <h1>SSL/TLS Certificate Expiry Report</h1>
+  <table>
+    <tr>
+      <th>Host</th>
+      <th>Port</th>
+      <th>Not After</th>
+      <th>Days Left</th>
+      <th>Status</th>
+    </tr>
+    {% for cert in cert_data %}
+    <tr class="{{ cert.status }}">
+      <td>{{ cert.host }}</td>
+      <td>{{ cert.port }}</td>
+      <td>{{ cert.not_after }}</td>
+      <td>{{ cert.days_left }}</td>
+      <td>{{ cert.status | title }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
