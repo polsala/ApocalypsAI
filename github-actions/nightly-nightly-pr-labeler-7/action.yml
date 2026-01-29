@@ -1,0 +1,5 @@
+name: "Nightly PR Labeler"\ndescription: "Suggest PR labels based on changed file paths using simple substring matching."\nauthor: "ApocalypsAI Nightly Integrator"\ninputs:\n  changed_files:\n    description: "New‑line separated list of changed file paths."
+    required: true\n  label_map:\n    description: "JSON string mapping substrings to label names."
+    required: true\n  token:\n    description: "GitHub token with issues:write permission (optional)."
+    required: false\n    default: ${{ github.token }}\noutputs:\n  labels:\n    description: "JSON‑encoded array of suggested labels."
+runs:\n  using: "node16"\n  main: "src/index.js"
