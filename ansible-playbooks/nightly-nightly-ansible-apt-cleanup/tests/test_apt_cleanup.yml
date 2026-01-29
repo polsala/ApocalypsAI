@@ -1,0 +1,16 @@
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run apt cleanup playbook
+      import_playbook: "../src/apt_cleanup.yml"
+
+    - name: Verify report exists
+      stat:
+        path: "/tmp/apt_cleanup_report.md"
+      register: report_stat
+
+    - name: Assert report created and non‑empty
+      assert:
+        that:
+          - report_stat.stat.exists
+          - report_stat.stat.size > 0
