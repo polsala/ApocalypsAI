@@ -1,0 +1,64 @@
+name: 'Cosmic Alignment Checker'
+description: 'Verifies "cosmic alignment" (configurable conditions like branch name, commit message, or environment variables) before allowing a workflow to proceed.'
+inputs:
+  required_branch_pattern:
+    description: 'Regex pattern for allowed branch names. E.g., "^main$|^release/.*$". Defaults to ".*" (any branch).'
+    required: false
+    default: '.*'
+  required_commit_phrase:
+    description: 'A specific phrase that must be present in the latest commit message. E.g., "🚀 Ready for launch!".'
+    required: false
+    default: ''
+  forbidden_day_of_week:
+    description: 'A specific day of the week (e.g., "Friday") on which the workflow is forbidden. Case-sensitive.'
+    required: false
+    default: ''
+  required_env_var_name:
+    description: 'The name of an environment variable that must be set to "true" for alignment. E.g., "COSMIC_ALIGNMENT_STATUS".'
+    required: false
+    default: ''
+outputs:
+  alignment_status:
+    description: 'The status of cosmic alignment: "aligned" or "misaligned".'
+  reason:
+    description: 'The reason for misalignment, or a success message.'
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository (needed for git log)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1 # Only fetch the latest commit
+
+    - name: Prepare context variables for script
+      shell: bash
+      id: prepare_vars
+      run: |
+        # Mock rationale: GITHUB_REF_NAME, LATEST_COMMIT_MESSAGE, CURRENT_DAY_OF_WEEK are dynamic.
+        # We prepare them here to be passed to the script, ensuring the script itself is testable offline.
+
+        # GITHUB_REF_NAME is usually available, but we'll ensure it's set for the script.
+        echo "SCRIPT_GITHUB_REF_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+
+        # Get latest commit message. GITHUB_HEAD_REF_MESSAGE is often for PRs, but not always reliable for push.
+        # For push events or general usage, we fetch it via git log.
+        COMMIT_MESSAGE=$(git log -1 --pretty=%B || echo "No commit message found")
+        echo "SCRIPT_LATEST_COMMIT_MESSAGE=$COMMIT_MESSAGE" >> $GITHUB_ENV
+
+        # Get current day of week
+        echo "SCRIPT_CURRENT_DAY_OF_WEEK=$(date +%A)" >> $GITHUB_ENV
+
+    - name: Run Cosmic Alignment Check
+      id: check
+      shell: bash
+      env:
+        INPUT_REQUIRED_BRANCH_PATTERN: ${{ inputs.required_branch_pattern }}
+        INPUT_REQUIRED_COMMIT_PHRASE: ${{ inputs.required_commit_phrase }}
+        INPUT_FORBIDDEN_DAY_OF_WEEK: ${{ inputs.forbidden_day_of_week }}
+        INPUT_REQUIRED_ENV_VAR_NAME: ${{ inputs.required_env_var_name }}
+        # Pass prepared context variables to the script
+        GITHUB_REF_NAME: ${{ env.SCRIPT_GITHUB_REF_NAME }}
+        LATEST_COMMIT_MESSAGE: ${{ env.SCRIPT_LATEST_COMMIT_MESSAGE }}
+        CURRENT_DAY_OF_WEEK: ${{ env.SCRIPT_CURRENT_DAY_OF_WEEK }}
+      run: |
+        bash "${{ github.action_path }}/src/check_alignment.sh"
