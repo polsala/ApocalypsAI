@@ -1,0 +1,3 @@
+# Nightly Barter Value Calculator\n\nA whimsical CLI tool to compute the total barter value of a list of post‑apocalypse supplies.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n```sh\nnode src/main.js water 3 apple 5 canned-beef 1 unknown-item 2\n```\n\nThe command above will output something like:\n\n```
+Total barter value: 38
+```\n\n## How it works\n\nEach known item has a predefined base value (see source). The tool multiplies the base value by the supplied quantity and sums the results. Unknown items default to a value of **1** to keep the calculation deterministic.\n\n## Files\n- `src/main.js` – implementation and CLI entry point\n- `tests/test_main.js` – deterministic offline tests using Node's built‑in `assert` module\n
