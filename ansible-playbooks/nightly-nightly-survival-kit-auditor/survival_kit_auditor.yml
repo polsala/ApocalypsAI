@@ -1,0 +1,60 @@
+---
+- name: Nightly Survival Kit Auditor
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/survival_kit.yml
+
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+      # Mock rationale: In tests, ansible_facts.packages will be set directly to simulate package presence.
+
+    - name: Initialize missing items list
+      ansible.builtin.set_fact:
+        missing_packages: []
+        missing_files: []
+
+    - name: Check for required packages
+      ansible.builtin.set_fact:
+        missing_packages: "{{ missing_packages + [item] }}"
+      loop: "{{ required_packages }}"
+      when: item not in ansible_facts.packages
+
+    - name: Check for required files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: file_check_results
+      loop: "{{ required_files }}"
+      loop_control:
+        label: "{{ item }}"
+      # Mock rationale: In tests, file_check_results will be set directly to simulate file existence.
+
+    - name: Add missing files to list
+      ansible.builtin.set_fact:
+        missing_files: "{{ missing_files + [item.item] }}"
+      loop: "{{ file_check_results.results }}"
+      when: not item.stat.exists
+
+    - name: Report survival kit status
+      ansible.builtin.debug:
+        msg: |
+          Survival Kit Audit for {{ inventory_hostname }}:
+          {% if missing_packages | length > 0 %}
+          Missing Packages: {{ missing_packages | join(', ') }}
+          {% else %}
+          All required packages are present.
+          {% endif %}
+
+          {% if missing_files | length > 0 %}
+          Missing Files: {{ missing_files | join(', ') }}
+          {% else %}
+          All required files are present.
+          {% endif %}
+
+          {% if missing_packages | length == 0 and missing_files | length == 0 %}
+          Status: READY FOR THE APOCALYPSE!
+          {% else %}
+          Status: ATTENTION REQUIRED! Some survival kit items are missing.
+          {% endif %}
