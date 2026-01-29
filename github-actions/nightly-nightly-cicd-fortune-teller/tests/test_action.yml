@@ -1,0 +1,64 @@
+name: Test CI/CD Fortune Teller Action
+
+on:
+  workflow_dispatch: # Allows manual triggering for testing
+  push:
+    branches:
+      - main # Or the branch where this action is being developed
+
+jobs:
+  test_blessing_fortune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Blessing Fortune Teller
+        id: blessing_fortune
+        uses: ./utils/nightly-cicd-fortune-teller # Path to the action
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fortune-type: 'blessing'
+          pr-number: '1' # Mock rationale: This is a mock PR number to allow the 'Post Fortune as PR Comment' step to be evaluated without an actual PR context. The primary goal is to test the action's execution flow and output capture, not actual comment posting in this test workflow.
+
+      - name: Verify Blessing Fortune Output
+        run: |
+          FORTUNE="${{ steps.blessing_fortune.outputs.fortune }}"
+          echo "Generated Blessing Fortune: $FORTUNE"
+          if [ -z "$FORTUNE" ]; then
+            echo "FAIL: Blessing fortune output is empty."
+            exit 1
+          fi
+          # Basic check for blessing keywords
+          if [[ "$FORTUNE" != *"May"* && "$FORTUNE" != *"The cosmic"* && "$FORTUNE" != *"Your code"* && "$FORTUNE" != *"A gentle breeze"* && "$FORTUNE" != *"The stars"* && "$FORTUNE" != *"May your tests"* && "$FORTUNE" != *"The spirits"* ]]; then
+            echo "WARN: Blessing fortune output does not contain expected keywords. Output: '$FORTUNE'"
+          fi
+          echo "PASS: Blessing fortune generated non-empty output."
+
+  test_warning_fortune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Warning Fortune Teller
+        id: warning_fortune
+        uses: ./utils/nightly-cicd-fortune-teller # Path to the action
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fortune-type: 'warning'
+          pr-number: '1' # Mock rationale: Same as above, a mock PR number for testing purposes.
+
+      - name: Verify Warning Fortune Output
+        run: |
+          FORTUNE="${{ steps.warning_fortune.outputs.fortune }}"
+          echo "Generated Warning Fortune: $FORTUNE"
+          if [ -z "$FORTUNE" ]; then
+            echo "FAIL: Warning fortune output is empty."
+            exit 1
+          fi
+          # Basic check for warning keywords
+          if [[ "$FORTUNE" != *"Beware"* && "$FORTUNE" != *"The ancient scrolls"* && "$FORTUNE" != *"A shadow"* && "$FORTUNE" != *"The void"* && "$FORTUNE" != *"A forgotten cache"* && "$FORTUNE" != *"The prophecy"* && "$FORTUNE" != *"A subtle off-by-one"* ]]; then
+            echo "WARN: Warning fortune output does not contain expected keywords. Output: '$FORTUNE'"
+          fi
+          echo "PASS: Warning fortune generated non-empty output."
