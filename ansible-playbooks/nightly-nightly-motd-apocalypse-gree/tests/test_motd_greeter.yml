@@ -1,0 +1,80 @@
+- name: Test Nightly MOTD Apocalypse Greeter Playbook Logic
+  hosts: localhost
+  connection: local
+  gather_facts: no # We'll provide mock facts
+
+  vars:
+    # Mock rationale: These facts simulate a target host's system information
+    # without needing to gather real facts, making the test deterministic and offline.
+    ansible_hostname: "test-host-mock"
+    ansible_distribution: "MockOS"
+    ansible_distribution_version: "2.0"
+    ansible_uptime_seconds: 7200
+    ansible_load_average_1m: 0.2
+    ansible_load_average_5m: 0.15
+    ansible_load_average_15m: 0.1
+    ansible_mounts:
+      - mount: "/"
+        size_available: 21474836480 # 20 GB
+
+    # Mock rationale: For deterministic testing, we fix the greeting. In a real run,
+    # the `random` filter would select from `apocalypse_greetings`.
+    # By providing only one greeting here, the `random` filter will deterministically
+    # select this specific greeting, allowing for predictable assertions.
+    test_random_greeting: "TEST_GREETING: The void awaits your command."
+
+    # Mock rationale: We write to /tmp/test_motd_apocalypsai instead of /etc/motd
+    # to avoid requiring root privileges and modifying the host system during testing.
+    # This makes the test self-contained, safe, and easily cleanable.
+    test_motd_path: "/tmp/test_motd_apocalypsai"
+
+  tasks:
+    - name: Ensure test MOTD directory exists
+      ansible.builtin.file:
+        path: "{{ test_motd_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Load apocalypse greetings (mocked)
+      ansible.builtin.set_fact:
+        loaded_greetings:
+          apocalypse_greetings:
+            - "{{ test_random_greeting }}"
+      # Mock rationale: Overrides the `include_vars` step from the main playbook
+      # to provide a controlled, single greeting for deterministic random selection.
+
+    - name: Select a random greeting (mocked)
+      ansible.builtin.set_fact:
+        random_greeting: "{{ loaded_greetings.apocalypse_greetings | random }}"
+      # Mock rationale: This step mimics the main playbook's logic. Since `loaded_greetings`
+      # contains only `test_random_greeting`, the `random` filter will deterministically
+      # select it.
+
+    - name: Render MOTD template (mocked)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/motd.j2" # Path relative to test playbook
+        dest: "{{ test_motd_path }}"
+        mode: '0644'
+      # Mock rationale: Uses the mocked facts and fixed greeting to render the template
+      # to a temporary file, ensuring deterministic output for verification.
+
+    - name: Read the generated MOTD file
+      ansible.builtin.slurp:
+        src: "{{ test_motd_path }}"
+      register: motd_content
+
+    - name: Assert MOTD content
+      ansible.builtin.assert:
+        that:
+          - motd_content.content | b64decode | contains(test_random_greeting)
+          - motd_content.content | b64decode | contains("Hostname: {{ ansible_hostname }}")
+          - motd_content.content | b64decode | contains("OS: {{ ansible_distribution }} {{ ansible_distribution_version }}")
+          - motd_content.content | b64decode | contains("Uptime: {{ ansible_uptime_seconds }} seconds")
+          - motd_content.content | b64decode | contains("Load Average: {{ ansible_load_average_1m }}, {{ ansible_load_average_5m }}, {{ ansible_load_average_15m }}")
+          - motd_content.content | b64decode | contains("Disk Usage (root): {{ (ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first / (1024*1024*1024)) | round(2) }} GB available")
+        fail_msg: "Generated MOTD content is not as expected."
+
+    - name: Clean up test MOTD file
+      ansible.builtin.file:
+        path: "{{ test_motd_path }}"
+        state: absent
