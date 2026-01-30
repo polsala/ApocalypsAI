@@ -1,0 +1,17 @@
+- hosts: localhost
+  gather_facts: true
+  vars_files:
+    - tips.yml
+  tasks:
+    - name: Compute tip index based on the current day of month
+      set_fact:
+        tip_index: "{{ (ansible_date_time.day | int - 1) % tips | length }}"
+
+    - name: Select tip of the day
+      set_fact:
+        tip_of_the_day: "{{ tips[tip_index] }}"
+
+    - name: Write tip to survival_tip.txt
+      copy:
+        dest: "./survival_tip.txt"
+        content: "{{ tip_of_the_day }}\n"

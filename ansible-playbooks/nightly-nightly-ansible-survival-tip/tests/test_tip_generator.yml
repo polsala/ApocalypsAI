@@ -1,0 +1,21 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run the tip generator playbook
+      import_playbook: "../src/tip_generator.yml"
+
+    - name: Verify survival_tip.txt exists
+      stat:
+        path: "./survival_tip.txt"
+      register: tip_file
+
+    - name: Assert the tip file was created
+      assert:
+        that:
+          - tip_file.stat.exists
+          - tip_file.stat.size > 0
+
+    - name: Clean up generated file (so tests are idempotent)
+      file:
+        path: "./survival_tip.txt"
+        state: absent
