@@ -1,0 +1,15 @@
+{
+  "name": "nightly-action-commit-emoji-annotator",
+  "version": "1.0.0",
+  "description": "GitHub Action that adds an emoji reaction to a commit based on its message.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node tests/test_selectEmoji.js"
+  },
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  }
+}
