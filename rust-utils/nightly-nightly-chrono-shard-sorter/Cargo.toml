@@ -1,0 +1,12 @@
+[package]
+name = "nightly-chrono-shard-sorter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "0.3"
+filetime = "0.2"
