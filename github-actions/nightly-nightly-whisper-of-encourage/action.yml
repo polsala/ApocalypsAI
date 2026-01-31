@@ -1,0 +1,16 @@
+name: 'Nightly Whisper of Encouragement'
+description: 'Posts a random, whimsical whisper of encouragement to a pull request or issue upon workflow completion.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  whispers:
+    description: 'Optional: A comma-separated list of custom whispers. If empty, uses default.'
+    required: false
+    default: ''
+outputs:
+  whisper-chosen:
+    description: 'The specific whisper that was chosen and posted.'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
