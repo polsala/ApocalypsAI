@@ -1,0 +1,15 @@
+Digital Dust Bunny Sweep Report - {{ run_date }}
+
+Archive Location: {{ archive_location }}
+
+Swept Files ({{ swept_files | length }} total):
+{% if swept_files %}
+{% for file in swept_files %}
+- {{ file.path }} (Last modified: {{ file.mtime | ansible.builtin.to_datetime('%Y%m%d%H%M%S') | ansible.builtin.format_datetime('%Y-%m-%d %H:%M:%S') }})
+{% endfor %}
+{% else %}
+No dust bunnies found to sweep. The digital realm is pristine!
+{% endif %}
+
+---
+May your servers remain clutter-free and your bits ever nimble.

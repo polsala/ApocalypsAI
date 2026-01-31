@@ -1,0 +1,131 @@
+---
+- name: Test Digital Dust Bunny Sweeper Playbook in Check Mode
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml # Load default variables
+
+  tasks:
+    - name: Create dummy source and archive directories for check_mode simulation
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ archive_dir }}"
+        - "{{ source_dirs[0] }}"
+        - "{{ source_dirs[1] }}"
+      # Mock rationale: Ensures the directories exist for the playbook to "find" and "move" files in check_mode.
+      # This allows check_mode to report 'changed' for file operations even if no actual files are moved.
+
+    - name: Create dummy old files for check_mode simulation
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: file
+        modification_time: "{{ item.mtime }}"
+        modification_time_format: "%s" # Unix timestamp
+      loop:
+        - { path: "{{ source_dirs[0] }}/old_log.txt", mtime: 1672531200 } # Jan 1, 2023 00:00:00 UTC
+        - { path: "{{ source_dirs[0] }}/forgotten_config.bak", mtime: 1672531201 }
+        - { path: "{{ source_dirs[1] }}/stale_data.csv", mtime: 1672531202 }
+      # Mock rationale: Creates actual files with old modification times. This allows the 'find' module
+      # to genuinely find them, making the test more realistic while still being deterministic
+      # due to fixed mtimes and known file paths.
+
+    - name: Mock ansible_date_time for deterministic report naming
+      ansible.builtin.set_fact:
+        ansible_date_time:
+          iso8601_basic: "20230101T120000"
+      # Mock rationale: Ensures report filename is consistent for testing.
+
+    - name: Run the main playbook in check mode
+      ansible.builtin.include_tasks: ../dust_bunny_sweeper.yml
+      # The include_tasks module will run the tasks from the main playbook.
+      # We rely on the dummy files created above for the 'find' module.
+      check_mode: true
+      register: playbook_run
+
+    - name: Assert that tasks would report changes
+      ansible.builtin.assert:
+        that:
+          - "'Ensure archive directory exists' in playbook_run.results | map(attribute='name')"
+          - playbook_run.results | selectattr('name', 'equalto', 'Ensure archive directory exists') | first | json_query('changed') == false # Should be false if created by setup
+          - "'Find old files (dust bunnies)' in playbook_run.results | map(attribute='name')"
+          - playbook_run.results | selectattr('name', 'equalto', 'Find old files (dust bunnies)') | first | json_query('changed') == false # Find doesn't change anything
+          - "'Consolidate found files' in playbook_run.results | map(attribute='name')"
+          - playbook_run.results | selectattr('name', 'equalto', 'Consolidate found files') | first | json_query('changed') == true # set_fact is always changed
+          - playbook_run.results | selectattr('name', 'equalto', 'Consolidate found files') | first | json_query('ansible_facts.dust_bunnies | length') == 3
+          - "'Move dust bunnies to archive' in playbook_run.results | map(attribute='name')"
+          - playbook_run.results | selectattr('name', 'equalto', 'Move dust bunnies to archive') | first | json_query('changed') == true # mv would be changed
+          - "'Generate sweep report' in playbook_run.results | map(attribute='name')"
+          - playbook_run.results | selectattr('name', 'equalto', 'Generate sweep report') | first | json_query('changed') == true # template would be changed
+        fail_msg: "One or more tasks did not report expected changes in check mode."
+      # Mock rationale: Verifies that tasks are correctly identified as 'changed' or 'not changed' in check_mode,
+      # indicating proper playbook logic flow.
+
+    - name: Set expected report content
+      ansible.builtin.set_fact:
+        expected_report_content: |
+          Digital Dust Bunny Sweep Report - 20230101T120000
+
+          Archive Location: /tmp/digital_attic_test/archive
+
+          Swept Files (3 total):
+          - /tmp/digital_attic_test/source1/old_log.txt (Last modified: 2023-01-01 00:00:00)
+          - /tmp/digital_attic_test/source1/forgotten_config.bak (Last modified: 2023-01-01 00:00:01)
+          - /tmp/digital_attic_test/source2/stale_data.csv (Last modified: 2023-01-01 00:00:02)
+
+          ---
+          May your servers remain clutter-free and your bits ever nimble.
+      # Mock rationale: Provides a known good string to compare against the template output.
+
+    - name: Verify report content in check mode (template module doesn't write in check_mode, but we can simulate)
+      ansible.builtin.template:
+        src: ../templates/sweep_report.j2
+        dest: "/dev/null" # Write to null to get content without actual file creation
+      delegate_to: localhost
+      vars:
+        swept_files: "{{ playbook_run.results | selectattr('name', 'equalto', 'Consolidate found files') | first | json_query('ansible_facts.dust_bunnies') }}"
+        archive_location: "{{ archive_dir }}"
+        run_date: "{{ ansible_date_time.iso8601_basic }}"
+      register: rendered_report
+      when: swept_files is defined and swept_files | length > 0
+
+    - name: Assert rendered report content matches expected
+      ansible.builtin.assert:
+        that:
+          - rendered_report.content | trim == expected_report_content | trim
+        fail_msg: "Rendered report content does not match expected content."
+      when: rendered_report is defined
+      # Mock rationale: Compares the actual rendered template output (using /dev/null to prevent file write)
+      # with a predefined expected string, ensuring the template logic is correct.
+
+    - name: Assert compress archive task would run if enabled
+      ansible.builtin.set_fact:
+        compress_archive: true
+      # Mock rationale: Temporarily enables compression for this specific test.
+
+    - name: Run the main playbook again in check mode with compression enabled
+      ansible.builtin.include_tasks: ../dust_bunny_sweeper.yml
+      check_mode: true
+      register: playbook_run_compress
+
+    - name: Assert compress archive task would run
+      ansible.builtin.assert:
+        that:
+          - "'Compress archive (optional)' in playbook_run_compress.results | map(attribute='name')"
+          - playbook_run_compress.results | selectattr('name', 'equalto', 'Compress archive (optional)') | first | json_query('changed') == true
+        fail_msg: "Compress archive task did not run or was not marked as changed in check mode."
+      # Mock rationale: Verifies that the archive module would attempt to compress,
+      # which is a 'changed' operation in check_mode.
+
+    - name: Cleanup dummy source and archive directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ archive_dir }}"
+        - "{{ source_dirs[0] }}"
+        - "{{ source_dirs[1] }}"
+      # Mock rationale: Cleans up the temporary files and directories created for the test,
+      # ensuring a clean state after test execution.

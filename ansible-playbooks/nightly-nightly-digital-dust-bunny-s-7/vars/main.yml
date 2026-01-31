@@ -1,0 +1,14 @@
+---
+# Directories to scan for digital dust bunnies
+source_dirs:
+  - "/tmp/digital_attic_test/source1"
+  - "/tmp/digital_attic_test/source2"
+
+# Directory where dust bunnies will be swept
+archive_dir: "/tmp/digital_attic_test/archive"
+
+# Files older than this many days will be considered dust bunnies
+age_days: 7
+
+# Optional: Compress the archive after sweeping (true/false)
+compress_archive: false
