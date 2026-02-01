@@ -1,0 +1,1 @@
+const quotes = [\n  \"The ash settles, but hope rises.\",\n  \"When the sun hides, the stars whisper.\",\n  \"Survival is a story written in dust.\",\n  \"Even ruins have echoes of laughter.\",\n  \"From the wreckage, we rebuild tomorrow.\"\n];\n\nexport default quotes;\n
