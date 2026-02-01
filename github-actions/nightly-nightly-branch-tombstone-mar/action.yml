@@ -1,0 +1,26 @@
+name: 'Branch Tombstone Marker'
+description: 'Identifies and lists stale branches in a repository.'
+inputs:
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '30'
+  exclude-branches:
+    description: 'Comma-separated list of branch names or patterns to exclude from staleness check (e.g., main,master,develop,release/*).'
+    required: false
+    default: 'main,master'
+outputs:
+  stale-branches:
+    description: 'Comma-separated list of identified stale branch names.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Branch Tombstone Marker Script
+      shell: bash
+      run: |
+        # Mock rationale: The script relies on git commands to inspect the repository history.
+        # For testing, a pre-configured local git repository is set up by the test workflow.
+        # In a real GitHub Actions run, the 'actions/checkout' step provides the necessary git context.
+        "${{ github.action_path }}/src/tombstone_marker.sh" \
+          "${{ inputs.stale-days }}" \
+          "${{ inputs.exclude-branches }}"
