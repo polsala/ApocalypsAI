@@ -1,0 +1,43 @@
+.App {
+  text-align: center;
+  background: #1a1a1a;
+  color: #00ffcc;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-family: 'Courier New', monospace;
+}
+
+.App-header {
+  padding: 40px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #ff3399;
+}
+
+.affirmation {
+  font-size: 1.5rem;
+  margin: 30px auto;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+button {
+  background: #333;
+  color: #00ffcc;
+  border: 2px solid #00ffcc;
+  padding: 12px 24px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #00ffcc;
+  color: #1a1a1a;
+}
