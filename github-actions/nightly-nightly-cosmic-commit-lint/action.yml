@@ -1,0 +1,56 @@
+name: 'Cosmic Commit Lint'
+description: 'Enforces conventional commit standards and adds a whimsical cosmic touch.'
+inputs:
+  commit-message:
+    description: 'The commit message to lint. Defaults to the PR title or last commit message.'
+    required: false
+    default: ''
+  cosmic-level:
+    description: 'Level of cosmic whimsy: "stardust" (light), "nebula" (medium), "blackhole" (strict).'
+    required: false
+    default: 'stardust'
+outputs:
+  lint-status:
+    description: 'The status of the linting: "success", "warning", or "failure".'
+    value: ${{ steps.run_lint_script.outputs.status }}
+  cosmic-suggestion:
+    description: 'A whimsical cosmic suggestion if the message was bland.'
+    value: ${{ steps.run_lint_script.outputs.suggestion }}
+runs:
+  using: 'composite'
+  steps:
+    - id: run_lint_script
+      shell: bash
+      run: |
+        # Determine commit message
+        COMMIT_MSG="${{ inputs.commit-message }}"
+        if [ -z "$COMMIT_MSG" ]; then
+          if [ -n "${{ github.event.pull_request.title }}" ]; then
+            COMMIT_MSG="${{ github.event.pull_request.title }}"
+          elif [ -n "${{ github.event.head_commit.message }}" ]; then
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+          else
+            echo "::error::Could not determine commit message from inputs or GitHub event."
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+            echo "suggestion=Failed to get commit message." >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+        fi
+        
+        echo "Running cosmic lint for message: $COMMIT_MSG"
+        
+        # Execute the linting script. It will write its outputs to stdout.
+        TEMP_OUTPUT_FILE="${{ runner.temp }}/cosmic_lint_script_output"
+        /bin/bash ${{ github.action_path }}/src/lint.sh "$COMMIT_MSG" "${{ inputs.cosmic-level }}" > "$TEMP_OUTPUT_FILE"
+        
+        # Read the outputs from the temporary file and set step outputs
+        LINT_STATUS=$(grep "status=" "$TEMP_OUTPUT_FILE" | cut -d'=' -f2)
+        COSMIC_SUGGESTION=$(grep "suggestion=" "$TEMP_OUTPUT_FILE" | cut -d'=' -f2)
+        
+        echo "status=$LINT_STATUS" >> "$GITHUB_OUTPUT"
+        echo "suggestion=$COSMIC_SUGGESTION" >> "$GITHUB_OUTPUT"
+        
+        # Exit with error if the script determined a failure
+        if [ "$LINT_STATUS" == "failure" ]; then
+          exit 1
+        fi
