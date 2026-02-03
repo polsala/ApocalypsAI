@@ -1,0 +1,22 @@
+Digital Dust Bunny Sweeper Report for {{ ansible_hostname }} ({{ ansible_date_time.iso8601_micro }})
+
+{% if dust_bunny_dry_run | bool %}
+--- DRY RUN ---
+The following items *would be* cleaned if 'dust_bunny_dry_run' was set to 'false':
+{% else %}
+--- CLEANUP COMPLETED ---
+The following items *were* cleaned:
+{% endif %}
+
+{% if all_dust_bunnies is defined and all_dust_bunnies | length > 0 %}
+{% for item in all_dust_bunnies %}
+- {{ item.path }} (Type: {{ item.type }}, Size: {{ item.size }} bytes, Last Modified: {{ item.mtime | to_datetime('%Y%m%d%H%M.%S', '%Y-%m-%d %H:%M:%S') }})
+{% endfor %}
+{% else %}
+No digital dust bunnies found in the specified paths older than {{ dust_bunny_age_days }} days.
+{% endif %}
+
+---
+Scan Paths: {{ dust_bunny_paths | join(', ') }}
+Age Threshold: {{ dust_bunny_age_days }} days
+Excluded Patterns: {{ dust_bunny_exclude_patterns | join(', ') if dust_bunny_exclude_patterns | length > 0 else 'None' }}
