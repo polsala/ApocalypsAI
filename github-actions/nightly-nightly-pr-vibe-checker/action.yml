@@ -1,0 +1,36 @@
+name: 'PR Vibe Checker'
+description: 'Analyzes PR titles and descriptions for positive sentiment and suggests improvements if the vibes are low.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  threshold:
+    description: 'Minimum vibe score for a "High" status. Default is 0.'
+    required: false
+    default: '0'
+  positive-keywords:
+    description: 'Comma-separated list of words that increase the vibe score.'
+    required: false
+    default: 'awesome,great,fantastic,delightful,joy,happy,success,celebrate,win,progress,exciting,superb,excellent,brilliant,hooray'
+  negative-keywords:
+    description: 'Comma-separated list of words that decrease the vibe score.'
+    required: false
+    default: 'bug,error,issue,problem,fix,fail,broken,struggle,difficult,challenge,bad,sad,frustrate,annoy,regret'
+  check-title:
+    description: 'Whether to include the PR title in the vibe check.'
+    required: false
+    default: 'true'
+  check-body:
+    description: 'Whether to include the PR body in the vibe check.'
+    required: false
+    default: 'true'
+outputs:
+  vibe-score:
+    description: 'The calculated numerical vibe score.'
+  vibe-status:
+    description: 'The categorized status: High, Medium, or Low.'
+  suggestion:
+    description: 'A whimsical suggestion message if the vibe status is Low.'
+runs:
+  using: 'node20'
+  main: 'dist/index.js' # This will be compiled from src/index.js using ncc
