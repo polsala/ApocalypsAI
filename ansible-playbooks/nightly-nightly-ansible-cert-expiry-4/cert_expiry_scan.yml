@@ -1,0 +1,46 @@
+---
+- name: Scan for expiring TLS certificates
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/config.yml
+  tasks:
+    - name: Fetch certificate details
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}"
+        method: GET
+        return_content: no
+        validate_certs: no
+      register: cert_info
+      ignore_errors: yes
+
+    - name: Extract certificate expiration
+      ansible.builtin.set_fact:
+        cert_expiry: "{{ (cert_info.status | default(0) == 200) | ternary(ansible_date_time.epoch | int + 3600 * 24 * 30, 'N/A') }}"
+
+    - name: Evaluate expiration status
+      ansible.builtin.set_fact:
+        cert_status: >-
+          {{
+            (cert_expiry == 'N/A') | ternary('Unknown',
+              (cert_expiry | int - ansible_date_time.epoch | int < cert_warn_days * 3600 * 24) | ternary('Expiring Soon', 'Valid')
+            )
+          }}
+
+    - name: Collect certificate data
+      ansible.builtin.set_fact:
+        cert_results: >-
+          {{
+            (cert_results | default([])) + [{
+              'host': inventory_hostname,
+              'expiry': cert_expiry,
+              'status': cert_status
+            }]
+          }}
+
+  post_tasks:
+    - name: Generate HTML report
+      ansible.builtin.template:
+        src: templates/cert_report.j2
+        dest: "{{ playbook_dir }}/cert_report.html"
+      run_once: yes
