@@ -1,0 +1,12 @@
+name: "Commit Emoji Annotator"
+description: "Add emoji reactions to commits in a PR based on simple sentiment analysis."
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+  pull-number:
+    description: "Pull request number"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
