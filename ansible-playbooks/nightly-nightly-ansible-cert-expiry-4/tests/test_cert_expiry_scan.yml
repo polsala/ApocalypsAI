@@ -1,0 +1,37 @@
+---
+- name: Test certificate expiry scan logic
+  hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: Simulate cert_info response
+      ansible.builtin.set_fact:
+        cert_info:
+          status: 200
+
+    - name: Mock ansible_date_time
+      ansible.builtin.set_fact:
+        ansible_date_time:
+          epoch: "1717200000" # Mock current time
+
+    - name: Extract certificate expiration
+      ansible.builtin.set_fact:
+        cert_expiry: "{{ (cert_info.status == 200) | ternary(ansible_date_time.epoch | int + 3600 * 24 * 30, 'N/A') }}"
+
+    - name: Evaluate expiration status
+      ansible.builtin.set_fact:
+        cert_status: >-
+          {{
+            (cert_expiry == 'N/A') | ternary('Unknown',
+              (cert_expiry | int - ansible_date_time.epoch | int < 30 * 3600 * 24) | ternary('Expiring Soon', 'Valid')
+            )
+          }}
+
+    - name: Assert cert_expiry is calculated
+      ansible.builtin.assert:
+        that:
+          - cert_expiry != 'N/A'
+          - cert_status == 'Expiring Soon'
+        fail_msg: "Certificate expiry calculation failed"
+        success_msg: "Certificate expiry correctly calculated as expiring soon"
+
+# Mock rationale: Simulates HTTP response and time to test logic without real network calls.
