@@ -1,0 +1,244 @@
+body {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #1a1a1a;
+  color: #00ff00;
+  overflow-x: hidden;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #0d0d0d;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 15px #00ff00;
+}
+
+h1 {
+  margin-bottom: 30px;
+  text-shadow: 0 0 8px #00ff00;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-item {
+  background-color: #2a2a2a;
+  border: 1px solid #00cc00;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 10px #004d00;
+  text-align: left;
+}
+
+.dashboard-item h2, .dashboard-item h3 {
+  color: #ffff00;
+  margin-top: 0;
+  text-shadow: 0 0 5px #ffff00;
+}
+
+/* Status Indicator */
+.status-circle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2em;
+  margin: 20px auto;
+  border: 3px solid;
+  box-shadow: 0 0 15px;
+  animation: pulse 2s infinite;
+}
+
+.status-optimal {
+  background-color: #00ff00;
+  color: #0d0d0d;
+  border-color: #00cc00;
+  box-shadow: 0 0 20px #00ff00;
+}
+
+.status-warning {
+  background-color: #ffff00;
+  color: #1a1a1a;
+  border-color: #cccc00;
+  box-shadow: 0 0 20px #ffff00;
+  animation-name: blink;
+}
+
+.status-critical {
+  background-color: #ff0000;
+  color: #ffffff;
+  border-color: #cc0000;
+  box-shadow: 0 0 25px #ff0000;
+  animation-name: flash;
+}
+
+.status-stable {
+  background-color: #00ffff;
+  color: #1a1a1a;
+  border-color: #00cccc;
+  box-shadow: 0 0 15px #00ffff;
+}
+
+.status-fluctuating {
+  background-color: #ff8c00;
+  color: #1a1a1a;
+  border-color: #cc6600;
+  box-shadow: 0 0 15px #ff8c00;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes flash {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0.3; }
+}
+
+/* Agent Activity Feed */
+.feed-container {
+  height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #00ff00 #2a2a2a;
+}
+
+.feed-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.feed-container::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+.feed-container::-webkit-scrollbar-thumb {
+  background-color: #00ff00;
+  border-radius: 4px;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-list li {
+  padding: 8px 0;
+  border-bottom: 1px dashed #006600;
+  font-size: 0.9em;
+  animation: scroll-in 0.5s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.activity-list li:last-child {
+  border-bottom: none;
+}
+
+@keyframes scroll-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Resource Allocation Meter */
+.resource-meter-container {
+  padding: 15px;
+}
+
+.meter-bars {
+  margin-top: 15px;
+}
+
+.meter-bar-item {
+  margin-bottom: 12px;
+}
+
+.sector-label {
+  font-size: 0.9em;
+  margin-bottom: 5px;
+  color: #cccccc;
+}
+
+.meter-bar-wrapper {
+  background-color: #3a3a3a;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 15px;
+  width: 100%;
+}
+
+.meter-bar {
+  background-color: #00ff00;
+  height: 100%;
+  transition: width 0.5s ease-out;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+.meter-value {
+  font-size: 0.8em;
+  text-align: right;
+  margin-top: 3px;
+  color: #aaaaaa;
+}
+
+/* Temporal Anomaly Tracker */
+.anomaly-tracker-container {
+  padding: 15px;
+}
+
+.anomaly-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.anomaly-list li {
+  padding: 6px 0;
+  font-size: 0.9em;
+  color: #ffcc00;
+}
+
+.anomaly-list li strong {
+  color: #ff0000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .App-header {
+    padding: 10px;
+  }
+  h1 {
+    font-size: 1.8em;
+  }
+}
