@@ -1,0 +1,12 @@
+name: "Emoji Commit Annotator"
+description: "Appends a random emoji to a given message."
+inputs:
+  message:
+    description: "The message to annotate"
+    required: true
+outputs:
+  annotated_message:
+    description: "Message with appended emoji"
+runs:
+  using: "node12"
+  main: "src/main.js"
