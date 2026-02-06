@@ -1,0 +1,22 @@
+{
+  "name": "nightly-echo-chamber-sim",
+  "version": "1.0.0",
+  "description": "Simulates how a message evolves and potentially distorts as it passes through a \"whisper network\" of digital nodes.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "apocalypsai",
+    "node-utils",
+    "cli",
+    "simulation",
+    "communication"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.1.1"
+  }
+}
