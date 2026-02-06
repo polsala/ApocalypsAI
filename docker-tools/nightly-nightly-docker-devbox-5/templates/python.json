@@ -1,0 +1,24 @@
+{
+  "name": "python",
+  "description": "Python 3.11 development environment with virtual environment and common tools",
+  "dockerfile": "Dockerfile.python",
+  "base_image": "python:3.11-slim",
+  "packages": ["build-essential", "curl", "wget"],
+  "ports": [8000, 8080],
+  "volumes": ["./src:/app/src", "./data:/app/data"],
+  "environment": {
+    "PYTHONPATH": "/app/src",
+    "PYTHONUNBUFFERED": "1",
+    "PIP_NO_CACHE_DIR": "1",
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1"
+  },
+  "startup_command": "bash",
+  "dependencies": ["python", "pip", "venv"],
+  "setup_commands": [
+    "python -m venv /app/venv",
+    ". /app/venv/bin/activate",
+    "pip install --upgrade pip",
+    "pip install pytest black flake8 mypy"
+  ],
+  "readme_template": "# Python Development Environment\n\nThis is a Python 3.11 development environment with:\n\n- Virtual environment setup\n- Common development tools (pytest, black, flake8, mypy)\n- Port 8000 and 8080 exposed for web applications\n- Volume mapping for live code changes\n\n## Getting Started\n\n1. Activate the virtual environment:\n   ```bash\n   source /app/venv/bin/activate\n   ```\n\n2. Start coding!\n\n3. Run tests:\n   ```bash\n   pytest\n   ```\n\n4. Format code:\n   ```bash\n   black src/\n   ```\n\n5. Check style:\n   ```bash\n   flake8 src/\n   ```\n"
+}

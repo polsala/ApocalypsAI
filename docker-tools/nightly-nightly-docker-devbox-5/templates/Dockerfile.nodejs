@@ -1,0 +1,32 @@
+# Node.js 20 Development Environment
+FROM node:20-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV NPM_CONFIG_LOGLEVEL=info
+ENV YARN_VERSION_CHECK=false
+
+# Install global packages
+RUN npm install -g npm@latest
+RUN npm install -g yarn
+RUN npm install -g eslint prettier typescript ts-node
+
+# Create source and data directories
+RUN mkdir -p /app/src /app/data
+
+# Set permissions
+RUN useradd -m -s /bin/bash devuser && chown -R devuser:devuser /app
+USER devuser
+
+# Default command
+CMD ["/bin/bash"]
