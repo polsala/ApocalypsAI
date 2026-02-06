@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install shuf (coreutils)\nRUN apk add --no-cache coreutils\n\nWORKDIR /app\n\nCOPY entrypoint.sh .\nCOPY tips.txt .\n\nRUN chmod +x entrypoint.sh\n\nENTRYPOINT ["./entrypoint.sh"]
