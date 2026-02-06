@@ -1,0 +1,1 @@
+import sys, os\nimport qrcode\n\ndef main():\n    if len(sys.argv) != 2:\n        print("Usage: app.py \"text to encode\"")\n        sys.exit(1)\n    text = sys.argv[1]\n    img = qrcode.make(text)\n    out_path = os.getenv("OUTPUT_PATH", "/data/qr.png")\n    img.save(out_path)\n    print(f"QR code saved to {out_path}")\n\nif __name__ == "__main__":\n    main()
