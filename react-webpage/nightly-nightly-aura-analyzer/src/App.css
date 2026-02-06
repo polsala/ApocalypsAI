@@ -1,0 +1,96 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #282c34;
+  color: white;
+}
+
+.App-header {
+  background-color: #20232a;
+  padding: 20px;
+  border-bottom: 1px solid #3a3f47;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  color: #61dafb;
+}
+
+.App-header p {
+  margin-top: 5px;
+  font-size: 1.1em;
+  color: #ccc;
+}
+
+.App-main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.aura-container {
+  width: 80%;
+  max-width: 700px;
+  min-height: 350px;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.5s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.aura-container::before {
+  content: '';
+  position: absolute;
+  top: -20px; /* Adjust to control glow spread */
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  background: inherit; /* Inherit the gradient */
+  filter: blur(25px); /* Create the glow effect */
+  opacity: 0.4; /* Control glow intensity */
+  z-index: -1;
+  border-radius: 20px;
+}
+
+.text-input {
+  width: calc(100% - 40px);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #f0f0f0;
+  resize: vertical;
+  min-height: 150px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s ease;
+}
+
+.text-input::placeholder {
+  color: #a0a0a0;
+}
+
+.text-input:focus {
+  outline: none;
+  background-color: rgba(0, 0, 0, 0.75);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5), 0 0 0 2px #61dafb;
+}
+
+.aura-description {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #f0f0f0;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+}
