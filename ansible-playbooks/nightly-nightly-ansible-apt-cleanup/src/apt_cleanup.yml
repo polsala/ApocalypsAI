@@ -1,0 +1,16 @@
+- hosts: all
+  become: true
+  vars:
+    report_path: "/tmp/apt_cleanup_report.md"
+  tasks:
+    - name: Simulate apt-get autoremove dry-run
+      command: echo -e "The following packages will be REMOVED:\n  libfoo\n  libbar\n0 upgraded, 0 newly installed, 2 to remove and 0 not upgraded."
+      register: apt_output
+      changed_when: false
+
+    - name: Write report
+      copy:
+        dest: "{{ report_path }}"
+        content: |
+          # Apt Autoremove Report
+          {{ apt_output.stdout }}
