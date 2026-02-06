@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n\n# Mock rationale: deterministic hash ensures this output.\nexport INPUT_NAME=\"TestUser\"\n\noutput=$(node src/index.js)\n\nexpected=\"::set-output name=compliment::Believe in yourself, TestUser!\"\n\nif [[ \"$output\" == \"$expected\" ]]; then\n  echo \"PASS\"\n  exit 0\nelse\n  echo \"FAIL: expected '$expected' but got '$output'\"\n  exit 1\nfi
