@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  chrono-cache:
+    build: .
+    image: chrono-cache-courier:latest
+    volumes:
+      - chrono-cache-data:/cache/notes
+    environment:
+      - CHRONO_RETENTION_HOURS=24 # Default retention, can be overridden
+    # This service is designed to run commands, not as a long-running daemon.
+    # We'll override the entrypoint for interactive use or specific commands.
+    # For example, to run 'list' command:
+    # docker-compose run chrono-cache list
+    # To run 'add' command:
+    # docker-compose run chrono-cache add "key" "value"
+    # To run 'clean' command:
+    # docker-compose run chrono-cache clean
+    # The default CMD is 'help', so 'docker-compose run chrono-cache' will show help.
+
+volumes:
+  chrono-cache-data:
