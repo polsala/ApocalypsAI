@@ -1,0 +1,1 @@
+name: \"Nightly Emoji Issue Labeler\"\ndescription: \"Add an emoji label to the triggering issue or pull request\"\ninputs:\n  emoji:\n    description: \"Emoji to add to the label\"\n    required: true\n  label:\n    description: \"Base label name\"\n    required: true\nruns:\n  using: \"node12\"\n  main: \"src/index.js\"
