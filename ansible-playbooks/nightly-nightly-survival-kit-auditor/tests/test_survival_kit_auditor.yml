@@ -1,0 +1,117 @@
+---
+- name: Test Nightly Survival Kit Auditor - All items present
+  hosts: test_host_all_present
+  gather_facts: no # We will mock facts
+
+  vars_files:
+    - ../vars/survival_kit.yml # Use the same survival kit definition
+
+  tasks:
+    - name: Mock ansible_facts.packages for all present scenario
+      ansible.builtin.set_fact:
+        ansible_facts: >-
+          {% set pkgs = {} %}
+          {% for pkg in required_packages %}
+          {% set _ = pkgs.update({pkg: [{'version': '1.0', 'source': 'mock'}]}) %}
+          {% endfor %}
+          {{ pkgs }}
+      # Mock rationale: Simulates `package_facts` module output for a system
+      # where all required packages are installed, by creating a dictionary
+      # with package names as keys and dummy version info.
+
+    - name: Mock file_check_results for all present scenario
+      ansible.builtin.set_fact:
+        file_check_results:
+          results: "{{ required_files | map('dict', {'item': item, 'stat': {'exists': true}}) | list }}"
+      # Mock rationale: Simulates `stat` module output for a system
+      # where all required files exist.
+
+    - name: Initialize missing items list (as in main playbook)
+      ansible.builtin.set_fact:
+        missing_packages: []
+        missing_files: []
+
+    - name: Check for required packages (simulated)
+      ansible.builtin.set_fact:
+        missing_packages: "{{ missing_packages + [item] }}"
+      loop: "{{ required_packages }}"
+      when: item not in ansible_facts.packages
+      # Mock rationale: Operates on the mocked ansible_facts.packages.
+
+    - name: Add missing files to list (simulated)
+      ansible.builtin.set_fact:
+        missing_files: "{{ missing_files + [item.item] }}"
+      loop: "{{ file_check_results.results }}"
+      when: not item.stat.exists
+      # Mock rationale: Operates on the mocked file_check_results.
+
+    - name: Assert all items are present
+      ansible.builtin.assert:
+        that:
+          - missing_packages | length == 0
+          - missing_files | length == 0
+        fail_msg: "Test failed: Expected all survival kit items to be present, but some were reported missing."
+        success_msg: "Test passed: All survival kit items correctly identified as present."
+
+- name: Test Nightly Survival Kit Auditor - Some items missing
+  hosts: test_host_some_missing
+  gather_facts: no # We will mock facts
+
+  vars_files:
+    - ../vars/survival_kit.yml
+
+  tasks:
+    - name: Mock ansible_facts.packages for some missing scenario
+      ansible.builtin.set_fact:
+        ansible_facts: >-
+          {% set pkgs = {} %}
+          {% for pkg in ['git', 'curl', 'htop'] %} # Only these are "installed"
+          {% set _ = pkgs.update({pkg: [{'version': '1.0', 'source': 'mock'}]}) %}
+          {% endfor %}
+          {{ pkgs }}
+      # Mock rationale: Simulates `package_facts` module output where specific packages are installed,
+      # leaving others from `required_packages` as missing.
+
+    - name: Mock file_check_results for some missing scenario
+      ansible.builtin.set_fact:
+        file_check_results:
+          results:
+            - { item: "/etc/ssh/sshd_config", stat: { exists: true } }
+            - { item: "/etc/fstab", stat: { exists: false } } # Missing
+            - { item: "/var/log/syslog", stat: { exists: false } } # Missing
+            - { item: "/etc/hosts", stat: { exists: true } }
+      # Mock rationale: Simulates `stat` module output where specific files exist or are missing.
+
+    - name: Initialize missing items list (as in main playbook)
+      ansible.builtin.set_fact:
+        missing_packages: []
+        missing_files: []
+
+    - name: Check for required packages (simulated)
+      ansible.builtin.set_fact:
+        missing_packages: "{{ missing_packages + [item] }}"
+      loop: "{{ required_packages }}"
+      when: item not in ansible_facts.packages
+      # Mock rationale: Operates on the mocked ansible_facts.packages.
+
+    - name: Add missing files to list (simulated)
+      ansible.builtin.set_fact:
+        missing_files: "{{ missing_files + [item.item] }}"
+      loop: "{{ file_check_results.results }}"
+      when: not item.stat.exists
+      # Mock rationale: Operates on the mocked file_check_results.
+
+    - name: Assert some items are missing
+      ansible.builtin.assert:
+        that:
+          - missing_packages | length > 0
+          - missing_files | length > 0
+          - ('vim' in missing_packages)
+          - ('tmux' in missing_packages)
+          - ('jq' in missing_packages)
+          - ('nmap' in missing_packages)
+          - ('python3-pip' in missing_packages)
+          - ('/etc/fstab' in missing_files)
+          - ('/var/log/syslog' in missing_files)
+        fail_msg: "Test failed: Expected some survival kit items to be missing, or incorrect items reported."
+        success_msg: "Test passed: Missing survival kit items correctly identified."
