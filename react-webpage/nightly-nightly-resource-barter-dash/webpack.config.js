@@ -1,0 +1,2 @@
+const path = require('path');\n\nmodule.exports = {\n  entry: './src/index.jsx',\n  output: {\n    filename: 'bundle.js',\n    path: path.resolve(__dirname, 'dist'),\n  },\n  resolve: {\n    extensions: ['.js', '.jsx'],\n  },\n  module: {\n    rules: [\n      {\n        test: /\\.jsx?$/,
+        exclude: /node_modules/,\n        use: {\n          loader: 'babel-loader',\n        },\n      },\n    ],\n  },\n  devServer: {\n    static: {\n      directory: path.join(__dirname, 'public'),\n    },\n    compress: true,\n    port: 3000,\n  },\n};\n
