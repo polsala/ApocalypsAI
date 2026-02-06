@@ -1,0 +1,21 @@
+- name: Apt maintenance on Debian/Ubuntu
+  hosts: all
+  become: true
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Autoremove unused packages
+      apt:
+        autoremove: yes
+        purge: yes
+
+    - name: Clean apt cache
+      apt:
+        autoclean: yes
+
+    - name: Report summary
+      debug:
+        msg: "Apt maintenance completed."
