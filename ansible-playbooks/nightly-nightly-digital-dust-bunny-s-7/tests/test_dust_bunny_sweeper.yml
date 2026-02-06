@@ -1,0 +1,155 @@
+---
+- name: Test Digital Dust Bunny Sweeper Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false # No need for full facts in a local test
+
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+    dust_bunny_paths:
+      - "{{ test_dir }}"
+    dust_bunny_age_days: 1 # Make files older than 1 day "dust bunnies"
+    dust_bunny_exclude_patterns:
+      - "important_file.txt"
+    dust_bunny_report_path: "{{ test_dir }}/test_report.txt"
+
+  pre_tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create old file (dust bunny)
+      ansible.builtin.shell: |
+        touch "{{ test_dir }}/old_log.log"
+        sleep 2 # Ensure it's older than 1 second for age check
+        touch -d "2 days ago" "{{ test_dir }}/old_log.log"
+      args:
+        creates: "{{ test_dir }}/old_log.log"
+      # Mock rationale: Creating a file and setting its modification time to simulate an old file.
+      # This is deterministic and offline as it operates on the local filesystem.
+
+    - name: Create old directory (dust bunny)
+      ansible.builtin.shell: |
+        mkdir -p "{{ test_dir }}/old_dir"
+        sleep 2
+        touch -d "2 days ago" "{{ test_dir }}/old_dir"
+      args:
+        creates: "{{ test_dir }}/old_dir"
+      # Mock rationale: Creating a directory and setting its modification time to simulate an old directory.
+      # This is deterministic and offline as it operates on the local filesystem.
+
+    - name: Create recent file (not a dust bunny)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/recent_file.txt"
+        state: touch
+      # Mock rationale: Creating a recent file to ensure it's not picked up by the age filter.
+      # This is deterministic and offline as it operates on the local filesystem.
+
+    - name: Create excluded file (not a dust bunny)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/important_file.txt"
+        state: touch
+      # Mock rationale: Creating a file that matches an exclusion pattern.
+      # This is deterministic and offline as it operates on the local filesystem.
+
+  tasks:
+    - name: Run playbook in dry run mode
+      ansible.builtin.include_tasks: ../dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_dry_run: true
+        dust_bunny_paths: "{{ dust_bunny_paths }}"
+        dust_bunny_age_days: "{{ dust_bunny_age_days }}"
+        dust_bunny_exclude_patterns: "{{ dust_bunny_exclude_patterns }}"
+        dust_bunny_report_path: "{{ dust_bunny_report_path }}"
+
+    - name: Verify dry run report content
+      ansible.builtin.assert:
+        that:
+          - "'--- DRY RUN ---' in dry_run_report.stdout"
+          - "'{{ test_dir }}/old_log.log' in dry_run_report.stdout"
+          - "'{{ test_dir }}/old_dir' in dry_run_report.stdout"
+          - "'{{ test_dir }}/recent_file.txt' not in dry_run_report.stdout"
+          - "'{{ test_dir }}/important_file.txt' not in dry_run_report.stdout"
+      vars:
+        dry_run_report: "{{ lookup('ansible.builtin.file', dust_bunny_report_path) }}"
+      # Mock rationale: Reading the generated report file from the local filesystem.
+      # This is deterministic and offline.
+
+    - name: Run playbook in actual cleanup mode
+      ansible.builtin.include_tasks: ../dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_dry_run: false
+        dust_bunny_paths: "{{ dust_bunny_paths }}"
+        dust_bunny_age_days: "{{ dust_bunny_age_days }}"
+        dust_bunny_exclude_patterns: "{{ dust_bunny_exclude_patterns }}"
+        dust_bunny_report_path: "{{ dust_bunny_report_path }}"
+
+    - name: Verify old files/dirs are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/old_log.log"
+        - "{{ test_dir }}/old_dir"
+      register: cleanup_stat_results
+
+    - name: Assert old files/dirs are absent
+      ansible.builtin.assert:
+        that:
+          - "not item.stat.exists"
+      loop: "{{ cleanup_stat_results.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      # Mock rationale: Using the 'stat' module on the local filesystem to verify file absence.
+      # This is deterministic and offline.
+
+    - name: Verify recent file is still present
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/recent_file.txt"
+      register: recent_file_stat
+
+    - name: Assert recent file is present
+      ansible.builtin.assert:
+        that:
+          - "recent_file_stat.stat.exists"
+      # Mock rationale: Using the 'stat' module on the local filesystem to verify file presence.
+      # This is deterministic and offline.
+
+    - name: Verify excluded file is still present
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/important_file.txt"
+      register: excluded_file_stat
+
+    - name: Assert excluded file is present
+      ansible.builtin.assert:
+        that:
+          - "excluded_file_stat.stat.exists"
+      # Mock rationale: Using the 'stat' module on the local filesystem to verify file presence.
+      # This is deterministic and offline.
+
+    - name: Verify cleanup summary report content
+      ansible.builtin.assert:
+        that:
+          - "'--- CLEANUP COMPLETED ---' in cleanup_report.stdout"
+          - "'{{ test_dir }}/old_log.log' in cleanup_report.stdout"
+          - "'{{ test_dir }}/old_dir' in cleanup_report.stdout"
+          - "'{{ test_dir }}/recent_file.txt' not in cleanup_report.stdout"
+          - "'{{ test_dir }}/important_file.txt' not in cleanup_report.stdout"
+      vars:
+        cleanup_report: "{{ lookup('ansible.builtin.file', dust_bunny_report_path) }}"
+      # Mock rationale: Reading the generated report file from the local filesystem.
+      # This is deterministic and offline.
+
+  post_tasks:
+    - name: Final cleanup of test environment
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: true

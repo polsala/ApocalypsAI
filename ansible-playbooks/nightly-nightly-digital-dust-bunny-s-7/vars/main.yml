@@ -1,0 +1,16 @@
+---
+# Directories to scan for dust bunnies
+dust_bunny_paths:
+  - /tmp/dust_bunny_test_area
+
+# Files/dirs older than this (in days) will be considered dust bunnies
+dust_bunny_age_days: 1
+
+# Patterns to exclude from cleanup (e.g., "*.conf", "important_data")
+dust_bunny_exclude_patterns: []
+
+# Set to 'true' for a dry run (only reports, no deletion), 'false' for actual cleanup
+dust_bunny_dry_run: true
+
+# Path where the cleanup report will be saved on the control node (or target if not delegated)
+dust_bunny_report_path: "/tmp/dust_bunny_report_{{ ansible_hostname }}.txt"

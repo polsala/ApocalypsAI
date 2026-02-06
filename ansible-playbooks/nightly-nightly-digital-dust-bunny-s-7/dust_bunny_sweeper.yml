@@ -1,0 +1,60 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ dust_bunny_report_path | dirname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Report is generated locally for testing, or on target for real use.
+      run_once: true # Only create the directory once if delegate_to is used for report generation
+
+    - name: Find old files and directories
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ dust_bunny_age_days }}d"
+        file_type: any # 'f' for files, 'd' for directories, 'any' for both
+        recurse: true
+        hidden: true
+        excludes: "{{ dust_bunny_exclude_patterns }}"
+      loop: "{{ dust_bunny_paths }}"
+      register: found_dust_bunnies
+      ignore_errors: true # Some paths might not exist or be accessible
+
+    - name: Consolidate found items
+      ansible.builtin.set_fact:
+        all_dust_bunnies: "{{ all_dust_bunnies | default([]) + item.files }}"
+      loop: "{{ found_dust_bunnies.results }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: item.files is defined and item.files | length > 0
+
+    - name: Generate dry run report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "{{ dust_bunny_report_path }}"
+      delegate_to: localhost # Report is generated locally for testing, or on target for real use.
+      when: dust_bunny_dry_run | bool
+
+    - name: Remove identified dust bunnies (actual cleanup)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ all_dust_bunnies }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: not dust_bunny_dry_run | bool
+      # This task will only run if dust_bunny_dry_run is false.
+      # It will remove files/directories found in the previous step.
+
+    - name: Generate cleanup summary report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "{{ dust_bunny_report_path }}"
+      delegate_to: localhost # Report is generated locally for testing, or on target for real use.
+      when: not dust_bunny_dry_run | bool
