@@ -1,0 +1,29 @@
+{
+  "name": "nightly-branch-bard",
+  "version": "1.0.0",
+  "description": "A GitHub Action to identify inactive branches and suggest whimsical names for them.",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
+  },
+  "keywords": [
+    "github-actions",
+    "branch-cleanup",
+    "repository-management"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1",
+    "minimatch": "^9.0.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@vercel/ncc": "^0.38.1",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.5"
+  }
+}
