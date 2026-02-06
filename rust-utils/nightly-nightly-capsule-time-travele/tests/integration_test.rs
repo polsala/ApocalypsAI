@@ -1,0 +1,1 @@
+use capsule::{seal, open};\n\n#[test]\nfn test_seal_and_open() {\n    let msg = "The future is bright";\n    let pass = "secret";\n    let sealed = seal(msg, pass);\n    let opened = open(&sealed, pass).expect("Failed to open sealed message");\n    assert_eq!(msg, opened);\n}\n
