@@ -1,0 +1,11 @@
+[package]
+name = "scavenger-route-planner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rand = { version = "0.8", optional = true }
+
+[features]
+default = []
+shuffle = ["rand"]
