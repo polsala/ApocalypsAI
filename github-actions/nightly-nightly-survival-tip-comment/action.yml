@@ -1,0 +1,1 @@
+name: "Nightly Survival Tip Commenter"\ndescription: "Posts a whimsical survival tip comment on new PRs"\ninputs:\n  tips-file:\n    description: "Path to a JSON file with an array of tips"\n    required: false\nruns:\n  using: "node12"\n  main: "src/index.js"
