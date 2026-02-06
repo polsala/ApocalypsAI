@@ -1,0 +1,1 @@
+# Nightly ANSI Palette Swatch\n\nA whimsical yet practical command‑line utility that prints the complete 256‑color ANSI palette, showing each color's index. Handy for developers customizing terminal themes.\n\n## Usage\n\n```sh\ncargo run --quiet\n```\n\nThe tool outputs each color code in its own foreground color, arranged in rows of 16.\n\n## License\n\nMIT

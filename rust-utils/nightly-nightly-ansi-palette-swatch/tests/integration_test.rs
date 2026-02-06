@@ -1,0 +1,1 @@
+use ansi_palette_swatch::generate_palette;\n\n#[test]\nfn test_palette_contents() {\n    let s = generate_palette();\n    assert!(s.contains("\\x1b[38;5;0m"));\n    assert!(s.contains("\\x1b[38;5;255m"));\n    let lines: Vec<&str> = s.split('\n').collect();\n    // Expect at least 16 rows (0‑15, 16‑31, …)\n    assert!(lines.len() >= 16);\n}\n

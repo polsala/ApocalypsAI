@@ -1,0 +1,1 @@
+pub fn generate_palette() -> String {\n    let mut out = String::new();\n    for i in 0..=255 {\n        out.push_str(&format!("\\x1b[38;5;{}m{:>3} ", i, i));\n        if i % 16 == 15 {\n            out.push_str("\\x1b[0m\n");\n        }\n    }\n    out\n}\n
