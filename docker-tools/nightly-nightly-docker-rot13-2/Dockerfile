@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install bash (provides a reliable shebang)\nRUN apk add --no-cache bash\n\n# Copy the ROT13 script into the image\nCOPY src/rot13.sh /usr/local/bin/rot13.sh\nRUN chmod +x /usr/local/bin/rot13.sh\n\n# The container simply runs the script, reading from STDIN\nENTRYPOINT [\"/usr/local/bin/rot13.sh\"]\n
