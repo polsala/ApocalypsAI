@@ -1,0 +1,53 @@
+name: Test Branch Tombstone Marker
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'nightly-branch-tombstone-marker/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: main_repo
+
+      - name: Setup test repository
+        run: |
+          # Mock rationale: This script creates a local git repository with predefined branches and commit dates.
+          # This allows the action to run against a controlled, deterministic environment without external network calls.
+          # It simulates the 'origin' remote locally for the 'git fetch' and 'git log' commands.
+          chmod +x main_repo/nightly-branch-tombstone-marker/tests/setup_test_repo.sh
+          main_repo/nightly-branch-tombstone-marker/tests/setup_test_repo.sh
+        working-directory: ${{ github.workspace }}
+
+      - name: Change directory to the test repository
+        run: cd test_repo
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Branch Tombstone Marker Action
+        id: tombstone_marker
+        uses: ./main_repo/nightly-branch-tombstone-marker
+        with:
+          stale-days: '30'
+          exclude-branches: 'main,master,develop,release/*' # 'main' is default, 'develop' and 'release/*' added for test
+
+      - name: Verify Stale Branches Output
+        run: |
+          STALE_BRANCHES="${{ steps.tombstone_marker.outputs.stale-branches }}"
+          echo "Detected stale branches: $STALE_BRANCHES"
+          # Mock rationale: Asserting against a known, deterministic output from the setup_test_repo.sh script.
+          # This ensures the action's logic correctly identifies stale branches based on the mocked git history.
+          # Expected stale branches: bugfix-old (40 days), feature-forgotten (60 days).
+          # Excluded: main, master, develop (50 days), release/v1.0 (70 days).
+          # Not stale: feature-new (5 days).
+          if [[ "$STALE_BRANCHES" != "bugfix-old,feature-forgotten" ]]; then
+            echo "Test failed: Expected 'bugfix-old,feature-forgotten', got '$STALE_BRANCHES'"
+            exit 1
+          else
+            echo "Test passed: Stale branches correctly identified."
+          fi
