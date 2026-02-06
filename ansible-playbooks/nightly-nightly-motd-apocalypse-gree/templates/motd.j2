@@ -1,0 +1,8 @@
+{{ random_greeting }}
+
+System Status Report:
+  Hostname: {{ ansible_hostname }}
+  OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+  Uptime: {{ ansible_uptime_seconds }} seconds
+  Load Average: {{ ansible_load_average_1m }}, {{ ansible_load_average_5m }}, {{ ansible_load_average_15m }}
+  Disk Usage (root): {{ (ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first / (1024*1024*1024)) | round(2) }} GB available

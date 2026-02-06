@@ -1,0 +1,27 @@
+- name: Deploy Whimsical Apocalypse MOTD
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    motd_path: /etc/motd # Default path for MOTD
+    apocalypse_greetings_file: "{{ playbook_dir }}/vars/greetings.yml"
+
+  tasks:
+    - name: Load apocalypse greetings
+      ansible.builtin.include_vars:
+        file: "{{ apocalypse_greetings_file }}"
+        name: loaded_greetings
+
+    - name: Select a random greeting
+      ansible.builtin.set_fact:
+        random_greeting: "{{ loaded_greetings.apocalypse_greetings | random }}"
+
+    - name: Render MOTD template and deploy
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/motd.j2"
+        dest: "{{ motd_path }}"
+        mode: '0644'
+      # Mock rationale: The `dest` path is made configurable via `motd_path` variable.
+      # This allows tests to write to a temporary location (e.g., /tmp) instead of /etc/motd,
+      # ensuring the test is non-invasive and doesn't require elevated privileges on the test runner.
