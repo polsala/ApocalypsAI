@@ -1,0 +1,28 @@
+name: 'Branch Bloom Pruner'
+description: 'Identifies and reports stale branches in a repository based on inactivity, helping maintain a tidy branch garden.'
+inputs:
+  days-stale:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  github-token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+outputs:
+  stale-branches:
+    description: 'A JSON array of branch names that are considered stale.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for accurate branch dates
+
+    - name: Run Branch Bloom Pruner
+      shell: bash
+      run: |
+        # Ensure the script is executable
+        chmod +x ${{ github.action_path }}/src/prune_branches.sh
+        # Run the script and capture its output
+        ${{ github.action_path }}/src/prune_branches.sh ${{ inputs.days-stale }}
