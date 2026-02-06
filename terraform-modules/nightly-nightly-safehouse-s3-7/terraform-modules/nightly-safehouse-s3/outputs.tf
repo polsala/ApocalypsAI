@@ -1,0 +1,1 @@
+output "bucket_id" {\n  value = aws_s3_bucket.safehouse.id\n}\n\noutput "bucket_arn" {\n  value = aws_s3_bucket.safehouse.arn\n}\n\noutput "access_password" {\n  description = "Random password for safe‑house access"\n  value       = random_password.access.result\n  sensitive   = true\n}\n
