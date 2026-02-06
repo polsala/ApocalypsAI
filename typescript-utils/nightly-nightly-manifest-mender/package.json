@@ -1,0 +1,39 @@
+{
+  "name": "nightly-manifest-mender",
+  "version": "1.0.0",
+  "description": "A type-safe CLI tool to validate and suggest 'mends' for apocalyptic inventory manifests using JSON Schema.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint . --ext .ts"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "validation",
+    "json-schema",
+    "apocalypse",
+    "utility"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/js-yaml": "^4.1.0",
+    "@types/node": "^20.12.7",
+    "@typescript-eslint/eslint-plugin": "^7.6.0",
+    "@typescript-eslint/parser": "^7.6.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
