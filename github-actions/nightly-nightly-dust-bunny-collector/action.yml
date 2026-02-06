@@ -1,0 +1,13 @@
+name: 'Dust Bunny Collector'
+description: 'Automatically prunes old GitHub Actions workflow runs to keep your repository tidy.'
+inputs:
+  token:
+    description: 'GitHub token with `repo` scope. Usually `github.token`.'
+    required: true
+  retention-days:
+    description: 'Number of days to retain workflow runs. Runs older than this will be deleted.'
+    required: false
+    default: '30'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
