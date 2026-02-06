@@ -1,0 +1,21 @@
+name: 'Apocalypse Forecast'
+description: 'Generates a whimsical apocalypse forecast based on issue and PR counts.'
+inputs:
+  issue_count:
+    description: 'Number of open issues'
+    required: true
+    type: number
+  pr_count:
+    description: 'Number of open pull requests'
+    required: true
+    type: number
+  github_token:
+    description: 'GitHub token to post comment (optional)'
+    required: false
+    default: ''
+outputs:
+  forecast:
+    description: 'The generated forecast string'
+runs:
+  using: 'node12'
+  main: 'src/index.js'
