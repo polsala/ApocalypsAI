@@ -1,0 +1,38 @@
+.echo-visualizer {
+  min-height: 100px;
+  border: 1px dashed #444;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #1f222a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: left;
+  word-break: break-word;
+}
+
+.echo-text {
+  font-family: 'Courier New', monospace;
+  font-size: 1.5em;
+  line-height: 1.6;
+  color: #e0e0e0;
+  white-space: pre-wrap; /* Preserve whitespace and allow wrapping */
+}
+
+.echo-char {
+  display: inline-block; /* Allows individual character transformation */
+  transition: all 0.1s ease-out; /* Smooth transitions for dynamic styles */
+  will-change: transform, opacity, filter, color, letter-spacing; /* Optimize performance */
+
+  /* Apply dynamic CSS variables */
+  filter: hue-rotate(var(--hue-shift, 0deg)) blur(var(--blur, 0px));
+  transform: translate(var(--translate-x, 0px), var(--translate-y, 0px)) scale(var(--scale, 1));
+  opacity: var(--opacity, 1);
+  letter-spacing: var(--letter-spacing, 0px);
+  color: hsl(var(--base-hue, 200), 70%, 70%); /* Base color, hue shifted by filter */
+}
+
+/* Define a base hue for color shifting */
+.echo-text {
+  --base-hue: 200;
+}
