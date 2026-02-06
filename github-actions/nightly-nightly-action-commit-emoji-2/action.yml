@@ -1,0 +1,9 @@
+name: "Commit Emoji Annotator"
+description: "Add a whimsical emoji reaction to a commit based on its message."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
