@@ -1,0 +1,13 @@
+name: 'Nightly Failure Fortifier'
+description: 'Posts a whimsical, apocalypse-themed fortifying message or survival tip to the workflow summary upon failure.'
+inputs:
+  messages:
+    description: 'Multiline string of whimsical messages to choose from.'
+    required: true
+  fallback_message:
+    description: 'A single message to use if no messages are provided or selected.'
+    required: false
+    default: "The void whispers, 'Try again, survivor.'"
+runs:
+  using: 'node20'
+  main: 'src/main.js'
