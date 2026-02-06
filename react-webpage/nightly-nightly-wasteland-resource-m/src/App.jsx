@@ -1,0 +1,1 @@
+import React from 'react';\nimport ResourceMap from './components/ResourceMap';\n\nfunction App() {\n  return (\n    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>\n      <h1>Wasteland Resource Map</h1>\n      <ResourceMap />\n    </div>\n  );\n}\n\nexport default App;
