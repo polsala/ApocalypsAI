@@ -1,0 +1,156 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #282c34;
+  color: white;
+}
+
+.App-header {
+  background-color: #20232a;
+  padding: 20px;
+  border-bottom: 1px solid #61dafb;
+}
+
+.App-content {
+  display: flex;
+  flex-grow: 1;
+  padding: 20px;
+  gap: 20px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.map-container {
+  border: 2px solid #61dafb;
+  background-color: #3a3f47;
+  flex-shrink: 0;
+}
+
+.map-grid {
+  display: grid;
+  border-collapse: collapse;
+}
+
+.map-cell {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #444;
+  box-sizing: border-box;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.map-cell:hover {
+  background-color: #555;
+}
+
+.map-cell.risk-mutant {
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
+.map-cell.risk-sandstorm {
+  background-color: rgba(255, 165, 0, 0.3);
+}
+
+.map-cell.risk-scavenger {
+  background-color: rgba(128, 0, 128, 0.3);
+}
+
+.map-cell.risk-oasis {
+  background-color: rgba(0, 255, 0, 0.3);
+}
+
+.location-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background-color: #61dafb;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.7em;
+  color: #282c34;
+  font-weight: bold;
+  cursor: pointer;
+  border: 2px solid #282c34;
+}
+
+.location-marker:hover {
+  background-color: #21a1f1;
+}
+
+.route-line {
+  stroke: #ff00ff;
+  stroke-width: 4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-panel {
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #61dafb;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.route-panel h2 {
+  color: #61dafb;
+  margin-top: 0;
+}
+
+.route-panel label {
+  display: block;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+.route-panel select, .route-panel button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #61dafb;
+  background-color: #282c34;
+  color: white;
+  font-size: 1em;
+}
+
+.route-panel button {
+  background-color: #61dafb;
+  color: #282c34;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.route-panel button:hover {
+  background-color: #21a1f1;
+}
+
+.route-panel select:focus, .route-panel button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.5);
+}
+
+.route-info {
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px dashed #61dafb;
+  border-radius: 5px;
+  background-color: #20232a;
+}
+
+.route-info p {
+  margin: 5px 0;
+}
