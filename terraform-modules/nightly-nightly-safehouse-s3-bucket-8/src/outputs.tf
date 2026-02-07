@@ -1,0 +1,1 @@
+output \"bucket_arn\" {\n  description = \"ARN of the created S3 bucket.\"\n  value       = aws_s3_bucket.safehouse.arn\n}\n\noutput \"secret_arn\" {\n  description = \"ARN of the Secrets Manager secret (empty string if disabled).\"\n  value = var.enable_secret ? aws_secretsmanager_secret.safehouse[0].arn : \"\"\n}\n
