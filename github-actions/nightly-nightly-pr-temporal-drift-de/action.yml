@@ -1,0 +1,121 @@
+name: 'PR Temporal Drift Detector'
+description: 'Detects chronological anomalies in pull requests, flagging PRs open too long or with stale commits.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  pr-number:
+    description: 'The PR number to check.'
+    required: true
+  repo-owner:
+    description: 'The owner of the repository.'
+    required: true
+  repo-name:
+    description: 'The name of the repository.'
+    required: true
+  max-open-days:
+    description: 'Maximum number of days a PR can be open before being flagged.'
+    required: false
+    default: '7'
+  max-stale-commit-days:
+    description: 'Maximum number of days since the last commit before a PR is flagged as stale.'
+    required: false
+    default: '3'
+  _mock-pr-json:
+    description: 'Internal: JSON string to mock PR data for testing.'
+    required: false
+    default: ''
+outputs:
+  drift-detected:
+    description: 'true if temporal drift was detected, false otherwise.'
+    value: ${{ steps.check_drift.outputs.drift_detected }}
+  drift-message:
+    description: 'A message describing the detected drift.'
+    value: ${{ steps.check_drift.outputs.drift_message }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup GitHub CLI
+      shell: bash
+      run: |
+        # Ensure gh CLI is available. It's usually pre-installed on GitHub-hosted runners.
+        if ! command -v gh &> /dev/null
+        then
+            echo "::error::gh CLI not found. Please ensure it's installed or use a runner where it is."
+            exit 1
+        fi
+        # Ensure jq is available. It's usually pre-installed on GitHub-hosted runners.
+        if ! command -v jq &> /dev/null
+        then
+            echo "::error::jq not found. Please ensure it's installed or use a runner where it is."
+            exit 1
+        fi
+
+    - name: Check for Temporal Drift
+      id: check_drift
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        PR_NUMBER="${{ inputs.pr-number }}"
+        REPO_OWNER="${{ inputs.repo-owner }}"
+        REPO_NAME="${{ inputs.repo-name }}"
+        MAX_OPEN_DAYS="${{ inputs.max-open-days }}"
+        MAX_STALE_COMMIT_DAYS="${{ inputs.max-stale-commit-days }}"
+        MOCK_PR_JSON="${{ inputs._mock-pr-json }}"
+
+        DRIFT_DETECTED="false"
+        DRIFT_MESSAGE=""
+
+        if [[ -n "$MOCK_PR_JSON" ]]; then
+          echo "Using mocked PR data."
+          PR_DATA="$MOCK_PR_JSON"
+        else
+          echo "Fetching PR data for $REPO_OWNER/$REPO_NAME #$PR_NUMBER..."
+          PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO_OWNER/$REPO_NAME" --json number,title,state,createdAt,updatedAt,commits)
+          if [[ $? -ne 0 ]]; then
+            echo "::error::Error fetching PR data. Exiting."
+            exit 1
+          fi
+        fi
+
+        CREATED_AT=$(echo "$PR_DATA" | jq -r '.createdAt')
+        LAST_COMMIT_DATE=$(echo "$PR_DATA" | jq -r '.commits[-1].committedDate')
+
+        # Calculate current timestamp in seconds since epoch
+        CURRENT_TIMESTAMP=$(date +%s)
+
+        # Convert PR creation date to timestamp
+        CREATED_TIMESTAMP=$(date -d "$CREATED_AT" +%s)
+        
+        # Convert last commit date to timestamp
+        LAST_COMMIT_TIMESTAMP=$(date -d "$LAST_COMMIT_DATE" +%s)
+
+        # Calculate age in days
+        PR_OPEN_SECONDS=$((CURRENT_TIMESTAMP - CREATED_TIMESTAMP))
+        PR_OPEN_DAYS=$((PR_OPEN_SECONDS / 86400)) # 86400 seconds in a day
+
+        LAST_COMMIT_AGE_SECONDS=$((CURRENT_TIMESTAMP - LAST_COMMIT_TIMESTAMP))
+        LAST_COMMIT_AGE_DAYS=$((LAST_COMMIT_AGE_SECONDS / 86400))
+
+        echo "PR #$PR_NUMBER created $PR_OPEN_DAYS days ago."
+        echo "Last commit was $LAST_COMMIT_AGE_DAYS days ago."
+
+        if (( PR_OPEN_DAYS > MAX_OPEN_DAYS )); then
+          DRIFT_DETECTED="true"
+          DRIFT_MESSAGE+="Temporal distortion detected: PR has been open for ${PR_OPEN_DAYS} days, exceeding the ${MAX_OPEN_DAYS}-day threshold. "
+        fi
+
+        if (( LAST_COMMIT_AGE_DAYS > MAX_STALE_COMMIT_DAYS )); then
+          DRIFT_DETECTED="true"
+          DRIFT_MESSAGE+="Chronological stagnation detected: Last commit was ${LAST_COMMIT_AGE_DAYS} days ago, exceeding the ${MAX_STALE_COMMIT_DAYS}-day stale threshold. "
+        fi
+
+        echo "drift_detected=$DRIFT_DETECTED" >> "$GITHUB_OUTPUT"
+        echo "drift_message=$DRIFT_MESSAGE" >> "$GITHUB_OUTPUT"
+
+        if [[ "$DRIFT_DETECTED" == "true" ]]; then
+          echo "::warning ::Temporal Drift Detected! $DRIFT_MESSAGE"
+        else
+          echo "No significant temporal drift detected. Timeline stable."
+        fi

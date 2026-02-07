@@ -1,0 +1,250 @@
+name: Test PR Temporal Drift Detector
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'github-actions/nightly-pr-temporal-drift-detect/**'
+
+jobs:
+  test_no_drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mock date command
+        run: |
+          # Mock rationale: Set a fixed current date for deterministic age calculations.
+          # This ensures that date-based comparisons in the action always yield the same results
+          # regardless of when the test is run.
+          echo "MOCKED_CURRENT_TIMESTAMP=$(date -d '2024-01-10T12:00:00Z' +%s)" >> $GITHUB_ENV
+          mkdir -p /tmp/mock_bin
+          cp ${{ github.workspace }}/github-actions/nightly-pr-temporal-drift-detect/tests/mock_date.sh /tmp/mock_bin/date
+          chmod +x /tmp/mock_bin/date
+        shell: bash
+
+      - name: Test PR with no drift (recent PR, recent commit)
+        id: drift_detector
+        uses: ./github-actions/nightly-pr-temporal-drift-detect # Use local path for testing
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Required by action, but not used due to mock
+          pr-number: 123
+          repo-owner: test-owner
+          repo-name: test-repo
+          max-open-days: 7
+          max-stale-commit-days: 3
+          _mock-pr-json: |
+            {
+              "number": 123,
+              "title": "Feature: New widget",
+              "state": "OPEN",
+              "createdAt": "2024-01-08T10:00:00Z",
+              "updatedAt": "2024-01-09T12:00:00Z",
+              "commits": [
+                {"oid": "abc", "committedDate": "2024-01-08T10:00:00Z"},
+                {"oid": "def", "committedDate": "2024-01-09T12:00:00Z"}
+              ]
+            }
+        env:
+          # Mock rationale: Prepend the mock_bin directory to PATH to ensure our mock 'date' script is used.
+          # This allows the action to use the mocked current timestamp for its calculations.
+          PATH: /tmp/mock_bin:$PATH
+          MOCKED_CURRENT_TIMESTAMP: ${{ env.MOCKED_CURRENT_TIMESTAMP }} # Pass to mock_date.sh
+
+      - name: Verify no drift detected
+        run: |
+          echo "Drift detected output: ${{ steps.drift_detector.outputs.drift-detected }}"
+          echo "Drift message output: ${{ steps.drift_detector.outputs.drift-message }}"
+          if [[ "${{ steps.drift_detector.outputs.drift-detected }}" != "false" ]]; then
+            echo "Test failed: Expected no drift, but drift was detected."
+            exit 1
+          fi
+          if [[ -n "${{ steps.drift_detector.outputs.drift-message }}" ]]; then
+            echo "Test failed: Expected empty drift message, but got: '${{ steps.drift_detector.outputs.drift-message }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_drift_open_too_long:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mock date command
+        run: |
+          # Mock rationale: Set a fixed current date for deterministic age calculations.
+          # This ensures that date-based comparisons in the action always yield the same results
+          # regardless of when the test is run.
+          echo "MOCKED_CURRENT_TIMESTAMP=$(date -d '2024-01-20T12:00:00Z' +%s)" >> $GITHUB_ENV
+          mkdir -p /tmp/mock_bin
+          cp ${{ github.workspace }}/github-actions/nightly-pr-temporal-drift-detect/tests/mock_date.sh /tmp/mock_bin/date
+          chmod +x /tmp/mock_bin/date
+        shell: bash
+
+      - name: Test PR open too long
+        id: drift_detector
+        uses: ./github-actions/nightly-pr-temporal-drift-detect
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: 456
+          repo-owner: test-owner
+          repo-name: test-repo
+          max-open-days: 7 # PR created 12 days ago (20th - 8th)
+          max-stale-commit-days: 3
+          _mock-pr-json: |
+            {
+              "number": 456,
+              "title": "Bugfix: Critical issue",
+              "state": "OPEN",
+              "createdAt": "2024-01-08T10:00:00Z",
+              "updatedAt": "2024-01-15T12:00:00Z",
+              "commits": [
+                {"oid": "abc", "committedDate": "2024-01-08T10:00:00Z"},
+                {"oid": "def", "committedDate": "2024-01-15T12:00:00Z"}
+              ]
+            }
+        env:
+          # Mock rationale: Prepend the mock_bin directory to PATH to ensure our mock 'date' script is used.
+          # This allows the action to use the mocked current timestamp for its calculations.
+          PATH: /tmp/mock_bin:$PATH
+          MOCKED_CURRENT_TIMESTAMP: ${{ env.MOCKED_CURRENT_TIMESTAMP }}
+
+      - name: Verify drift detected (open too long)
+        run: |
+          echo "Drift detected output: ${{ steps.drift_detector.outputs.drift-detected }}"
+          echo "Drift message output: ${{ steps.drift_detector.outputs.drift-message }}"
+          if [[ "${{ steps.drift_detector.outputs.drift-detected }}" != "true" ]]; then
+            echo "Test failed: Expected drift, but none was detected."
+            exit 1
+          fi
+          if [[ ! "${{ steps.drift_detector.outputs.drift-message }}" =~ "Temporal distortion detected: PR has been open for 12 days, exceeding the 7-day threshold." ]]; then
+            echo "Test failed: Expected 'open too long' message, but got: '${{ steps.drift_detector.outputs.drift-message }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_drift_stale_commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mock date command
+        run: |
+          # Mock rationale: Set a fixed current date for deterministic age calculations.
+          # This ensures that date-based comparisons in the action always yield the same results
+          # regardless of when the test is run.
+          echo "MOCKED_CURRENT_TIMESTAMP=$(date -d '2024-01-10T12:00:00Z' +%s)" >> $GITHUB_ENV
+          mkdir -p /tmp/mock_bin
+          cp ${{ github.workspace }}/github-actions/nightly-pr-temporal-drift-detect/tests/mock_date.sh /tmp/mock_bin/date
+          chmod +x /tmp/mock_bin/date
+        shell: bash
+
+      - name: Test PR with stale commit
+        id: drift_detector
+        uses: ./github-actions/nightly-pr-temporal-drift-detect
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: 789
+          repo-owner: test-owner
+          repo-name: test-repo
+          max-open-days: 7
+          max-stale-commit-days: 3 # Last commit 7 days ago (10th - 3rd)
+          _mock-pr-json: |
+            {
+              "number": 789,
+              "title": "Refactor: Cleanup old code",
+              "state": "OPEN",
+              "createdAt": "2024-01-01T10:00:00Z",
+              "updatedAt": "2024-01-03T12:00:00Z",
+              "commits": [
+                {"oid": "abc", "committedDate": "2024-01-01T10:00:00Z"},
+                {"oid": "def", "committedDate": "2024-01-03T12:00:00Z"}
+              ]
+            }
+        env:
+          # Mock rationale: Prepend the mock_bin directory to PATH to ensure our mock 'date' script is used.
+          # This allows the action to use the mocked current timestamp for its calculations.
+          PATH: /tmp/mock_bin:$PATH
+          MOCKED_CURRENT_TIMESTAMP: ${{ env.MOCKED_CURRENT_TIMESTAMP }}
+
+      - name: Verify drift detected (stale commit)
+        run: |
+          echo "Drift detected output: ${{ steps.drift_detector.outputs.drift-detected }}"
+          echo "Drift message output: ${{ steps.drift_detector.outputs.drift-message }}"
+          if [[ "${{ steps.drift_detector.outputs.drift-detected }}" != "true" ]]; then
+            echo "Test failed: Expected drift, but none was detected."
+            exit 1
+          fi
+          if [[ ! "${{ steps.drift_detector.outputs.drift-message }}" =~ "Chronological stagnation detected: Last commit was 7 days ago, exceeding the 3-day stale threshold." ]]; then
+            echo "Test failed: Expected 'stale commit' message, but got: '${{ steps.drift_detector.outputs.drift-message }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_drift_both:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mock date command
+        run: |
+          # Mock rationale: Set a fixed current date for deterministic age calculations.
+          # This ensures that date-based comparisons in the action always yield the same results
+          # regardless of when the test is run.
+          echo "MOCKED_CURRENT_TIMESTAMP=$(date -d '2024-01-20T12:00:00Z' +%s)" >> $GITHUB_ENV
+          mkdir -p /tmp/mock_bin
+          cp ${{ github.workspace }}/github-actions/nightly-pr-temporal-drift-detect/tests/mock_date.sh /tmp/mock_bin/date
+          chmod +x /tmp/mock_bin/date
+        shell: bash
+
+      - name: Test PR with both drifts
+        id: drift_detector
+        uses: ./github-actions/nightly-pr-temporal-drift-detect
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: 999
+          repo-owner: test-owner
+          repo-name: test-repo
+          max-open-days: 7 # PR created 12 days ago (20th - 8th)
+          max-stale-commit-days: 3 # Last commit 5 days ago (20th - 15th)
+          _mock-pr-json: |
+            {
+              "number": 999,
+              "title": "Feature: Experimental portal",
+              "state": "OPEN",
+              "createdAt": "2024-01-08T10:00:00Z",
+              "updatedAt": "2024-01-15T12:00:00Z",
+              "commits": [
+                {"oid": "abc", "committedDate": "2024-01-08T10:00:00Z"},
+                {"oid": "def", "committedDate": "2024-01-15T12:00:00Z"}
+              ]
+            }
+        env:
+          # Mock rationale: Prepend the mock_bin directory to PATH to ensure our mock 'date' script is used.
+          # This allows the action to use the mocked current timestamp for its calculations.
+          PATH: /tmp/mock_bin:$PATH
+          MOCKED_CURRENT_TIMESTAMP: ${{ env.MOCKED_CURRENT_TIMESTAMP }}
+
+      - name: Verify drift detected (both)
+        run: |
+          echo "Drift detected output: ${{ steps.drift_detector.outputs.drift-detected }}"
+          echo "Drift message output: ${{ steps.drift_detector.outputs.drift-message }}"
+          if [[ "${{ steps.drift_detector.outputs.drift-detected }}" != "true" ]]; then
+            echo "Test failed: Expected drift, but none was detected."
+            exit 1
+          fi
+          if [[ ! "${{ steps.drift_detector.outputs.drift-message }}" =~ "Temporal distortion detected: PR has been open for 12 days, exceeding the 7-day threshold." ]]; then
+            echo "Test failed: Expected 'open too long' message, but got: '${{ steps.drift_detector.outputs.drift-message }}'"
+            exit 1
+          fi
+          if [[ ! "${{ steps.drift_detector.outputs.drift-message }}" =~ "Chronological stagnation detected: Last commit was 5 days ago, exceeding the 3-day stale threshold." ]]; then
+            echo "Test failed: Expected 'stale commit' message, but got: '${{ steps.drift_detector.outputs.drift-message }}'"
+            exit 1
+          fi
+        shell: bash
