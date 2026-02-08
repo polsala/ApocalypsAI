@@ -1,0 +1,1 @@
+import React from \"react\";\nimport { createRoot } from \"react-dom/client\";\nimport QuestBoard from \"./QuestBoard\";\n\nconst container = document.getElementById(\"root\");\nconst root = createRoot(container);\nroot.render(<QuestBoard />);
