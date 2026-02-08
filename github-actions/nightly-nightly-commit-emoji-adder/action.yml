@@ -1,0 +1,9 @@
+name: "Commit Emoji Adder"
+description: "Add emojis to PR titles based on commit message types"
+inputs:
+  repo-token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"

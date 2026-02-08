@@ -1,0 +1,16 @@
+{
+  "name": "nightly-commit-emoji-adder",
+  "version": "1.0.0",
+  "description": "GitHub Action to add emojis to PR titles",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
