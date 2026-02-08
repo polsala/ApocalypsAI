@@ -1,0 +1,74 @@
+---
+- name: Digital Garden Trimmer - Prune old logs and clear temporary directories
+  hosts: all
+  gather_facts: no
+  # Use a default vars_file, but allow override via extra var 'garden_config_path'
+  vars_files:
+    - "{{ garden_config_path | default('../vars/garden_config.yml') }}"
+
+  tasks:
+    - name: Ensure target directories exist for logs (idempotent)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ log_paths_to_trim }}"
+      become: yes # Might need sudo for /var/log paths
+
+    - name: Ensure target directories exist for temps (idempotent)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0777' # More permissive for temp dirs
+      loop: "{{ temp_paths_to_clear }}"
+      become: yes
+
+    - name: Find old log files to prune
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ log_age_days }}d"
+        age_stamp: atime # Access time, or mtime/ctime
+        file_type: file
+      register: old_log_files
+      loop: "{{ log_paths_to_trim }}"
+      loop_control:
+        loop_var: log_path
+      changed_when: false # This task only finds, doesn't change anything yet
+
+    - name: Delete old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_log_files.results | map(attribute='files') | flatten }}"
+      when: old_log_files.results is defined and item.path is defined
+      become: yes
+      register: deleted_logs
+
+    - name: Report deleted log files
+      ansible.builtin.debug:
+        msg: "Deleted log file: {{ item.path }}"
+      loop: "{{ deleted_logs.results }}"
+      when: item.changed is defined and item.changed
+
+    - name: Clear contents of temporary directories
+      ansible.builtin.file:
+        path: "{{ item }}/" # Trailing slash ensures contents are removed, not the directory itself
+        state: absent
+      loop: "{{ temp_paths_to_clear }}"
+      become: yes
+      register: cleared_temps
+
+    - name: Recreate temporary directories if they were cleared (idempotent)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0777'
+      loop: "{{ temp_paths_to_clear }}"
+      when: cleared_temps.results is defined and item in cleared_temps.results | map(attribute='item')
+      become: yes
+
+    - name: Report cleared temporary directories
+      ansible.builtin.debug:
+        msg: "Cleared contents of temporary directory: {{ item.path }}"
+      loop: "{{ cleared_temps.results }}"
+      when: item.changed is defined and item.changed

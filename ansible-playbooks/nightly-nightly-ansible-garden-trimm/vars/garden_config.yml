@@ -1,0 +1,14 @@
+# Default configuration for the Digital Garden Trimmer
+log_paths_to_trim:
+  - /var/log/ansible_test_logs
+  # Add more paths here, e.g.,
+  # - /var/log/nginx
+  # - /var/log/apache2
+
+log_age_days: 7 # Default: Delete log files older than 7 days
+
+temp_paths_to_clear:
+  - /tmp/ansible_test_temp
+  # Add more paths here, e.g.,
+  # - /var/tmp/cache
+  # - /opt/app/tmp
