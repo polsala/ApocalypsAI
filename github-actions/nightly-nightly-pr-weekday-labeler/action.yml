@@ -1,0 +1,17 @@
+name: "PR Weekday Labeler"
+description: "Outputs the weekday name of a given date (or today) for labeling pull requests."
+inputs:
+  date:
+    description: "ISO date string (YYYY-MM-DD). Defaults to today."
+    required: false
+outputs:
+  weekday:
+    description: "Weekday name (e.g., Monday)."
+runs:
+  using: "composite"
+  steps:
+    - name: Determine weekday
+      id: weekday
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/src/determine_weekday.sh"
