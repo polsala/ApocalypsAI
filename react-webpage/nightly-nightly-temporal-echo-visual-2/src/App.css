@@ -1,0 +1,140 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  font-size: 3em;
+  margin-bottom: 10px;
+  color: #61dafb;
+  text-shadow: 0 0 10px #61dafb;
+}
+
+.App-header p {
+  font-size: 1em;
+  opacity: 0.7;
+}
+
+main {
+  width: 90%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.input-section textarea {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1em;
+  border-radius: 8px;
+  border: 2px solid #61dafb;
+  background-color: #3a3f47;
+  color: white;
+  resize: vertical;
+  min-height: 100px;
+  box-sizing: border-box;
+}
+
+.input-section textarea::placeholder {
+  color: #aaa;
+}
+
+.input-section textarea:focus {
+  outline: none;
+  border-color: #21a1f1;
+  box-shadow: 0 0 15px rgba(33, 161, 241, 0.5);
+}
+
+.visualization-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.stability-meter-container {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 20px;
+}
+
+.stability-meter-container h3 {
+  margin-bottom: 10px;
+  color: #61dafb;
+}
+
+.stability-bar-background {
+  width: 100%;
+  height: 20px;
+  background-color: #555;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.stability-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+
+.stability-value {
+  margin-top: 10px;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.echo-container {
+  width: 100%;
+  background-color: #1e2127;
+  border-radius: 10px;
+  padding: 20px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: flex-start;
+  text-align: left;
+  position: relative; /* For absolute positioning of echoes */
+}
+
+.echo-item {
+  position: relative;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.0em;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.5s ease-out;
+  white-space: pre-wrap;
+  word-break: break-word;
+  animation: fadeInSlide 0.8s ease-out forwards;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0px) scale(1);
+  }
+}
+
+.no-echoes {
+  opacity: 0.6;
+  font-style: italic;
+  margin: auto;
+}
