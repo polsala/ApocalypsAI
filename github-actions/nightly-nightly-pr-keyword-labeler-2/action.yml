@@ -1,0 +1,14 @@
+name: "PR Keyword Labeler"
+description: "Automatically adds whimsical labels to PRs based on title keywords."
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with repo permissions"
+    required: true
+  label-mapping:
+    description: "JSON string mapping keywords to labels"
+    required: false
+    default: '{"fix":"🛠️ bugfix","feature":"✨ feature","docs":"📚 documentation","refactor":"♻️ refactor","wip":"🚧 WIP"}'
+runs:
+  using: "node12"
+  main: "src/index.js"
