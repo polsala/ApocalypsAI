@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\n# Copy source code and requirements\nCOPY src/ ./src/\nCOPY requirements.txt .\n\n# Install runtime dependencies (pytest for optional testing)\nRUN pip install --no-cache-dir -r requirements.txt\n\n# Set the default command\nENTRYPOINT ["python", "src/app.py"]\n
