@@ -1,0 +1,88 @@
+.skill-node {
+  background-color: #444a54;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid #555;
+  transition: all 0.3s ease;
+}
+
+.skill-node.locked {
+  opacity: 0.7;
+  border-color: #777;
+}
+
+.skill-node.unlocked {
+  background-color: #2e7d32; /* Darker green for unlocked */
+  border-color: #4caf50; /* Green border */
+  opacity: 1;
+}
+
+.skill-node.unlockable {
+  border-color: #61dafb; /* Cyan border for unlockable */
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.5);
+}
+
+.skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.skill-name {
+  margin: 0;
+  color: #61dafb;
+}
+
+.skill-description {
+  font-size: 0.9em;
+  color: #cccccc;
+  margin-bottom: 10px;
+}
+
+.skill-prerequisites {
+  font-size: 0.8em;
+  color: #ffab40; /* Orange for prerequisites */
+  margin: 0;
+}
+
+.skill-toggle-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.skill-toggle-button:hover:not(:disabled) {
+  background-color: #a0e9ff;
+}
+
+.skill-toggle-button:disabled {
+  background-color: #555;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.skill-toggle-button.unlocked-btn {
+  background-color: #4caf50; /* Green for mastered */
+  color: white;
+}
+
+.skill-toggle-button.unlocked-btn:hover:not(:disabled) {
+  background-color: #66bb6a;
+}
+
+.skill-toggle-button.locked-btn {
+  background-color: #777;
+  color: #ccc;
+}
+
+.skill-toggle-button.unlockable-btn {
+  background-color: #61dafb;
+  color: #282c34;
+}
