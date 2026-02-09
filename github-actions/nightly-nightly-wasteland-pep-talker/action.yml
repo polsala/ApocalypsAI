@@ -1,0 +1,36 @@
+name: 'Wasteland Pep Talker'
+description: 'Posts a morale-boosting Wasteland Wisdom message on merged PRs or new releases.'
+inputs:
+  github-token:
+    description: 'GitHub token for authentication (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  event-type:
+    description: 'Type of event: "pull_request" or "release"'
+    required: true
+  event-id:
+    description: 'ID of the event (PR number or Release ID)'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate Pep Talk
+      id: generate_talk
+      shell: bash
+      run: |
+        PEPTALK=$(bash "${{ github.action_path }}/src/generate_pep_talk.sh")
+        echo "pep-talk=$PEPTALK" >> "$GITHUB_OUTPUT"
+    - name: Post Comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        PEPTALK_MESSAGE="${{ steps.generate_talk.outputs.pep-talk }}"
+        echo "Posting message: $PEPTALK_MESSAGE"
+        if [ "${{ inputs.event-type }}" == "pull_request" ]; then
+          gh pr comment "${{ inputs.event-id }}" --body "$PEPTALK_MESSAGE"
+        elif [ "${{ inputs.event-type }}" == "release" ]; then
+          gh release comment "${{ inputs.event-id }}" --body "$PEPTALK_MESSAGE"
+        else
+          echo "Error: Invalid event-type '${{ inputs.event-type }}'. Must be 'pull_request' or 'release'."
+          exit 1
+        fi
