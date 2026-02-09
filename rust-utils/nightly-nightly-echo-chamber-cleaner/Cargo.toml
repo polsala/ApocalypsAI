@@ -1,0 +1,13 @@
+[package]
+name = "echo-chamber-cleaner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+sha2 = "0.10.8"
+walkdir = "2.5.0"
+hex = "0.4.3"
+
+[dev-dependencies]
+tempfile = "3.10.1"
