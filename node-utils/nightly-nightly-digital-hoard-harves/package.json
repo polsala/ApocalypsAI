@@ -1,0 +1,26 @@
+{
+  "name": "nightly-digital-hoard-harvester",
+  "version": "1.0.0",
+  "description": "A Node.js CLI tool to identify and manage old or large 'digital artifacts' in your file system.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "node-js",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
