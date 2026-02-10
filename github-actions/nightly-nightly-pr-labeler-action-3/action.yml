@@ -1,0 +1,23 @@
+name: "Nightly PR Labeler"
+description: "Automatically adds labels to a PR based on changed file types."
+author: "ApocalypsAI"
+branding:
+  icon: "tag"
+  color: "purple"
+outputs:
+  labels:
+    description: "Comma‑separated list of labels to apply"
+    value: ${{ steps.labeler.outputs.labels }}
+runs:
+  using: "composite"
+  steps:
+    - name: "Run labeler script"
+      id: labeler
+      shell: bash
+      env:
+        CHANGED_FILES: ${{ env.CHANGED_FILES }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        LABEL_OUTPUT=$(bash ${{ github.workspace }}/nightly-pr-labeler-action/src/labeler.sh)
+        echo "labels=$LABEL_OUTPUT" >> $GITHUB_OUTPUT
