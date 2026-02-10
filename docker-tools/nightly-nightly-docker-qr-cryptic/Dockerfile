@@ -1,0 +1,1 @@
+FROM alpine:3.18\nRUN apk add --no-cache qrencode busybox-extras\nCOPY entrypoint.sh /entrypoint.sh\nCOPY phrases.txt /phrases.txt\nRUN chmod +x /entrypoint.sh\nEXPOSE 8080\nENTRYPOINT ["/entrypoint.sh"]
