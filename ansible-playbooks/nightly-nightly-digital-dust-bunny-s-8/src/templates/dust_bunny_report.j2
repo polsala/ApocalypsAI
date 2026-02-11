@@ -1,0 +1,18 @@
+Digital Dust Bunny Report for {{ ansible_hostname }} ({{ ansible_date_time.iso8601_micro }} UTC)
+-------------------------------------------------------------------------------------------------
+
+Scan Paths: {{ scan_paths | join(', ') }}
+Age Threshold: {{ age_threshold_days }} days
+
+Found {{ found_files | length }} digital dust bunnies:
+
+{% if found_files %}
+{% for file in found_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No digital dust bunnies found. Your system is sparkling clean!
+{% endif %}
+
+-------------------------------------------------------------------------------------------------
+End of Report

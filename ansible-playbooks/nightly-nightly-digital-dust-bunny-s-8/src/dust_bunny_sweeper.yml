@@ -1,0 +1,47 @@
+---
+- name: Find and manage digital dust bunnies
+  hosts: all
+  gather_facts: false # Only gather facts if needed, keep it light
+
+  vars_files:
+    - vars/main.yml # Load default configuration
+
+  tasks:
+    - name: Ensure local report directory exists on control machine
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ local_report_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true # Only create once, even if multiple hosts
+
+    - name: Find old files (digital dust bunnies)
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ age_threshold_days }}d"
+        recurse: true
+        file_type: file
+      register: dust_bunnies_found
+
+    - name: Generate dust bunny report for {{ ansible_hostname }}
+      delegate_to: localhost
+      ansible.builtin.template:
+        src: templates/dust_bunny_report.j2
+        dest: "{{ local_report_dir }}/dust_bunny_report_{{ ansible_hostname }}.txt"
+      vars:
+        found_files: "{{ dust_bunnies_found.files | map(attribute='path') | list }}"
+      when: dust_bunnies_found.files | length > 0
+
+    - name: Report no dust bunnies found for {{ ansible_hostname }}
+      delegate_to: localhost
+      ansible.builtin.copy:
+        content: "No digital dust bunnies found on {{ ansible_hostname }} in specified paths older than {{ age_threshold_days }} days.\n"
+        dest: "{{ local_report_dir }}/dust_bunny_report_{{ ansible_hostname }}.txt"
+      when: dust_bunnies_found.files | length == 0
+
+    - name: Remove digital dust bunnies (if cleanup_enabled is true)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ dust_bunnies_found.files }}"
+      when: cleanup_enabled

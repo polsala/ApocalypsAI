@@ -1,0 +1,128 @@
+---
+- name: Test Nightly Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  gather_facts: true # Needed for ansible_date_time
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+    test_report_dir: "/tmp/ansible_test_reports"
+    test_file_prefix: "dust_bunny_"
+    test_age_threshold_days: 1 # Files older than 1 day
+    # Override playbook defaults for testing
+    scan_paths: ["{{ test_dir }}"]
+    age_threshold_days: "{{ test_age_threshold_days }}"
+    local_report_dir: "{{ test_report_dir }}"
+
+  tasks:
+    - name: Clean up previous test environment
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_dir }}"
+        - "{{ test_report_dir }}"
+      ignore_errors: true # In case they don't exist
+
+    - name: Create test directory
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create old test files (dust bunnies)
+      delegate_to: localhost
+      ansible.builtin.command: "touch -d '{{ ansible_date_time.date }} -{{ test_age_threshold_days + 1 }} days' {{ test_dir }}/{{ test_file_prefix }}old_file_{{ item }}.txt"
+      loop: "{{ range(1, 4) | list }}"
+      # Mock rationale: Using `touch -d` to create files with specific old timestamps
+      # is a deterministic way to simulate old files for the `find` module. It operates
+      # on the local filesystem within the test environment, avoiding external dependencies.
+
+    - name: Create recent test file (not a dust bunny)
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ test_dir }}/recent_file.txt"
+        state: touch
+
+    - name: Run the dust bunny sweeper in report-only mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        cleanup_enabled: false # Ensure cleanup is disabled for this test phase
+
+    - name: Assert report directory exists
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ test_report_dir }}"
+      register: report_dir_stat
+      failed_when: not report_dir_stat.stat.exists
+
+    - name: Assert report file exists
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ test_report_dir }}/dust_bunny_report_localhost.txt"
+      register: report_file_stat
+      failed_when: not report_file_stat.stat.exists
+
+    - name: Read report content
+      delegate_to: localhost
+      ansible.builtin.slurp:
+        src: "{{ test_report_dir }}/dust_bunny_report_localhost.txt"
+      register: report_content_b64
+
+    - name: Decode report content
+      delegate_to: localhost
+      set_fact:
+        decoded_report: "{{ report_content_b64['content'] | b64decode }}"
+
+    - name: Assert report contains expected dust bunnies
+      delegate_to: localhost
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/{{ test_file_prefix }}old_file_1.txt' in decoded_report"
+          - "'{{ test_dir }}/{{ test_file_prefix }}old_file_2.txt' in decoded_report"
+          - "'{{ test_dir }}/{{ test_file_prefix }}old_file_3.txt' in decoded_report"
+          - "'recent_file.txt' not in decoded_report" # Ensure recent file is not reported
+        msg: "Report does not contain expected dust bunnies or contains recent files."
+
+    - name: Assert old files still exist before cleanup
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_1.txt"
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_2.txt"
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_3.txt"
+      register: old_files_stat
+      failed_when: not item.stat.exists for item in old_files_stat.results
+
+    - name: Run the dust bunny sweeper in cleanup mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        cleanup_enabled: true # Enable cleanup for this test phase
+
+    - name: Assert old files are removed after cleanup
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_1.txt"
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_2.txt"
+        - "{{ test_dir }}/{{ test_file_prefix }}old_file_3.txt"
+      register: cleaned_files_stat
+      failed_when: item.stat.exists for item in cleaned_files_stat.results
+
+    - name: Assert recent file still exists after cleanup
+      delegate_to: localhost
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/recent_file.txt"
+      register: recent_file_stat
+      failed_when: not recent_file_stat.stat.exists
+
+    - name: Clean up test environment after successful run
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_dir }}"
+        - "{{ test_report_dir }}"
