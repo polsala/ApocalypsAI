@@ -1,0 +1,32 @@
+{
+  "name": "nightly-digital-detritus-arch",
+  "version": "1.0.0",
+  "description": "A type-safe TypeScript CLI utility to organize digital detritus into whimsical, user-defined 'apocalyptic' categories based on file rules.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "nightly-digital-detritus-arch": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "file-organizer",
+    "apocalypse",
+    "utility"
+  ],
+  "author": "ApocalypsAI Integrator",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
