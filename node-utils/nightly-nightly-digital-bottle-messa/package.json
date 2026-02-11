@@ -1,0 +1,29 @@
+{
+  "name": "nightly-digital-bottle-message",
+  "version": "1.0.0",
+  "description": "A CLI tool to 'bottle' and 'uncork' digital messages, preserving them with a timestamp and a unique identifier.",
+  "main": "src/index.js",
+  "bin": {
+    "bottle-message": "src/index.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "message",
+    "archive",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "uuid": "^9.0.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
