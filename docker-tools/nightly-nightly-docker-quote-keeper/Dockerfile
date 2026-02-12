@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/go.mod src/go.sum ./\nRUN go mod download\nCOPY src/*.go ./\nRUN CGO_ENABLED=0 go build -o quote-keeper .\n\nFROM alpine:3.18\nWORKDIR /app\nCOPY --from=builder /app/quote-keeper .\nEXPOSE 8080\nCMD [\"./quote-keeper\"]\n
