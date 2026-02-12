@@ -1,0 +1,58 @@
+---
+- name: Sweep Digital Dustbunnies
+  hosts: all
+  become: yes # May need root for some cleanup tasks
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Ensure dustbunny quarantine directory exists
+      ansible.builtin.file:
+        path: "{{ dustbunny_quarantine_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find temporary files to delete
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        patterns: "{{ dustbunny_temp_patterns | join(',') }}"
+        file_type: file
+        age: "{{ dustbunny_temp_age }}"
+        recurse: yes
+      loop: "{{ dustbunny_scan_paths }}"
+      register: temp_files_to_delete
+
+    - name: Delete temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ temp_files_to_delete.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      ignore_errors: yes # In case some files are locked or permissions issues
+
+    - name: Find old log files to archive
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        patterns: "{{ dustbunny_log_patterns | join(',') }}"
+        file_type: file
+        age: "{{ dustbunny_log_age }}"
+        recurse: yes
+      loop: "{{ dustbunny_scan_paths }}"
+      register: old_log_files_to_archive
+
+    - name: Archive old log files to quarantine
+      ansible.builtin.command:
+        cmd: mv "{{ item.path }}" "{{ dustbunny_quarantine_path }}/{{ item.path | basename }}.{{ ansible_date_time.iso8601_basic_short }}"
+      loop: "{{ old_log_files_to_archive.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      ignore_errors: yes # In case some files are locked or permissions issues
+
+    - name: Generate dustbunny report
+      ansible.builtin.template:
+        src: dustbunny_report.j2
+        dest: "{{ dustbunny_report_path }}"
+        mode: '0644'
+      vars:
+        deleted_files: "{{ temp_files_to_delete.results | map(attribute='files') | flatten | map(attribute='path') }}"
+        archived_files: "{{ old_log_files_to_archive.results | map(attribute='files') | flatten | map(attribute='path') }}"
+        quarantine_path: "{{ dustbunny_quarantine_path }}"

@@ -1,0 +1,28 @@
+Digital Dustbunny Sweeper Report - {{ ansible_date_time.iso8601 }}
+
+Greetings, {{ ansible_hostname }}!
+
+Your friendly neighborhood ApocalypsAI Dustbunny Sweeper has been hard at work, tidying up the digital nooks and crannies of your system.
+
+---
+DELETED TEMPORARY FILES:
+{% if deleted_files %}
+{% for file in deleted_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No temporary files found to delete. What a tidy system!
+{% endif %}
+
+---
+ARCHIVED OLD LOGS/MISPLACED FILES (moved to {{ quarantine_path }}):
+{% if archived_files %}
+{% for file in archived_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No old logs or misplaced files found to archive. Spick and span!
+{% endif %}
+
+---
+May your system run smoothly and free of digital clutter!

@@ -1,0 +1,26 @@
+---
+dustbunny_scan_paths:
+  - /tmp
+  - /var/log
+  - /home/ansibleuser # Example, adjust as needed
+
+dustbunny_temp_patterns:
+  - '*.tmp'
+  - '*.bak'
+  - '*~'
+  - '#*#'
+  - '.DS_Store' # macOS specific, but common in shared folders
+  - 'Thumbs.db' # Windows specific
+  - '*.swp' # Vim swap files
+
+dustbunny_temp_age: '7d' # Delete files older than 7 days
+
+dustbunny_log_patterns:
+  - '*.log'
+  - '*.gz'
+  - '*.old'
+
+dustbunny_log_age: '30d' # Archive logs older than 30 days
+
+dustbunny_quarantine_path: /var/lib/dustbunny_quarantine
+dustbunny_report_path: /var/log/dustbunny_report.txt
