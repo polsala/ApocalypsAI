@@ -1,0 +1,82 @@
+---
+- name: Ensure temporal synchronization across servers
+  hosts: all
+  become: yes
+  vars:
+    ntp_servers: # Default NTP servers
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+      - 3.pool.ntp.org
+
+  tasks:
+    - name: Detect OS and package manager
+      ansible.builtin.setup:
+        gather_subset: min
+
+    - name: Determine NTP client to use (chrony preferred)
+      ansible.builtin.set_fact:
+        ntp_client_package: "chrony"
+        ntp_service_name: "chronyd"
+      when: ansible_distribution in ['CentOS', 'RedHat', 'Fedora', 'Rocky', 'AlmaLinux'] or
+            (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('16.04', '>=')) or
+            (ansible_distribution == 'Debian' and ansible_distribution_version is version('9', '>='))
+
+    - name: Fallback to ntpd for other distributions or older versions
+      ansible.builtin.set_fact:
+        ntp_client_package: "ntp"
+        ntp_service_name: "ntpd"
+      when: ntp_client_package is not defined
+
+    - name: Install chosen NTP client package ({{ ntp_client_package }})
+      ansible.builtin.package:
+        name: "{{ ntp_client_package }}"
+        state: present
+
+    - name: Configure chrony.conf
+      ansible.builtin.template:
+        src: chrony.conf.j2
+        dest: /etc/chrony/chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: ntp_client_package == 'chrony'
+      notify: Restart chrony service
+
+    - name: Configure ntp.conf
+      ansible.builtin.template:
+        src: ntp.conf.j2
+        dest: /etc/ntp.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: ntp_client_package == 'ntp'
+      notify: Restart ntpd service
+
+    - name: Ensure NTP service ({{ ntp_service_name }}) is running and enabled
+      ansible.builtin.service:
+        name: "{{ ntp_service_name }}"
+        state: started
+        enabled: yes
+
+    - name: Report current system time
+      ansible.builtin.command: date
+      register: current_time
+      changed_when: false
+
+    - name: Display current system time
+      ansible.builtin.debug:
+        msg: "Current system time on {{ inventory_hostname }}: {{ current_time.stdout }}"
+
+  handlers:
+    - name: Restart chrony service
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+      when: ntp_client_package == 'chrony'
+
+    - name: Restart ntpd service
+      ansible.builtin.service:
+        name: ntpd
+        state: restarted
+      when: ntp_client_package == 'ntp'

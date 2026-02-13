@@ -1,0 +1,26 @@
+# This file is managed by Ansible. Do not edit manually.
+
+{% for server in ntp_servers %}
+server {{ server }} iburst
+{% endfor %}
+
+# This directive tells chronyd to store the rate and offset data in a file.
+# This allows chronyd to retain synchronization information across restarts.
+driftfile /var/lib/chrony/drift
+
+# This directive enables the use of the RTC (Real Time Clock) as a reference
+# clock if chronyd cannot synchronize with any external NTP server.
+rtcsync
+
+# This directive allows NTP clients on the local network to query this server.
+# Uncomment and adjust if you want this server to act as an NTP server for others.
+# allow 192.168.0.0/16
+
+# This directive specifies the path to the NTP key file.
+# keyfile /etc/chrony/chrony.keys
+
+# This directive specifies the path to the log file.
+# logdir /var/log/chrony
+
+# This directive enables logging of specific events.
+# log measurements statistics tracking rtc
