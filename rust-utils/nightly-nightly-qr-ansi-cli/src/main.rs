@@ -1,0 +1,1 @@
+use clap::Parser;\nuse nightly_qr_ansi_cli::render_qr;\n\n#[derive(Parser)]\n#[command(author, version, about, long_about = None)]\nstruct Args {\n    /// Text to encode into QR code\n    text: String,\n}\n\nfn main() {\n    let args = Args::parse();\n    let output = render_qr(&args.text);\n    println!("{}", output);\n}\n

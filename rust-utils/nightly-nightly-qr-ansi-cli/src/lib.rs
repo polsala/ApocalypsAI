@@ -1,0 +1,1 @@
+use qrcode::QrCode;\n\npub fn render_qr(data: &str) -> String {\n    let code = QrCode::new(data).expect("Failed to create QR code");\n    code.render()\n        .light_color(' ')\n        .dark_color('█')\n        .build()\n}\n
