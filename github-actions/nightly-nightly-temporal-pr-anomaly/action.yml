@@ -1,0 +1,9 @@
+name: 'Nightly Temporal PR Anomaly Check'
+description: 'Scans PR titles and commit messages for temporal anomaly keywords and comments with whimsical warnings.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+runs:
+  using: 'node16'
+  main: 'src/main.js'
