@@ -1,0 +1,73 @@
+.sentiment-container {
+  background-color: #2a2a3e;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.sentiment-container h2 {
+  color: #a0a0ff;
+  margin-bottom: 25px;
+}
+
+.sentiment-bar-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.sentiment-label {
+  min-width: 80px;
+  text-align: right;
+  font-weight: bold;
+  color: #b0b0b0;
+}
+
+.sentiment-bar-background {
+  flex-grow: 1;
+  height: 25px;
+  background-color: #3a3a4e;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.sentiment-bar {
+  height: 100%;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  box-sizing: border-box;
+  transition: width 0.5s ease-out;
+  color: white;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.sentiment-bar.sentiment-hope {
+  background-color: #4CAF50; /* Green */
+}
+
+.sentiment-bar.sentiment-despair {
+  background-color: #F44336; /* Red */
+}
+
+.sentiment-bar.sentiment-whimsy {
+  background-color: #FFEB3B; /* Yellow */
+  color: #333; /* Dark text for yellow */
+}
+
+.sentiment-bar.sentiment-dread {
+  background-color: #673AB7; /* Deep Purple */
+}
+
+.sentiment-value {
+  font-size: 0.9em;
+}
