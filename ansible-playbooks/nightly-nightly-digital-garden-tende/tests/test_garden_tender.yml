@@ -1,0 +1,85 @@
+---
+- name: Test Digital Garden Tender Playbook
+  hosts: localhost
+  gather_facts: yes # Needed for ansible_date_time.epoch
+  vars:
+    test_garden_path: "/tmp/test_digital_garden_{{ ansible_date_time.epoch }}" # Unique path for each test run
+
+  tasks:
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy valid note
+      ansible.builtin.copy:
+        src: test_files/valid_note.md
+        dest: "{{ test_garden_path }}/valid_note.md"
+
+    - name: Copy note missing front matter
+      ansible.builtin.copy:
+        src: test_files/missing_frontmatter.md
+        dest: "{{ test_garden_path }}/missing_frontmatter.md"
+
+    - name: Copy note missing tags in front matter
+      ansible.builtin.copy:
+        src: test_files/missing_tags.md
+        dest: "{{ test_garden_path }}/missing_tags.md"
+
+    - name: Copy note with broken link
+      ansible.builtin.copy:
+        src: test_files/broken_link_note.md
+        dest: "{{ test_garden_path }}/broken_link_note.md"
+
+    - name: Copy target for valid link
+      ansible.builtin.copy:
+        src: test_files/target_for_link.md
+        dest: "{{ test_garden_path }}/target_for_link.md"
+
+    - name: Run the garden tender playbook
+      ansible.builtin.include_tasks:
+        file: ../src/garden_tender.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        stale_days_threshold: 0 # Make all files "stale" for testing
+
+    - name: Assert no files are missing front matter (except expected)
+      ansible.builtin.assert:
+        that:
+          - missing_frontmatter_files | length == 1
+          - "{{ test_garden_path }}/missing_frontmatter.md" in missing_frontmatter_files
+        fail_msg: "Unexpected files missing front matter: {{ missing_frontmatter_files }}"
+      # Mock rationale: This test runs against localhost and copies specific test files to a temporary directory.
+      # The 'missing_frontmatter.md' file is intentionally created without front matter to trigger this condition.
+
+    - name: Assert no files are missing required keys (except expected)
+      ansible.builtin.assert:
+        that:
+          - missing_key_files | length == 1
+          - missing_key_files[0].file == "{{ test_garden_path }}/missing_tags.md"
+          - "'tags' in missing_key_files[0].missing_keys"
+        fail_msg: "Unexpected files missing required keys: {{ missing_key_files }}"
+      # Mock rationale: The 'missing_tags.md' file is intentionally created with front matter but without the 'tags' key.
+
+    - name: Assert broken links are correctly identified
+      ansible.builtin.assert:
+        that:
+          - broken_links | length == 1
+          - broken_links[0].source_file == "{{ test_garden_path }}/broken_link_note.md"
+          - broken_links[0].link == "non_existent_target.md"
+          - not broken_links[0].target_exists
+        fail_msg: "Broken links assertion failed: {{ broken_links }}"
+      # Mock rationale: 'broken_link_note.md' contains a link to 'non_existent_target.md', which is not copied to the test garden.
+
+    - name: Assert stale files are correctly identified
+      ansible.builtin.assert:
+        that:
+          - stale_files | length == 5 # All 5 files should be stale with 0-day threshold
+        fail_msg: "Stale files assertion failed: {{ stale_files }}"
+      # Mock rationale: The 'stale_days_threshold' is set to 0 in the test, ensuring all newly copied files are considered stale.
+
+    - name: Clean up test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent

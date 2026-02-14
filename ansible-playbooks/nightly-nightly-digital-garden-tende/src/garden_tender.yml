@@ -1,0 +1,139 @@
+---
+- name: Tend to the Digital Garden
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure digital garden path exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Ensure local path for testing, or remote for actual use
+
+    - name: Find all markdown notes
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files
+
+    - name: Initialize fact lists for reporting
+      ansible.builtin.set_fact:
+        missing_frontmatter_files: []
+        missing_key_files: []
+        broken_links: []
+        stale_files: []
+      run_once: true
+
+    - name: Process each markdown file for front matter and keys
+      ansible.builtin.block:
+        - name: Slurp file content
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content
+
+        - name: Decode content and check for front matter
+          ansible.builtin.set_fact:
+            decoded_content: "{{ file_content.content | b64decode }}"
+            has_frontmatter: "{{ file_content.content | b64decode | regex_search('^---\n(.*?)\n---\n', multiline=True, ignorecase=True) }}"
+
+        - name: Add to missing front matter list if not found
+          ansible.builtin.set_fact:
+            missing_frontmatter_files: "{{ missing_frontmatter_files + [item.path] }}"
+          when: not has_frontmatter
+
+        - name: Parse front matter and check for required keys
+          ansible.builtin.set_fact:
+            frontmatter_data: "{{ decoded_content | regex_replace('^---\n(.*?)\n---\n.*', '\\1', multiline=True, ignorecase=True) | from_yaml }}"
+          when: has_frontmatter
+          ignore_errors: true # In case of malformed YAML
+
+        - name: Check for specific required keys
+          ansible.builtin.set_fact:
+            missing_key_files: "{{ missing_key_files + [{ 'file': item.path, 'missing_keys': (required_frontmatter_keys | difference(frontmatter_data.keys() | list)) }] }}"
+          when:
+            - has_frontmatter
+            - frontmatter_data is defined
+            - (required_frontmatter_keys | difference(frontmatter_data.keys() | list)) | length > 0
+      loop: "{{ md_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Report files missing front matter
+      ansible.builtin.debug:
+        msg: "WARNING: File '{{ item }}' is missing YAML front matter."
+      loop: "{{ missing_frontmatter_files }}"
+      when: missing_frontmatter_files | length > 0
+
+    - name: Report files missing required front matter keys
+      ansible.builtin.debug:
+        msg: "WARNING: File '{{ item.file }}' is missing required front matter keys: {{ item.missing_keys | join(', ') }}."
+      loop: "{{ missing_key_files }}"
+      when: missing_key_files | length > 0
+
+    - name: Process each markdown file for broken links
+      ansible.builtin.block:
+        - name: Slurp file content for links
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content_for_links
+
+        - name: Find internal markdown links
+          ansible.builtin.set_fact:
+            links_found: "{{ file_content_for_links.content | b64decode | regex_findall('\[[^\]]+\]\(([^)]+\.md)\)') }}"
+
+        - name: Check if linked files exist
+          ansible.builtin.stat:
+            path: "{{ garden_path }}/{{ link }}" # Assuming links are relative to garden_path for simplicity
+          register: link_stat_result
+          loop: "{{ links_found }}"
+          loop_control:
+            loop_var: link
+          when: links_found | length > 0
+
+        - name: Add to broken links list if target does not exist
+          ansible.builtin.set_fact:
+            broken_links: "{{ broken_links + [{ 'source_file': item.path, 'link': link_stat_result.item, 'target_exists': link_stat_result.stat.exists }] }}"
+          loop: "{{ link_stat_result.results }}"
+          loop_control:
+            label: "{{ item.item }}"
+          when: not item.stat.exists
+      loop: "{{ md_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Report broken internal links
+      ansible.builtin.debug:
+        msg: "WARNING: File '{{ item.source_file }}' contains a broken link to '{{ item.link }}'."
+      loop: "{{ broken_links }}"
+      when: broken_links | length > 0
+
+    - name: Process each markdown file for staleness
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      register: file_stats
+      loop: "{{ md_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Identify stale files
+      ansible.builtin.set_fact:
+        stale_files: "{{ stale_files + [item.item.path] }}"
+      loop: "{{ file_stats.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+      vars:
+        current_timestamp: "{{ ansible_date_time.epoch | int }}"
+        mtime_threshold: "{{ current_timestamp - (stale_days_threshold * 24 * 60 * 60) }}"
+      when:
+        - item.stat.exists
+        - item.stat.mtime < mtime_threshold
+
+    - name: Report stale files
+      ansible.builtin.debug:
+        msg: "SUGGESTION: File '{{ item }}' hasn't been modified in {{ stale_days_threshold }} days. Perhaps it needs watering?"
+      loop: "{{ stale_files }}"
+      when: stale_files | length > 0
