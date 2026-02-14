@@ -1,0 +1,1 @@
+{\n  "name": "nightly-duration-parser",\n  "version": "0.1.0",\n  "description": "Parse and format human‑readable time durations",\n  "main": "dist/index.js",\n  "scripts": {\n    "build": "tsc",\n    "start": "npm run build && node dist/index.js",\n    "test": "npm run build && node dist/src/tests/test.js"\n  },\n  "devDependencies": {\n    "typescript": "^5.0.0"\n  }\n}
