@@ -1,0 +1,12 @@
+name: Nightly PR Labeler
+description: Prints labels that would be applied to a PR.
+inputs:
+  labels:
+    description: Comma‑separated list of labels
+    required: true
+runs:
+  using: node12
+  main: index.js
+outputs:
+  applied-labels:
+    description: The list of labels processed
