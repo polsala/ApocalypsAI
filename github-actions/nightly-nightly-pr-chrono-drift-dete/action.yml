@@ -1,0 +1,28 @@
+name: 'Nightly PR Chrono-Drift Detector'
+description: 'Detects temporal anomalies like future-dated claims or stale PRs in titles/descriptions.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+  future-date-threshold-days:
+    description: 'Number of days into the future a mentioned date can be before flagging.'
+    required: false
+    default: '7'
+  stale-pr-threshold-days:
+    description: 'Number of days a PR can be open without activity before being considered stale.'
+    required: false
+    default: '30'
+  ignore-drafts:
+    description: 'Set to true to ignore draft PRs for stale checks.'
+    required: false
+    default: 'true'
+outputs:
+  chrono-drift-detected:
+    description: 'True if any chrono-drift was detected.'
+    value: ${{ steps.detector.outputs.chrono-drift-detected }}
+  drift-details:
+    description: 'JSON string with details of detected drifts.'
+    value: ${{ steps.detector.outputs.drift-details }}
+runs:
+  using: 'node20'
+  main: 'src/main.js'
