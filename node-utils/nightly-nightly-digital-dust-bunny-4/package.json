@@ -1,0 +1,26 @@
+{
+  "name": "nightly-digital-dust-bunny",
+  "version": "1.0.0",
+  "description": "A Node.js CLI tool that helps identify and manage digital clutter by scanning directories for old, large, or \"whimsical\" files, suggesting them for archival or deletion.",
+  "main": "src/index.js",
+  "bin": {
+    "dust-bunny": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "cleanup",
+    "files",
+    "node",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  }
+}
