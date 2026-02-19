@@ -1,0 +1,10 @@
+[package]
+name = "nightly-chrono-task-prioritizer"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Nightly Integrator"]
+description = "A high-performance CLI tool to prioritize survival tasks based on temporal decay and critical impact."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
