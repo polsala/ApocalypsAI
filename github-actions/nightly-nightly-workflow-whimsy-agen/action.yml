@@ -1,0 +1,20 @@
+name: 'Nightly Workflow Whimsy Agent'
+description: 'Posts whimsical, morale-boosting comments on workflow run statuses.'
+inputs:
+  github-token:
+    description: 'GitHub token for posting comments.'
+    required: true
+  workflow-conclusion:
+    description: 'The conclusion of the workflow run (e.g., success, failure, cancelled).'
+    required: true
+  pr-number:
+    description: 'The pull request number to comment on, if applicable.'
+    required: false
+outputs:
+  whimsical-message:
+    description: 'The generated whimsical message.'
+  comment-id:
+    description: 'The ID of the created comment, if any.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
