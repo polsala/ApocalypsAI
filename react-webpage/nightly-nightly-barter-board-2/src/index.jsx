@@ -1,0 +1,1 @@
+import React from \"react\";\nimport ReactDOM from \"react-dom/client\";\nimport App from \"./App.jsx\";\n\nconst root = ReactDOM.createRoot(document.getElementById(\"root\"));\nroot.render(<React.StrictMode><App /></React.StrictMode>);\n
