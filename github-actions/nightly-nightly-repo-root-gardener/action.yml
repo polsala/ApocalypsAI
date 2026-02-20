@@ -1,0 +1,139 @@
+name: 'Nightly Repository Root Gardener'
+description: 'Cultivates a healthy repository root by ensuring essential files are present and optionally checking for basic content patterns.'
+inputs:
+  required_files:
+    description: 'Comma-separated list of file paths that must exist in the repository root.'
+    required: false
+    default: ''
+  forbidden_files:
+    description: 'Comma-separated list of file paths that must NOT exist in the repository root.'
+    required: false
+    default: ''
+  check_license_header:
+    description: 'Boolean. If true, checks common source files for a basic license header.'
+    required: false
+    default: 'false'
+  license_header_pattern:
+    description: 'Regex pattern to match for license headers. Only used if check_license_header is true.'
+    required: false
+    default: '(Copyright|License)'
+  github_token:
+    description: 'GITHUB_TOKEN or a PAT. If provided and issues are found, the action will create a new issue or comment on the current PR.'
+    required: false
+    default: ''
+outputs:
+  status:
+    description: 'Overall status: success or failure'
+    value: ${{ steps.final_report.outputs.status }}
+  report:
+    description: 'JSON string containing a detailed report of all checks and findings.'
+    value: ${{ steps.final_report.outputs.report }}
+runs:
+  using: "composite"
+  steps:
+    - name: Initialize Report
+      shell: bash
+      run: |
+        echo '{"required_files_status": "N/A", "required_files_missing": [], "forbidden_files_status": "N/A", "forbidden_files_found": [], "license_header_status": "N/A", "license_header_missing": [], "overall_status": "success", "messages": []}' > gardener_report.json
+
+    - name: Check Required Files
+      shell: bash
+      if: inputs.required_files != ''
+      run: |
+        REQUIRED_FILES_INPUT="${{ inputs.required_files }}"
+        IFS=',' read -ra FILES_ARRAY <<< "$REQUIRED_FILES_INPUT"
+        MISSING_FILES=()
+        for file in "${FILES_ARRAY[@]}"; do
+          if [ ! -f "$file" ]; then
+            MISSING_FILES+=("$file")
+          fi
+        done
+
+        if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+          jq --argjson missing "$(printf '%s\n' "${MISSING_FILES[@]}" | jq -R . | jq -s .)" \
+             '.required_files_status = "failure" | .required_files_missing = $missing | .overall_status = "failure" | .messages += ["Missing required files: \($missing | join(", "))"]' \
+             gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        else
+          jq '.required_files_status = "success"' gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        fi
+
+    - name: Check Forbidden Files
+      shell: bash
+      if: inputs.forbidden_files != ''
+      run: |
+        FORBIDDEN_FILES_INPUT="${{ inputs.forbidden_files }}"
+        IFS=',' read -ra FILES_ARRAY <<< "$FORBIDDEN_FILES_INPUT"
+        FOUND_FILES=()
+        for file in "${FILES_ARRAY[@]}"; do
+          if [ -f "$file" ]; then
+            FOUND_FILES+=("$file")
+          fi
+        done
+
+        if [ ${#FOUND_FILES[@]} -gt 0 ]; then
+          jq --argjson found "$(printf '%s\n' "${FOUND_FILES[@]}" | jq -R . | jq -s .)" \
+             '.forbidden_files_status = "failure" | .forbidden_files_found = $found | .overall_status = "failure" | .messages += ["Found forbidden files: \($found | join(", "))"]' \
+             gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        else
+          jq '.forbidden_files_status = "success"' gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        fi
+
+    - name: Check License Headers
+      shell: bash
+      if: inputs.check_license_header == 'true'
+      run: |
+        LICENSE_PATTERN="${{ inputs.license_header_pattern }}"
+        SOURCE_FILE_TYPES="py js go rs ts java cpp"
+        FILES_WITHOUT_HEADER=()
+
+        for ext in $SOURCE_FILE_TYPES; do
+          find . -type f -name "*.$ext" -print0 | while IFS= read -r -d $'\0' file; do
+            if ! head -n 10 "$file" | grep -Eq "$LICENSE_PATTERN"; then # Check first 10 lines
+              FILES_WITHOUT_HEADER+=("$file")
+            fi
+          done
+        done
+
+        if [ ${#FILES_WITHOUT_HEADER[@]} -gt 0 ]; then
+          jq --argjson missing "$(printf '%s\n' "${FILES_WITHOUT_HEADER[@]}" | jq -R . | jq -s .)" \
+             '.license_header_status = "failure" | .license_header_missing = $missing | .overall_status = "failure" | .messages += ["Files missing license header: \($missing | join(", "))"]' \
+             gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        else
+          jq '.license_header_status = "success"' gardener_report.json > tmp_report.json && mv tmp_report.json gardener_report.json
+        fi
+
+    - name: Finalize Report and Set Outputs
+      id: final_report
+      shell: bash
+      run: |
+        REPORT_CONTENT=$(cat gardener_report.json)
+        OVERALL_STATUS=$(jq -r '.overall_status' gardener_report.json)
+
+        echo "report=$REPORT_CONTENT" >> "$GITHUB_OUTPUT"
+        echo "status=$OVERALL_STATUS" >> "$GITHUB_OUTPUT"
+
+        if [ "$OVERALL_STATUS" == "failure" ] && [ "${{ inputs.github_token }}" != "" ]; then
+          ISSUE_TITLE="🌱 Repository Root Gardener found issues!"
+          ISSUE_BODY="The Nightly Repository Root Gardener has identified some areas needing attention:\n\n\`\`\`json\n$REPORT_CONTENT\n\`\`\`\n\nPlease address these to keep our repository garden healthy!"
+          
+          # Check if it's a pull request
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            # Comment on PR
+            echo "Commenting on PR..."
+            COMMENT_URL=$(jq -n --arg body "$ISSUE_BODY" '{body: $body}' | \
+              curl -s -X POST -H "Authorization: token ${{ inputs.github_token }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$GITHUB_PULL_REQUEST_NUMBER/comments" \
+              | jq -r .html_url)
+            echo "Comment URL: $COMMENT_URL"
+          else
+            # Create new issue
+            echo "Creating new issue..."
+            ISSUE_URL=$(jq -n --arg title "$ISSUE_TITLE" --arg body "$ISSUE_BODY" '{title: $title, body: $body}' | \
+              curl -s -X POST -H "Authorization: token ${{ inputs.github_token }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" \
+              | jq -r .html_url)
+            echo "Issue URL: $ISSUE_URL"
+          fi
+        fi
