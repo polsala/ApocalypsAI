@@ -1,0 +1,23 @@
+# src/vars/main.yml
+
+# Paths to scan for digital dust bunnies (files to be deleted)
+dust_bunny_paths:
+  - "/tmp/digital_dust_bunnies"
+  - "/var/log/old_logs"
+
+# Files older than this many days will be considered dust bunnies
+dust_bunny_age_days: 7
+
+# Paths to scan for ancient data relics (files to be archived)
+relic_paths:
+  - "/tmp/ancient_relics"
+  - "/var/data/old_backups"
+
+# Files older than this many days will be considered relics
+relic_age_days: 30
+
+# Directory where ancient data relics will be moved
+archive_base_dir: "/var/digital_archive"
+
+# Path for the sweep report
+sweep_report_path: "/var/log/digital_dust_sweep_report.txt"

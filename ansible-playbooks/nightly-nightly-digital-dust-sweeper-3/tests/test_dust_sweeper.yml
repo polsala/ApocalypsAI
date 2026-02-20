@@ -1,0 +1,131 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  become: yes
+
+  vars:
+    test_base_dir: "/tmp/ansible_test_sweep_{{ lookup('pipe', 'date +%s') }}"
+    test_dust_bunny_path: "{{ test_base_dir }}/dust_bunnies"
+    test_relic_path: "{{ test_base_dir }}/relics"
+    test_archive_dir: "{{ test_base_dir }}/archive"
+    test_report_path: "{{ test_base_dir }}/sweep_report.txt"
+    test_dust_bunny_age_days: 1
+    test_relic_age_days: 2
+
+  tasks:
+    - name: Mock rationale: Create temporary test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_dust_bunny_path }}"
+        - "{{ test_relic_path }}"
+        - "{{ test_archive_dir }}"
+
+    - name: Mock rationale: Create dummy dust bunny files (older than threshold)
+      ansible.builtin.command: "touch -d '{{ test_dust_bunny_age_days + 1 }} days ago' {{ test_dust_bunny_path }}/dust_file_{{ item }}.log"
+      loop: [1, 2]
+      args:
+        creates: "{{ test_dust_bunny_path }}/dust_file_{{ item }}.log"
+
+    - name: Mock rationale: Create dummy dust bunny files (newer than threshold)
+      ansible.builtin.command: "touch -d '{{ test_dust_bunny_age_days - 1 }} hours ago' {{ test_dust_bunny_path }}/recent_dust_file_{{ item }}.log"
+      loop: [1]
+      args:
+        creates: "{{ test_dust_bunny_path }}/recent_dust_file_{{ item }}.log"
+
+    - name: Mock rationale: Create dummy relic files (older than threshold)
+      ansible.builtin.command: "touch -d '{{ test_relic_age_days + 1 }} days ago' {{ test_relic_path }}/relic_data_{{ item }}.bak"
+      loop: [1, 2, 3]
+      args:
+        creates: "{{ test_relic_path }}/relic_data_{{ item }}.bak"
+
+    - name: Mock rationale: Create dummy relic files (newer than threshold)
+      ansible.builtin.command: "touch -d '{{ test_relic_age_days - 1 }} hours ago' {{ test_relic_path }}/recent_relic_data_{{ item }}.bak"
+      loop: [1]
+      args:
+        creates: "{{ test_relic_path }}/recent_relic_data_{{ item }}.bak"
+
+    - name: Run the main dust sweeper playbook
+      ansible.builtin.include_tasks: ../src/dust_sweeper.yml
+      vars:
+        dust_bunny_paths: ["{{ test_dust_bunny_path }}"]
+        dust_bunny_age_days: "{{ test_dust_bunny_age_days }}"
+        relic_paths: ["{{ test_relic_path }}"]
+        relic_age_days: "{{ test_relic_age_days }}"
+        archive_base_dir: "{{ test_archive_dir }}"
+        sweep_report_path: "{{ test_report_path }}"
+
+    - name: Verify dust bunnies are deleted
+      ansible.builtin.stat:
+        path: "{{ test_dust_bunny_path }}/dust_file_{{ item }}.log"
+      register: stat_result
+      loop: [1, 2]
+      failed_when: stat_result.stat.exists
+
+    - name: Verify recent dust bunnies are NOT deleted
+      ansible.builtin.stat:
+        path: "{{ test_dust_bunny_path }}/recent_dust_file_1.log"
+      register: stat_result
+      failed_when: not stat_result.stat.exists
+
+    - name: Verify relics are archived
+      ansible.builtin.stat:
+        path: "{{ test_archive_dir }}/relic_data_{{ item }}.bak"
+      register: stat_result
+      loop: [1, 2, 3]
+      failed_when: not stat_result.stat.exists
+
+    - name: Verify original relics are deleted
+      ansible.builtin.stat:
+        path: "{{ test_relic_path }}/relic_data_{{ item }}.bak"
+      register: stat_result
+      loop: [1, 2, 3]
+      failed_when: stat_result.stat.exists
+
+    - name: Verify recent relics are NOT archived
+      ansible.builtin.stat:
+        path: "{{ test_relic_path }}/recent_relic_data_1.bak"
+      register: stat_result
+      failed_when: not stat_result.stat.exists
+
+    - name: Verify report file exists
+      ansible.builtin.stat:
+        path: "{{ test_report_path }}"
+      register: report_stat
+      failed_when: not report_stat.stat.exists
+
+    - name: Verify report content
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        decoded_report: "{{ report_content_b64.content | b64decode }}"
+
+    - name: Assert report content for deleted files
+      ansible.builtin.assert:
+        that:
+          - "'Total Digital Dust Bunnies Deleted: 2' in decoded_report"
+          - "'dust_file_1.log' in decoded_report"
+          - "'dust_file_2.log' in decoded_report"
+        msg: "Report does not contain expected deleted file information."
+
+    - name: Assert report content for archived files
+      ansible.builtin.assert:
+        that:
+          - "'Total Ancient Data Relics Archived: 3' in decoded_report"
+          - "'relic_data_1.bak' in decoded_report"
+          - "'relic_data_2.bak' in decoded_report"
+          - "'relic_data_3.bak' in decoded_report"
+        msg: "Report does not contain expected archived file information."
+
+    - name: Cleanup temporary test directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+        recurse: yes
+      when: test_base_dir is defined and test_base_dir != '/' # Safety check
