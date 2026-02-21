@@ -1,0 +1,1 @@
+name: PR Language Labeler\ndescription: Detect languages in PR files and output labels\ninputs:\n  github-token:\n    description: Token for GitHub API\n    required: true\nruns:\n  using: node12\n  main: src/index.js
