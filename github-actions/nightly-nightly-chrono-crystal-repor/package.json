@@ -1,0 +1,19 @@
+{
+  "name": "nightly-chrono-crystal-report",
+  "version": "1.0.0",
+  "description": "Generates a whimsical Chrono-Crystal Status Report based on workflow outcome.",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
