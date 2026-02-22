@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Certificate Expiry Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 8px; border: 1px solid #ddd; }
+    th { background-color: #f2f2f2; }
+    .expiring { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Certificate Expiry Report</h1>
+  <p>Last scanned: {{ ansible_date_time.iso8601 }}</p>
+  <table>
+    <tr><th>Host</th><th>Cert Path</th><th>Expiry Date</th><th>Days Left</th></tr>
+    {% for cert in expiring_certs %}
+    <tr class="expiring">
+      <td>{{ inventory_hostname }}</td>
+      <td>{{ cert.path }}</td>
+      <td>{{ cert.enddate }}</td>
+      <td>{{ cert.days_left }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4">No expiring certificates found.</td></tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

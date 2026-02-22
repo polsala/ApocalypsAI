@@ -1,0 +1,51 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Create dummy cert directory
+      file:
+        path: /tmp/test_certs
+        state: directory
+
+    - name: Generate dummy cert
+      copy:
+        content: |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKoK/hpZcrDlMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMjIwMjAxMDAwMDAwWhcNMjMwMjAxMDAwMDAwWjBF
+          MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+          ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+          CgKCAQEAunF5aDa6Hq2eXKVr1Md1At/F9ZkD+DHDoQAfsEqiCIJZLvbxOF4qopod
+          u3pP9IN0epYSLbiYfysu3OGxDOU0bI2TRNwEbj9OvHKx8dEl0gucigDknKfqOKg+
+          59kqJ2bZBuTZMfQAxyOYmoUY3hQ6A8A5bKdvhjvSmIOxFKYmR7zaMQsX0qfKq6i/
+          3QIDAQABo1AwTjAdBgNVHQ4EFgQUK9JQ/WA7AH7zQPWLKmqrktMYlqwwHwYDVR0j
+          BBgwFoAUK9JQ/WA7AH7zQPWLKmqrktMYlqwwDAYDVR0TBAUwAwEB/zANBgkqhkiG
+          9w0BAQsFAAOCAQEAgyN7Gc1Biwx1VUTau0K1s5xAyBVmGNwMLAvF9QSwKCojWpkp
+          8Q==
+          -----END CERTIFICATE-----
+        dest: /tmp/test_certs/dummy.crt
+
+    - name: Run main playbook locally with test inventory
+      ansible.builtin.include_tasks: ../src/cert_expiry_scan.yml
+      vars:
+        cert_paths: ["/tmp/test_certs"]
+        cert_warning_days: 400
+
+    - name: Assert that report was generated
+      stat:
+        path: ./cert_report.html
+      register: report_file
+
+    - name: Verify report exists
+      assert:
+        that:
+          - report_file.stat.exists
+          - report_file.stat.size > 0
+        fail_msg: "HTML report not generated correctly."
+
+    # Mock rationale: Simulates cert scanning logic without real network or host dependencies.
+    - name: Cleanup test files
+      file:
+        path: /tmp/test_certs
+        state: absent

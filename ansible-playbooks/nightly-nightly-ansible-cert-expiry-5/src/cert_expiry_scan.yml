@@ -1,0 +1,55 @@
+---
+- name: Check Certificate Expiry Across Hosts
+  hosts: all
+  gather_facts: no
+  vars:
+    cert_paths:
+      - /etc/ssl/certs
+      - /etc/pki/tls/certs
+    cert_warning_days: 30
+  tasks:
+    - name: Find certificate files
+      find:
+        paths: "{{ cert_paths }}"
+        patterns: "*.crt,*.pem"
+        recurse: yes
+      register: found_certs
+
+    - name: Stat each certificate
+      command: openssl x509 -in {{ item }} -noout -enddate
+      loop: "{{ found_certs.files | map(attribute='path') | list }}"
+      register: cert_enddates
+      ignore_errors: yes
+
+    - name: Parse certificate end dates
+      set_fact:
+        parsed_certs: |
+          {{ parsed_certs | default([]) + [{
+            'path': item.item,
+            'enddate_raw': item.stdout_lines[0] | regex_replace('notAfter=', '')
+          }] }}
+      loop: "{{ cert_enddates.results }}"
+      when: item.rc == 0
+
+    - name: Convert dates and calculate days until expiry
+      set_fact:
+        parsed_certs: |
+          {{ parsed_certs | map('combine', {
+            'enddate': (item.enddate_raw | to_datetime('%b %d %H:%M:%S %Y %Z')).date(),
+            'days_left': ((item.enddate_raw | to_datetime('%b %d %H:%M:%S %Y %Z')).date() - ansible_date_time.date).days
+          }) | list }}
+      loop: "{{ parsed_certs }}"
+      vars:
+        ansible_date_time: { date: '{{ lookup("pipe", "date +%Y-%m-%d") }}' }
+
+    - name: Filter expiring certs
+      set_fact:
+        expiring_certs: |
+          {{ parsed_certs | selectattr('days_left', 'lt', cert_warning_days) | list }}
+
+    - name: Generate HTML Report
+      template:
+        src: cert_report.j2
+        dest: ./cert_report.html
+      delegate_to: localhost
+      run_once: true
