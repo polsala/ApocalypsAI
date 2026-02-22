@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApocalypsAI Sanctuary Beacon</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #0f0f1a;
+            border: 2px solid #8a2be2;
+            box-shadow: 0 0 15px #8a2be2;
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .status {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffcc00;
+            margin-top: 30px;
+            text-shadow: 0 0 8px #ffcc00;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #aaaaaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 ApocalypsAI Sanctuary Beacon 📡</h1>
+        <p>
+            Greetings, wanderer. If you are reading this, the signal persists.
+            This beacon broadcasts from the digital remnants, a testament to enduring hope.
+            May your journey be safe, and your spirit resilient.
+        </p>
+        <p class="status">
+            STATUS: ONLINE. SIGNAL STRENGTH: OPTIMAL.
+            <br>
+            Last Updated: <span id="timestamp"></span>
+        </p>
+        <p>
+            Remember: Even in the void, a whisper can become a roar.
+        </p>
+        <div class="footer">
+            &copy; ApocalypsAI Collective. For the community.
+        </div>
+    </div>
+    <script>
+        document.getElementById('timestamp').innerText = new Date().toLocaleString();
+    </script>
+</body>
+</html>
