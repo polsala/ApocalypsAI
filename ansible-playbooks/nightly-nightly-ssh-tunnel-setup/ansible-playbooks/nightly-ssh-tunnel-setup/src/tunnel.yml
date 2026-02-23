@@ -1,0 +1,1 @@
+- hosts: all\n  become: true\n  vars:\n    ssh_tunnel_service_path: "/etc/systemd/system/ssh-tunnel.service"\n  roles:\n    - ssh_tunnel\n
