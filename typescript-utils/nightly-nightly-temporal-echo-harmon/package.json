@@ -1,0 +1,30 @@
+{
+  "name": "nightly-temporal-echo-harmonizer",
+  "version": "1.0.0",
+  "description": "Harmonizes fragmented, time-stamped 'temporal echoes' into coherent narratives or sentiment-grouped clusters.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "apocalypsai",
+    "temporal",
+    "echo",
+    "harmonizer",
+    "typescript",
+    "cli"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
