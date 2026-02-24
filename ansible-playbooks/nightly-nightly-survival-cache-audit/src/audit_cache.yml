@@ -1,0 +1,116 @@
+---
+- name: Audit Survival Cache Items
+  hosts: survival_hosts
+  gather_facts: true
+  vars_files:
+    - vars/cache_manifest.yml
+
+  tasks:
+    - name: Audit each survival cache item
+      ansible.builtin.block:
+        - name: Get item status
+          ansible.builtin.stat:
+            path: "{{ item.path }}"
+            checksum_algorithm: sha256
+          register: item_stat
+
+        - name: Initialize audit result for current item
+          ansible.builtin.set_fact:
+            _status: "PASS"
+            _message: "Item found and properties match."
+            _diffs: []
+          when: item_stat.stat.exists # Start with PASS if item exists
+
+        - name: Handle item not found (required item)
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Item not found."
+            _diffs: ["Item not found. Expected state: {{ item.state }}"]
+          when: not item_stat.stat.exists and not item.optional | default(false)
+
+        - name: Handle item not found (optional item)
+          ansible.builtin.set_fact:
+            _status: "PASS"
+            _message: "Optional item not found (as expected)."
+            _diffs: []
+          when: not item_stat.stat.exists and item.optional | default(false)
+
+        - name: Check item type
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Item type mismatch."
+            _diffs: "{{ _diffs + ['Expected type: ' + item.state + ', Actual type: ' + ('file' if item_stat.stat.isreg else 'directory' if item_stat.stat.isdir else 'unknown')] }}"
+          when:
+            - item_stat.stat.exists
+            - _status == "PASS"
+            - (item.state == 'file' and not item_stat.stat.isreg) or \
+              (item.state == 'directory' and not item_stat.stat.isdir)
+
+        - name: Check item permissions (mode)
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Permissions mismatch."
+            _diffs: "{{ _diffs + ['Expected mode: ' + item.mode + ', Actual mode: ' + item_stat.stat.mode] }}"
+          when:
+            - item_stat.stat.exists
+            - _status == "PASS"
+            - item.mode is defined
+            - item_stat.stat.mode != item.mode
+
+        - name: Check item owner
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Owner mismatch."
+            _diffs: "{{ _diffs + ['Expected owner: ' + item.owner + ', Actual owner: ' + item_stat.stat.pw_name] }}"
+          when:
+            - item_stat.stat.exists
+            - _status == "PASS"
+            - item.owner is defined
+            - item_stat.stat.pw_name != item.owner
+
+        - name: Check item group
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Group mismatch."
+            _diffs: "{{ _diffs + ['Expected group: ' + item.group + ', Actual group: ' + item_stat.stat.gr_name] }}"
+          when:
+            - item_stat.stat.exists
+            - _status == "PASS"
+            - item.group is defined
+            - item_stat.stat.gr_name != item.group
+
+        - name: Check item checksum
+          ansible.builtin.set_fact:
+            _status: "FAIL"
+            _message: "Checksum mismatch."
+            _diffs: "{{ _diffs + ['Expected checksum: ' + item.checksum + ', Actual checksum: ' + item_stat.stat.checksum] }}"
+          when:
+            - item_stat.stat.exists
+            - _status == "PASS"
+            - item.checksum is defined
+            - item_stat.stat.checksum != item.checksum
+
+        - name: Aggregate results for the host
+          ansible.builtin.set_fact:
+            audit_results: "{{ audit_results | default([]) + [{
+              'item': item,
+              'status': _status | default('FAIL'), # Default to FAIL if no conditions met
+              'message': _message | default('Unknown audit failure.'),
+              'diffs': _diffs | default([])
+            }] }}"
+      loop: "{{ survival_cache_items }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Generate and display audit report
+      ansible.builtin.template:
+        src: templates/audit_report.j2
+        dest: "/tmp/survival_cache_audit_report_{{ ansible_date_time.iso8601_basic_short }}.txt"
+      delegate_to: localhost # Save report locally where playbook is run
+      run_once: true
+      register: report_output
+
+    - name: Display report path
+      ansible.builtin.debug:
+        msg: "Survival Cache Audit Report saved to {{ report_output.dest }}"
+      run_once: true

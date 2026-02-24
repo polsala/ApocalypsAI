@@ -1,0 +1,19 @@
+---
+survival_cache_items:
+  - path: "/tmp/survival_cache/essential_data.txt"
+    state: "file"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+    checksum: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # SHA256 of an empty file
+    description: "Critical survival data log"
+  - path: "/tmp/survival_cache/secure_vault"
+    state: "directory"
+    mode: "0700"
+    owner: "root"
+    group: "root"
+    description: "Secure vault for sensitive items"
+  - path: "/tmp/survival_cache/optional_note.txt"
+    state: "file"
+    optional: true
+    description: "An optional note from the past, absence is okay"
