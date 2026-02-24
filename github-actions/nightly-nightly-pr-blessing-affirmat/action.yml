@@ -1,0 +1,12 @@
+name: 'PR Blessing Affirmation'
+description: 'Adds a whimsical, apocalypse-themed affirmation comment to merged PRs that passed all checks.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+outputs:
+  affirmation-message:
+    description: 'The affirmation message posted to the PR'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
