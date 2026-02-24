@@ -1,0 +1,38 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  border-radius: 15px;
+  padding: 40px;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  max-width: 90%;
+  margin: auto;
+}
+
+.App-header h1 {
+  margin-bottom: 10px;
+  color: #00ffff; /* Cyan for a techy feel */
+}
+
+.App-header p {
+  font-size: 1.2em;
+  margin-top: 0;
+  margin-bottom: 30px;
+}
