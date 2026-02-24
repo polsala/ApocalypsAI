@@ -1,0 +1,1 @@
+# nightly-qr-ascii\n\nGenerate QR codes as ASCII art directly from the command line.\n\n## Installation\n\n```sh\ncargo install --path .\n```\n\n## Usage\n\n```sh\nnightly-qr-ascii "Hello, world!"\n```\n\nOutputs QR code in terminal using block characters.\n\n## Options\n\n- `-s, --size <N>`: Scale factor (default 1) to enlarge each module.\n\n## License\n\nMIT
