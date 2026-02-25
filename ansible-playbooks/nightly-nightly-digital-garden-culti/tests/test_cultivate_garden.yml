@@ -1,0 +1,90 @@
+---
+- name: Test Digital Garden Cultivator Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    digital_garden_path: "/tmp/digital_garden_test"
+    max_garden_plants: 2 # For testing pruning logic
+
+  tasks:
+    - name: Ensure test garden directory is clean before tests
+      ansible.builtin.file:
+        path: "{{ digital_garden_path }}"
+        state: absent
+      # Mock rationale: This ensures a clean slate for each test run, making the test deterministic.
+
+    - name: Ensure test garden directory exists for subsequent runs
+      ansible.builtin.file:
+        path: "{{ digital_garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Ensures the base directory for the test, deterministic and offline.
+
+    - name: Run the main playbook for the first time (create initial plant)
+      ansible.builtin.include_tasks:
+        file: ../src/cultivate_garden.yml
+      vars:
+        digital_garden_path: "{{ digital_garden_path }}"
+        max_garden_plants: "{{ max_garden_plants }}"
+      # Mock rationale: Directly includes the main playbook, running it locally. 
+      # All its modules operate locally, making it deterministic and offline.
+
+    - name: Verify one plant exists after first run
+      ansible.builtin.find:
+        paths: "{{ digital_garden_path }}"
+        patterns: "plant_*.txt"
+        file_type: file
+      register: plants_after_first_run
+    - name: Assert one plant exists
+      ansible.builtin.assert:
+        that:
+          - plants_after_first_run.files | length == 1
+        msg: "Expected 1 plant after first run, but found {{ plants_after_first_run.files | length }}"
+      # Mock rationale: The 'find' module operates on the local filesystem, and 'assert' is a local check.
+
+    - name: Run the main playbook for the second time (add another plant)
+      ansible.builtin.include_tasks:
+        file: ../src/cultivate_garden.yml
+      vars:
+        digital_garden_path: "{{ digital_garden_path }}"
+        max_garden_plants: "{{ max_garden_plants }}"
+
+    - name: Verify two plants exist after second run
+      ansible.builtin.find:
+        paths: "{{ digital_garden_path }}"
+        patterns: "plant_*.txt"
+        file_type: file
+      register: plants_after_second_run
+    - name: Assert two plants exist
+      ansible.builtin.assert:
+        that:
+          - plants_after_second_run.files | length == 2
+        msg: "Expected 2 plants after second run, but found {{ plants_after_second_run.files | length }}"
+      # Mock rationale: Same as above, local operations and checks.
+
+    - name: Run the main playbook for the third time (trigger pruning, max_garden_plants=2)
+      ansible.builtin.include_tasks:
+        file: ../src/cultivate_garden.yml
+      vars:
+        digital_garden_path: "{{ digital_garden_path }}"
+        max_garden_plants: "{{ max_garden_plants }}"
+
+    - name: Verify two plants exist after third run (pruning occurred)
+      ansible.builtin.find:
+        paths: "{{ digital_garden_path }}"
+        patterns: "plant_*.txt"
+        file_type: file
+      register: plants_after_third_run
+    - name: Assert pruning kept only max_garden_plants
+      ansible.builtin.assert:
+        that:
+          - plants_after_third_run.files | length == max_garden_plants
+        msg: "Expected {{ max_garden_plants }} plants after pruning, but found {{ plants_after_third_run.files | length }}"
+      # Mock rationale: Same as above, local operations and checks.
+
+    - name: Clean up test garden directory after tests
+      ansible.builtin.file:
+        path: "{{ digital_garden_path }}"
+        state: absent
+      # Mock rationale: Ensures no side effects on the host filesystem after tests, deterministic.
