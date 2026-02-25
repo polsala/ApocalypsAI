@@ -1,0 +1,17 @@
+{
+  "name": "nightly-supply-weight-calculator",
+  "version": "0.1.0",
+  "description": "Compute total weight of supplies with mixed units.",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "node --loader ts-node/esm tests/index.test.ts"
+  },
+  "bin": {
+    "nightly-supply-weight-calculator": "src/index.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}
