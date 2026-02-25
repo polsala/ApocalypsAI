@@ -1,0 +1,20 @@
+name: 'Issue Bloom Nurturer'
+description: 'A whimsical GitHub Action to nurture community engagement on stale or overgrown issues and PRs.'
+inputs:
+  repo-token:
+    description: 'GitHub token for API access.'
+    required: true
+  stale-days:
+    description: 'Number of days without activity for an issue/PR to be considered "parched".'
+    required: false
+    default: '30'
+  overgrown-comment-threshold:
+    description: 'Number of comments for an issue/PR to be considered "overgrown".'
+    required: false
+    default: '50'
+outputs:
+  nurtured-items-count:
+    description: 'The number of issues/PRs that received a nurturing comment.'
+runs:
+  using: 'node16'
+  main: 'src/index.js'
