@@ -1,0 +1,11 @@
+[package]
+name = "qr_code_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+qrcode = "0.13"
+
+[lib]
+name = "qr_code_cli"
+path = "src/lib.rs"
