@@ -1,0 +1,173 @@
+name: 'Test Cosmic Commit Checker'
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test_aligned_commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock commit messages file - Aligned
+        run: |
+          echo "feat: Add new cosmic ray detector" > mock_commits_aligned.txt
+          echo "chore: Update celestial navigation charts" >> mock_commits_aligned.txt
+          echo "docs: Improve README for stellar-mapping" >> mock_commits_aligned.txt
+        # Mock rationale: Provides a static, predefined set of commit messages for deterministic testing.
+
+      - name: Run Cosmic Commit Check - Aligned Scenario
+        uses: ./ # Uses the action in the current repository
+        id: aligned_check
+        with:
+          commit_messages_file: 'mock_commits_aligned.txt'
+          required_keywords: 'cosmic,celestial,docs'
+          forbidden_keywords: 'WIP,bug,error'
+          fail_on_mismatch: 'true'
+
+      - name: Verify Aligned Outputs
+        run: |
+          echo "Checking outputs for aligned scenario..."
+          if [ "${{ steps.aligned_check.outputs.alignment_status }}" != "aligned" ]; then
+            echo "❌ Test Failed: Expected alignment_status 'aligned', got '${{ steps.aligned_check.outputs.alignment_status }}'"
+            exit 1
+          fi
+          if [ "${{ steps.aligned_check.outputs.required_found }}" != "cosmic,celestial,docs" ]; then
+            echo "❌ Test Failed: Expected required_found 'cosmic,celestial,docs', got '${{ steps.aligned_check.outputs.required_found }}'"
+            exit 1
+          fi
+          if [ "${{ steps.aligned_check.outputs.forbidden_found }}" != "" ]; then
+            echo "❌ Test Failed: Expected forbidden_found '', got '${{ steps.aligned_check.outputs.forbidden_found }}'"
+            exit 1
+          fi
+          echo "✅ Test Passed: Aligned scenario outputs are correct."
+
+  test_misaligned_forbidden:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock commit messages file - Misaligned (Forbidden)
+        run: |
+          echo "fix: Critical bug in warp drive" > mock_commits_forbidden.txt
+          echo "feat: Add new cosmic ray detector" >> mock_commits_forbidden.txt
+        # Mock rationale: Provides a static, predefined set of commit messages for deterministic testing.
+
+      - name: Run Cosmic Commit Check - Misaligned (Forbidden) Scenario
+        uses: ./ # Uses the action in the current repository
+        id: forbidden_check
+        with:
+          commit_messages_file: 'mock_commits_forbidden.txt'
+          required_keywords: 'cosmic'
+          forbidden_keywords: 'bug'
+          fail_on_mismatch: 'true'
+
+      - name: Verify Misaligned (Forbidden) Outputs
+        run: |
+          echo "Checking outputs for misaligned (forbidden) scenario..."
+          if [ "${{ steps.forbidden_check.outputs.alignment_status }}" != "misaligned" ]; then
+            echo "❌ Test Failed: Expected alignment_status 'misaligned', got '${{ steps.forbidden_check.outputs.alignment_status }}'"
+            exit 1
+          fi
+          if [ "${{ steps.forbidden_check.outputs.required_found }}" != "cosmic" ]; then
+            echo "❌ Test Failed: Expected required_found 'cosmic', got '${{ steps.forbidden_check.outputs.required_found }}'"
+            exit 1
+          fi
+          if [ "${{ steps.forbidden_check.outputs.forbidden_found }}" != "bug" ]; then
+            echo "❌ Test Failed: Expected forbidden_found 'bug', got '${{ steps.forbidden_check.outputs.forbidden_found }}'"
+            exit 1
+          fi
+          echo "✅ Test Passed: Misaligned (forbidden) scenario outputs are correct."
+        continue-on-error: true # Allow this step to pass even if the previous step failed due to fail_on_mismatch
+
+      - name: Check for expected failure
+        if: success()
+        run: |
+          echo "❌ Test Failed: Expected the action to fail, but it succeeded."
+          exit 1
+        # Mock rationale: This step verifies the action's intended failure behavior when fail_on_mismatch is true.
+
+  test_misaligned_missing_required:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock commit messages file - Misaligned (Missing Required)
+        run: |
+          echo "feat: Add new ray detector" > mock_commits_missing.txt
+          echo "chore: Update navigation charts" >> mock_commits_missing.txt
+        # Mock rationale: Provides a static, predefined set of commit messages for deterministic testing.
+
+      - name: Run Cosmic Commit Check - Misaligned (Missing Required) Scenario
+        uses: ./ # Uses the action in the current repository
+        id: missing_required_check
+        with:
+          commit_messages_file: 'mock_commits_missing.txt'
+          required_keywords: 'cosmic'
+          forbidden_keywords: ''
+          fail_on_mismatch: 'true'
+
+      - name: Verify Misaligned (Missing Required) Outputs
+        run: |
+          echo "Checking outputs for misaligned (missing required) scenario..."
+          if [ "${{ steps.missing_required_check.outputs.alignment_status }}" != "misaligned" ]; then
+            echo "❌ Test Failed: Expected alignment_status 'misaligned', got '${{ steps.missing_required_check.outputs.alignment_status }}'"
+            exit 1
+          fi
+          if [ "${{ steps.missing_required_check.outputs.required_found }}" != "" ]; then
+            echo "❌ Test Failed: Expected required_found '', got '${{ steps.missing_required_check.outputs.required_found }}'"
+            exit 1
+          fi
+          if [ "${{ steps.missing_required_check.outputs.forbidden_found }}" != "" ]; then
+            echo "❌ Test Failed: Expected forbidden_found '', got '${{ steps.missing_required_check.outputs.forbidden_found }}'"
+            exit 1
+          fi
+          echo "✅ Test Passed: Misaligned (missing required) scenario outputs are correct."
+        continue-on-error: true # Allow this step to pass even if the previous step failed due to fail_on_mismatch
+
+      - name: Check for expected failure
+        if: success()
+        run: |
+          echo "❌ Test Failed: Expected the action to fail, but it succeeded."
+          exit 1
+        # Mock rationale: This step verifies the action's intended failure behavior when fail_on_mismatch is true.
+
+  test_no_fail_on_mismatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock commit messages file - No Fail on Mismatch
+        run: |
+          echo "fix: Critical bug in warp drive" > mock_commits_no_fail.txt
+          echo "feat: Add new cosmic ray detector" >> mock_commits_no_fail.txt
+        # Mock rationale: Provides a static, predefined set of commit messages for deterministic testing.
+
+      - name: Run Cosmic Commit Check - No Fail on Mismatch Scenario
+        uses: ./ # Uses the action in the current repository
+        id: no_fail_check
+        with:
+          commit_messages_file: 'mock_commits_no_fail.txt'
+          required_keywords: 'celestial'
+          forbidden_keywords: 'bug'
+          fail_on_mismatch: 'false'
+
+      - name: Verify No Fail on Mismatch Outputs
+        run: |
+          echo "Checking outputs for no fail on mismatch scenario..."
+          if [ "${{ steps.no_fail_check.outputs.alignment_status }}" != "misaligned" ]; then
+            echo "❌ Test Failed: Expected alignment_status 'misaligned', got '${{ steps.no_fail_check.outputs.alignment_status }}'"
+            exit 1
+          fi
+          if [ "${{ steps.no_fail_check.outputs.required_found }}" != "" ]; then
+            echo "❌ Test Failed: Expected required_found '', got '${{ steps.no_fail_check.outputs.required_found }}'"
+            exit 1
+          fi
+          if [ "${{ steps.no_fail_check.outputs.forbidden_found }}" != "bug" ]; then
+            echo "❌ Test Failed: Expected forbidden_found 'bug', got '${{ steps.no_fail_check.outputs.forbidden_found }}'"
+            exit 1
+          fi
+          echo "✅ Test Passed: No fail on mismatch scenario outputs are correct."
