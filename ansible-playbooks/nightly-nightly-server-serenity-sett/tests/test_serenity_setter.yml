@@ -1,0 +1,68 @@
+---
+- name: Test Nightly Server Serenity Setter
+  hosts: localhost
+  connection: local
+  become: yes
+  vars_files:
+    - ../src/vars/serenity_messages.yml
+  tasks:
+    - name: Create a dummy MOTD file for testing
+      ansible.builtin.tempfile:
+        state: file
+        suffix: _motd_test
+        path: /tmp
+      register: dummy_motd_file
+      # Mock rationale: Create a temporary file to act as /etc/motd for testing purposes.
+
+    - name: Create a dummy old temporary file for cleanup test
+      ansible.builtin.tempfile:
+        state: file
+        suffix: _old_tmp_test
+        path: /tmp
+      register: dummy_old_tmp_file
+      # Mock rationale: Create a temporary file that will be older than 1 day to test cleanup.
+    
+    - name: Set modification time of dummy old temporary file to be old
+      ansible.builtin.command: touch -d "2 days ago" {{ dummy_old_tmp_file.path }}
+      changed_when: true
+      # Mock rationale: Ensure the dummy file is old enough to be targeted by the cleanup task.
+
+    - name: Include tasks from the serenity setter
+      ansible.builtin.include_tasks:
+        file: ../src/serenity_setter_tasks.yml
+      vars:
+        motd_dest_path: "{{ dummy_motd_file.path }}"
+      # Mock rationale: Execute the main playbook's tasks, redirecting its MOTD output to our dummy file.
+
+    - name: Read the content of the dummy MOTD file
+      ansible.builtin.slurp:
+        src: "{{ dummy_motd_file.path }}"
+      register: motd_content
+      # Mock rationale: Read the content written by the playbook to the dummy MOTD file.
+
+    - name: Assert MOTD starts with one of the serenity messages and contains the footer
+      ansible.builtin.assert:
+        that:
+          - (motd_content.content | b64decode | string).split('\n')[0] in serenity_messages
+          - motd_content.content | b64decode | string is search("ApocalypsAI Nightly Integrator - Serenity Setter")
+        msg: "MOTD content does not start with a valid serenity message or is missing the footer."
+      # Mock rationale: More robust check for the random message and footer.
+
+    - name: Check if the dummy old temporary file was removed
+      ansible.builtin.stat:
+        path: "{{ dummy_old_tmp_file.path }}"
+      register: old_tmp_file_stat
+      # Mock rationale: Check the status of the dummy file to confirm its removal.
+
+    - name: Assert dummy old temporary file was removed
+      ansible.builtin.assert:
+        that:
+          - not old_tmp_file_stat.stat.exists
+        msg: "Dummy old temporary file '{{ dummy_old_tmp_file.path }}' was not removed."
+      # Mock rationale: Confirm the cleanup task worked by asserting the file no longer exists.
+
+    - name: Clean up dummy MOTD file
+      ansible.builtin.file:
+        path: "{{ dummy_motd_file.path }}"
+        state: absent
+      # Mock rationale: Remove the temporary MOTD file created for the test.
