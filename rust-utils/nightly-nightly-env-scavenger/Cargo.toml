@@ -1,0 +1,16 @@
+[package]
+name = "nightly-env-scavenger"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+anyhow = "1"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "1"
+tempfile = "3"
