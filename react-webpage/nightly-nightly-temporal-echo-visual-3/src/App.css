@@ -1,0 +1,18 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.visualizer-section {
+  margin-top: 20px;
+  min-height: 300px; /* Ensure space for chart */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-data-message {
+  color: #aaa;
+  font-style: italic;
+}
