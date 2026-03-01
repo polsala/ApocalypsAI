@@ -1,0 +1,1 @@
+import os\nfrom flask import Flask, Response\n\napp = Flask(__name__)\n\n@app.route("/", methods=["GET"])\ndef quote():\n    q = os.getenv("QUOTE", "When the world ends, make sure you have coffee.")\n    return Response(q, mimetype="text/plain")\n\nif __name__ == "__main__":\n    app.run(host="0.0.0.0", port=8080)\n
