@@ -1,0 +1,16 @@
+---
+- name: Test Nightly SSH Key Rotator
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run rotation playbook in check mode
+      command: ansible-playbook -i src/inventory.ini src/rotate_ssh_keys.yml --check
+      register: result
+      ignore_errors: true
+
+    - name: Assert playbook succeeded
+      assert:
+        that:
+          - result.rc == 0
+        fail_msg: "Rotation playbook failed in check mode"
+      # Mock rationale: In CI we cannot reach real hosts, so we assume the command returns rc=0.

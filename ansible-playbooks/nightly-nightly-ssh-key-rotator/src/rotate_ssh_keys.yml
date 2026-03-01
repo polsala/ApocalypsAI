@@ -1,0 +1,48 @@
+---
+- name: Rotate SSH host keys on all managed hosts
+  hosts: all
+  become: true
+  vars:
+    backup_dir: "/etc/ssh/backup_keys"
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+    key_types:
+      - { type: "rsa", bits: 4096 }
+      - { type: "ed25519", bits: 0 }
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Backup existing host keys
+      shell: |
+        for key in /etc/ssh/ssh_host_*_key; do
+          if [ -f "$key" ]; then
+            cp "$key" "{{ backup_dir }}/$(basename $key).{{ timestamp }}"
+          fi
+        done
+      args:
+        executable: /bin/bash
+      when: not ansible_check_mode
+
+    - name: Generate new SSH host keys
+      loop: "{{ key_types }}"
+      loop_control:
+        loop_var: key_type
+      block:
+        - name: Remove old key (if any)
+          file:
+            path: "/etc/ssh/ssh_host_{{ key_type.type }}_key"
+            state: absent
+        - name: Generate new key
+          command: >
+            ssh-keygen -t {{ key_type.type }} {{ '-b ' + key_type.bits|string if key_type.bits > 0 else '' }} -f /etc/ssh/ssh_host_{{ key_type.type }}_key -N ''
+          args:
+            creates: "/etc/ssh/ssh_host_{{ key_type.type }}_key"
+
+    - name: Restart SSH service to apply new keys
+      service:
+        name: sshd
+        state: restarted
+      when: not ansible_check_mode
