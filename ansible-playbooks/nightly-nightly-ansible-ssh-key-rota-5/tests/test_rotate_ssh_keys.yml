@@ -1,0 +1,30 @@
+- name: Test SSH key rotation playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    target: localhost
+    ssh_key_path: "/tmp/id_rsa_test_rotated"
+  tasks:
+    - name: Include rotation playbook
+      import_playbook: "../src/rotate_ssh_keys.yml"
+
+    - name: Verify new private key exists
+      stat:
+        path: "{{ ssh_key_path }}"
+      register: key_stat
+
+    - name: Assert key file was created
+      assert:
+        that:
+          - key_stat.stat.exists
+        fail_msg: "New SSH private key was not created."
+      # Mock rationale: In offline test we assume file creation succeeds.
+
+    - name: Cleanup test keys
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ ssh_key_path }}"
+        - "{{ ssh_key_path }}.pub"
