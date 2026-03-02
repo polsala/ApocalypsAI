@@ -1,0 +1,89 @@
+name: Test Workflow Schedule Harmonizer
+on: [push] # Trigger for testing
+
+jobs:
+  test_harmonized_workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup test environment (harmonized)
+        run: |
+          mkdir -p .github/workflows
+          echo "on:\n  schedule:\n    - cron: '0 0 * * *'\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/harmonized_workflow.yml
+          echo "on:\n  push:\n    branches: [ main ]\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/no_schedule_workflow.yml
+          echo "on:\n  schedule:\n    - cron: '0 0 * * *'\n  push:\n    branches: [ main ]\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/mixed_harmonized_workflow.yml
+      - name: Run action with harmonized schedules (expect success)
+        id: harmonized_check
+        uses: ./ # Refers to the action in the current directory
+        with:
+          expected-cron-schedule: '0 0 * * *'
+      - name: Verify harmonized output
+        run: |
+          echo "Action outcome: ${{ steps.harmonized_check.outcome }}"
+          echo "Output: ${{ steps.harmonized_check.outputs.desynchronized-workflows }}"
+          if [ "${{ steps.harmonized_check.outcome }}" != "success" ]; then
+            echo "::error::Expected action to succeed, but it failed."
+            exit 1
+          fi
+          if [ -n "${{ steps.harmonized_check.outputs.desynchronized-workflows }}" ]; then
+            echo "::error::Expected no desynchronized workflows, but found: ${{ steps.harmonized_check.outputs.desynchronized-workflows }}"
+            exit 1
+          fi
+
+  test_desynchronized_workflows_failure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup test environment (desynchronized for failure)
+        run: |
+          mkdir -p .github/workflows
+          echo "on:\n  schedule:\n    - cron: '1 0 * * *'\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/fail_desynchronized_workflow.yml
+          echo "on:\n  schedule:\n    - cron: '0 0 * * *'\n    - cron: '2 0 * * *'\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/partially_desynchronized_workflow.yml
+          echo "on:\n  schedule:\n    - cron: '3 0 * * *'\njobs:\n  test: { runs-on: ubuntu-latest, steps: [] }" > .github/workflows/another_desynchronized_workflow.yml
+      - name: Run action expecting failure
+        id: fail_check
+        uses: ./ # Refers to the action in the current directory
+        with:
+          expected-cron-schedule: '0 0 * * *'
+        continue-on-error: true # Allow the workflow to continue even if this step fails
+      - name: Verify failure and output
+        run: |
+          echo "Action outcome: ${{ steps.fail_check.outcome }}"
+          echo "Output: ${{ steps.fail_check.outputs.desynchronized-workflows }}"
+          if [ "${{ steps.fail_check.outcome }}" != "failure" ]; then
+            echo "::error::Expected action to fail, but it succeeded."
+            exit 1
+          fi
+          EXPECTED_DESYNCHRONIZED="fail_desynchronized_workflow.yml,partially_desynchronized_workflow.yml,another_desynchronized_workflow.yml"
+          # Sort the expected and actual lists for robust comparison, as order might vary
+          ACTUAL_DESYNCHRONIZED=$(echo "${{ steps.fail_check.outputs.desynchronized-workflows }}" | tr ',' '\n' | sort | tr '\n' ',' | sed 's/,$//')
+          EXPECTED_DESYNCHRONIZED=$(echo "$EXPECTED_DESYNCHRONIZED" | tr ',' '\n' | sort | tr '\n' ',' | sed 's/,$//')
+
+          if [ "$ACTUAL_DESYNCHRONIZED" != "$EXPECTED_DESYNCHRONIZED" ]; then
+            echo "::error::Expected '$EXPECTED_DESYNCHRONIZED', but found: '$ACTUAL_DESYNCHRONIZED'"
+            exit 1
+          fi
+
+  test_no_workflow_directory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure no .github/workflows directory exists
+        run: rm -rf .github/workflows
+      - name: Run action with no workflow directory (expect success and no output)
+        id: no_dir_check
+        uses: ./ # Refers to the action in the current directory
+        with:
+          expected-cron-schedule: '0 0 * * *'
+      - name: Verify no directory output
+        run: |
+          echo "Action outcome: ${{ steps.no_dir_check.outcome }}"
+          echo "Output: ${{ steps.no_dir_check.outputs.desynchronized-workflows }}"
+          if [ "${{ steps.no_dir_check.outcome }}" != "success" ]; then
+            echo "::error::Expected action to succeed, but it failed."
+            exit 1
+          fi
+          if [ -n "${{ steps.no_dir_check.outputs.desynchronized-workflows }}" ]; then
+            echo "::error::Expected no desynchronized workflows, but found: ${{ steps.no_dir_check.outputs.desynchronized-workflows }}"
+            exit 1
+          fi

@@ -1,0 +1,80 @@
+name: 'Workflow Schedule Harmonizer'
+description: 'Verifies all scheduled workflows in a repository adhere to a specified harmonized cron schedule, reporting any temporal desynchronizations.'
+inputs:
+  expected-cron-schedule:
+    description: 'The cron schedule string that all scheduled workflows must adhere to (e.g., "0 0 * * *").'
+    required: true
+outputs:
+  desynchronized-workflows:
+    description: 'A comma-separated list of workflows that do not match the expected schedule.'
+    value: ${{ steps.check_schedules.outputs.desynchronized }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Install yq (if not present)
+      shell: bash
+      run: |
+        if ! command -v yq &> /dev/null; then
+          echo "yq not found, installing..."
+          # Attempt snap install first, then direct download for broader compatibility on Linux runners
+          sudo snap install yq || (sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq)
+        fi
+      # Mock rationale: yq is a common tool on GitHub Actions runners, but explicitly installing it ensures determinism
+      # and handles cases where it might not be pre-installed. For offline testing, yq would need to be mocked or pre-installed
+      # in the test environment, or the test itself would need to mock the yq command's output.
+
+    - name: Find and check workflow schedules
+      id: check_schedules
+      shell: bash
+      run: |
+        EXPECTED_CRON="${{ inputs.expected-cron-schedule }}"
+        DESYNCHRONIZED_WORKFLOWS=""
+        WORKFLOW_DIR=".github/workflows"
+
+        if [ ! -d "$WORKFLOW_DIR" ]; then
+          echo "No workflow directory found at $WORKFLOW_DIR. Skipping check."
+          echo "desynchronized=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        for workflow_file in "$WORKFLOW_DIR"/*.yml "$WORKFLOW_DIR"/*.yaml; do
+          if [ -f "$workflow_file" ]; then
+            WORKFLOW_NAME=$(basename "$workflow_file")
+            echo "Checking workflow: $WORKFLOW_NAME"
+
+            # Use yq to extract cron schedules. Suppress errors if path doesn't exist.
+            CRON_SCHEDULES=$(yq '(.on.schedule[] | .cron)' "$workflow_file" 2>/dev/null || true)
+
+            if [ -z "$CRON_SCHEDULES" ]; then
+              echo "  $WORKFLOW_NAME has no 'on: schedule:' trigger or invalid schedule format. Skipping schedule check."
+              continue
+            fi
+
+            ALL_MATCH=true
+            while IFS= read -r found_cron; do
+              if [ -n "$found_cron" ] && [ "$found_cron" != "$EXPECTED_CRON" ]; then
+                echo "  Mismatch in $WORKFLOW_NAME: Expected '$EXPECTED_CRON', Found '$found_cron'"
+                ALL_MATCH=false
+                break
+              fi
+            done <<< "$CRON_SCHEDULES"
+
+            if ! $ALL_MATCH; then
+              DESYNCHRONIZED_WORKFLOWS+="$WORKFLOW_NAME,"
+            else
+              echo "  $WORKFLOW_NAME is harmonized."
+            fi
+          fi
+        done
+
+        # Remove trailing comma if any
+        DESYNCHRONIZED_WORKFLOWS=$(echo "$DESYNCHRONIZED_WORKFLOWS" | sed 's/,$//')
+
+        echo "desynchronized=$DESYNCHRONIZED_WORKFLOWS" >> $GITHUB_OUTPUT
+
+        if [ -n "$DESYNCHRONIZED_WORKFLOWS" ]; then
+          echo "::error::The following workflows are desynchronized: $DESYNCHRONIZED_WORKFLOWS"
+          exit 1
+        else
+          echo "All scheduled workflows are harmonized!"
+        fi
