@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install bash and jq (JSON processor)\nRUN apk add --no-cache bash jq\n\n# Copy the packing script\nCOPY src/pack.sh /usr/local/bin/pack.sh\nRUN chmod +x /usr/local/bin/pack.sh\n\n# The script expects a path to a JSON file as its sole argument\nENTRYPOINT ["/usr/local/bin/pack.sh"]\n
