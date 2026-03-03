@@ -1,0 +1,1 @@
+use wasteland_distance_calculator::compute_total_distance;\n\n#[test]\nfn integration_test_sample() {\n    let pts = vec![(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)];\n    let dist = compute_total_distance(&pts);\n    // Expected distance: 1 (0,0 -> 1,0) + 1 (1,0 -> 1,1) = 2\n    assert!((dist - 2.0).abs() < 1e-6);\n}\n
