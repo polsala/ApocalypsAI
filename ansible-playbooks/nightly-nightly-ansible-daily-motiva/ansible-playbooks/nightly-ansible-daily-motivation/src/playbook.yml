@@ -1,0 +1,16 @@
+- name: Write a random motivational quote
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Select a random quote
+      set_fact:
+        selected_quote: "{{ quotes | random }}"
+
+    - name: Write quote to file
+      copy:
+        dest: "./motivation.txt"
+        content: "{{ selected_quote }}\n"
+        mode: '0644'

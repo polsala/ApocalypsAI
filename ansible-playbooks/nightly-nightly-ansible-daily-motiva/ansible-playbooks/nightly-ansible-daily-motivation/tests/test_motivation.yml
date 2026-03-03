@@ -1,0 +1,34 @@
+- name: Test daily motivation playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../src/vars.yml
+  tasks:
+    - name: Run the motivation playbook
+      import_playbook: ../src/playbook.yml
+
+    - name: Verify motivation.txt exists
+      stat:
+        path: "./motivation.txt"
+      register: motivation_file
+
+    - name: Assert file was created
+      assert:
+        that:
+          - motivation_file.stat.exists
+          - motivation_file.stat.size > 0
+
+    - name: Read the quote
+      slurp:
+        src: "./motivation.txt"
+      register: quote_content
+
+    - name: Decode content
+      set_fact:
+        quote_text: "{{ quote_content.content | b64decode | trim }}"
+
+    - name: Ensure quote is from the list
+      assert:
+        that:
+          - quote_text in quotes
