@@ -1,0 +1,1 @@
+use std::env;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <data>", args[0]);\n        std::process::exit(1);\n    }\n    let data = &args[1];\n    let qr = nightly_qr_code_terminal::generate_qr_string(data);\n    println!("{}", qr);\n}\n
