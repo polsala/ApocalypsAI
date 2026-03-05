@@ -1,0 +1,12 @@
+---
+- name: Test mirror sync playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    - import_playbook: ../src/sync_mirror.yml
+
+    - name: Verify sync succeeded
+      assert:
+        that:
+          - mirror_sync_success | bool
+        fail_msg: "Mirror sync did not succeed"
