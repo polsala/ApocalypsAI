@@ -1,0 +1,57 @@
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: /etc/ssh/backup_keys
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing host keys
+      copy:
+        src: "/etc/ssh/{{ item }}"
+        dest: "/etc/ssh/backup_keys/{{ item }}.{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: true
+      loop:
+        - ssh_host_ed25519_key
+        - ssh_host_ed25519_key.pub
+        - ssh_host_rsa_key
+        - ssh_host_rsa_key.pub
+      ignore_errors: true
+
+    - name: Remove old host keys
+      file:
+        path: "/etc/ssh/{{ item }}"
+        state: absent
+      loop:
+        - ssh_host_ed25519_key
+        - ssh_host_ed25519_key.pub
+        - ssh_host_rsa_key
+        - ssh_host_rsa_key.pub
+      ignore_errors: true
+
+    - name: Generate new SSH host key
+      command: >
+        ssh-keygen -t {{ ssh_key_type }}
+        {% if ssh_key_type == 'rsa' %} -b {{ ssh_key_bits }} {% endif %}
+        -f /etc/ssh/ssh_host_{{ ssh_key_type }}_key -N ''
+      args:
+        creates: "/etc/ssh/ssh_host_{{ ssh_key_type }}_key"
+      register: gen_key
+
+    - name: Set fact indicating rotation succeeded
+      set_fact:
+        ssh_key_rotated: true
+
+    - name: Restart SSH service
+      service:
+        name: sshd
+        state: restarted
+      when: gen_key.changed
+
+    - name: Debug rotation result
+      debug:
+        msg: "SSH host keys rotated."
