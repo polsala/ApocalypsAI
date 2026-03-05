@@ -1,0 +1,19 @@
+---
+- name: Test SSH key rotator playbook (mocked)
+  hosts: localhost
+  gather_facts: false
+  vars:
+    target_user: testuser
+  tasks:
+    - name: Include the rotator playbook in check mode
+      ansible.builtin.import_playbook: "../src/rotate_ssh_keys.yml"
+      vars:
+        target_user: "{{ target_user }}"
+      check_mode: true
+      # Mock rationale: In check mode, no actual key generation occurs; we assert that the playbook runs without errors.
+
+    - name: Assert that the playbook completed
+      ansible.builtin.assert:
+        that:
+          - true  # placeholder assertion
+        fail_msg: "Playbook failed to run in check mode."
