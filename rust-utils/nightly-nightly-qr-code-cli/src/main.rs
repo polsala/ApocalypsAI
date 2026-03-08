@@ -1,0 +1,1 @@
+use std::env;\nuse qr_cli::render_qr;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    }\n    let output = render_qr(&args[1]);\n    print!("{}", output);\n}\n
