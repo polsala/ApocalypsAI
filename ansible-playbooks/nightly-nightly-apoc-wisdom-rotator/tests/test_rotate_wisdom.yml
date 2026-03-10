@@ -1,0 +1,32 @@
+---
+- name: Test Apocalyptic Wisdom Rotator Playbook
+  hosts: localhost
+  gather_facts: no
+  become: yes # Required for /etc/motd, even in check mode
+  vars:
+    # Mock rationale: We override the random selection to ensure deterministic testing.
+    # This allows us to assert against a specific expected message.
+    selected_wisdom: "TEST: This is a mock wisdom message for deterministic testing."
+    # Mock rationale: Provide a dummy list for the assert task in the main playbook
+    # to prevent it from failing due to an undefined 'wisdom_messages' list.
+    wisdom_messages:
+      - "TEST: This is a mock wisdom message for deterministic testing."
+      - "Another mock message."
+  tasks:
+    - name: Run the main playbook in check mode
+      ansible.builtin.include_tasks:
+        file: ../src/rotate_wisdom.yml
+      args:
+        apply:
+          check_mode: yes # Ensure the included playbook runs in check mode
+
+    - name: Verify that /etc/motd would be templated with the mock message
+      ansible.builtin.assert:
+        that:
+          - "motd_template_result is defined"
+          - "motd_template_result.changed is true" # Should be changed in check mode if content differs
+          - "'TEST: This is a mock wisdom message for deterministic testing.' in motd_template_result.diff.after_header"
+          # Mock rationale: The 'diff.after_header' field of the registered variable
+          # contains the content that *would* be written by the template module in check mode.
+          # This allows deterministic verification of the templated output without actual file writes.
+        fail_msg: "MOTD content does not contain the expected mock wisdom message in check mode."
