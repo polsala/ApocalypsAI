@@ -1,0 +1,74 @@
+---
+- name: Test Nightly Wasteland Garden Cultivator
+  hosts: localhost
+  connection: local
+  gather_facts: yes # Needed for ansible_user_id and ansible_user_gid
+  become: yes # Needed for creating/checking files with specific permissions
+  vars:
+    test_base_dir: "/tmp/ansible_test_garden_{{ lookup('pipe', 'date +%s') }}" # Unique temp dir
+    garden_config: # Override for testing
+      - path: "{{ test_base_dir }}/opt/wasteland_resources"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user_id }}" # Use current user for local testing
+        group: "{{ ansible_user_gid }}" # Use current group for local testing
+        files:
+          - name: "scavenged_data.log"
+            content: "Test log entry\n"
+            mode: "0644"
+          - name: ".resource_marker"
+            content: "marker"
+            mode: "0600"
+      - path: "{{ test_base_dir }}/var/lib/settlement_cache"
+        state: directory
+        mode: "0770"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+        files: []
+
+  tasks:
+    - name: Create test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Run the main cultivation playbook
+      ansible.builtin.include_tasks:
+        file: ../src/cultivate_garden.yml
+      vars:
+        garden_config: "{{ garden_config }}" # Pass the test-specific config
+
+    - name: Verify /opt/wasteland_resources directory exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/opt/wasteland_resources"
+      register: wasteland_resources_dir_stat
+      failed_when: not wasteland_resources_dir_stat.stat.exists or wasteland_resources_dir_stat.stat.mode != "0755" or wasteland_resources_dir_stat.stat.pw_name != ansible_user_id or wasteland_resources_dir_stat.stat.gr_name != ansible_user_gid
+
+    - name: Verify /opt/wasteland_resources/scavenged_data.log exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/opt/wasteland_resources/scavenged_data.log"
+      register: scavenged_data_log_stat
+      failed_when: not scavenged_data_log_stat.stat.exists or scavenged_data_log_stat.stat.mode != "0644" or scavenged_data_log_stat.stat.size == 0 or scavenged_data_log_stat.stat.pw_name != ansible_user_id or scavenged_data_log_stat.stat.gr_name != ansible_user_gid
+
+    - name: Verify /opt/wasteland_resources/.resource_marker exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/opt/wasteland_resources/.resource_marker"
+      register: resource_marker_stat
+      failed_when: not resource_marker_stat.stat.exists or resource_marker_stat.stat.mode != "0600" or resource_marker_stat.stat.pw_name != ansible_user_id or resource_marker_stat.stat.gr_name != ansible_user_gid
+
+    - name: Verify /var/lib/settlement_cache directory exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/var/lib/settlement_cache"
+      register: settlement_cache_dir_stat
+      failed_when: not settlement_cache_dir_stat.stat.exists or settlement_cache_dir_stat.stat.mode != "0770" or settlement_cache_dir_stat.stat.pw_name != ansible_user_id or settlement_cache_dir_stat.stat.gr_name != ansible_user_gid
+
+    - name: Clean up test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: The tests run against localhost, creating temporary files and directories.
+      # The 'lookup('pipe', 'date +%s')' ensures a unique temporary directory for each test run,
+      # making the test deterministic and isolated. The cleanup task ensures no side effects.
+      # Using 'ansible_user_id' and 'ansible_user_gid' for ownership checks makes the test
+      # robust across different local execution environments without requiring specific users/groups.
