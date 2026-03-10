@@ -1,0 +1,23 @@
+{
+  "name": "nightly-echo-file-manifestor",
+  "version": "1.0.0",
+  "description": "Creates 'ghost files' (empty placeholders) for specified paths, helping to manage digital echoes and mental clutter.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "utility",
+    "ghost-files",
+    "file-management",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
