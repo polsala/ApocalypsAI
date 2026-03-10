@@ -1,0 +1,2 @@
+import { generateQR } from '../src/main';\n\n// Mock qrcode-terminal\njest.mock('qrcode-terminal', () => ({\n  generate: (text: string, _opts: any, cb: (qr: string) => void) => {\n    // Simple deterministic mock: reverse the text inside a box\n    const mockQr = `---QR---\\n${text.split('').reverse().join('')}\\n---END---`;
+    cb(mockQr);\n  },\n}));\n\ndescribe('generateQR', () => {\n  it('returns mocked QR string', async () => {\n    const result = await generateQR('hello');\n    expect(result).toBe('---QR---\\nolleh\\n---END---');\n  });\n});\n
