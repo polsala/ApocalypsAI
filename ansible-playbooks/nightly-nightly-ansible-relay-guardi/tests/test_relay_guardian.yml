@@ -1,0 +1,84 @@
+---
+- name: Test Nightly Ansible Relay Guardian
+  hosts: localhost
+  gather_facts: no
+  vars:
+    critical_relay_services:
+      - radio_beacon
+      - data_uplink
+      - emergency_broadcast
+
+  tasks:
+    - name: Mock service facts for 'radio_beacon' and 'emergency_broadcast' as stopped, 'data_uplink' as running
+      ansible.builtin.set_fact:
+        ansible_facts:
+          services:
+            radio_beacon.service:
+              state: stopped
+              status: inactive
+              name: radio_beacon.service
+              source: systemd
+            data_uplink.service:
+              state: running
+              status: active
+              name: data_uplink.service
+              source: systemd
+            emergency_broadcast.service:
+              state: stopped
+              status: inactive
+              name: emergency_broadcast.service
+              source: systemd
+      # Mock rationale: Simulates the output of ansible.builtin.service_facts for deterministic testing.
+
+    - name: Initialize relay_guardian_results for test run
+      ansible.builtin.set_fact:
+        relay_guardian_results: {}
+
+    - name: Run the main relay guardian playbook
+      ansible.builtin.include_tasks: ../src/relay_guardian.yml
+      vars:
+        critical_relay_services: "{{ critical_relay_services }}"
+
+    - name: Assert radio_beacon would have been restarted
+      ansible.builtin.assert:
+        that:
+          - "relay_guardian_results.radio_beacon.restart_changed == true"
+        fail_msg: "radio_beacon restart task should have reported 'changed' (would have restarted)"
+      # Mock rationale: Verifies the 'when' condition for restart task. When run with --check, the systemd module
+      # reports 'changed: true' if it *would* have run. This assertion checks if the registered 'changed' status is true.
+
+    - name: Assert data_uplink was running and not restarted
+      ansible.builtin.assert:
+        that:
+          - "relay_guardian_results.data_uplink.restart_changed == false"
+        fail_msg: "data_uplink restart task should have reported 'not changed' (already running)"
+      # Mock rationale: Verifies the 'when' condition for restart task.
+
+    - name: Assert emergency_broadcast would have been restarted
+      ansible.builtin.assert:
+        that:
+          - "relay_guardian_results.emergency_broadcast.restart_changed == true"
+        fail_msg: "emergency_broadcast restart task should have reported 'changed' (would have restarted)"
+      # Mock rationale: Verifies the 'when' condition for restart task.
+
+    - name: Assert final status message for radio_beacon reflects initial mocked state
+      ansible.builtin.assert:
+        that:
+          - "'Relay service \'radio_beacon\' is now stopped.' in relay_guardian_results.radio_beacon.final_status_msg"
+        fail_msg: "Final status for radio_beacon should reflect 'stopped' (before actual restart)"
+      # Mock rationale: Verifies the debug message content based on the initial mocked state. The debug message
+      # reflects the state *before* any hypothetical restart in this offline test setup.
+
+    - name: Assert final status message for data_uplink reflects initial mocked state
+      ansible.builtin.assert:
+        that:
+          - "'Relay service \'data_uplink\' is now running.' in relay_guardian_results.data_uplink.final_status_msg"
+        fail_msg: "Final status for data_uplink should reflect 'running'"
+      # Mock rationale: Verifies the debug message content based on the initial mocked state.
+
+    - name: Assert final status message for emergency_broadcast reflects initial mocked state
+      ansible.builtin.assert:
+        that:
+          - "'Relay service \'emergency_broadcast\' is now stopped.' in relay_guardian_results.emergency_broadcast.final_status_msg"
+        fail_msg: "Final status for emergency_broadcast should reflect 'stopped' (before actual restart)"
+      # Mock rationale: Verifies the debug message content based on the initial mocked state.
