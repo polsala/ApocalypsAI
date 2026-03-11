@@ -1,0 +1,25 @@
+{
+  "name": "nightly-quantum-choice-caster",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool that helps you make decisions by 'quantum casting' a choice from a list of options.",
+  "main": "src/index.js",
+  "bin": {
+    "nightly-quantum-choice-caster": "src/index.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "cli",
+    "decision-making",
+    "whimsical",
+    "node-utils",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
