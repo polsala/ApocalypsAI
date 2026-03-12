@@ -1,0 +1,33 @@
+name: 'Nightly Cosmic PR Aligner'
+description: 'Checks pull request titles and descriptions for "cosmic alignment" based on configurable patterns.'
+inputs:
+  pr-title:
+    description: 'The pull request title to check.'
+    required: false
+    default: ${{ github.event.pull_request.title }}
+  pr-description:
+    description: 'The pull request description (body) to check.'
+    required: false
+    default: ${{ github.event.pull_request.body }}
+  title-regex:
+    description: 'Regular expression pattern for the PR title.'
+    required: true
+  description-regex:
+    description: 'Regular expression pattern for the PR description.'
+    required: true
+  fail-on-mismatch:
+    description: 'Whether to fail the action if patterns do not match.'
+    required: false
+    default: 'true'
+runs:
+  using: 'composite'
+  steps:
+    - name: Check Alignment Script
+      shell: bash
+      run: |
+        "${{ github.action_path }}/src/check_alignment.sh" \
+          "${{ inputs.pr-title }}" \
+          "${{ inputs.pr-description }}" \
+          "${{ inputs.title-regex }}" \
+          "${{ inputs.description-regex }}" \
+          "${{ inputs.fail-on-mismatch }}"

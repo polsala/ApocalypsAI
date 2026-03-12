@@ -1,0 +1,111 @@
+name: Test Cosmic PR Aligner
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  push:
+    branches:
+      - main
+    paths:
+      - 'github-actions/nightly-cosmic-pr-aligner/**'
+
+jobs:
+  test_successful_alignment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with perfectly aligned PR
+        id: aligned_pr
+        uses: ./github-actions/nightly-cosmic-pr-aligner # Path to the action
+        with:
+          pr-title: 'feat: ✨ Add new cosmic feature'
+          pr-description: 'This PR brings cosmic balance to the force. Aligns with the stars.'
+          title-regex: '^(feat|fix|docs|chore|refactor): ✨ .*'
+          description-regex: '.*cosmic balance.*Aligns with the stars.*'
+          fail-on-mismatch: true
+      - name: Verify success
+        run: echo "Test 'aligned_pr' passed as expected."
+
+  test_failed_title_alignment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with misaligned title (should fail)
+        id: misaligned_title
+        uses: ./github-actions/nightly-cosmic-pr-aligner
+        with:
+          pr-title: 'Wrong title format'
+          pr-description: 'This PR brings cosmic balance to the force.'
+          title-regex: '^(feat|fix|docs|chore|refactor): ✨ .*'
+          description-regex: '.*cosmic balance.*'
+          fail-on-mismatch: true
+        continue-on-error: true # Allow workflow to continue to check output
+
+      - name: Verify failure
+        run: |
+          # Mock rationale: The test explicitly checks the outcome of the previous step,
+          # which is determined by the action's internal logic based on hardcoded inputs.
+          # This makes the test deterministic and offline.
+          if [ "${{ steps.misaligned_title.outcome }}" != "failure" ]; then
+            echo "Test 'misaligned_title' was expected to fail but did not."
+            exit 1
+          else
+            echo "Test 'misaligned_title' failed as expected."
+          fi
+
+  test_failed_description_alignment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with misaligned description (should fail)
+        id: misaligned_description
+        uses: ./github-actions/nightly-cosmic-pr-aligner
+        with:
+          pr-title: 'feat: ✨ Add new cosmic feature'
+          pr-description: 'This PR is just a regular PR.'
+          title-regex: '^(feat|fix|docs|chore|refactor): ✨ .*'
+          description-regex: '.*cosmic balance.*'
+          fail-on-mismatch: true
+        continue-on-error: true
+
+      - name: Verify failure
+        run: |
+          # Mock rationale: Similar to the title test, this checks the outcome based on
+          # hardcoded inputs, ensuring determinism and offline execution.
+          if [ "${{ steps.misaligned_description.outcome }}" != "failure" ]; then
+            echo "Test 'misaligned_description' was expected to fail but did not."
+            exit 1
+          else
+            echo "Test 'misaligned_description' failed as expected."
+          fi
+
+  test_no_fail_on_mismatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with misaligned title but no fail (should succeed)
+        id: no_fail_mismatch
+        uses: ./github-actions/nightly-cosmic-pr-aligner
+        with:
+          pr-title: 'Wrong title format'
+          pr-description: 'This PR is just a regular PR.'
+          title-regex: '^(feat|fix|docs|chore|refactor): ✨ .*'
+          description-regex: '.*cosmic balance.*'
+          fail-on-mismatch: false
+      - name: Verify success (despite mismatch)
+        run: |
+          # Mock rationale: This test verifies the 'fail-on-mismatch' logic with hardcoded
+          # inputs, confirming the action's behavior without external dependencies.
+          if [ "${{ steps.no_fail_mismatch.outcome }}" != "success" ]; then
+            echo "Test 'no_fail_mismatch' was expected to succeed but did not."
+            exit 1
+          else
+            echo "Test 'no_fail_mismatch' succeeded as expected (fail-on-mismatch was false)."
+          fi
