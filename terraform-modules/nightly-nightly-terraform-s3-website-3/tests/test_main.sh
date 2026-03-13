@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Mock rationale: verify that the module defines an aws_s3_bucket resource named website_bucket\n\nset -e\n\nif grep -q 'resource "aws_s3_bucket" "website_bucket"' src/main.tf; then\n  echo "PASS: aws_s3_bucket \"website_bucket\" found"\n  exit 0\nelse\n  echo "FAIL: aws_s3_bucket \"website_bucket\" not found"\n  exit 1\nfi\n
