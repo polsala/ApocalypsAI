@@ -1,0 +1,61 @@
+---
+- name: Test Daily Comfort File Distribution
+  hosts: localhost
+  gather_facts: false
+  become: yes
+
+  vars:
+    test_comfort_file_path: "/tmp/ansible_test_comfort_file.txt"
+    test_comfort_message: |
+      Test comfort message for verification.
+      All systems go!
+
+  tasks:
+    - name: Set test specific variables for the main playbook
+      ansible.builtin.set_fact:
+        comfort_file_path: "{{ test_comfort_file_path }}"
+        comfort_message: "{{ test_comfort_message }}"
+      # Mock rationale: Overriding variables to point to a temporary, controlled path
+      # and specific content for deterministic, offline testing.
+
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ test_comfort_file_path }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Run the main comfort file distribution playbook
+      ansible.builtin.include_tasks:
+        file: ../src/distribute_comfort.yml
+      vars:
+        comfort_file_path: "{{ test_comfort_file_path }}"
+        comfort_message: "{{ test_comfort_message }}"
+      # Mock rationale: Running the actual playbook against localhost with mocked variables.
+
+    - name: Verify the comfort file exists
+      ansible.builtin.stat:
+        path: "{{ test_comfort_file_path }}"
+      register: file_stat_result
+
+    - name: Assert comfort file exists after playbook run
+      ansible.builtin.assert:
+        that:
+          - file_stat_result.stat.exists
+        fail_msg: "Comfort file {{ test_comfort_file_path }} was not created!"
+
+    - name: Verify the content of the comfort file
+      ansible.builtin.command: "cat {{ test_comfort_file_path }}"
+      register: file_content
+      changed_when: false
+
+    - name: Assert comfort file content is correct
+      ansible.builtin.assert:
+        that:
+          - file_content.stdout == test_comfort_message
+        fail_msg: "Comfort file content mismatch! Expected '{{ test_comfort_message }}', got '{{ file_content.stdout }}'"
+
+    - name: Clean up test comfort file
+      ansible.builtin.file:
+        path: "{{ test_comfort_file_path }}"
+        state: absent
+      # Mock rationale: Ensuring a clean state after the test.

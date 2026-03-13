@@ -1,0 +1,46 @@
+---
+- name: Distribute Daily Comfort File
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure comfort file directory exists
+      ansible.builtin.file:
+        path: "{{ comfort_file_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Place the daily comfort file
+      ansible.builtin.copy:
+        content: "{{ comfort_message }}"
+        dest: "{{ comfort_file_path }}"
+        mode: '0644'
+      register: comfort_file_status
+
+    - name: Report comfort file distribution status
+      ansible.builtin.debug:
+        msg: "Comfort file {{ comfort_file_path }} {{ 'created' if comfort_file_status.changed else 'already present' }}."
+
+    - name: Verify comfort file presence and content
+      ansible.builtin.stat:
+        path: "{{ comfort_file_path }}"
+      register: comfort_file_stat_result
+
+    - name: Assert comfort file exists
+      ansible.builtin.assert:
+        that:
+          - comfort_file_stat_result.stat.exists
+        fail_msg: "Comfort file {{ comfort_file_path }} does not exist!"
+
+    - name: Assert comfort file content is correct (optional, but good for testing)
+      ansible.builtin.command: "cat {{ comfort_file_path }}"
+      register: file_content
+      changed_when: false
+
+    - name: Check content
+      ansible.builtin.assert:
+        that:
+          - file_content.stdout == comfort_message
+        fail_msg: "Comfort file content mismatch!"
