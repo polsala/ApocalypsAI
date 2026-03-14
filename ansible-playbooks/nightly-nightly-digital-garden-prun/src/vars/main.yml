@@ -1,0 +1,11 @@
+---
+# Directories to clean temporary files from
+temp_dirs_to_clean:
+  - /tmp
+  - /var/tmp
+
+# Maximum age for temporary files to be kept (e.g., '1d', '7d', '30m')
+max_age_temp_files: "1d"
+
+# Path on the remote host where the garden report will be saved
+report_output_path: "/tmp"

@@ -1,0 +1,102 @@
+---
+- name: Test Digital Garden Pruner
+  hosts: test_host
+  become: yes
+  vars:
+    test_base_dir: "/tmp/ansible_garden_test_env"
+    temp_dirs_to_clean: ["{{ test_base_dir }}/tmp", "{{ test_base_dir }}/var/tmp"]
+    max_age_temp_files: "1s" # Use 1 second for easy testing of 'old' files
+    report_output_path: "{{ test_base_dir }}/reports"
+
+  tasks:
+    - name: Clean up previous test environment if it exists
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+
+    - name: Create test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create mock temporary directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0777'
+      loop: "{{ temp_dirs_to_clean }}"
+
+    - name: Create an old file in mock /tmp
+      ansible.builtin.shell:
+        cmd: | 
+          touch -t {{ (ansible_date_time.epoch | int - 10) | timestamp_to_datetime | strftime('%Y%m%d%H%M.%S') }} {{ test_base_dir }}/tmp/old_file.txt
+          echo "old content" > {{ test_base_dir }}/tmp/old_file.txt
+      args:
+        creates: "{{ test_base_dir }}/tmp/old_file.txt"
+      changed_when: false
+      # Mock rationale: Create a file with a modification time older than max_age_temp_files (1 second) for deterministic cleanup testing.
+
+    - name: Create a new file in mock /tmp
+      ansible.builtin.copy:
+        content: "new content"
+        dest: "{{ test_base_dir }}/tmp/new_file.txt"
+        mode: '0644'
+      # Mock rationale: Create a file with a recent modification time to ensure it is NOT removed.
+
+    - name: Run the main prune_garden playbook with test variables
+      ansible.builtin.include_tasks:
+        file: ../src/prune_garden.yml
+      vars:
+        temp_dirs_to_clean: "{{ temp_dirs_to_clean }}"
+        max_age_temp_files: "{{ max_age_temp_files }}"
+        report_output_path: "{{ report_output_path }}"
+        # apt/yum clean tasks will run on system paths, not our mock paths.
+        # Their successful execution is implicitly tested by the playbook not failing.
+
+    - name: Assert old file is removed
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/tmp/old_file.txt"
+      register: old_file_stat
+    - name: Verify old file is absent
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old file '{{ test_base_dir }}/tmp/old_file.txt' was not removed."
+
+    - name: Assert new file is present
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/tmp/new_file.txt"
+      register: new_file_stat
+    - name: Verify new file is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New file '{{ test_base_dir }}/tmp/new_file.txt' was unexpectedly removed."
+
+    - name: Assert report file is generated
+      ansible.builtin.stat:
+        path: "{{ report_output_path }}/garden_report.txt"
+      register: report_file_stat
+    - name: Verify report file exists
+      ansible.builtin.assert:
+        that:
+          - report_file_stat.stat.exists
+        fail_msg: "Garden report file '{{ report_output_path }}/garden_report.txt' was not generated."
+
+    - name: Assert report file contains expected content
+      ansible.builtin.slurp:
+        src: "{{ report_output_path }}/garden_report.txt"
+      register: report_content
+    - name: Verify report content
+      ansible.builtin.assert:
+        that:
+          - "'Digital Garden Health Report' in (report_content['content'] | b64decode)"
+          - "'Mount Point: /' in (report_content['content'] | b64decode)"
+        fail_msg: "Garden report content is not as expected."
+      # Mock rationale: Check for key phrases to ensure the template was rendered and populated with some system facts.
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
