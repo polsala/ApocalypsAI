@@ -1,0 +1,37 @@
+.temporal-input-form {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.temporal-input-form input {
+  padding: 12px 15px;
+  border: 1px solid #61dafb;
+  border-radius: 5px;
+  background-color: #3a3f47;
+  color: white;
+  font-size: 1rem;
+  width: 70%;
+  max-width: 400px;
+}
+
+.temporal-input-form input::placeholder {
+  color: #aaa;
+}
+
+.temporal-input-form button {
+  padding: 12px 20px;
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.temporal-input-form button:hover {
+  background-color: #21a1f1;
+}
