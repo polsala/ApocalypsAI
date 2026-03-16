@@ -1,0 +1,24 @@
+{
+  "name": "nightly-wasteland-barter-buddy",
+  "version": "1.0.0",
+  "description": "A CLI tool to calculate fair trade values for post-apocalyptic resources.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/test_barterCalculator.js"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "wasteland",
+    "barter",
+    "survival",
+    "utility"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "yargs": "^17.1.1"
+  }
+}
