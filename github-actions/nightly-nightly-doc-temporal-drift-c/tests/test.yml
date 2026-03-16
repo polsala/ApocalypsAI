@@ -1,0 +1,183 @@
+name: Test Documentation Temporal Drift Detector
+on: [push] # Or workflow_dispatch for manual testing
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for git diff between arbitrary SHAs
+
+      - name: Setup dummy git repo for testing
+        run: |
+          mkdir test_repo
+          cd test_repo
+          git init
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+          # Create base branch
+          echo "Initial code line 1" > src/code.js
+          echo "Initial doc line 1" > README.md
+          git add .
+          git commit -m "Initial commit"
+          git branch base-branch
+          BASE_SHA=$(git rev-parse HEAD)
+          echo "BASE_SHA=$BASE_SHA" >> $GITHUB_ENV
+
+          # Create feature branch with code changes, no doc changes
+          git checkout -b feature-code-only
+          echo "New code line 2" >> src/code.js
+          echo "New code line 3" >> src/code.js
+          echo "New code line 4" >> src/code.js
+          echo "New code line 5" >> src/code.js
+          echo "New code line 6" >> src/code.js
+          echo "New code line 7" >> src/code.js
+          echo "New code line 8" >> src/code.js
+          echo "New code line 9" >> src/code.js
+          echo "New code line 10" >> src/code.js
+          echo "New code line 11" >> src/code.js # 11 lines changed
+          git add .
+          git commit -m "Feature: significant code changes"
+          HEAD_SHA_CODE_ONLY=$(git rev-parse HEAD)
+          echo "HEAD_SHA_CODE_ONLY=$HEAD_SHA_CODE_ONLY" >> $GITHUB_ENV
+
+          # Create feature branch with code and doc changes
+          git checkout base-branch
+          git checkout -b feature-code-and-doc
+          echo "Another new code line 2" >> src/code.js
+          echo "Another new code line 3" >> src/code.js
+          echo "Another new code line 4" >> src/code.js
+          echo "Another new code line 5" >> src/code.js
+          echo "Another new code line 6" >> src/code.js
+          echo "Another new code line 7" >> src/code.js
+          echo "Another new code line 8" >> src/code.js
+          echo "Another new code line 9" >> src/code.js
+          echo "Another new code line 10" >> src/code.js
+          echo "Another new code line 11" >> src/code.js # 11 lines changed
+          echo "Updated doc line 2" >> README.md
+          git add .
+          git commit -m "Feature: code and doc changes"
+          HEAD_SHA_CODE_AND_DOC=$(git rev-parse HEAD)
+          echo "HEAD_SHA_CODE_AND_DOC=$HEAD_SHA_CODE_AND_DOC" >> $GITHUB_ENV
+
+          # Create feature branch with minor code changes
+          git checkout base-branch
+          git checkout -b feature-minor-code
+          echo "Minor code change" >> src/code.js # 1 line changed
+          git add .
+          git commit -m "Feature: minor code changes"
+          HEAD_SHA_MINOR_CODE=$(git rev-parse HEAD)
+          echo "HEAD_SHA_MINOR_CODE=$HEAD_SHA_MINOR_CODE" >> $GITHUB_ENV
+
+          # Create feature branch with only doc changes
+          git checkout base-branch
+          git checkout -b feature-doc-only
+          echo "Only doc change" >> README.md
+          git add .
+          git commit -m "Feature: doc only changes"
+          HEAD_SHA_DOC_ONLY=$(git rev-parse HEAD)
+          echo "HEAD_SHA_DOC_ONLY=$HEAD_SHA_DOC_ONLY" >> $GITHUB_ENV
+
+      - name: Test Case 1: Significant code changes, no doc changes (Drift Expected)
+        id: test_drift_expected
+        working-directory: test_repo # Run the action within the dummy repo
+        env:
+          GITHUB_BASE_REF: ${{ env.BASE_SHA }}
+          GITHUB_SHA: ${{ env.HEAD_SHA_CODE_ONLY }}
+        uses: ../ # Refers to the action in the current repository (relative to test_repo)
+        with:
+          doc-paths: 'README.md'
+          code-paths: 'src/**'
+          threshold-lines: 10
+          github-token: 'dummy-token' # Mock rationale: Not used for actual API calls in test
+
+      - name: Assert Test Case 1
+        run: |
+          echo "Drift detected: ${{ steps.test_drift_expected.outputs.drift-detected }}"
+          echo "Suggestion comment: ${{ steps.test_drift_expected.outputs.suggestion-comment }}"
+          if [ "${{ steps.test_drift_expected.outputs.drift-detected }}" != "true" ]; then
+            echo "Test Case 1 Failed: Expected drift-detected to be 'true'"
+            exit 1
+          fi
+          if [[ ! "${{ steps.test_drift_expected.outputs.suggestion-comment }}" =~ "Temporal Drift Detected!" ]]; then
+            echo "Test Case 1 Failed: Expected suggestion comment to contain 'Temporal Drift Detected!'"
+            exit 1
+          fi
+
+      - name: Test Case 2: Significant code changes, with doc changes (No Drift Expected)
+        id: test_no_drift_doc_updated
+        working-directory: test_repo
+        env:
+          GITHUB_BASE_REF: ${{ env.BASE_SHA }}
+          GITHUB_SHA: ${{ env.HEAD_SHA_CODE_AND_DOC }}
+        uses: ../
+        with:
+          doc-paths: 'README.md'
+          code-paths: 'src/**'
+          threshold-lines: 10
+          github-token: 'dummy-token'
+
+      - name: Assert Test Case 2
+        run: |
+          echo "Drift detected: ${{ steps.test_no_drift_doc_updated.outputs.drift-detected }}"
+          if [ "${{ steps.test_no_drift_doc_updated.outputs.drift-detected }}" != "false" ]; then
+            echo "Test Case 2 Failed: Expected drift-detected to be 'false'"
+            exit 1
+          fi
+          if [ -n "${{ steps.test_no_drift_doc_updated.outputs.suggestion-comment }}" ]; then
+            echo "Test Case 2 Failed: Expected suggestion comment to be empty"
+            exit 1
+          fi
+
+      - name: Test Case 3: Minor code changes, no doc changes (No Drift Expected)
+        id: test_no_drift_minor_code
+        working-directory: test_repo
+        env:
+          GITHUB_BASE_REF: ${{ env.BASE_SHA }}
+          GITHUB_SHA: ${{ env.HEAD_SHA_MINOR_CODE }}
+        uses: ../
+        with:
+          doc-paths: 'README.md'
+          code-paths: 'src/**'
+          threshold-lines: 10
+          github-token: 'dummy-token'
+
+      - name: Assert Test Case 3
+        run: |
+          echo "Drift detected: ${{ steps.test_no_drift_minor_code.outputs.drift-detected }}"
+          if [ "${{ steps.test_no_drift_minor_code.outputs.drift-detected }}" != "false" ]; then
+            echo "Test Case 3 Failed: Expected drift-detected to be 'false'"
+            exit 1
+          fi
+          if [ -n "${{ steps.test_no_drift_minor_code.outputs.suggestion-comment }}" ]; then
+            echo "Test Case 3 Failed: Expected suggestion comment to be empty"
+            exit 1
+          fi
+
+      - name: Test Case 4: Only doc changes (No Drift Expected)
+        id: test_no_drift_doc_only
+        working-directory: test_repo
+        env:
+          GITHUB_BASE_REF: ${{ env.BASE_SHA }}
+          GITHUB_SHA: ${{ env.HEAD_SHA_DOC_ONLY }}
+        uses: ../
+        with:
+          doc-paths: 'README.md'
+          code-paths: 'src/**'
+          threshold-lines: 10
+          github-token: 'dummy-token'
+
+      - name: Assert Test Case 4
+        run: |
+          echo "Drift detected: ${{ steps.test_no_drift_doc_only.outputs.drift-detected }}"
+          if [ "${{ steps.test_no_drift_doc_only.outputs.drift-detected }}" != "false" ]; then
+            echo "Test Case 4 Failed: Expected drift-detected to be 'false'"
+            exit 1
+          fi
+          if [ -n "${{ steps.test_no_drift_doc_only.outputs.suggestion-comment }}" ]; then
+            echo "Test Case 4 Failed: Expected suggestion comment to be empty"
+            exit 1
+          fi

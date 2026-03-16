@@ -1,0 +1,34 @@
+name: 'Documentation Temporal Drift Detector'
+description: 'Checks for potential documentation drift when code changes significantly.'
+inputs:
+  doc-paths:
+    description: 'Comma-separated list of documentation file patterns (e.g., "README.md,docs/**").'
+    required: false
+    default: 'README.md'
+  code-paths:
+    description: 'Comma-separated list of code directory patterns (e.g., "src/**,agents/**").'
+    required: false
+    default: 'src/**,agents/**'
+  threshold-lines:
+    description: 'Minimum number of lines changed in code paths to trigger a doc check.'
+    required: false
+    default: '10'
+  github-token:
+    description: 'GitHub token for API calls (e.g., commenting on PRs).'
+    required: true
+    default: '${{ github.token }}'
+outputs:
+  drift-detected:
+    description: 'True if potential documentation drift was detected.'
+    value: ${{ steps.drift_check.outputs.drift-detected }}
+  suggestion-comment:
+    description: 'The suggested comment to add to the PR if drift is detected.'
+    value: ${{ steps.drift_check.outputs.suggestion-comment }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Temporal Drift Check
+      id: drift_check
+      shell: bash
+      run: |
+        ${{ github.action_path }}/src/main.sh
