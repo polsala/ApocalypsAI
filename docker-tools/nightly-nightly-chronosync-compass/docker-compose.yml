@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  chronosync-compass:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    container_name: nightly-chronosync-compass-app
+    restart: unless-stopped
