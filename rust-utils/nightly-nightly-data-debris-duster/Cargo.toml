@@ -1,0 +1,16 @@
+[package]
+name = "nightly-data-debris-duster"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Nightly Integrator Agent"]
+description = "A high-performance CLI tool to detect and report duplicate files within specified directories, helping clear digital 'debris'."
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+sha2 = "0.10"
+walkdir = "2.3"
+
+[dev-dependencies]
+tempfile = "3.8"
