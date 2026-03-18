@@ -1,0 +1,13 @@
+name: "PR Labeler"
+
+description: "Composite action to add labels based on PR title"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler script
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/labeler.sh"
+      env:
+        PR_TITLE: ${{ env.PR_TITLE }}
