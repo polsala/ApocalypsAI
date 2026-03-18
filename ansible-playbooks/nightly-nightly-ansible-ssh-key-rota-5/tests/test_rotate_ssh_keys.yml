@@ -1,0 +1,19 @@
+- hosts: localhost
+  become: true
+  vars:
+    ssh_key_dir: "/tmp/ssh_test"
+  pre_tasks:
+    - name: Ensure test SSH key directory exists
+      file:
+        path: "{{ ssh_key_dir }}"
+        state: directory
+        mode: "0700"
+  tasks:
+    - name: Include rotation tasks
+      import_tasks: "../src/rotate_ssh_keys.yml"
+
+    - name: Verify rotation fact is set
+      assert:
+        that:
+          - ssh_key_rotated | default(false)
+        fail_msg: "SSH keys were not rotated during the test run"
