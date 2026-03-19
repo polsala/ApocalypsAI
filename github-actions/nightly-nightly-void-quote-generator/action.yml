@@ -1,0 +1,1 @@
+name: "Void Quote Generator"\ndescription: "Generates a random apocalyptic quote."\ninputs:\n  prefix:\n    description: "Optional prefix to prepend to the quote."\n    required: false\n    default: ""\noutputs:\n  quote:\n    description: "The generated quote (with optional prefix)."\nruns:\n  using: "node12"\n  main: "src/index.js"
