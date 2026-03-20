@@ -1,0 +1,1 @@
+name: "Apocalypse Tip"\ndescription: "Prints a random post‑apocalyptic survival tip"\ninputs:\n  tip-index:\n    description: "Optional index of tip to use"\n    required: false\n    default: ""\nruns:\n  using: "node16"\n  main: "src/tip_generator.js"
