@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  fridge-monitor:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - fridge_data:/app/fridge_monitor.db # Persist the SQLite database
+    restart: unless-stopped
+
+volumes:
+  fridge_data:
