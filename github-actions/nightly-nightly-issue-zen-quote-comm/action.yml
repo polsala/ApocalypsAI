@@ -1,0 +1,10 @@
+name: Issue Zen Quote Commenter
+description: Posts a random zen quote as a comment on newly opened issues.
+author: ApocalypsAI
+runs:
+  using: "composite"
+  steps:
+    - name: Run Zen Quote Script
+      shell: bash
+      run: |
+        "${{ github.action_path }}/src/main.sh"
