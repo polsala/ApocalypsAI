@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  scavenger-bot:
+    build: .
+    environment:
+      SIMULATION_DAYS: 10
+      ZONES: "Deserted Outpost,Sunken Ship,Forgotten Bunker"
+      RESOURCES_PER_ZONE: 7
+      RESOURCE_TYPES: "Canned Goods,Ammunition,Tools,Maps"
+    # Optional: if you want to see the output immediately
+    # tty: true
+    # stdin_open: true
