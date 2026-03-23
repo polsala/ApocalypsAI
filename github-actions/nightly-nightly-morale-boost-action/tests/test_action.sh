@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n# Mock rationale: using deterministic seed to avoid randomness.\nexport INPUT_SEED=2\noutput=$(node src/index.js 2>&1)\nexpected=\"A single step forward is still progress, even in the void.\"\nif echo \"$output\" | grep -q \"$expected\"; then\n  echo \"PASS\"\n  exit 0\nelse\n  echo \"FAIL: expected '$expected' in output\"\n  exit 1\nfi
