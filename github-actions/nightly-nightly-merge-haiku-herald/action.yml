@@ -1,0 +1,19 @@
+name: 'Nightly Merge Haiku Herald'
+description: 'Posts a celebratory haiku to a specified issue or discussion upon successful PR merge to main.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication.'
+    required: true
+  target-type:
+    description: 'Type of target to comment on: "issue" or "discussion".'
+    required: false
+    default: 'issue'
+  target-id:
+    description: 'The ID of the issue or discussion to post the haiku to.'
+    required: true
+outputs:
+  haiku-posted:
+    description: 'Boolean indicating if a haiku was successfully posted.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
