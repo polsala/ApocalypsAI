@@ -1,0 +1,9 @@
+---
+log_retention_days: 30
+tmp_retention_days: 7
+log_paths:
+  - /var/log
+#  - /var/log/nginx # Uncomment or add custom log paths as needed
+tmp_paths:
+  - /tmp
+  - /var/tmp

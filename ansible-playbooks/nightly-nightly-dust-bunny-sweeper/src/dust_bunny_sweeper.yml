@@ -1,0 +1,80 @@
+---
+- name: Whimsically sweep away digital dust bunnies
+  hosts: all
+  become: yes # Needed for cleaning system directories like /var/log, /tmp, apt cache
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Gather facts about the system
+      ansible.builtin.setup
+      tags: always
+
+    - name: Sweep away old log file tumbleweeds
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ log_retention_days }}d"
+        file_type: file
+      loop: "{{ log_paths }}"
+      register: old_logs_to_delete
+      changed_when: old_logs_to_delete.files | length > 0
+      # Mock rationale: In a real run, this finds files. In check_mode, it reports what it *would* find.
+      # For testing, we'll override log_paths to a temporary directory and verify its output.
+
+    - name: Delete old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs_to_delete.files }}"
+      when: old_logs_to_delete.files | length > 0
+      # Mock rationale: In a real run, this deletes files. In check_mode, it reports what it *would* delete.
+      # For testing, we'll operate on a temporary directory and verify file absence.
+
+    - name: Report on swept logs
+      ansible.builtin.debug:
+        msg: "Swept {{ old_logs_to_delete.files | length }} old log files from {{ item }}"
+      loop: "{{ log_paths }}"
+      when: old_logs_to_delete.files | length > 0
+      # Mock rationale: Provides output for verification in tests.
+
+    - name: Clear out temporary file cobwebs
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ tmp_retention_days }}d"
+        file_type: file
+      loop: "{{ tmp_paths }}"
+      register: old_tmp_files_to_delete
+      changed_when: old_tmp_files_to_delete.files | length > 0
+      # Mock rationale: Similar to log files, finds files in temporary paths.
+
+    - name: Delete old temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files_to_delete.files }}"
+      when: old_tmp_files_to_delete.files | length > 0
+      # Mock rationale: Deletes files in temporary paths.
+
+    - name: Report on cleared temporary files
+      ansible.builtin.debug:
+        msg: "Cleared {{ old_tmp_files_to_delete.files | length }} temporary files from {{ item }}"
+      loop: "{{ tmp_paths }}"
+      when: old_tmp_files_to_delete.files | length > 0
+      # Mock rationale: Provides output for verification in tests.
+
+    - name: Dust off package cache (apt)
+      ansible.builtin.apt:
+        autoclean: yes
+        clean: yes
+      when: ansible_pkg_mgr == 'apt'
+      # Mock rationale: This task is idempotent. In check_mode, it reports if it *would* clean.
+      # For testing, we can assert that this task is included and would run on apt systems.
+
+    - name: Dust off package cache (yum/dnf)
+      ansible.builtin.yum:
+        clean: all
+      when: ansible_pkg_mgr == 'yum' or ansible_pkg_mgr == 'dnf'
+      # Mock rationale: Similar to apt, idempotent.
+
+    - name: Whimsical completion message
+      ansible.builtin.debug:
+        msg: "Digital dust bunnies have been swept! Your system feels lighter and brighter."
