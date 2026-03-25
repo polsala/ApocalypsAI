@@ -1,0 +1,9 @@
+name: 'Commit Emoji Adorner'
+description: 'Posts a random emoji comment on new pull requests.'
+inputs:
+  token:
+    description: 'GitHub token'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
