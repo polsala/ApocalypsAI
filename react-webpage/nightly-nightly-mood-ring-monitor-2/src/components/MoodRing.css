@@ -1,0 +1,32 @@
+/* src/components/MoodRing.css */
+.mood-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.mood-ring {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 5px solid #61dafb;
+  transition: background-color 0.5s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #282c34; /* Text color inside the ring if any */
+}
+
+.mood-text {
+  margin-top: 15px;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.mood-score {
+  font-size: 0.9em;
+  color: #bbb;
+}
