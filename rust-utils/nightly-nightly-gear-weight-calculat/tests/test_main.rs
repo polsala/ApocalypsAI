@@ -1,0 +1,1 @@
+use gear_weight_calculator::{Item, compute_total};\n\n#[test]\nfn test_compute_total() {\n    let items = vec![\n        Item { name: "Backpack".to_string(), weight: 2.5 },\n        Item { name: "Water".to_string(), weight: 1.2 },\n        Item { name: "Tent".to_string(), weight: 5.0 },\n    ];\n    let total = compute_total(&items);\n    assert!((total - 8.7).abs() < 1e-6);\n}\n
