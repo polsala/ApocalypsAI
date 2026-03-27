@@ -1,0 +1,1 @@
+import time\nimport os\n\ndef main():\n    print("Demo app running. Check /app/state.txt for state.")\n    # This app just keeps running, allowing external interaction\n    # and demonstrating a persistent file.\n    while True:\n        time.sleep(3600) # Sleep for an hour, effectively running indefinitely\n\nif __name__ == "__main__":\n    main()
