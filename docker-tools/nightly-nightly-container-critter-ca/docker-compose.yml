@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  critter_caretaker:
+    build: .
+    container_name: nightly-container-critter-care
+    volumes:
+      # Mount the Docker socket to allow the caretaker to interact with the Docker daemon
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Comma-separated list of container names to monitor and potentially refresh
+      # Example: PET_CONTAINERS="my-web-app,my-database"
+      - PET_CONTAINERS=${PET_CONTAINERS:-}
+      # Set to "true" to enable pruning of unused Docker objects (images, volumes, networks)
+      - PRUNE_ENABLED=${PRUNE_ENABLED:-"true"}
+      # Set to "true" to enable automatic restart of unwell (stopped/exited) pet containers
+      - REFRESH_ENABLED=${REFRESH_ENABLED:-"false"}
+    # To run periodically, you would typically use a cron job on the host
+    # or a separate scheduler service to trigger this compose file.
+    # For a standalone run, just 'docker-compose up --build --force-recreate'
+    restart: "no" # This service is designed for manual or cron-triggered runs, not continuous restart by Docker.
