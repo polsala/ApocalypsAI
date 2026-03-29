@@ -1,0 +1,38 @@
+name: 'Ghost Branch Buster'
+description: 'Identifies and optionally deletes branches that haven''t been updated in a configurable period.'
+inputs:
+  repo-token:
+    description: 'GitHub token with permissions to read branches and delete them.'
+    required: true
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: true
+    default: '90'
+  exempt-branches:
+    description: 'Comma-separated list of branch names to exempt from being considered stale (e.g., main, develop).'
+    required: false
+    default: 'main,master,develop,dev'
+  dry-run:
+    description: 'If true, only reports stale branches without deleting them.'
+    required: false
+    default: 'true'
+  delete-stale:
+    description: 'If true and dry-run is false, deletes identified stale branches.'
+    required: false
+    default: 'false'
+  issue-label:
+    description: 'Optional label to add to the issue created for stale branches.'
+    required: false
+  issue-title:
+    description: 'Optional title for the issue created for stale branches. Defaults to "Stale Branches Detected".'
+    required: false
+outputs:
+  stale-branches-count:
+    description: 'The number of stale branches found.'
+  deleted-branches-count:
+    description: 'The number of branches deleted.'
+  stale-branches-list:
+    description: 'A JSON array of the names of stale branches.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
