@@ -1,0 +1,13 @@
+name: PR Labeler
+description: Auto‑label pull requests based on title keywords
+inputs:
+  token:
+    description: GITHUB_TOKEN with repo scope
+    required: true
+  mapping:
+    description: JSON string mapping keywords to labels (e.g. {\"bug\":\"bug\",\"feat\":\"feature\"})
+    required: false
+    default: '{"bug":"bug","feat":"feature","docs":"documentation"}'
+runs:
+  using: node12
+  main: src/index.js
