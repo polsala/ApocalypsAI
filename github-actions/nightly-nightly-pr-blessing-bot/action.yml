@@ -1,0 +1,16 @@
+name: 'Nightly PR Blessing Bot'
+description: 'Posts a whimsical, apocalypse-themed blessing to successfully merged Pull Requests.'
+inputs:
+  github-token:
+    description: 'GitHub token with write access to pull requests.'
+    required: true
+  blessing-type:
+    description: 'Type of blessing to post: "affirmation", "emoji", or "quote".'
+    required: false
+    default: 'affirmation'
+outputs:
+  blessing-message:
+    description: 'The blessing message that was posted.'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -1,0 +1,18 @@
+{
+  "name": "nightly-pr-blessing-bot",
+  "version": "1.0.0",
+  "description": "A GitHub Action that posts a whimsical, apocalypse-themed blessing to successfully merged Pull Requests.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.js -o dist --license licenses.txt",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@vercel/ncc": "^0.38.1"
+  }
+}
