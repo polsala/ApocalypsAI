@@ -1,0 +1,73 @@
+---
+- name: Deploy Morale Booster Webpage
+  hosts: webservers
+  become: yes
+  vars_files:
+    - vars/morale_content.yml
+
+  tasks:
+    - name: Ensure Nginx is installed
+      ansible.builtin.package:
+        name: nginx
+        state: present
+      # Mock rationale: In a real scenario, this would install Nginx.
+      # For offline testing, we assume this step succeeds and subsequent tasks
+      # will create files as if Nginx were present.
+
+    - name: Create web root directory for morale booster
+      ansible.builtin.file:
+        path: /var/www/morale_booster
+        state: directory
+        mode: '0755'
+        owner: www-data
+        group: www-data
+      # Mock rationale: Creates the target directory for the webpage.
+
+    - name: Deploy morale-boosting HTML page
+      ansible.builtin.template:
+        src: templates/morale_page.html.j2
+        dest: /var/www/morale_booster/index.html
+        mode: '0644'
+        owner: www-data
+        group: www-data
+      # Mock rationale: Renders the HTML template with dynamic content.
+
+    - name: Configure Nginx for morale booster
+      ansible.builtin.blockinfile:
+        path: /etc/nginx/sites-available/morale_booster
+        create: yes
+        mode: '0644'
+        block: |
+          server {
+              listen 80;
+              listen [::]:80;
+              server_name {{ ansible_hostname }}; # Or a specific domain
+              root /var/www/morale_booster;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+      # Mock rationale: Creates or updates the Nginx site configuration.
+
+    - name: Enable morale booster Nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/morale_booster
+        dest: /etc/nginx/sites-enabled/morale_booster
+        state: link
+      # Mock rationale: Creates a symlink to enable the Nginx site.
+
+    - name: Remove default Nginx site (if exists)
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      ignore_errors: yes # Default might not exist or be named differently
+      # Mock rationale: Cleans up default config to avoid conflicts.
+
+    - name: Restart Nginx service
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+      # Mock rationale: In a real scenario, this would restart Nginx.
+      # For offline testing, we assume this step succeeds.
