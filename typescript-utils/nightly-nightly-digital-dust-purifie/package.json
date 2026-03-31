@@ -1,0 +1,30 @@
+{
+  "name": "nightly-digital-dust-purifier",
+  "version": "1.0.0",
+  "description": "A TypeScript CLI tool to identify and suggest actions for old or unused files, treating them as digital dust bunnies.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "bin": {
+    "nightly-digital-dust-purifier": "dist/index.js"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "utility",
+    "file-management",
+    "cleanup"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
