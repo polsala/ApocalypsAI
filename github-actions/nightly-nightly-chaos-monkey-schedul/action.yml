@@ -1,0 +1,50 @@
+name: 'Nightly Chaos Monkey Scheduler'
+description: 'Inject scheduled chaos into your CI pipelines like a post-apocalyptic gremlin.'
+author: 'ApocalypsAI'
+
+inputs:
+  mode:
+    description: 'Type of chaos to simulate (e.g., network-delay, cpu-stress, kill-service)'
+    required: false
+    default: 'random'
+  duration:
+    description: 'Duration of the chaos event (e.g., 5s, 1m)'
+    required: false
+    default: '10s'
+  target-service:
+    description: 'Optional service name to limit scope'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Run Chaos Simulation
+      shell: bash
+      run: |
+        echo "[CHAOS SIMULATION STARTED] Mode: ${{ inputs.mode }}, Duration: ${{ inputs.duration }}"
+        case ${{ inputs.mode }} in
+          network-delay)
+            tc qdisc add dev eth0 root netem delay 100ms
+            sleep ${{ inputs.duration }}
+            tc qdisc del dev eth0 root
+            ;;
+          cpu-stress)
+            timeout ${{ inputs.duration }} stress --cpu 4 &>/dev/null || true
+            ;;
+          kill-service)
+            if [ -n "${{ inputs.target-service }}" ]; then
+              pkill -f "${{ inputs.target-service }}" || true
+            fi
+            ;;
+          *)
+            echo "Unknown mode. Choosing random..."
+            modes=("network-delay" "cpu-stress")
+            choice=${modes[$RANDOM % ${#modes[@]}]}
+            echo "Selected: $choice"
+            exec "$0" --mode="$choice" --duration="${{ inputs.duration }}"
+            ;;
+        esac
+        echo "[CHAOS SIMULATION ENDED]"
+branding:
+  icon: 'zap'
+  color: 'red'
