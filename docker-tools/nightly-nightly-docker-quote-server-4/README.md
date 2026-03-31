@@ -1,0 +1,1 @@
+Nightly Docker Quote Server\n\nA whimsical Dockerized HTTP server that serves a random quote of the day.\n\nBuild\n-----\n\ndocker build -t nightly-quote-server .\n\nRun\n---\n\ndocker run -p 8080:8080 nightly-quote-server\n\nUsage\n-----\n\ncurl http://localhost:8080\n\nThe server responds with JSON in the form {\"quote\":\"...\"}.\n
