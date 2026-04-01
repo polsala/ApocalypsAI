@@ -1,0 +1,90 @@
+---
+- name: Ensure temporal consistency across the fleet
+  hosts: all
+  become: true
+  gather_facts: false # Facts will be explicitly set or gathered conditionally for deterministic testing
+  vars:
+    ntp_servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+    force_sync: false # Set to true to force an immediate clock sync
+
+  tasks:
+    - name: Gather facts for package manager detection (if not already set)
+      ansible.builtin.setup:
+        gather_subset:
+          - distribution
+          - pkg_mgr
+      when: ansible_pkg_mgr is not defined or ansible_distribution is not defined
+      # Mock rationale: This task is conditional. In a test environment where facts
+      # are mocked via set_fact, this task will be skipped, ensuring deterministic
+      # behavior based on the mocked facts. In a real run, it will gather facts.
+
+    - name: Install NTP client (apt)
+      ansible.builtin.apt:
+        name: ntp
+        state: present
+        update_cache: true
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Install NTP client (yum/dnf)
+      ansible.builtin.package:
+        name: chrony
+        state: present
+      when: ansible_pkg_mgr == 'yum' or ansible_pkg_mgr == 'dnf'
+
+    - name: Configure NTP (chrony for RHEL/CentOS)
+      ansible.builtin.template:
+        src: templates/chrony.conf.j2
+        dest: /etc/chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: ansible_pkg_mgr == 'yum' or ansible_pkg_mgr == 'dnf'
+      notify: Restart chrony
+
+    - name: Configure NTP (ntp for Debian/Ubuntu)
+      ansible.builtin.template:
+        src: templates/ntp.conf.j2
+        dest: /etc/ntp.conf
+        owner: root
+        group: root
+        mode: '0644'
+      when: ansible_pkg_mgr == 'apt'
+      notify: Restart ntp
+
+    - name: Ensure NTP service is running and enabled (chrony)
+      ansible.builtin.service:
+        name: chronyd
+        state: started
+        enabled: true
+      when: ansible_pkg_mgr == 'yum' or ansible_pkg_mgr == 'dnf'
+
+    - name: Ensure NTP service is running and enabled (ntp)
+      ansible.builtin.service:
+        name: ntp
+        state: started
+        enabled: true
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Force immediate clock synchronization
+      ansible.builtin.command: ntpdate -s {{ ntp_servers[0] }}
+      when: force_sync | bool
+      changed_when: true # Always report change for ntpdate as it's an action
+      # Mock rationale: In a real scenario, ntpdate would modify the system clock.
+      # For testing, we assume this command would be executed and report a change.
+      # The 'changed_when: true' ensures the task is always marked as changed if executed.
+
+  handlers:
+    - name: Restart chrony
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+      when: ansible_pkg_mgr == 'yum' or ansible_pkg_mgr == 'dnf'
+
+    - name: Restart ntp
+      ansible.builtin.service:
+        name: ntp
+        state: restarted
+      when: ansible_pkg_mgr == 'apt'
