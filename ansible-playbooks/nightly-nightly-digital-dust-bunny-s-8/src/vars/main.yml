@@ -1,0 +1,7 @@
+# src/vars/main.yml
+cleanup_age_days: 30 # Files older than 30 days will be removed
+cleanup_paths:
+  - /tmp
+  - /var/tmp
+  - /var/log/old_app_logs
+  - /home/*/cache
