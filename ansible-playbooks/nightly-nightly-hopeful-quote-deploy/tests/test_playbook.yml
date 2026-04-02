@@ -1,0 +1,39 @@
+- name: Test hopeful quote deployment
+  hosts: local
+  gather_facts: false
+  vars:
+    test_quote: "Test quote for CI."
+    test_dir: "/tmp/ansible_test_quotes"
+    test_file: "test.txt"
+  tasks:
+    - name: Include main playbook with test vars
+      import_playbook: "../src/playbook.yml"
+      vars:
+        quote: "{{ test_quote }}"
+        dest_dir: "{{ test_dir }}"
+        dest_file: "{{ test_file }}"
+
+    - name: Verify file exists
+      stat:
+        path: "{{ test_dir }}/{{ test_file }}"
+      register: file_stat
+
+    - name: Assert file was created
+      assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.isreg
+
+    - name: Read file content
+      slurp:
+        src: "{{ test_dir }}/{{ test_file }}"
+      register: file_content
+
+    - name: Decode content
+      set_fact:
+        decoded_content: "{{ file_content.content | b64decode }}"
+
+    - name: Assert content matches
+      assert:
+        that:
+          - decoded_content == test_quote
