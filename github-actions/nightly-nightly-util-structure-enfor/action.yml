@@ -1,0 +1,26 @@
+name: 'Nightly Util Structure Enforcer'
+description: 'Verifies the structural integrity of newly added or modified utility folders, ensuring they conform to the README.md, src/, and tests/ layout.'
+inputs:
+  util-path:
+    description: 'The path to the utility folder to check (e.g., python-utils/my-util).'
+    required: true
+outputs:
+  status:
+    description: 'The status of the structure check (valid or invalid).'
+    value: ${{ steps.check.outputs.status }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      shell: bash
+      run: |
+        # Pass the input to the script
+        "${{ github.action_path }}/src/check_structure.sh" "${{ inputs.util-path }}"
+        # Capture the exit code and set an output
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "status=valid" >> $GITHUB_OUTPUT
+        else
+          echo "status=invalid" >> $GITHUB_OUTPUT
+        fi
+        exit $EXIT_CODE

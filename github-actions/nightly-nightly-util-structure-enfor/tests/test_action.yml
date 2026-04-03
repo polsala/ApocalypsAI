@@ -1,0 +1,110 @@
+name: Test Nightly Util Structure Enforcer
+
+on: [workflow_dispatch] # Manual trigger for testing
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create test utility folders
+        run: |
+          mkdir -p python-utils/valid-util/src
+          mkdir -p python-utils/valid-util/tests
+          echo "# Valid Util" > python-utils/valid-util/README.md
+
+          mkdir -p python-utils/missing-readme/src
+          mkdir -p python-utils/missing-readme/tests
+
+          mkdir -p python-utils/missing-src
+          echo "# Missing Src" > python-utils/missing-src/README.md
+          mkdir -p python-utils/missing-src/tests
+
+          mkdir -p python-utils/missing-tests/src
+          echo "# Missing Tests" > python-utils/missing-tests/README.md
+
+          mkdir -p python-utils/empty-util # Missing all
+
+          echo "Test setup complete."
+
+      - name: Test valid utility structure
+        id: valid_check
+        uses: ./
+        with:
+          util-path: python-utils/valid-util
+        # Mock rationale: This test is deterministic and offline. It creates a mock file system structure
+        # to simulate a valid utility, then runs the action against it. The success or failure is
+        # determined by the action's internal logic based on these mock files.
+
+      - name: Assert valid utility passed
+        run: |
+          if [ "${{ steps.valid_check.outputs.status }}" != "valid" ]; then
+            echo "Error: Valid utility check failed."
+            exit 1
+          fi
+          echo "Valid utility check passed as expected."
+
+      - name: Test utility missing README.md (expect failure)
+        id: missing_readme_check
+        uses: ./
+        with:
+          util-path: python-utils/missing-readme
+        continue-on-error: true # Expecting this to fail
+
+      - name: Assert missing README.md failed
+        run: |
+          if [ "${{ steps.missing_readme_check.outputs.status }}" != "invalid" ]; then
+            echo "Error: Utility missing README.md did not fail as expected."
+            exit 1
+          fi
+          echo "Utility missing README.md failed as expected."
+
+      - name: Test utility missing src/ (expect failure)
+        id: missing_src_check
+        uses: ./
+        with:
+          util-path: python-utils/missing-src
+        continue-on-error: true
+
+      - name: Assert missing src/ failed
+        run: |
+          if [ "${{ steps.missing_src_check.outputs.status }}" != "invalid" ]; then
+            echo "Error: Utility missing src/ did not fail as expected."
+            exit 1
+          fi
+          echo "Utility missing src/ failed as expected."
+
+      - name: Test utility missing tests/ (expect failure)
+        id: missing_tests_check
+        uses: ./
+        with:
+          util-path: python-utils/missing-tests
+        continue-on-error: true
+
+      - name: Assert missing tests/ failed
+        run: |
+          if [ "${{ steps.missing_tests_check.outputs.status }}" != "invalid" ]; then
+            echo "Error: Utility missing tests/ did not fail as expected."
+            exit 1
+          fi
+          echo "Utility missing tests/ failed as expected."
+
+      - name: Test non-existent utility path (expect success, warning)
+        id: non_existent_check
+        uses: ./
+        with:
+          util-path: python-utils/does-not-exist
+        # Mock rationale: This test simulates a scenario where a utility path might be removed or
+        # never existed. The action is designed to gracefully handle this by issuing a warning
+        # and exiting successfully, as the "structure" of a non-existent path is vacuously valid
+        # for the purpose of *enforcing* structure.
+
+      - name: Assert non-existent path passed
+        run: |
+          if [ "${{ steps.non_existent_check.outputs.status }}" != "valid" ]; then
+            echo "Error: Non-existent utility path check failed."
+            exit 1
+          fi
+          echo "Non-existent utility path check passed as expected (with warning)."
