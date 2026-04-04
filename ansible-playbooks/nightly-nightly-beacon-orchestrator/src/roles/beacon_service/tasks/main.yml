@@ -1,0 +1,20 @@
+---
+- name: Ensure Nginx package is installed
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Deploy beacon status HTML page
+  ansible.builtin.template:
+    src: beacon_status.html.j2
+    dest: /usr/share/nginx/html/beacon_status.html
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Nginx
+
+- name: Ensure Nginx service is running and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
