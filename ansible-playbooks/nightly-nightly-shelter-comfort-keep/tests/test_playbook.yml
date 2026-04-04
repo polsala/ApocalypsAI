@@ -1,0 +1,56 @@
+---
+- name: Test Nightly Shelter Comfort Keeper - All OK Scenario
+  hosts: localhost
+  gather_facts: yes # Needed for ansible_hostname, ansible_date_time
+  vars:
+    report_file: "test_comfort_report_ok.txt"
+  environment:
+    MOCK_SOLAR_CLEANLINESS: "1.0"
+    MOCK_WATER_CLOG: "0.05"
+    MOCK_MOSS_BRIGHTNESS: "95"
+    MOCK_NOSH_STOCK: "30"
+    MOCK_CHIMES_TANGLE: "0.01"
+  tasks:
+    - name: Run the main playbook with all systems OK
+      ansible.builtin.import_playbook: playbook.yml
+
+    - name: Assert no issues detected in OK scenario
+      ansible.builtin.assert:
+        that:
+          - not (hostvars['localhost']['power_issue_detected'] | default(false))
+          - not (hostvars['localhost']['water_issue_detected'] | default(false))
+          - not (hostvars['localhost']['lighting_issue_detected'] | default(false))
+          - not (hostvars['localhost']['snacks_issue_detected'] | default(false))
+          - not (hostvars['localhost']['security_issue_detected'] | default(false))
+        fail_msg: "Expected no issues, but some were detected in OK scenario."
+      # Mock rationale: We set environment variables to simulate ideal sensor readings.
+      # The assert task then verifies that the playbook's logic correctly interprets
+      # these ideal conditions as 'no issues detected'. This is deterministic and offline.
+
+- name: Test Nightly Shelter Comfort Keeper - Issues Detected Scenario
+  hosts: localhost
+  gather_facts: yes # Needed for ansible_hostname, ansible_date_time
+  vars:
+    report_file: "test_comfort_report_issues.txt"
+  environment:
+    MOCK_SOLAR_CLEANLINESS: "0.5"
+    MOCK_WATER_CLOG: "0.3"
+    MOCK_MOSS_BRIGHTNESS: "50"
+    MOCK_NOSH_STOCK: "5"
+    MOCK_CHIMES_TANGLE: "0.15"
+  tasks:
+    - name: Run the main playbook with issues present
+      ansible.builtin.import_playbook: playbook.yml
+
+    - name: Assert issues detected in Issues scenario
+      ansible.builtin.assert:
+        that:
+          - hostvars['localhost']['power_issue_detected'] | default(false)
+          - hostvars['localhost']['water_issue_detected'] | default(false)
+          - hostvars['localhost']['lighting_issue_detected'] | default(false)
+          - hostvars['localhost']['snacks_issue_detected'] | default(false)
+          - hostvars['localhost']['security_issue_detected'] | default(false)
+        fail_msg: "Expected issues, but some were not detected in Issues scenario."
+      # Mock rationale: We set environment variables to simulate problematic sensor readings.
+      # The assert task then verifies that the playbook's logic correctly identifies
+      # these problematic conditions as 'issues detected'. This is deterministic and offline.
