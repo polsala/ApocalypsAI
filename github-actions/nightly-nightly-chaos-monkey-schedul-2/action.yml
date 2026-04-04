@@ -1,0 +1,29 @@
+name: 'Chaos Monkey Scheduler'
+description: 'Randomly schedules chaos engineering events during off-peak hours'
+author: 'ApocalypsAI'
+inputs:
+  probability:
+    description: 'Likelihood of scheduling an event (0.0 - 1.0)'
+    required: false
+    default: '0.5'
+  start_hour:
+    description: 'Start of off-peak window (24-hour format)'
+    required: false
+    default: '22'
+  end_hour:
+    description: 'End of off-peak window (24-hour format)'
+    required: false
+    default: '6'
+  dry_run:
+    description: 'If true, log event without actually scheduling'
+    required: false
+    default: 'false'
+outputs:
+  event_scheduled:
+    description: 'Whether a chaos event was scheduled'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+branding:
+  icon: 'zap'
+  color: 'red'
