@@ -1,0 +1,46 @@
+name: 'Chaos Monkey Dispatcher'
+description: 'Randomly disrupts CI pipelines to test resilience.'
+author: 'ApocalypsAI'
+inputs:
+  failure_rate:
+    description: 'Probability of causing a failure (0.0 to 1.0)'
+    required: false
+    default: '0.1'
+  delay_max_seconds:
+    description: 'Maximum artificial delay in seconds'
+    required: false
+    default: '3'
+runs:
+  using: 'composite'
+  steps:
+    - name: Chaos Injection Decision
+      shell: bash
+      run: |
+        FAILURE_RATE=${{ inputs.failure_rate }}
+        DELAY_MAX=${{ inputs.delay_max_seconds }}
+        echo "Failure rate set to $FAILURE_RATE"
+        echo "Max delay set to $DELAY_MAX seconds"
+        RAND=$(awk -v seed="$(date +%s%N)" 'BEGIN { srand(seed); print int(rand()*100) }')
+        THRESHOLD=$(echo "$FAILURE_RATE * 100" | bc)
+        if (( $(echo "$RAND < $THRESHOLD" | bc -l) )); then
+          echo "CHAOS_MONKEY_EVENT=failure" >> $GITHUB_ENV
+        else
+          echo "CHAOS_MONKEY_EVENT=delay" >> $GITHUB_ENV
+        fi
+    - name: Apply Chaos Delay
+      if: env.CHAOS_MONKEY_EVENT == 'delay'
+      shell: bash
+      run: |
+        DELAY_MAX=${{ inputs.delay_max_seconds }}
+        SLEEP_TIME=$((RANDOM % DELAY_MAX + 1))
+        echo "Injecting artificial delay of $SLEEP_TIME second(s)..."
+        sleep $SLEEP_TIME
+    - name: Trigger Failure
+      if: env.CHAOS_MONKEY_EVENT == 'failure'
+      shell: bash
+      run: |
+        echo "💥 Chaos Monkey strikes! Inducing failure."
+        exit 1
+branding:
+  icon: 'zap'
+  color: 'red'
