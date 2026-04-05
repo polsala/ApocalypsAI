@@ -1,0 +1,32 @@
+name: 'Nightly Chrono-Corrector'
+description: 'Scans repository files for outdated year references and suggests corrections.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  scan-paths:
+    description: 'Comma-separated list of file paths or directories to scan for year references.'
+    required: false
+    default: 'README.md,LICENSE'
+  current-year:
+    description: 'The year to check against. Defaults to current year.'
+    required: false
+    default: ''
+outputs:
+  anomalies-found:
+    description: 'True if any outdated year references were found.'
+    value: ${{ steps.run_script.outputs.anomalies-found }}
+  report:
+    description: 'A markdown report of findings.'
+    value: ${{ steps.run_script.outputs.report }}
+runs:
+  using: 'composite'
+  steps:
+    - id: run_script
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_SCAN_PATHS: ${{ inputs.scan-paths }}
+        INPUT_CURRENT_YEAR: ${{ inputs.current-year }}
+      run: |
+        bash "${{ github.action_path }}/src/main.sh"
