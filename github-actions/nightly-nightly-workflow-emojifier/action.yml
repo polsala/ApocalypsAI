@@ -1,0 +1,16 @@
+name: 'Nightly Workflow Emojifier'
+description: 'Translates workflow job statuses into whimsical emojis for fun and flair.'
+inputs:
+  status:
+    description: 'The status string (e.g., success, failure, cancelled, skipped).'
+    required: true
+  default-emoji:
+    description: 'The emoji to use if the status is not recognized.'
+    required: false
+    default: '❓'
+outputs:
+  emoji:
+    description: 'The whimsical emoji for the status.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
