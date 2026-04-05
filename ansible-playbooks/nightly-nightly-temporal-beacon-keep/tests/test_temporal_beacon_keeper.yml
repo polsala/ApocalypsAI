@@ -1,0 +1,116 @@
+---
+- name: Test Temporal Beacon Keeper Playbook Logic
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Test Scenario 1: NTP service active, enabled, and synchronized
+      block:
+        - name: Mock facts for Scenario 1
+          set_fact:
+            timesyncd_service_result:
+              status:
+                ActiveState: "active"
+                LoadState: "loaded"
+                UnitFileState: "enabled"
+            timedatectl_output:
+              rc: 0
+              stdout: |
+                System clock synchronized: yes
+                NTP service: active
+                RTC in local TZ: no
+                NTP synchronized: yes
+                RTC in local TZ: no
+          # Mock rationale: Simulates a healthy systemd-timesyncd service and successful time synchronization for deterministic testing.
+
+        - name: Parse time synchronization status (Scenario 1)
+          set_fact:
+            ntp_service_active: "{{ timesyncd_service_result.status.ActiveState | default('unknown') }}"
+            ntp_service_enabled: "{{ timesyncd_service_result.status.LoadState | default('loaded') == 'loaded' and timesyncd_service_result.status.UnitFileState | default('unknown') == 'enabled' }}"
+            ntp_sync_status: "Unknown"
+
+        - name: Determine synchronization status from timedatectl output (Scenario 1)
+          set_fact:
+            ntp_sync_status: "Synchronized" if 'NTP synchronized: yes' in timedatectl_output.stdout else "Not Synchronized"
+          when: timedatectl_output.rc == 0 and timedatectl_output.stdout is defined
+
+        - name: Assert Scenario 1 results
+          assert:
+            that:
+              - ntp_service_active == "active"
+              - ntp_service_enabled == true
+              - ntp_sync_status == "Synchronized"
+            msg: "Scenario 1 (Active, Enabled, Synchronized) failed."
+
+    - name: Test Scenario 2: NTP service inactive, enabled, and not synchronized
+      block:
+        - name: Mock facts for Scenario 2
+          set_fact:
+            timesyncd_service_result:
+              status:
+                ActiveState: "inactive"
+                LoadState: "loaded"
+                UnitFileState: "enabled"
+            timedatectl_output:
+              rc: 0
+              stdout: |
+                System clock synchronized: no
+                NTP service: inactive
+                RTC in local TZ: no
+                NTP synchronized: no
+                RTC in local TZ: no
+          # Mock rationale: Simulates a systemd-timesyncd service that is not running but enabled, and time is not synchronized.
+
+        - name: Parse time synchronization status (Scenario 2)
+          set_fact:
+            ntp_service_active: "{{ timesyncd_service_result.status.ActiveState | default('unknown') }}"
+            ntp_service_enabled: "{{ timesyncd_service_result.status.LoadState | default('loaded') == 'loaded' and timesyncd_service_result.status.UnitFileState | default('unknown') == 'enabled' }}"
+            ntp_sync_status: "Unknown"
+
+        - name: Determine synchronization status from timedatectl output (Scenario 2)
+          set_fact:
+            ntp_sync_status: "Synchronized" if 'NTP synchronized: yes' in timedatectl_output.stdout else "Not Synchronized"
+          when: timedatectl_output.rc == 0 and timedatectl_output.stdout is defined
+
+        - name: Assert Scenario 2 results
+          assert:
+            that:
+              - ntp_service_active == "inactive"
+              - ntp_service_enabled == true
+              - ntp_sync_status == "Not Synchronized"
+            msg: "Scenario 2 (Inactive, Enabled, Not Synchronized) failed."
+
+    - name: Test Scenario 3: timedatectl command fails
+      block:
+        - name: Mock facts for Scenario 3
+          set_fact:
+            timesyncd_service_result:
+              status:
+                ActiveState: "active"
+                LoadState: "loaded"
+                UnitFileState: "enabled"
+            timedatectl_output:
+              rc: 1 # Simulate command failure
+              stdout: ""
+              stderr: "Failed to query systemd: Connection refused"
+          # Mock rationale: Simulates a scenario where the timedatectl command itself fails, leading to an 'Unknown' synchronization status.
+
+        - name: Parse time synchronization status (Scenario 3)
+          set_fact:
+            ntp_service_active: "{{ timesyncd_service_result.status.ActiveState | default('unknown') }}"
+            ntp_service_enabled: "{{ timesyncd_service_result.status.LoadState | default('loaded') == 'loaded' and timesyncd_service_result.status.UnitFileState | default('unknown') == 'enabled' }}"
+            ntp_sync_status: "Unknown"
+
+        - name: Determine synchronization status from timedatectl output (Scenario 3)
+          set_fact:
+            ntp_sync_status: "Synchronized" if 'NTP synchronized: yes' in timedatectl_output.stdout else "Not Synchronized"
+          when: timedatectl_output.rc == 0 and timedatectl_output.stdout is defined
+
+        - name: Assert Scenario 3 results
+          assert:
+            that:
+              - ntp_service_active == "active"
+              - ntp_service_enabled == true
+              - ntp_sync_status == "Unknown"
+            msg: "Scenario 3 (timedatectl failure) failed."
