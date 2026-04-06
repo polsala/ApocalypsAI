@@ -1,0 +1,47 @@
+---
+- name: Sow daily seeds in the digital garden
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/garden_settings.yml
+
+  vars:
+    # Default current_date, can be overridden by CLI or include_tasks vars
+    current_date: "{{ lookup('pipe', 'date +%Y-%m-%d') }}"
+    # Mock rationale: In a real run, this uses the system date.
+    # For testing, this variable will be explicitly overridden by the test playbook.
+
+  tasks:
+    - name: Ensure digital garden path exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Construct daily note filename
+      ansible.builtin.set_fact:
+        daily_note_filename: "{{ garden_path }}/{{ filename_prefix }}-{{ current_date }}.md"
+
+    - name: Check if daily note already exists
+      ansible.builtin.stat:
+        path: "{{ daily_note_filename }}"
+      register: daily_note_stat
+
+    - name: Create daily thought seed if it doesn't exist
+      ansible.builtin.template:
+        src: templates/daily_seed.md.j2
+        dest: "{{ daily_note_filename }}"
+        mode: '0644'
+      when: not daily_note_stat.stat.exists
+      register: seed_creation_result
+
+    - name: Report on seed sowing
+      ansible.builtin.debug:
+        msg: |
+          {% if seed_creation_result.changed is defined and seed_creation_result.changed %}
+          Successfully planted a new seed: {{ daily_note_filename }}
+          {% else %}
+          No new seed planted today. {{ daily_note_filename }} already exists.
+          {% endif %}
