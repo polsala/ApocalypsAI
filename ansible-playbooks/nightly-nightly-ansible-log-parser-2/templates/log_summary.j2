@@ -1,0 +1,11 @@
+Log Analysis Summary for {{ inventory_hostname }}
+===================================================
+
+Log File: {{ log_file_path }}
+
+Detected Errors:
+{% for error, count in error_counts.items() %}
+- {{ error }} ({{ count }} occurrences)
+{% endfor %}
+
+--- End of Report ---

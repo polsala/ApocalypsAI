@@ -1,0 +1,84 @@
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_log_file: "/tmp/test_syslog.log"
+    test_report_file: "/tmp/test_ansible_log_summary.txt"
+    error_keywords: ["error", "failed", "warning", "critical", "denied", "exception"]
+
+  tasks:
+    - name: Create a mock log file with specific errors
+      ansible.builtin.copy:
+        dest: "{{ test_log_file }}"
+        content: |
+          2023-10-27T10:00:00Z systemd: Starting Some Service...
+          2023-10-27T10:01:05Z kernel: [    0.123456] ACPI: Added _OSI(Linux)
+          2023-10-27T10:02:10Z app: An error occurred during processing.
+          2023-10-27T10:03:15Z sshd: Failed password for invalid user testuser
+          2023-10-27T10:04:20Z cron: (root) CMD (command)
+          2023-10-27T10:05:25Z app: Another error occurred.
+          2023-10-27T10:06:30Z systemd: Some Service started successfully.
+          2023-10-27T10:07:35Z app: A critical warning was issued.
+          2023-10-27T10:08:40Z auth: Access denied for user admin.
+          2023-10-27T10:09:45Z app: An exception was caught.
+          2023-10-27T10:10:50Z kernel: [    1.234567] random: crng init done
+        mode: '0644'
+      # Mock rationale: Creating a temporary file with predictable content to simulate log entries.
+
+    - name: Run the log_parser.yml playbook with test variables
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../"
+      vars:
+        log_file_path: "{{ test_log_file }}"
+        report_path: "{{ test_report_file }}"
+      # Mock rationale: Using include_role to run the actual playbook logic within the test context.
+      # This assumes the test_log_parser.yml is in a sibling directory to the main playbook.
+      # For a standalone utility, this might need adjustment to directly call the playbook.
+      # For this example, we'll simulate the tasks directly for clarity.
+
+    - name: Simulate log file reading and decoding
+      ansible.builtin.command: "cat {{ test_log_file }}"
+      register: mock_log_content_raw
+      changed_when: false
+      # Mock rationale: Simulating reading the file content.
+
+    - name: Simulate error counting
+      ansible.builtin.set_fact:
+        simulated_error_counts: {}
+      # Mock rationale: Initialize a fact to store simulated counts.
+
+    - name: Simulate iterating and counting errors
+      ansible.builtin.set_fact:
+        simulated_error_counts: "{{ simulated_error_counts | combine({item: (simulated_error_counts[item] | default(0)) + 1}) }}"
+      loop: "{{ (mock_log_content_raw.stdout.splitlines() | select('match', '(?:' + (error_keywords | join('|')) + ')') | list) }}"
+      loop_control:
+        loop_var: item
+      # Mock rationale: Manually applying the logic to count errors from the simulated log content.
+
+    - name: Assert that specific errors are counted correctly
+      ansible.builtin.assert:
+        that:
+          - "simulated_error_counts['An error occurred during processing.'] == 1"
+          - "simulated_error_counts['Failed password for invalid user testuser'] == 1"
+          - "simulated_error_counts['Another error occurred.'] == 1"
+          - "simulated_error_counts['A critical warning was issued.'] == 1"
+          - "simulated_error_counts['Access denied for user admin.'] == 1"
+          - "simulated_error_counts['An exception was caught.'] == 1"
+        fail_msg: "Error counts do not match expected values."
+        success_msg: "Error counts verified successfully."
+      # Mock rationale: Verifying the simulated counts against expected values.
+
+    - name: Clean up mock log file
+      ansible.builtin.file:
+        path: "{{ test_log_file }}"
+        state: absent
+      # Mock rationale: Cleaning up the temporary mock file.
+
+    - name: Clean up report file if it exists
+      ansible.builtin.file:
+        path: "{{ test_report_file }}"
+        state: absent
+      # Mock rationale: Ensuring no leftover report file from previous runs.

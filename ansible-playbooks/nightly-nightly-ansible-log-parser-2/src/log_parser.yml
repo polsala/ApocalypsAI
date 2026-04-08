@@ -1,0 +1,55 @@
+---
+- name: Parse and summarize system logs
+  hosts: all
+  become: yes
+  vars:
+    log_file_path: "/var/log/syslog"
+    error_keywords: ["error", "failed", "warning", "critical", "denied", "exception"]
+    report_path: "/tmp/ansible_log_summary.txt"
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes if not present)
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: touch
+      when: ansible_env.CI is defined # Only run in CI environment for testing
+
+    - name: Read log file content
+      ansible.builtin.slurp:
+        src: "{{ log_file_path }}"
+      register: log_content_raw
+      ignore_errors: yes # Ignore if log file doesn't exist on target
+
+    - name: Decode log content
+      ansible.builtin.set_fact:
+        log_content: "{{ log_content_raw.content | b64decode }}"
+      when: log_content_raw.content is defined
+
+    - name: Initialize error counts fact
+      ansible.builtin.set_fact:
+        error_counts: {}
+      when: log_content is defined
+
+    - name: Iterate over lines and count errors
+      ansible.builtin.set_fact:
+        error_counts: "{{ error_counts | combine({item: (error_counts[item] | default(0)) + 1}) }}"
+      loop: "{{ log_content.splitlines() | select('match', '(?:' + (error_keywords | join('|')) + ')') | list }}"
+      when: log_content is defined
+      loop_control:
+        loop_var: item
+
+    - name: Generate summary report
+      ansible.builtin.template:
+        src: "templates/log_summary.j2"
+        dest: "{{ report_path }}"
+      when: error_counts is defined and error_counts | length > 0
+
+    - name: Report that no errors were found (if applicable)
+      ansible.builtin.debug:
+        msg: "No significant errors found in {{ log_file_path }} based on keywords."
+      when: error_counts is defined and error_counts | length == 0
+
+    - name: Report if log file was not accessible
+      ansible.builtin.debug:
+        msg: "Could not access log file: {{ log_file_path }}. Please check permissions or path."
+      when: log_content_raw.failed
