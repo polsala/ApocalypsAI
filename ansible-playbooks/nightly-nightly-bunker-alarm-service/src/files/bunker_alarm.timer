@@ -1,0 +1,1 @@
+[Unit]\nDescription=Run Bunker Alarm every minute\n\n[Timer]\nOnBootSec=1min\nOnUnitActiveSec=1min\nUnit=bunker_alarm.service\n\n[Install]\nWantedBy=timers.target\n

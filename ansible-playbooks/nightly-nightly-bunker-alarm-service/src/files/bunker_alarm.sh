@@ -1,0 +1,1 @@
+#!/bin/bash\nwarnings=(\n  "Radiation levels rising!"\n  "Mutant horde approaching!"\n  "Supply caches depleted!"\n  "Water filtration failure!"\n  "Power grid overload!"\n)\nmsg="${warnings[$RANDOM % ${#warnings[@]}]}"\necho "$(date '+%Y-%m-%d %H:%M:%S') - $msg" >> /var/log/bunker_alarm.log\n
