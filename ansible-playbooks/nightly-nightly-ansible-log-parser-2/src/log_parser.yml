@@ -1,0 +1,55 @@
+---
+- name: Parse and summarize log files
+  hosts: log_servers
+  become: yes
+  vars:
+    log_files_to_parse: [] # e.g., ['/var/log/syslog', '/var/log/auth.log']
+    error_keywords: ['ERROR', 'WARN', 'CRITICAL', 'FAILED', 'EXCEPTION']
+    report_output_path: "./log_summary_report.txt"
+
+  tasks:
+    - name: Ensure log files are accessible
+      stat:
+        path: "{{ item }}"
+      loop: "{{ log_files_to_parse }}"
+      register: log_file_stats
+      failed_when: "item not in log_file_stats.results | map(attribute='stat.path')"
+      changed_when: false
+
+    - name: Read log file content and filter errors
+      shell: |
+        cat {{ item }}
+      loop: "{{ log_files_to_parse }}"
+      register: log_contents
+      changed_when: false
+      when: item in log_file_stats.results | map(attribute='stat.path')
+
+    - name: Process and aggregate log data
+      set_fact:
+        aggregated_logs: "{{ aggregated_logs | default([]) + (item.stdout | split('\n') | select('match', '(?i)(' + (error_keywords | join('|')) + ')') | list) }}"
+      loop: "{{ log_contents.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Count error occurrences
+      set_fact:
+        error_counts: "{{ aggregated_logs | community.general.dict_kv_to_list | community.general.groupby('value') | map('combine', {'count': item.length}) | list }}"
+      when: aggregated_logs is defined and aggregated_logs | length > 0
+
+    - name: Generate summary report
+      template: src=../templates/log_report.j2 dest={{ report_output_path }}
+      when: error_counts is defined and error_counts | length > 0
+
+    - name: Report if no errors found
+      debug:
+        msg: "No significant errors found in the specified log files."
+      when: error_counts is not defined or error_counts | length == 0
+
+- name: Display report on control node
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Read and display the generated report
+      debug:
+        msg: "{{ lookup('file', report_output_path) }}"
+      when: report_output_path is defined and (lookup('file', report_output_path) | length > 0)
