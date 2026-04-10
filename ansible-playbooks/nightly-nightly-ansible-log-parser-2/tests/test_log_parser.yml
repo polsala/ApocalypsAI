@@ -1,0 +1,59 @@
+---
+- name: Test Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mocking a log file for testing purposes
+    mock_log_content: |
+      Oct 26 10:00:01 server1 kernel: [    0.000000] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-012) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023
+      Oct 26 10:01:05 server1 systemd[1]: Starting NetworkManager...
+      Oct 26 10:02:10 server1 app[1234]: INFO: Application started successfully.
+      Oct 26 10:03:15 server1 app[1234]: ERROR: Failed to connect to database.
+      Oct 26 10:04:20 server1 systemd[1]: NetworkManager.service: Succeeded.
+      Oct 26 10:05:25 server1 app[1234]: WARNING: Low disk space detected.
+      Oct 26 10:06:30 server1 kernel: [  123.456789] ACPI: button: The lid device is not present.
+      Oct 26 10:07:35 server1 app[1234]: CRITICAL: Unhandled exception occurred.
+      Oct 26 10:08:40 server1 sshd[5678]: Accepted password for user from 192.168.1.1 port 54321 ssh2
+      Oct 26 10:09:45 server1 app[1234]: ERROR: Another database connection failed.
+
+    mock_log_file_path: /tmp/mock_syslog
+    expected_error_keywords: ['error', 'failed', 'warning', 'critical', 'exception', 'denied']
+
+  tasks:
+    - name: Create mock log file
+      copy:
+        content: "{{ mock_log_content }}"
+        dest: "{{ mock_log_file_path }}"
+      delegate_to: localhost
+
+    - name: Run the log parser playbook with mock data
+      include_role:
+        name: ../src # Assuming the playbook is in ../src/log_parser.yml
+      vars:
+        log_file_path: "{{ mock_log_file_path }}"
+        error_keywords: "{{ expected_error_keywords }}"
+      register: playbook_result
+      delegate_to: localhost
+
+    - name: Assert that the playbook ran successfully and produced output
+      assert:
+        that:
+          - "playbook_result is defined"
+          - "playbook_result.results is defined"
+          - "playbook_result.results | length > 0"
+          - "playbook_result.results[0].ansible_facts.log_summary is defined"
+          - "playbook_result.results[0].ansible_facts.log_summary['error'] == 2"
+          - "playbook_result.results[0].ansible_facts.log_summary['failed'] == 2"
+          - "playbook_result.results[0].ansible_facts.log_summary['warning'] == 1"
+          - "playbook_result.results[0].ansible_facts.log_summary['critical'] == 1"
+          - "playbook_result.results[0].ansible_facts.log_summary['exception'] == 1"
+          - "playbook_result.results[0].ansible_facts.log_summary['denied'] == 0"
+      delegate_to: localhost
+
+    - name: Clean up mock log file
+      file:
+        path: "{{ mock_log_file_path }}"
+        state: absent
+      delegate_to: localhost
