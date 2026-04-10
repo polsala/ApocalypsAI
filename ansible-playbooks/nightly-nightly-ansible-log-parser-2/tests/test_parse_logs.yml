@@ -1,0 +1,49 @@
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Define mock log patterns for testing
+    log_patterns:
+      - name: "Test Critical Errors"
+        path: "/tmp/test_syslog.log"
+        regex: "CRITICAL ERROR: Something bad happened"
+        severity: "high"
+        mock_content: "INFO: System started\nWARNING: Low disk space\nCRITICAL ERROR: Something bad happened\nINFO: Process completed\n"
+      - name: "Test Warning Messages"
+        path: "/tmp/test_app.log"
+        regex: "WARNING: Potential issue detected"
+        severity: "medium"
+        mock_content: "DEBUG: Data processed\nWARNING: Potential issue detected\nINFO: Task finished\n"
+
+  tasks:
+    - name: Include the main log parsing playbook
+      include_tasks: ../src/parse_logs.yml
+
+    - name: Assert that critical errors were found
+      assert:
+        that:
+          - "parsed_log_results is defined"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Critical Errors') | first | default({}) | has_key('matches')"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Critical Errors') | first | default({}) | attr('matches') | length == 1"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Critical Errors') | first | default({}) | attr('matches') | contains(['CRITICAL ERROR: Something bad happened'])"
+        fail_msg: "Test Failed: Critical errors not found or incorrect."
+        success_msg: "Test Passed: Critical errors correctly identified."
+
+    - name: Assert that warning messages were found
+      assert:
+        that:
+          - "parsed_log_results is defined"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Warning Messages') | first | default({}) | has_key('matches')"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Warning Messages') | first | default({}) | attr('matches') | length == 1"
+          - "parsed_log_results | selectattr('name', 'equalto', 'Test Warning Messages') | first | default({}) | attr('matches') | contains(['WARNING: Potential issue detected'])"
+        fail_msg: "Test Failed: Warning messages not found or incorrect."
+        success_msg: "Test Passed: Warning messages correctly identified."
+
+    - name: Clean up temporary log files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ log_patterns }}"
