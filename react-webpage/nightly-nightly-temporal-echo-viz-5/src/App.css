@@ -1,0 +1,55 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #282c34;
+  color: white;
+}
+
+.App-header {
+  background-color: #1a1c20;
+  padding: 20px;
+  border-bottom: 1px solid #444;
+}
+
+.App-header h1 {
+  margin: 0;
+  color: #61dafb;
+}
+
+.App-header p {
+  margin-top: 5px;
+  font-style: italic;
+  color: #bbb;
+}
+
+.App-main {
+  display: flex;
+  flex-grow: 1;
+  padding: 20px;
+  gap: 20px;
+}
+
+.map-container {
+  flex: 3;
+  height: 70vh;
+  border: 1px solid #61dafb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sidebar {
+  flex: 1;
+  background-color: #1a1c20;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: left;
+  overflow-y: auto;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
