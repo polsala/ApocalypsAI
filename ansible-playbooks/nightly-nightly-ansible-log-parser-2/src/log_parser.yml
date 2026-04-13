@@ -1,0 +1,41 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars:
+    log_file_path: /var/log/syslog
+    error_keywords: ['error', 'failed', 'warning', 'critical', 'exception', 'denied']
+    log_summary: {}
+
+  tasks:
+    - name: Ensure log file exists
+      stat:
+        path: "{{ log_file_path }}"
+      register: log_file_stat
+
+    - name: Fail if log file does not exist
+      fail:
+        msg: "Log file '{{ log_file_path }}' not found."
+      when: not log_file_stat.stat.exists
+
+    - name: Read log file content
+      slurp:
+        src: "{{ log_file_path }}"
+      register: log_content
+      when: log_file_stat.stat.exists
+
+    - name: Parse log lines for keywords
+      set_fact:
+        log_summary: "{{ log_summary | default({}) | combine({item: (log_content.content | b64decode | split('\n') | select('search', item) | list | length)}, recursive=true) }}"
+      loop: "{{ error_keywords }}"
+      when: log_file_stat.stat.exists
+
+    - name: Display log summary
+      debug:
+        msg: "Log Analysis Summary for {{ inventory_hostname }}: {{ log_summary }}"
+      when: log_file_stat.stat.exists and log_summary is defined and log_summary | length > 0
+
+    - name: Report no errors found if summary is empty
+      debug:
+        msg: "No significant error patterns found in {{ inventory_hostname }} logs."
+      when: log_file_stat.stat.exists and (log_summary is not defined or log_summary | length == 0)
