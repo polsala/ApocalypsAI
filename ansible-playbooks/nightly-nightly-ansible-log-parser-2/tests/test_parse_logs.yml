@@ -1,0 +1,70 @@
+---
+- name: Test Ansible Log Parser Utility
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Override default log paths for testing
+    log_files_to_parse:
+      - /tmp/test_syslog.log
+      - /tmp/test_auth.log
+    error_keywords:
+      - ERROR
+      - WARN
+    report_output_path: "/tmp/test_log_analysis_report.txt"
+
+  tasks:
+    - name: Create dummy log files for testing
+      ansible.builtin.copy:
+        content: |
+          {{ item.content }}
+        dest: "{{ item.dest }}"
+      loop:
+        - dest: "/tmp/test_syslog.log"
+          content: "This is a normal log line.\nAn ERROR occurred here.\nAnother warning: WARN.\n"
+        - dest: "/tmp/test_auth.log"
+          content: "Authentication successful.\nFailed login attempt.\nPermission denied for user.\n"
+
+    - name: Run the log parsing playbook (mocked)
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../src"
+      # In a real scenario, you'd run the actual playbook.
+      # For testing, we're simulating its execution by including its tasks.
+      # This requires the 'src' directory to be structured as a role or using include_tasks.
+      # For simplicity here, we'll assume it's structured to be included.
+      # If not, a more robust test would involve a separate test playbook that calls the main one.
+      # For this example, we'll simulate the outcome of the main playbook.
+      # Mock rationale: Simulating the execution of the main playbook and its output.
+      # The actual 'parse_logs.yml' would be executed here in a real test setup.
+      # For this JSON response, we'll assert against the expected output file.
+
+    - name: Assert that the report file was created
+      ansible.builtin.stat:
+        path: "{{ report_output_path }}"
+      register: report_file_stat
+      assert:
+        that:
+          - report_file_stat.stat.exists
+
+    - name: Read the generated report content
+      ansible.builtin.slurp:
+        src: "{{ report_output_path }}"
+      register: report_content_slurp
+
+    - name: Assert report content contains expected keywords and counts
+      assert:
+        that:
+          - "'ERROR | 1' in (report_content_slurp.content | b64decode)"
+          - "'WARN | 1' in (report_content_slurp.content | b64decode)"
+          - "'failed | 1' in (report_content_slurp.content | b64decode)"
+          - "'permission denied | 1' in (report_content_slurp.content | b64decode)"
+
+    - name: Clean up dummy log files and report
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/test_syslog.log"
+        - "/tmp/test_auth.log"
+        - "{{ report_output_path }}"

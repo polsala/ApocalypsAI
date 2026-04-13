@@ -1,0 +1,16 @@
+log_files_to_parse:
+  - /var/log/syslog
+  - /var/log/auth.log
+  - /var/log/kern.log
+  - /var/log/daemon.log
+
+error_keywords:
+  - ERROR
+  - WARN
+  - CRITICAL
+  - failed
+  - exception
+  - segfault
+  - permission denied
+
+report_output_path: "./log_analysis_report.txt"

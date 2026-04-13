@@ -1,0 +1,15 @@
+# Log Analysis Report
+
+Generated on: {{ ansible_date_time.iso8601 }}
+
+## Keyword Frequency Summary
+
+{% if keyword_counts is defined and keyword_counts | length > 0 %}
+| Keyword    | Count |
+|------------|-------|
+{% for keyword, count in keyword_counts.items() %}
+| {{ keyword }} | {{ count }} |
+{% endfor %}
+{% else %}
+No keywords found or logs processed.
+{% endif %}
