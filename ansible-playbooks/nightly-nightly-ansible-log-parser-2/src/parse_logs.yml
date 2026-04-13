@@ -1,0 +1,46 @@
+---
+- name: Parse system logs
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/log_patterns.yml
+
+  tasks:
+    - name: Ensure log directory exists (for testing purposes)
+      file:
+        path: "{{ item.path | dirname }}"
+        state: directory
+      loop: "{{ log_patterns }}"
+      when: ansible_connection == 'local' # Only for local testing setup
+
+    - name: Create mock log file (for testing purposes)
+      copy:
+        content: "{{ item.mock_content | default('This is a sample log line.\n') }}"
+        dest: "{{ item.path }}"
+      loop: "{{ log_patterns }}"
+      when: ansible_connection == 'local' # Only for local testing setup
+
+    - name: Parse log file for patterns
+      community.general.regex_search:
+        file: "{{ item.path }}"
+        search_regex: "{{ item.regex }}"
+      loop: "{{ log_patterns }}"
+      register: log_matches
+      ignore_errors: yes # Continue even if a log file is not found
+
+    - name: Collect and report findings
+      set_fact:
+        parsed_log_results: "{{ parsed_log_results | default([]) + [ {'name': item.item.name, 'path': item.item.path, 'matches': item.matches, 'severity': item.item.severity | default('info')} ] }}"
+      loop: "{{ log_matches }}"
+      when: item.matches is defined and item.matches | length > 0
+
+    - name: Display log analysis results
+      debug:
+        msg: "Log Analysis Results for {{ item.name }} ({{ item.severity }}): Found {{ item.matches | length }} matches in {{ item.path }}. Matches: {{ item.matches }}"
+      loop: "{{ parsed_log_results }}"
+      when: parsed_log_results is defined and parsed_log_results | length > 0
+
+    - name: No relevant log entries found message
+      debug:
+        msg: "No relevant log entries found based on defined patterns."
+      when: parsed_log_results is not defined or parsed_log_results | length == 0

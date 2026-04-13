@@ -1,0 +1,16 @@
+# Define the log patterns to search for.
+# Each pattern requires a 'name', 'path' to the log file, and a 'regex' to match.
+# An optional 'severity' field can be added for reporting.
+log_patterns:
+  - name: "System Critical Errors"
+    path: "/var/log/syslog"
+    regex: "ERROR.*critical"
+    severity: "high"
+  - name: "Failed SSH Logins"
+    path: "/var/log/auth.log"
+    regex: "Failed password for invalid user"
+    severity: "medium"
+  - name: "Application Warnings"
+    path: "/var/log/myapp/app.log"
+    regex: "WARNING:.*"
+    severity: "low"
