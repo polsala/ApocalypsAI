@@ -1,0 +1,56 @@
+---
+- name: Parse System Logs and Identify Errors
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/log_config.yml
+
+  tasks:
+    - name: Ensure log files exist (for testing purposes, will be skipped if not present)
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ log_files_to_parse }}"
+      register: log_file_stats
+      ignore_errors: yes
+
+    - name: Collect log content from specified files
+      ansible.builtin.command: "cat {{ item.stat.path }}"
+      loop: "{{ log_file_stats.results }}"
+      when: item.stat is defined and item.stat.exists
+      register: log_contents
+      changed_when: false
+
+    - name: Process log content and count keywords
+      ansible.builtin.set_fact:
+        parsed_logs: "{{ parsed_logs | default({}) | combine({ item.item.stat.path: item.stdout }) }}"
+      loop: "{{ log_contents.results }}"
+      loop_control:
+        label: "{{ item.item.stat.path }}"
+
+    - name: Aggregate keyword counts across all logs
+      ansible.builtin.set_fact:
+        keyword_counts: "{{ keyword_counts | default({}) }}"
+      loop: "{{ log_files_to_parse }}"
+      loop_control:
+        label: "{{ item }}"
+      vars:
+        current_log_content: "{{ parsed_logs.get(item, '') }}"
+        current_keyword_counts: "{{ keyword_counts | default({}) }}"
+      block:
+        - name: Count occurrences of each error keyword in the current log
+          ansible.builtin.set_fact:
+            current_keyword_counts: "{{ current_keyword_counts | combine({ keyword: (current_log_content.splitlines() | select("search", keyword) | list | length) }) }}"
+          loop: "{{ error_keywords }}"
+          loop_control:
+            label: "{{ keyword }}"
+
+        - name: Update overall keyword counts
+          ansible.builtin.set_fact:
+            keyword_counts: "{{ current_keyword_counts | combine(current_keyword_counts, recursive=true) }}"
+
+    - name: Generate summary report
+      ansible.builtin.template:
+        src: templates/log_report.j2
+        dest: "{{ report_output_path }}"
+      delegate_to: localhost
+      run_once: true
