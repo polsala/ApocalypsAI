@@ -1,0 +1,72 @@
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mock log content to simulate /var/log/syslog
+    mock_log_content: |
+      2023-10-27 10:00:01 server1 kernel: [    0.000000] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-030) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023
+      2023-10-27 10:00:05 server1 systemd[1]: Starting Network Manager...
+      2023-10-27 10:01:10 server1 apt[1234]: E: Failed to fetch http://archive.ubuntu.com/ubuntu/dists/jammy-updates/InRelease 404  Not Found [IP: 91.189.91.39 80]
+      2023-10-27 10:02:00 server1 systemd[1]: Network Manager started.
+      2023-10-27 10:03:00 server1 sshd[5678]: error: PAM: authentication error for root from 192.168.1.100 port 54321 ssh2
+      2023-10-27 10:04:00 server1 systemd[1]: Warning: Disk space critically low on /var/log.
+      2023-10-27 10:05:00 server1 some_app[9012]: INFO: Processing request #12345.
+      2023-10-27 10:06:00 server1 some_app[9012]: WARNING: Deprecation warning for function X, use Y instead.
+      2023-10-27 10:07:00 server1 systemd[1]: Service xyz crashed unexpectedly. Restarting.
+
+    log_file_path: "/var/log/syslog"
+    error_keywords: ["error", "failed", "critical", "exception", "denied"]
+    warning_keywords: ["warning", "warn", "deprecated", "notice", "slow"]
+
+  tasks:
+    - name: Mock the log file content
+      copy:
+        content: "{{ mock_log_content }}"
+        dest: "/tmp/{{ log_file_path.split('/')[-1] }}"
+      delegate_to: localhost
+
+    - name: Run the log parsing playbook with mocked log file
+      ansible.builtin.command: >-
+        ansible-playbook -i inventory.ini src/parse_logs.yml
+        --extra-vars "log_file_path=/tmp/{{ log_file_path.split('/')[-1] }}"
+      register: playbook_run
+      changed_when: false
+
+    - name: Assert playbook ran successfully
+      assert:
+        that:
+          - playbook_run.rc == 0
+
+    - name: Fetch the generated report
+      fetch:
+        src: "/tmp/log_report_{{ inventory_hostname }}.txt"
+        dest: "./reports/log_report_{{ inventory_hostname }}.txt"
+        flat: yes
+      delegate_to: localhost
+
+    - name: Assert report content for errors
+      assert:
+        that:
+          - "'ERROR: 3' in report_content"
+          - "'"Failed to fetch http://archive.ubuntu.com/ubuntu/dists/jammy-updates/InRelease 404  Not Found [IP: 91.189.91.39 80]"' in report_content"
+          - "'error: PAM: authentication error for root from 192.168.1.100 port 54321 ssh2' in report_content"
+          - "'Service xyz crashed unexpectedly. Restarting.' in report_content"
+      vars:
+        report_content: "{{ lookup('file', './reports/log_report_localhost.txt') }}"
+
+    - name: Assert report content for warnings
+      assert:
+        that:
+          - "'WARNING: 2' in report_content"
+          - "'Warning: Disk space critically low on /var/log.' in report_content"
+          - "'WARNING: Deprecation warning for function X, use Y instead.' in report_content"
+      vars:
+        report_content: "{{ lookup('file', './reports/log_report_localhost.txt') }}"
+
+    - name: Assert report content for info
+      assert:
+        that:
+          - "'INFO: 4' in report_content"

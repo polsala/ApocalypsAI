@@ -1,0 +1,36 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure loguru is installed on target hosts
+      pip:
+        name: loguru
+        state: present
+      when: ansible_os_family != "Windows"
+
+    - name: Fetch and parse log file
+      script: scripts/parse_log.py
+      args:
+        executable: python3
+      register: log_analysis_result
+      when: ansible_os_family != "Windows"
+
+    - name: Display log analysis summary
+      debug:
+        msg: "{{ log_analysis_result.stdout }}"
+      when: ansible_os_family != "Windows"
+
+    - name: Report generation (template)
+      template:
+        src: templates/log_report.j2
+        dest: "/tmp/log_report_{{ inventory_hostname }}.txt"
+      when: ansible_os_family != "Windows"
+
+    - name: Inform user about report location
+      debug:
+        msg: "Log analysis report saved to /tmp/log_report_{{ inventory_hostname }}.txt on {{ inventory_hostname }}"
+      when: ansible_os_family != "Windows"

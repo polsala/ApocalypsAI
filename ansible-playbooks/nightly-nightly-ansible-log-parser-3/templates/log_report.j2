@@ -1,0 +1,48 @@
+Log Analysis Report for: {{ inventory_hostname }}
+===================================================
+
+Total Log Entries Processed: {{ log_analysis_result.stdout | from_json | length }}
+
+Summary by Level:
+-----------------
+{% set levels = {'ERROR': 0, 'WARNING': 0, 'INFO': 0} %}
+{% for entry in log_analysis_result.stdout | from_json %}
+  {% if entry.level == 'ERROR' %}{% set levels = levels | combine({'ERROR': levels.ERROR + 1}) %}{% elif entry.level == 'WARNING' %}{% set levels = levels | combine({'WARNING': levels.WARNING + 1}) %}{% else %}{% set levels = levels | combine({'INFO': levels.INFO + 1}) %}{% endif %}
+{% endfor %}
+ERROR: {{ levels.ERROR }}
+WARNING: {{ levels.WARNING }}
+INFO: {{ levels.INFO }}
+
+Top 5 Common Error Messages:
+----------------------------
+{% set error_messages = {} %}
+{% for entry in log_analysis_result.stdout | from_json %}
+  {% if entry.level == 'ERROR' %}
+    {% set message = entry.message %}
+    {% if message in error_messages %}
+      {% set error_messages = error_messages | combine({message: error_messages[message] + 1}) %}
+    {% else %}
+      {% set error_messages = error_messages | combine({message: 1}) %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% for msg, count in error_messages | sort(attribute='value', reverse=true) | list | slice(0, 5) %}
+{{ loop.index }}. "{{ msg }}": {{ count }} times
+{% endfor %}
+
+Top 5 Common Warning Messages:
+------------------------------
+{% set warning_messages = {} %}
+{% for entry in log_analysis_result.stdout | from_json %}
+  {% if entry.level == 'WARNING' %}
+    {% set message = entry.message %}
+    {% if message in warning_messages %}
+      {% set warning_messages = warning_messages | combine({message: warning_messages[message] + 1}) %}
+    {% else %}
+      {% set warning_messages = warning_messages | combine({message: 1}) %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% for msg, count in warning_messages | sort(attribute='value', reverse=true) | list | slice(0, 5) %}
+{{ loop.index }}. "{{ msg }}": {{ count }} times
+{% endfor %}
