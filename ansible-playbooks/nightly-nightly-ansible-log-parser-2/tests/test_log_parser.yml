@@ -1,0 +1,105 @@
+---
+- name: Test Nightly Ansible Log Parser
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mock log file content
+    mock_log_content_syslog: |
+      Jan 1 00:00:01 hostname kernel: Some informational message.
+      Jan 1 00:01:00 hostname CRITICAL: System failure detected!
+      Jan 1 00:02:05 hostname sudo: user logged in.
+      Jan 1 00:03:15 hostname WARN: Disk space low.
+      Jan 1 00:04:00 hostname ERROR: Database connection failed.
+    mock_log_content_authlog: |
+      Jan 1 00:05:00 hostname sshd[1234]: Accepted password for user from 192.168.1.1 port 54321 ssh2
+      Jan 1 00:06:00 hostname sshd[5678]: Failed password for invalid user from 192.168.1.2 port 12345 ssh2
+      Jan 1 00:07:00 hostname sshd[9012]: Connection closed by authenticating user root 192.168.1.3 port 67890 [preauth]
+
+    # Mock inventory and target files
+    mock_inventory_path: "./mock_inventory.ini"
+    mock_log_files_path: "./mock_log_files.yml"
+    mock_report_path: "./mock_log_summary_report.txt"
+
+  tasks:
+    - name: Create mock inventory file
+      copy:
+        dest: "{{ mock_inventory_path }}"
+        content: |
+          [log_servers]
+          localhost
+      register: mock_inventory_creation
+
+    - name: Create mock log files directory
+      file:
+        path: "./mock_logs"
+        state: directory
+
+    - name: Create mock syslog file
+      copy:
+        dest: "./mock_logs/syslog"
+        content: "{{ mock_log_content_syslog }}"
+
+    - name: Create mock auth.log file
+      copy:
+        dest: "./mock_logs/auth.log"
+        content: "{{ mock_log_content_authlog }}"
+
+    - name: Create mock log files variable file
+      copy:
+        dest: "{{ mock_log_files_path }}"
+        content: |
+          log_files_to_parse:
+            - "./mock_logs/syslog"
+            - "./mock_logs/auth.log"
+          report_output_path: "{{ mock_report_path }}"
+
+    - name: Run the log parser playbook with mock data
+      command: >
+        ansible-playbook
+        -i {{ mock_inventory_path }}
+        src/log_parser.yml
+        --extra-vars "@{{ mock_log_files_path }}"
+      register: playbook_run
+      ignore_errors: yes # Allow playbook to fail if it encounters unexpected issues during test
+
+    - name: Assert playbook ran successfully
+      assert:
+        that:
+          - playbook_run.rc == 0
+        fail_msg: "Ansible playbook failed to run."
+
+    - name: Assert report file was created
+      stat:
+        path: "{{ mock_report_path }}"
+      register: report_file_stat
+      assert:
+        that:
+          - report_file_stat.stat.exists
+        fail_msg: "Report file was not created."
+
+    - name: Read report content
+      slurp:
+        src: "{{ mock_report_path }}"
+      register: report_content_slurp
+
+    - name: Assert report content contains expected errors and counts
+      assert:
+        that:
+          - "'CRITICAL | 1' in (report_content_slurp.content | b64decode)"
+          - "'WARN | 1' in (report_content_slurp.content | b64decode)"
+          - "'ERROR | 1' in (report_content_slurp.content | b64decode)"
+          - "'FAILED | 1' in (report_content_slurp.content | b64decode)"
+          - "'EXCEPTION' not in (report_content_slurp.content | b64decode)" # Should not be present in mock data
+        fail_msg: "Report content does not match expected error counts."
+
+    - name: Clean up mock files and directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ mock_inventory_path }}"
+        - "{{ mock_log_files_path }}"
+        - "./mock_logs"
+        - "{{ mock_report_path }}"
