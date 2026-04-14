@@ -1,0 +1,15 @@
+Log Summary for {{ host }}
+=========================
+
+Total Errors Found: {{ error_count }}
+Total Warnings Found: {{ warning_count }}
+
+Errors:
+{% for error in errors %}
+- {{ error }}
+{% endfor %}
+
+Warnings:
+{% for warning in warnings %}
+- {{ warning }}
+{% endfor %}
