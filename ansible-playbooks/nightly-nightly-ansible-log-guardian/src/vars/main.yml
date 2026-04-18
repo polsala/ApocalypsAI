@@ -1,0 +1,20 @@
+---
+log_guardian_configs:
+  - name: "shelter_sentry_logs"
+    path: "/var/log/shelter/*.log"
+    frequency: daily
+    rotate: 7
+    compress: yes
+    delaycompress: yes
+    missingok: yes
+    notifempty: yes
+    create: "0640 root adm"
+    postrotate: "/usr/bin/systemctl reload rsyslog > /dev/null 2>&1 || true"
+  - name: "temporal_anomaly_logs"
+    path: "/var/log/temporal_anomalies.log"
+    frequency: weekly
+    rotate: 4
+    compress: yes
+    missingok: yes
+    notifempty: yes
+    create: "0600 root root"
