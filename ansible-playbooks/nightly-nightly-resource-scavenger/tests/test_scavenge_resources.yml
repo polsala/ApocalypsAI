@@ -1,0 +1,110 @@
+---
+- name: Test Nightly Resource Scavenger Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    test_scavenge_dir: "/tmp/apocalypsai_scavenge_test_area"
+    test_report_path: "/tmp/scavenger_report_localhost.txt"
+    scavenger_paths:
+      - "{{ test_scavenge_dir }}"
+    scavenger_min_file_size_mb: 5 # Lower threshold for easier testing
+    scavenger_max_file_age_days: 1 # Lower threshold for easier testing
+    scavenger_report_path: "{{ test_report_path }}"
+
+  tasks:
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_scavenge_dir }}"
+        - "{{ test_report_path }}"
+      ignore_errors: true # Mock rationale: Ensure a clean slate, ignore if files don't exist.
+
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_scavenge_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Create a controlled environment for testing file discovery.
+
+    - name: Create a large dummy file (10MB)
+      ansible.builtin.copy:
+        content: "{{ 'a' * (10 * 1024 * 1024) }}"
+        dest: "{{ test_scavenge_dir }}/large_dummy_file.txt"
+        mode: '0644'
+      # Mock rationale: Simulate a large file that should be reported.
+
+    - name: Create an old dummy file (1MB, 2 days old)
+      ansible.builtin.copy:
+        content: "{{ 'b' * (1 * 1024 * 1024) }}"
+        dest: "{{ test_scavenge_dir }}/old_dummy_file.log"
+        mode: '0644'
+      # Mock rationale: Simulate an old file that should be reported.
+
+    - name: Set modification time for old dummy file
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_scavenge_dir }}/old_dummy_file.log"
+      changed_when: false # This command changes mtime, but not content, so not 'changed' for Ansible.
+      # Mock rationale: Ensure the 'old' file condition is met for testing.
+
+    - name: Create a small, recent dummy file (should not be reported)
+      ansible.builtin.copy:
+        content: "{{ 'c' * 100 }}"
+        dest: "{{ test_scavenge_dir }}/small_recent_file.txt"
+        mode: '0644'
+      # Mock rationale: Ensure files not meeting criteria are correctly ignored.
+
+    - name: Run the main scavenger playbook
+      ansible.builtin.import_playbook: ../src/scavenge_resources.yml
+      vars:
+        scavenger_paths: "{{ scavenger_paths }}"
+        scavenger_min_file_size_mb: "{{ scavenger_min_file_size_mb }}"
+        scavenger_max_file_age_days: "{{ scavenger_max_file_age_days }}"
+        scavenger_report_path: "{{ scavenger_report_path }}"
+
+    - name: Verify report content for large file
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content
+      # Mock rationale: Read the generated report to assert its contents.
+
+    - name: Assert large file is in report
+      ansible.builtin.assert:
+        that:
+          - "'large_dummy_file.txt' in (report_content.content | b64decode)"
+          - "'10.00 MB' in (report_content.content | b64decode)"
+        msg: "Large dummy file not found or size incorrect in report."
+      # Mock rationale: Verify the large file was correctly identified and reported.
+
+    - name: Assert old file is in report
+      ansible.builtin.assert:
+        that:
+          - "'old_dummy_file.log' in (report_content.content | b64decode)"
+          - "'1.00 MB' in (report_content.content | b64decode)"
+        msg: "Old dummy file not found or size incorrect in report."
+      # Mock rationale: Verify the old file was correctly identified and reported.
+
+    - name: Assert small, recent file is NOT in report
+      ansible.builtin.assert:
+        that:
+          - "'small_recent_file.txt' not in (report_content.content | b64decode)"
+        msg: "Small, recent file incorrectly found in report."
+      # Mock rationale: Verify files not meeting criteria are correctly excluded.
+
+    - name: Assert top-level directory size is in report
+      ansible.builtin.assert:
+        that:
+          - "'Path: {{ test_scavenge_dir }}' in (report_content.content | b64decode)"
+          - "'Size: ' in (report_content.content | b64decode)" # Check for 'Size: X' pattern
+        msg: "Top-level directory size for test_scavenge_dir not found in report."
+      # Mock rationale: Verify directory size reporting works.
+
+    - name: Final cleanup of test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_scavenge_dir }}"
+        - "{{ test_report_path }}"
+      # Mock rationale: Remove all temporary files created during the test.
