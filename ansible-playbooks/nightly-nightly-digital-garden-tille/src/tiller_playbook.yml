@@ -1,0 +1,30 @@
+---
+- name: Cultivate the Digital Garden
+  hosts: garden_hosts
+  gather_facts: true
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure digital garden base path exists
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure garden plots (markdown files) exist
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}/{{ item }}"
+        state: touch
+        mode: '0644'
+      loop: "{{ garden_plots }}"
+
+    - name: Select today's wisdom (deterministic for testing)
+      ansible.builtin.set_fact:
+        current_wisdom: "{{ wisdom_messages[0] }}" # Mock rationale: For deterministic testing, always pick the first wisdom. In a real scenario, this could be randomized or date-based.
+
+    - name: Update daily wisdom message
+      ansible.builtin.template:
+        src: templates/wisdom_template.j2
+        dest: "{{ garden_base_path }}/{{ daily_wisdom_file }}"
+        mode: '0644'
