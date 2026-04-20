@@ -1,0 +1,14 @@
+---
+ApocalypsAI Nightly Cache Guardian Report
+Generated on: {{ ansible_date_time.iso8601_micro }}
+Target Host: {{ ansible_hostname }}
+
+Cache Status Overview:
+{% for cache_location in cache_locations %}
+  Cache Location: {{ cache_location }}
+    Manifest ({{ manifest_filename }}): {{ 'Exists' if manifest_status.results[loop.index0].stat.exists else 'MISSING' }}
+    Blessing File ({{ blessing_filename }}): {{ 'Exists' if blessing_file_stat.results[loop.index0].stat.exists else 'MISSING' }}
+    Blessing Checksum (SHA256): {{ cache_checksums[cache_location] | default('N/A') }}
+{% endfor %}
+
+---

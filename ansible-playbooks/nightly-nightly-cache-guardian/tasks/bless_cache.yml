@@ -1,0 +1,23 @@
+---
+- name: Ensure cache location directory exists
+  ansible.builtin.file:
+    path: "{{ cache_base_path }}/{{ cache_location }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location
+
+- name: Select a random blessing message
+  ansible.builtin.set_fact:
+    current_blessing: "{{ blessing_messages | random }}"
+  run_once: true
+
+- name: Create or update temporal blessing file in {{ cache_base_path }}/{{ cache_location }}
+  ansible.builtin.template:
+    src: templates/blessing_message.j2
+    dest: "{{ cache_base_path }}/{{ cache_location }}/{{ blessing_filename }}"
+    mode: '0644'
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location

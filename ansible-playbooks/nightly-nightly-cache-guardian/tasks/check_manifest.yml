@@ -1,0 +1,16 @@
+---
+- name: Check for manifest file in {{ cache_base_path }}/{{ cache_location }}
+  ansible.builtin.stat:
+    path: "{{ cache_base_path }}/{{ cache_location }}/{{ manifest_filename }}"
+  register: manifest_status
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location
+  changed_when: false
+
+- name: Report manifest status (debug)
+  ansible.builtin.debug:
+    msg: "Cache '{{ cache_location }}': Manifest file '{{ manifest_filename }}' {{ 'exists' if manifest_status.results[ansible_loop.index0].stat.exists else 'MISSING' }}"
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location

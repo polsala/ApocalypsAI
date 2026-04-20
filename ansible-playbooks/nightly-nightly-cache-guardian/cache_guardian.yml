@@ -1,0 +1,29 @@
+---
+- name: ApocalypsAI Nightly Cache Guardian
+  hosts: caches
+  gather_facts: yes # Gather facts for ansible_hostname and ansible_date_time
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure cache base path exists
+      ansible.builtin.file:
+        path: "{{ cache_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Run guardian tasks for each cache location
+      ansible.builtin.include_tasks:
+        file: "{{ item }}"
+      loop:
+        - tasks/check_manifest.yml
+        - tasks/check_integrity.yml
+        - tasks/bless_cache.yml
+      loop_control:
+        loop_var: item
+
+    - name: Generate cache report
+      ansible.builtin.template:
+        src: templates/cache_report.j2
+        dest: "{{ cache_base_path }}/cache_guardian_report_{{ ansible_hostname }}.txt"
+        mode: '0644'

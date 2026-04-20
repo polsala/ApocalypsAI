@@ -1,0 +1,119 @@
+---
+- name: Test ApocalypsAI Nightly Cache Guardian
+  hosts: localhost
+  gather_facts: yes # Needed for ansible_hostname and ansible_date_time in reports
+  vars_files:
+    - vars/main.yml # Use the same vars for consistency
+  vars:
+    test_cache_base_path: "/tmp/apocalypsai_test_caches"
+    test_cache_locations:
+      - "test_alpha"
+      - "test_beta"
+
+  tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ test_cache_base_path }}"
+        state: absent
+
+    - name: Ensure test cache base path exists
+      ansible.builtin.file:
+        path: "{{ test_cache_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy cache locations and manifest files
+      ansible.builtin.file:
+        path: "{{ test_cache_base_path }}/{{ item }}/{{ manifest_filename }}"
+        state: touch
+        mode: '0644'
+      loop: "{{ test_cache_locations }}"
+      loop_control:
+        loop_var: item
+
+    - name: Run the main cache guardian playbook in check mode first
+      ansible.builtin.include_playbook: ../cache_guardian.yml
+      vars:
+        cache_base_path: "{{ test_cache_base_path }}"
+        cache_locations: "{{ test_cache_locations }}"
+      # Mock rationale: Running the main playbook with specific test variables
+      # and in check mode allows us to verify idempotency and expected changes
+      # without actually modifying files in the first pass.
+      check_mode: yes
+
+    - name: Verify blessing files were NOT created in check mode
+      ansible.builtin.stat:
+        path: "{{ test_cache_base_path }}/{{ item }}/{{ blessing_filename }}"
+      register: blessing_file_check_mode_stat
+      loop: "{{ test_cache_locations }}"
+      loop_control:
+        loop_var: item
+
+    - name: Assert blessing files do not exist after check mode
+      ansible.builtin.assert:
+        that: not item.stat.exists
+        msg: "Blessing file '{{ item.path }}' should not exist after check mode run."
+      loop: "{{ blessing_file_check_mode_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Run the main cache guardian playbook (actual run)
+      ansible.builtin.include_playbook: ../cache_guardian.yml
+      vars:
+        cache_base_path: "{{ test_cache_base_path }}"
+        cache_locations: "{{ test_cache_locations }}"
+      # Mock rationale: Running the main playbook with specific test variables
+      # and in actual run mode allows us to verify file creation and content.
+
+    - name: Verify blessing files were created and contain content
+      ansible.builtin.slurp:
+        src: "{{ test_cache_base_path }}/{{ item }}/{{ blessing_filename }}"
+      register: blessing_file_content
+      loop: "{{ test_cache_locations }}"
+      loop_control:
+        loop_var: item
+
+    - name: Assert blessing files exist and have content
+      ansible.builtin.assert:
+        that:
+          - item.content is defined
+          - item.content | b64decode | length > 0
+          - item.content | b64decode is search("Temporal Blessing")
+          - item.content | b64decode is search("Timestamp")
+        msg: "Blessing file '{{ item.source }}' should exist and contain expected content."
+      loop: "{{ blessing_file_content.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Verify manifest files still exist
+      ansible.builtin.stat:
+        path: "{{ test_cache_base_path }}/{{ item }}/{{ manifest_filename }}"
+      register: manifest_file_stat
+      loop: "{{ test_cache_locations }}"
+      loop_control:
+        loop_var: item
+
+    - name: Assert manifest files exist
+      ansible.builtin.assert:
+        that: item.stat.exists
+        msg: "Manifest file '{{ item.path }}' should exist."
+      loop: "{{ manifest_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Verify report file was generated
+      ansible.builtin.stat:
+        path: "{{ test_cache_base_path }}/cache_guardian_report_localhost.txt"
+      register: report_file_stat
+
+    - name: Assert report file exists and has content
+      ansible.builtin.assert:
+        that:
+          - report_file_stat.stat.exists
+          - report_file_stat.stat.size > 0
+        msg: "Report file should exist and not be empty."
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_cache_base_path }}"
+        state: absent
