@@ -1,0 +1,24 @@
+---
+# Base path where caches are located on target hosts
+cache_base_path: "/tmp/apocalypsai_caches"
+
+# List of specific cache location subdirectories to manage
+cache_locations:
+  - "alpha_sector"
+  - "beta_sector"
+  - "gamma_sector"
+
+# Filename for the cache manifest (presence check)
+manifest_filename: "cache_manifest.txt"
+
+# Filename for the temporal blessing file (integrity check and update)
+blessing_filename: "temporal_blessing.txt"
+
+# Whimsical messages to include in the temporal blessing file
+blessing_messages:
+  - "May your rations be plentiful and your spirits unyielding."
+  - "The void whispers, but resilience echoes louder."
+  - "Hope is the last resource, guard it well."
+  - "In the darkest night, remember the dawn."
+  - "The stars may fall, but your cache endures."
+  - "A well-kept secret is a well-kept life."

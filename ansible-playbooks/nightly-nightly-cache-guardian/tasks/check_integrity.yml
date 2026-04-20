@@ -1,0 +1,19 @@
+---
+- name: Calculate checksum of blessing file in {{ cache_base_path }}/{{ cache_location }}
+  ansible.builtin.stat:
+    path: "{{ cache_base_path }}/{{ cache_location }}/{{ blessing_filename }}"
+    checksum_algorithm: sha256
+  register: blessing_file_stat
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location
+  changed_when: false
+  ignore_errors: true # File might not exist yet on first run
+
+- name: Store blessing file checksums
+  ansible.builtin.set_fact:
+    cache_checksums: "{{ cache_checksums | default({}) | combine({cache_location: blessing_file_stat.results[ansible_loop.index0].stat.checksum | default('N/A')}) }}"
+  loop: "{{ cache_locations }}"
+  loop_control:
+    loop_var: cache_location
+  when: blessing_file_stat.results[ansible_loop.index0].stat.exists
