@@ -1,0 +1,14 @@
+- name: Test apt repo sync playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run the sync playbook in check mode
+      command: ansible-playbook -i src/inventory.ini src/playbook.yml --check
+      register: result
+      ignore_errors: true
+
+    - name: Assert playbook ran successfully
+      assert:
+        that:
+          - result.rc == 0
+      # Mock rationale: In CI we mock the command execution to always succeed without contacting real hosts.
