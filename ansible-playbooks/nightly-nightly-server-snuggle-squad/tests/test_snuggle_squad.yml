@@ -1,0 +1,75 @@
+---
+- name: Test Server Snuggle Squad Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    comfort_dir: "/opt/server_comfort"
+    bedtime_log_file: "{{ comfort_dir }}/bedtime_log.txt"
+    dream_catcher_script_path: "{{ comfort_dir }}/dream_catcher.sh"
+    cron_job_name: "server_dream_catcher"
+
+  tasks:
+    - name: Clean up previous test artifacts (Mock rationale: Ensure a clean slate for deterministic testing)
+      ansible.builtin.file:
+        path: "{{ comfort_dir }}"
+        state: absent
+      ignore_errors: yes # In case it doesn't exist
+
+    - name: Remove cron job before running playbook (Mock rationale: Ensure a clean slate for deterministic testing)
+      ansible.builtin.cron:
+        name: "{{ cron_job_name }}"
+        state: absent
+        user: root
+      ignore_errors: yes
+
+    - name: Run the main playbook
+      ansible.builtin.include_playbook: ../snuggle_squad.yml
+
+    - name: Verify comfort directory exists
+      ansible.builtin.stat:
+        path: "{{ comfort_dir }}"
+      register: comfort_dir_stat
+      failed_when: not comfort_dir_stat.stat.exists or not comfort_dir_stat.stat.isdir or comfort_dir_stat.stat.mode != '0755'
+      # Mock rationale: Directly asserts the state of the file system after playbook execution.
+
+    - name: Verify bedtime log file exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ bedtime_log_file }}"
+      register: bedtime_log_stat
+      failed_when: not bedtime_log_stat.stat.exists or bedtime_log_stat.stat.mode != '0644'
+      # Mock rationale: Directly asserts the state of the file system after playbook execution.
+
+    - name: Check bedtime log content
+      ansible.builtin.command: cat "{{ bedtime_log_file }}"
+      register: log_content
+      changed_when: false
+      failed_when: log_content.stdout | length == 0 or "Zzz... Server localhost is dreaming sweet dreams" not in log_content.stdout
+      # Mock rationale: Verifies the content written by the playbook. The specific random string is not checked, only the prefix.
+
+    - name: Verify dream catcher script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ dream_catcher_script_path }}"
+      register: script_stat
+      failed_when: not script_stat.stat.exists or not script_stat.stat.isreg or script_stat.stat.mode != '0755'
+      # Mock rationale: Directly asserts the state of the file system after playbook execution.
+
+    - name: Verify cron job is scheduled
+      ansible.builtin.command: "sudo crontab -l -u root"
+      register: crontab_output
+      changed_when: false
+      failed_when: "'{{ cron_job_name }}' not in crontab_output.stdout or '{{ dream_catcher_script_path }}' not in crontab_output.stdout"
+      # Mock rationale: Checks the system's cron configuration. This is offline as it queries the local system's crontab.
+
+    - name: Clean up test artifacts after verification (Mock rationale: Ensure no lingering effects for subsequent test runs)
+      ansible.builtin.file:
+        path: "{{ comfort_dir }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove cron job after verification (Mock rationale: Ensure no lingering effects for subsequent test runs)
+      ansible.builtin.cron:
+        name: "{{ cron_job_name }}"
+        state: absent
+        user: root
+      ignore_errors: yes

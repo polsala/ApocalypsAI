@@ -1,0 +1,5 @@
+#!/bin/bash
+# This script catches and processes server dreams (e.g., cleans up temporary files, or just logs a message)
+echo "$(date -Is) - Server {{ inventory_hostname }} caught a dream: {{ ['optimizing buffers', 'defragmenting thoughts', 'tidying up temp files', 'counting sheep'] | random }}."
+# In a real scenario, this could run actual cleanup commands.
+# For now, it's just a whimsical log entry.

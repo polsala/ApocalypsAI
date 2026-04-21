@@ -1,0 +1,19 @@
+---
+- name: Ensure servers are snug and cozy
+  hosts: all
+  become: yes # For creating directories and cron jobs
+  vars:
+    comfort_dir: "/opt/server_comfort"
+    bedtime_log_file: "{{ comfort_dir }}/bedtime_log.txt"
+    dream_catcher_script_path: "{{ comfort_dir }}/dream_catcher.sh"
+    cron_job_name: "server_dream_catcher"
+
+  tasks:
+    - name: Include comfort blanket task
+      ansible.builtin.include_tasks: tasks/comfort_blanket.yml
+
+    - name: Include bedtime story task
+      ansible.builtin.include_tasks: tasks/bedtime_story.yml
+
+    - name: Include dream catcher task
+      ansible.builtin.include_tasks: tasks/dream_catcher.yml
