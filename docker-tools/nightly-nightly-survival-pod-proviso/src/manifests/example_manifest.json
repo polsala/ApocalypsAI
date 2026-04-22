@@ -1,0 +1,12 @@
+{
+  "pod_name": "my-survival-web-pod",
+  "image_name": "nginx",
+  "image_tag": "1.21",
+  "host_port": 8080,
+  "container_port": 80,
+  "env_var_value": "hello-wasteland",
+  "volume_path": "./data/web-content",
+  "secrets": {
+    "secret_key": "super-secret-alpha-omega"
+  }
+}

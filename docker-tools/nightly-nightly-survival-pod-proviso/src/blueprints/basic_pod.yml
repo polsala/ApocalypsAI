@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  {{ pod_name | default('default-pod') }}:
+    image: {{ image_name | default('alpine') }}:{{ image_tag | default('latest') }}
+    container_name: {{ pod_name | default('default-pod') }}
+    {% if host_port and container_port %}
+    ports:
+      - "{{ host_port }}:{{ container_port }}"
+    {% endif %}
+    environment:
+      POD_ENV_VAR: "{{ env_var_value | default('no-value') }}"
+      {% if secrets.secret_key %}
+      SECRET_KEY: "{{ secrets.secret_key }}"
+      {% endif %}
+    {% if volume_path %}
+    volumes:
+      - {{ volume_path }}:/data
+    {% endif %}
+    restart: unless-stopped
