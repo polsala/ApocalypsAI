@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install coreutils for `shuf`\nRUN apk add --no-cache coreutils\n\n# Copy the quote script into the image\nCOPY src/quote.sh /usr/local/bin/quote.sh\nRUN chmod +x /usr/local/bin/quote.sh\n\n# Default command prints a random quote\nENTRYPOINT [\"/usr/local/bin/quote.sh\"]
