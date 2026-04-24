@@ -1,0 +1,178 @@
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #282c34;
+  color: #61dafb;
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #1e2228;
+  padding: 20px;
+  color: white;
+  border-bottom: 2px solid #61dafb;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  text-shadow: 0 0 10px #61dafb;
+}
+
+.App-header p {
+  font-size: 1.2em;
+  color: #ccc;
+}
+
+main {
+  padding: 20px;
+}
+
+.dashboard-section {
+  background-color: #1e2228;
+  margin-bottom: 30px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.3);
+}
+
+.dashboard-section h2 {
+  color: #61dafb;
+  margin-top: 0;
+  border-bottom: 1px solid #61dafb;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+/* Utility List */
+.utility-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.utility-item {
+  background-color: #282c34;
+  padding: 15px;
+  border-radius: 5px;
+  border: 1px solid #3a3f47;
+  text-align: left;
+  transition: transform 0.2s ease-in-out;
+}
+
+.utility-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(97, 218, 251, 0.2);
+}
+
+.utility-item h3 {
+  margin-top: 0;
+  color: #f0db4f; /* Yellow for utility names */
+}
+
+.utility-item p {
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+/* Agent Activity Feed */
+.activity-list {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.activity-item {
+  background-color: #3a3f47;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  border-left: 3px solid #61dafb;
+}
+
+.agent-name {
+  font-weight: bold;
+  color: #f0db4f;
+  margin-right: 8px;
+}
+
+.timestamp {
+  font-size: 0.8em;
+  color: #aaa;
+  margin-left: 10px;
+}
+
+/* Temporal Anomaly Watch */
+.anomaly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.anomaly-card {
+  padding: 15px;
+  border-radius: 5px;
+  color: white;
+  transition: transform 0.2s ease-in-out;
+}
+
+.anomaly-card:hover {
+  transform: scale(1.05);
+}
+
+.anomaly-card h3 {
+  margin-top: 0;
+  font-size: 1.3em;
+}
+
+.anomaly-card p {
+  font-size: 0.9em;
+  margin-bottom: 5px;
+}
+
+.anomaly-card .severity {
+  font-weight: bold;
+}
+
+.anomaly-card .status {
+  font-style: italic;
+}
+
+.anomaly-card.low {
+  background-color: #4CAF50; /* Green */
+}
+
+.anomaly-card.medium {
+  background-color: #ff9800; /* Orange */
+}
+
+.anomaly-card.high {
+  background-color: #f44336; /* Red */
+}
+
+.anomaly-card.stable {
+  border: 2px solid #4CAF50;
+}
+
+.anomaly-card.monitoring {
+  border: 2px solid #ff9800;
+}
+
+.anomaly-card.critical {
+  border: 2px solid #f44336;
+}
+
+footer {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #1e2228;
+  color: #aaa;
+  font-size: 0.8em;
+}
