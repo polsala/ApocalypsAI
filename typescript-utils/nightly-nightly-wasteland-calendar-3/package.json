@@ -1,0 +1,16 @@
+{
+  "name": "nightly-wasteland-calendar",
+  "version": "0.1.0",
+  "description": "Convert Gregorian dates to a whimsical post‑apocalypse calendar",
+  "main": "dist/index.js",
+  "bin": {
+    "nightly-wasteland-calendar": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node ./dist/tests/index.test.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
