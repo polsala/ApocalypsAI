@@ -1,0 +1,69 @@
+---
+- name: Ensure essential garden tools are installed (apt)
+  ansible.builtin.apt:
+    name:
+      - jq
+      - curl
+      - git
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Ensure essential garden tools are installed (yum)
+  ansible.builtin.yum:
+    name:
+      - jq
+      - curl
+      - git
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Create garden owner group
+  ansible.builtin.group:
+    name: "{{ garden_owner_username }}"
+    gid: "{{ garden_owner_gid | default(omit) }}" # Omit if not defined to let system assign
+    state: present
+
+- name: Create garden owner user
+  ansible.builtin.user:
+    name: "{{ garden_owner_username }}"
+    uid: "{{ garden_owner_uid | default(omit) }}" # Omit if not defined to let system assign
+    group: "{{ garden_owner_username }}"
+    shell: /bin/bash
+    home: "/home/{{ garden_owner_username }}"
+    state: present
+
+- name: Ensure base garden directory exists
+  ansible.builtin.file:
+    path: "{{ garden_base_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure specific garden plot directory exists
+  ansible.builtin.file:
+    path: "{{ garden_base_path }}/{{ garden_plot_name }}"
+    state: directory
+    owner: "{{ garden_owner_username }}"
+    group: "{{ garden_owner_username }}"
+    mode: '0770'
+
+- name: Simulate watering the garden plot
+  ansible.builtin.file:
+    path: "{{ garden_base_path }}/{{ garden_plot_name }}/watered_today.log"
+    state: touch
+    owner: "{{ garden_owner_username }}"
+    group: "{{ garden_owner_username }}"
+    mode: '0660'
+  changed_when: true # Always report as changed for whimsical effect
+
+- name: Simulate harvesting from the garden plot
+  ansible.builtin.file:
+    path: "{{ garden_base_path }}/{{ garden_plot_name }}/harvest_report_{{ ansible_date_time.iso8601_basic }}.log"
+    state: touch
+    owner: "{{ garden_owner_username }}"
+    group: "{{ garden_owner_username }}"
+    mode: '0660'
+  changed_when: true # Always report as changed for whimsical effect

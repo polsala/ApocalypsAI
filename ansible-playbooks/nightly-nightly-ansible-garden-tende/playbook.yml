@@ -1,0 +1,17 @@
+---
+- name: Tend to the Survival Gardens
+  hosts: garden_servers
+  gather_facts: yes
+  become: yes # Required for system-level changes (user, group, /opt directory)
+  roles:
+    - role: garden_plot
+      vars:
+        garden_plot_name: "plot_alpha"
+        garden_owner_username: "gardener_alpha"
+        garden_owner_uid: 1001
+        garden_owner_gid: 1001
+
+  tasks:
+    - name: Report on garden status
+      debug:
+        msg: "Garden '{{ garden_plot_name }}' on {{ inventory_hostname }} is tended. Last simulated watering: {{ ansible_date_time.iso8601_micro }}."
