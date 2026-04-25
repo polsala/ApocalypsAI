@@ -1,0 +1,38 @@
+---
+- name: Perform Nightly Server Serenity Ritual
+  hosts: servers
+  become: true
+  vars:
+    serenity_report_path: /var/log/serenity_report.txt
+    tmp_file_age_days: 7
+    clean_old_tmp_files: false
+
+  tasks:
+    - name: Ensure serenity report directory exists
+      ansible.builtin.file:
+        path: "{{ serenity_report_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Include check for forgotten temporary files
+      ansible.builtin.include_tasks: tasks/check_tmp_files.yml
+
+    - name: Include check for NTP synchronization
+      ansible.builtin.include_tasks: tasks/check_ntp_sync.yml
+
+    - name: Include check for pending reboot
+      ansible.builtin.include_tasks: tasks/check_pending_reboot.yml
+
+    - name: Include check for disk space clutter
+      ansible.builtin.include_tasks: tasks/check_disk_clutter.yml
+
+    - name: Generate Serenity Report
+      ansible.builtin.template:
+        src: templates/serenity_report.j2
+        dest: "{{ serenity_report_path }}"
+        mode: '0644'
+      # For this utility, a per-host report is more appropriate.
+
+    - name: Display path to Serenity Report
+      ansible.builtin.debug:
+        msg: "Serenity Report generated at {{ serenity_report_path }} on {{ inventory_hostname }}"

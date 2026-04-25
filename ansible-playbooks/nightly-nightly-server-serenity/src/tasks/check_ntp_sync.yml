@@ -1,0 +1,10 @@
+---
+- name: Check NTP synchronization status
+  ansible.builtin.command: timedatectl status
+  register: timedatectl_status_result
+  changed_when: false
+  failed_when: false # Allow command to fail gracefully if timedatectl is not present
+
+- name: Set fact for NTP sync status
+  ansible.builtin.set_fact:
+    serenity_ntp_sync_status: "{{ 'Synchronized with NTP server.' if 'NTP service: active' in timedatectl_status_result.stdout and 'NTP synchronized: yes' in timedatectl_status_result.stdout else 'Not synchronized or NTP service inactive.' }}"
