@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  become: false
+  vars:
+    # Use a temporary file to avoid requiring root privileges
+    motd_path: "/tmp/motd_test_{{ inventory_hostname }}"
+  tasks:
+    - name: Include the MOTD setup playbook
+      import_playbook: "../../src/setup_motd.yml"
+    - name: Verify the MOTD contains an apocalypse keyword
+      command: cat "{{ motd_path }}"
+      register: motd_content
+    - name: Assert quote contains expected word
+      assert:
+        that:
+          - "'Apocalypse' in motd_content.stdout or 'apocalypse' in motd_content.stdout"
+        # Mock rationale: we assume at least one quote includes the word "Apocalypse"
