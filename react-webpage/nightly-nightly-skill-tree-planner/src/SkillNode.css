@@ -1,0 +1,69 @@
+.skill-node {
+  background-color: #3a3f47;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  width: 200px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+}
+
+.skill-node:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.skill-node.available {
+  border-color: #4CAF50; /* Green for available */
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+.skill-node.learned {
+  background-color: #4CAF50; /* Green background for learned */
+  border-color: #388E3C;
+  color: #fff;
+  cursor: default;
+}
+
+.skill-node.learned:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.skill-node h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.1em;
+}
+
+.skill-node p {
+  font-size: 0.8em;
+  margin-bottom: 3px;
+  color: #ccc;
+}
+
+.skill-node.learned p {
+  color: #eee;
+}
+
+.skill-node .skill-tier {
+  font-weight: bold;
+}
+
+.skill-node .skill-prereqs {
+  font-style: italic;
+  font-size: 0.7em;
+  color: #a0a0a0;
+}
+
+.skill-node.learned .skill-prereqs {
+  color: #d0d0d0;
+}
