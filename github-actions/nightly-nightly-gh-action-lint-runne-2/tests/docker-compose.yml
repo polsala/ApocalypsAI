@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  lint-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount the current directory to simulate the GitHub Actions environment
+      - ./:/app
+    working_dir: /app
+    # This command will run the entrypoint script with a dummy workflow file
+    # The actual test cases will override this command in the test script.
+    command: "echo 'No workflows found for initial test'"
+
+  # A dummy workflow file for testing purposes
+  dummy-workflow-service:
+    image: alpine:latest
+    volumes:
+      - ./test_workflows:/app/.github/workflows
+    command: tail -f /dev/null # Keep container running
+
+volumes:
+  test_workflows:
