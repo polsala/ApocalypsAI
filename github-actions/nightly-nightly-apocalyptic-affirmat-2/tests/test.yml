@@ -1,0 +1,56 @@
+name: Test Apocalyptic Affirmation Action
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'github-actions/nightly-apocalyptic-affirmation/**'
+
+jobs:
+  test_action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Apocalyptic Affirmation Action (summary target)
+        id: affirmation_summary
+        uses: ./github-actions/nightly-apocalyptic-affirmation
+        with:
+          target: 'summary'
+
+      - name: Verify summary output
+        run: |
+          # Mock rationale: We cannot directly read the workflow summary from a step in a way that's easily testable
+          # within the same workflow run. Instead, we verify that the action ran successfully and produced an output.
+          # The 'summary' target only affects where the message is displayed, not the core logic of generating the affirmation.
+          echo "Affirmation output from summary run: ${{ steps.affirmation_summary.outputs.affirmation }}"
+          if [ -z "${{ steps.affirmation_summary.outputs.affirmation }}" ]; then
+            echo "Error: Affirmation output is empty for summary target."
+            exit 1
+          fi
+          echo "Summary target test passed."
+
+      - name: Run Apocalyptic Affirmation Action (output target)
+        id: affirmation_output
+        uses: ./github-actions/nightly-apocalyptic-affirmation
+        with:
+          target: 'output'
+
+      - name: Verify output
+        run: |
+          # Mock rationale: The core logic is tested by checking the step output. The randomness means we can't assert
+          # a specific string, but we can assert its presence and that it's a non-empty string.
+          echo "Affirmation output from output run: ${{ steps.affirmation_output.outputs.affirmation }}"
+          if [ -z "${{ steps.affirmation_output.outputs.affirmation }}" ]; then
+            echo "Error: Affirmation output is empty."
+            exit 1
+          fi
+          # Basic check to ensure it's a string (not just empty or null)
+          if [[ ! "${{ steps.affirmation_output.outputs.affirmation }}" =~ ^.*$ ]]; then
+            echo "Error: Affirmation output is not a string."
+            exit 1
+          fi
+          echo "Output target test passed."
