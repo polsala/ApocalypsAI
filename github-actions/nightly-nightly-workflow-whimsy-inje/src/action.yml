@@ -1,0 +1,65 @@
+name: 'Workflow Whimsy Injector'
+description: 'Injects a random, whimsical, and positive message into a GitHub Actions workflow run summary.'
+inputs:
+  message-file:
+    description: 'Path to a file containing whimsical messages (one per line). If not provided, uses internal defaults.'
+    required: false
+  test-message-index:
+    description: 'For testing: picks the message at this 0-indexed position. Overrides random selection.'
+    required: false
+outputs:
+  whimsy-message:
+    description: 'The whimsical message that was injected.'
+    value: ${{ steps.inject-whimsy.outputs.selected-message }}
+runs:
+  using: 'composite'
+  steps:
+    - id: inject-whimsy
+      shell: bash
+      run: |
+        # Define default whimsical messages
+        DEFAULT_MESSAGES=(
+          "May your code compile on the first try, and your coffee be strong!"
+          "Remember to hydrate, both yourself and your servers!"
+          "A pixelated rainbow for your digital journey today!"
+          "Even the most complex algorithms appreciate a good nap."
+          "Your workflow is doing great! Give it a virtual high-five."
+          "Sending good vibes and bug-free compiles your way!"
+          "Don't forget to stretch your fingers and your imagination!"
+          "May your merges be smooth and your conflicts minimal."
+          "The universe conspires for your success (and maybe a few laughs)."
+          "Take a moment to appreciate the hum of your CPU."
+        )
+
+        MESSAGES_FILE="${{ inputs.message-file }}"
+        TEST_INDEX="${{ inputs.test-message-index }}"
+        SELECTED_MESSAGE=""
+
+        if [[ -n "$MESSAGES_FILE" && -f "$MESSAGES_FILE" ]]; then
+          # Read messages from file
+          readarray -t CUSTOM_MESSAGES < "$MESSAGES_FILE"
+          if (( ${#CUSTOM_MESSAGES[@]} == 0 )); then
+            echo "Warning: Custom message file '$MESSAGES_FILE' is empty. Falling back to default messages." >&2
+            MESSAGES_SOURCE=("${DEFAULT_MESSAGES[@]}")
+          else
+            MESSAGES_SOURCE=("${CUSTOM_MESSAGES[@]}")
+          fi
+        else
+          MESSAGES_SOURCE=("${DEFAULT_MESSAGES[@]}")
+        fi
+
+        if [[ -n "$TEST_INDEX" ]]; then
+          if (( TEST_INDEX >= 0 && TEST_INDEX < ${#MESSAGES_SOURCE[@]} )); then
+            SELECTED_MESSAGE="${MESSAGES_SOURCE[$TEST_INDEX]}"
+          else
+            echo "Warning: test-message-index $TEST_INDEX is out of bounds for available messages. Falling back to random selection." >&2
+            SELECTED_MESSAGE="${MESSAGES_SOURCE[$(( RANDOM % ${#MESSAGES_SOURCE[@]} ))]}"
+          fi
+        else
+          SELECTED_MESSAGE="${MESSAGES_SOURCE[$(( RANDOM % ${#MESSAGES_SOURCE[@]} ))]}"
+        fi
+
+        echo "### Whimsy Injection" >> "$GITHUB_STEP_SUMMARY"
+        echo "${SELECTED_MESSAGE}" >> "$GITHUB_STEP_SUMMARY"
+        echo "selected-message=$SELECTED_MESSAGE" >> "$GITHUB_OUTPUT"
+        echo "Injected: $SELECTED_MESSAGE"
