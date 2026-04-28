@@ -1,0 +1,20 @@
+name: Commit Emoji Reactor
+description: Adds a random emoji reaction to each commit in a pull request to spread positivity.
+author: ApocalypsAI
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN for authentication'
+    required: true
+    default: ${{ github.token }}
+runs:
+  using: "composite"
+  steps:
+    - name: Add emoji reactions
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        # Mock rationale: In real action, we'd list commits and add reactions via API.
+        echo "Would add random emoji reactions to commits in PR #$PR_NUMBER of $REPO"
