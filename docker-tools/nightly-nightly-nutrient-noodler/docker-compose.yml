@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  noodler:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_APP: app.py
+      FLASK_RUN_HOST: 0.0.0.0
+    restart: unless-stopped
