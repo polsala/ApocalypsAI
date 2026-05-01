@@ -1,0 +1,1 @@
+name: "PR Quote Commenter"\ndescription: "Posts a random apocalypse‑themed quote on new PRs"\ninputs:\n  github-token:\n    description: "GitHub token"\n    required: true\n  quotes:\n    description: "Custom quotes, one per line"\n    required: false\nruns:\n  using: "node12"\n  main: "src/index.js"
