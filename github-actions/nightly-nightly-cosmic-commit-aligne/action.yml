@@ -1,0 +1,63 @@
+name: 'Cosmic Commit Aligner'
+description: 'Checks if commit messages align with cosmic principles (positive tone, structure).'
+inputs:
+  commit-message:
+    description: 'The commit message to check for cosmic alignment.'
+    required: true
+  positive-keywords:
+    description: 'Comma-separated list of keywords that should be present for positive alignment. If empty, this check is skipped.'
+    required: false
+    default: 'feat,fix,chore,docs,refactor,style,test,build,ci,perf,revert,improve,add,update'
+  negative-keywords:
+    description: 'Comma-separated list of keywords that should NOT be present for negative energy. If empty, this check is skipped.'
+    required: false
+    default: 'broken,fail,buggy,mess,oops,ugh,bad,error'
+  min-length:
+    description: 'Minimum allowed length for the commit message.'
+    required: false
+    default: '10'
+  max-length:
+    description: 'Maximum allowed length for the commit message.'
+    required: false
+    default: '100'
+outputs:
+  aligned:
+    description: 'True if the commit message is aligned, false otherwise.'
+    value: ${{ steps.check.outputs.aligned }}
+  reason:
+    description: 'Reason for misalignment, if any.'
+    value: ${{ steps.check.outputs.reason }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      run: |
+        # Pass inputs as environment variables to the script
+        COMMIT_MESSAGE="${{ inputs.commit-message }}"
+        POSITIVE_KEYWORDS="${{ inputs.positive-keywords }}"
+        NEGATIVE_KEYWORDS="${{ inputs.negative-keywords }}"
+        MIN_LENGTH="${{ inputs.min-length }}"
+        MAX_LENGTH="${{ inputs.max-length }}"
+
+        # Execute the core script
+        OUTPUT=$(bash "${{ github.action_path }}/src/check_commit.sh" \
+          "$COMMIT_MESSAGE" \
+          "$POSITIVE_KEYWORDS" \
+          "$NEGATIVE_KEYWORDS" \
+          "$MIN_LENGTH" \
+          "$MAX_LENGTH")
+        
+        EXIT_CODE=$?
+        
+        # Parse output from the script
+        ALIGNED=$(echo "$OUTPUT" | grep "aligned:" | cut -d':' -f2 | xargs)
+        REASON=$(echo "$OUTPUT" | grep "reason:" | cut -d':' -f2- | xargs)
+
+        echo "aligned=$ALIGNED" >> "$GITHUB_OUTPUT"
+        echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
+        if [ "$ALIGNED" = "false" ]; then
+          echo "::error ::Cosmic Alignment Failed: $REASON"
+          exit 1
+        fi
+      shell: bash
