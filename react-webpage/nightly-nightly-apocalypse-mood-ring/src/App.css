@@ -1,0 +1,83 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34; /* Dark background for apocalyptic theme */
+  color: white;
+}
+
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  background-color: #1a1c20; /* Slightly lighter dark background for header */
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 100%;
+}
+
+h1 {
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: #61dafb; /* A futuristic blue */
+}
+
+.mood-ring {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  margin: 0 auto 30px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #ffffff; /* White text for contrast */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  transition: background-color 0.5s ease-in-out;
+  border: 5px solid rgba(255, 255, 255, 0.3); /* Subtle border */
+}
+
+.mood-name {
+  margin: 0;
+}
+
+.mood-description {
+  font-size: 1.1em;
+  margin-bottom: 30px;
+  line-height: 1.5;
+  color: #cccccc;
+}
+
+.mood-button {
+  background-color: #61dafb; /* React blue */
+  color: #282c34;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.2em;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.mood-button:hover {
+  background-color: #21a1f1;
+  transform: translateY(-2px);
+}
+
+.mood-button:active {
+  transform: translateY(0);
+}
