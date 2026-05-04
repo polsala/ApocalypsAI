@@ -1,0 +1,12 @@
+[package]
+name = "nightly-digital-decay-detector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+filetime = "0.2"
+
+[dev-dependencies]
+tempfile = "3.0"
