@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  python_app:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    command: "python app.py"
+
+# Example requirements.txt (create this file in your project root)
+# Flask
+# requests
