@@ -1,0 +1,146 @@
+---
+- name: Test Digital Zen Garden Deployment Playbook in Check Mode
+  hosts: localhost
+  connection: local
+  become: yes # Needed for tasks that would normally require sudo
+  vars_files:
+    - ../src/vars/main.yml # Load variables from the main playbook
+
+  tasks:
+    - name: Mock ansible_os_family for Debian
+      ansible.builtin.set_fact:
+        ansible_os_family: "Debian"
+      # Mock rationale: Simulates a Debian-based system for conditional tasks.
+
+    - name: Run Nginx installation task in check mode
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      check_mode: yes
+      register: nginx_install_result
+      # Mock rationale: Runs the task without making actual changes,
+      # allowing us to inspect what *would* happen.
+
+    - name: Assert Nginx installation task would run
+      ansible.builtin.assert:
+        that:
+          - "nginx_install_result is changed"
+      # Mock rationale: Checks if the Nginx installation task was evaluated and marked as 'changed' in check mode,
+      # indicating it would attempt to install Nginx.
+
+    - name: Run Nginx service task in check mode
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+      check_mode: yes
+      register: nginx_service_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert Nginx service task would run
+      ansible.builtin.assert:
+        that:
+          - "nginx_service_result is changed"
+      # Mock rationale: Checks if the Nginx service task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run directory creation task in check mode
+      ansible.builtin.file:
+        path: "{{ zen_garden_path }}"
+        state: directory
+        mode: '0755'
+        owner: www-data
+        group: www-data
+      check_mode: yes
+      register: dir_create_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert directory creation task would run
+      ansible.builtin.assert:
+        that:
+          - "dir_create_result is changed"
+      # Mock rationale: Checks if the directory creation task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run Nginx config deployment task in check mode
+      ansible.builtin.template:
+        src: ../src/templates/nginx_zen_garden.conf.j2
+        dest: "{{ nginx_conf_path }}/zen_garden.conf"
+        mode: '0644'
+      check_mode: yes
+      register: nginx_config_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert Nginx config deployment task would run
+      ansible.builtin.assert:
+        that:
+          - "nginx_config_result is changed"
+      # Mock rationale: Checks if the Nginx config deployment task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run default Nginx site removal task in check mode
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      check_mode: yes
+      register: default_site_remove_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert default Nginx site removal task would run
+      ansible.builtin.assert:
+        that:
+          - "default_site_remove_result is changed"
+      # Mock rationale: Checks if the default site removal task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run index.html deployment task in check mode
+      ansible.builtin.template:
+        src: ../src/templates/index.html.j2
+        dest: "{{ zen_garden_path }}/index.html"
+        mode: '0644'
+        owner: www-data
+        group: www-data
+      vars:
+        current_zen_quote: "{{ zen_quotes | random }}" # This will be random, but the task itself should still be 'changed'
+      check_mode: yes
+      register: index_html_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert index.html deployment task would run
+      ansible.builtin.assert:
+        that:
+          - "index_html_result is changed"
+      # Mock rationale: Checks if the index.html deployment task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run update script deployment task in check mode
+      ansible.builtin.template:
+        src: ../src/templates/update_zen_quote.sh.j2
+        dest: /usr/local/bin/update_zen_quote.sh
+        mode: '0755'
+      check_mode: yes
+      register: script_deploy_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert update script deployment task would run
+      ansible.builtin.assert:
+        that:
+          - "script_deploy_result is changed"
+      # Mock rationale: Checks if the script deployment task was evaluated and marked as 'changed' in check mode.
+
+    - name: Run cron job scheduling task in check mode
+      ansible.builtin.cron:
+        name: "Update Digital Zen Garden quote"
+        minute: "0"
+        hour: "*"
+        day: "*"
+        month: "*"
+        weekday: "*"
+        job: "/usr/local/bin/update_zen_quote.sh {{ zen_garden_path }}/index.html"
+        user: root
+      check_mode: yes
+      register: cron_job_result
+      # Mock rationale: Runs the task without making actual changes.
+
+    - name: Assert cron job scheduling task would run
+      ansible.builtin.assert:
+        that:
+          - "cron_job_result is changed"
+      # Mock rationale: Checks if the cron job scheduling task was evaluated and marked as 'changed' in check mode.

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Zen Garden</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f8f0;
+            color: #333;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            padding: 40px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+        h1 {
+            color: #4CAF50;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .quote {
+            font-style: italic;
+            font-size: 1.5em;
+            color: #555;
+            margin-top: 30px;
+        }
+        .author {
+            margin-top: 15px;
+            font-size: 1em;
+            color: #777;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 0.8em;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Your Digital Zen Garden</h1>
+        <p class="quote">"{{ current_zen_quote }}"</p>
+        <p class="author">- Ancient Wisdom</p>
+        <div class="footer">
+            Reflect, breathe, and find your calm.
+        </div>
+    </div>
+</body>
+</html>
