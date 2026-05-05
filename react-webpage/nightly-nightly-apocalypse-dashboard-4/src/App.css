@@ -1,0 +1,127 @@
+.App {
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  background-color: #282c34;
+  color: white;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #1e2128;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.App-header h1 {
+  margin: 0;
+  color: #61dafb;
+  font-size: 2.5em;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #bbb;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+section {
+  background-color: #3a3f47;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+section h2 {
+  color: #61dafb;
+  margin-top: 0;
+  font-size: 2em;
+  border-bottom: 2px solid #61dafb;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.agent-card {
+  background-color: #444950;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 5px solid;
+  text-align: left;
+  transition: transform 0.2s ease-in-out;
+}
+
+.agent-card:hover {
+  transform: translateY(-5px);
+}
+
+.agent-card h3 {
+  margin-top: 0;
+  color: #f0f0f0;
+  font-size: 1.5em;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.utilities-section p {
+  font-size: 1.2em;
+  margin-bottom: 20px;
+}
+
+.classifier-distribution ul {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.classifier-distribution li {
+  margin-bottom: 8px;
+  font-size: 1.1em;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  justify-content: center;
+}
+
+.workflow-item {
+  background-color: #444950;
+  padding: 15px;
+  border-radius: 5px;
+  text-align: left;
+  font-size: 1.1em;
+}
+
+.workflow-item span {
+  margin-right: 10px;
+}
+
+footer {
+  margin-top: 50px;
+  padding: 20px;
+  font-size: 0.9em;
+  color: #888;
+}
