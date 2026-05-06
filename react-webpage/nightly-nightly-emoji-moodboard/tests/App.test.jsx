@@ -1,0 +1,1 @@
+import { render, screen } from \"@testing-library/react\";\nimport App from \"../src/App\";\n\ntest(\"renders nine emojis\", () => {\n  render(<App />);\n  const emojis = screen.getAllByText(/./u); // any character\n  // Mock rationale: we expect exactly 9 emoji elements\n  expect(emojis).toHaveLength(9);\n});\n
