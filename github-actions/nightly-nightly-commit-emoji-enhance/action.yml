@@ -1,0 +1,14 @@
+name: "Commit Emoji Enhancer"
+description: "Appends a random emoji to the latest commit message."
+author: "ApocalypsAI Nightly Integrator"
+inputs:
+  commit:
+    description: "Create a new commit with the enhanced message"
+    required: false
+    default: "false"
+outputs:
+  new_message:
+    description: "The commit message with an added emoji"
+runs:
+  using: "node12"
+  main: "src/main.js"
