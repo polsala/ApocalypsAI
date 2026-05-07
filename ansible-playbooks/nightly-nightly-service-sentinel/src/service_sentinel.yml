@@ -1,0 +1,62 @@
+---
+- name: Nightly Service Sentinel - Monitor and Resurrect Critical Services
+  hosts: all
+  become: true
+  vars:
+    critical_services: [] # Default empty, can be overridden by vars/main.yml or extra-vars
+
+  tasks:
+    - name: Load critical services from vars/main.yml if not already defined
+      ansible.builtin.include_vars:
+        file: vars/main.yml
+        name: service_vars
+      when: critical_services is not defined or critical_services | length == 0
+      ignore_errors: true # Allow playbook to run even if vars/main.yml is missing
+
+    - name: Set critical_services from loaded vars if still empty
+      ansible.builtin.set_fact:
+        critical_services: "{{ service_vars.critical_services | default([]) }}"
+      when: critical_services is not defined or critical_services | length == 0
+
+    - name: Ensure critical_services list is defined and not empty
+      ansible.builtin.fail:
+        msg: "No critical_services defined. Please define them in vars/main.yml or via --extra-vars."
+      when: critical_services is not defined or critical_services | length == 0
+
+    - name: Check status of critical services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+      register: service_status
+      loop: "{{ critical_services }}"
+      ignore_errors: true # Continue even if a service doesn't exist
+
+    - name: Attempt resurrection for deceased services
+      ansible.builtin.systemd:
+        name: "{{ item.item }}"
+        state: started
+        enabled: true # Ensure it starts on boot
+      when:
+        - item.status is defined
+        - item.status.ActiveState != 'active' or item.status.SubState != 'running'
+      loop: "{{ service_status.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      register: resurrection_attempt
+      changed_when: resurrection_attempt.changed
+
+    - name: Report sentinel findings
+      ansible.builtin.debug:
+        msg: |
+          {% if item.status is defined and (item.status.ActiveState == 'active' and item.status.SubState == 'running') %}
+          [SENTINEL REPORT] Service '{{ item.item }}' is standing strong, vigilant against the void.
+          {% elif item.status is defined and item.status.ActiveState != 'active' and item.status.SubState != 'running' and item.changed %}
+          [SENTINEL ALERT] Service '{{ item.item }}' was found deceased! Attempting resurrection... Status: {{ item.status.ActiveState }}/{{ item.status.SubState }} -> RESURRECTED!
+          {% elif item.status is defined and item.status.ActiveState != 'active' and item.status.SubState != 'running' and not item.changed %}
+          [SENTINEL WARNING] Service '{{ item.item }}' was found deceased and resurrection failed or was not attempted. Status: {{ item.status.ActiveState }}/{{ item.status.SubState }}
+          {% else %}
+          [SENTINEL NOTE] Service '{{ item.item }}' status unknown or not applicable.
+          {% endif %}
+      loop: "{{ resurrection_attempt.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: resurrection_attempt.results is defined and resurrection_attempt.results | length > 0
