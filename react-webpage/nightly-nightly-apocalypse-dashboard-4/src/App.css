@@ -1,0 +1,144 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  color: #61dafb;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #1e2127;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  color: #ffffff;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #bbbbbb;
+}
+
+.dashboard-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+}
+
+.dashboard-section {
+  background-color: #1e2127;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  flex: 1;
+  min-width: 300px;
+  max-width: 600px;
+}
+
+.dashboard-section h2 {
+  font-size: 1.8em;
+  margin-top: 0;
+  color: #61dafb;
+  border-bottom: 2px solid #61dafb;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.dashboard-card {
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-card h3 {
+  font-size: 1.4em;
+  margin-top: 0;
+  color: #ffffff;
+  margin-bottom: 15px;
+}
+
+.dashboard-card p {
+  font-size: 1em;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.dashboard-card strong {
+  color: #ffffff;
+}
+
+.agent-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+}
+
+.agent-status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #3a3f47;
+  padding: 10px 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.agent-status-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.agent-name {
+  font-weight: bold;
+}
+
+.agent-status-text {
+  font-style: italic;
+  color: #cccccc;
+}
+
+.workflow-health-good {
+  color: #4CAF50;
+}
+
+.workflow-health-warning {
+  color: #FFC107;
+}
+
+.workflow-health-error {
+  color: #F44336;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+footer {
+  margin-top: 50px;
+  font-size: 0.9em;
+  color: #888888;
+}
