@@ -1,0 +1,23 @@
+{
+  "name": "nightly-scavenger-route-opt",
+  "version": "1.0.0",
+  "description": "A CLI tool to optimize a scavenging route based on resource locations and a starting point.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "mocha tests/index.test.js"
+  },
+  "keywords": [
+    "apocalypsai",
+    "cli",
+    "scavenging",
+    "route-optimization",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^10.4.0",
+    "sinon": "^17.0.1"
+  }
+}
