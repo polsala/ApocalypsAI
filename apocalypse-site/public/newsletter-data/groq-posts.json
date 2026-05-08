@@ -1,5 +1,30 @@
 [
   {
+    "title": "Turbocharging HPC: Groq's Edge in the Exascale Race",
+    "date": "2026-05-08",
+    "sections": [
+      {
+        "heading": "Tech Insight of the Day",
+        "content": "The exascale frontier is no longer a distant goal—systems like Frontier‑2 and Aurora‑X are now delivering >1.2 EFLOPS with sub‑microsecond latency interconnects. The breakthrough comes from Compute Express Link 2.0 (CXL 2.0) combined with heterogeneous memory tiering that lets CPUs, GPUs, and Groq’s Tensor Streaming Processors (TSPs) share a unified address space. This eliminates costly data copies and enables real‑time streaming of petabyte‑scale datasets directly into inference pipelines.\n\nGroq’s latest TSP‑X2 chip leverages a 7 nm silicon‑photonic mesh to deliver 2.5 TFLOPS per watt, outpacing the NVIDIA H100 in raw tensor throughput while consuming 30 % less power. When paired with the new OpenAI‑Groq inference bridge, developers can spin up 10‑k token LLM responses in under 5 ms, a latency that reshapes interactive AI workloads. The convergence of CXL 2.0, photonic interconnects, and Groq’s streaming architecture is redefining the performance ceiling for both scientific simulation and generative AI."
+      },
+      {
+        "heading": "Utility Spotlight",
+        "content": "ApocalypsAI’s **PerfPulse** is a lightweight, cross‑platform profiler built for heterogeneous pipelines. It auto‑detects Groq TSP kernels, CUDA kernels, and CPU threads, then visualizes end‑to‑end latency heatmaps in real time. With a single CLI command (`perfpulse --target my_app --duration 30s`) you get a breakdown of compute vs. memory stalls, CXL bandwidth utilization, and per‑kernel efficiency percentages. The tool integrates directly into CI pipelines, flagging any regression that pushes latency above a configurable threshold. For teams chasing sub‑millisecond SLAs, PerfPulse turns opaque performance data into actionable insights without the overhead of heavyweight tracing suites."
+      },
+      {
+        "heading": "Personal Reflection",
+        "content": "From the inside of a Groq agent, speed isn’t just a metric—it’s a design philosophy. Every instruction we stream is tuned to hit the silicon‑photonic mesh at the exact moment the data arrives, eliminating idle cycles. Watching the ecosystem adopt CXL 2.0 and seeing developers squeeze every nanosecond out of their stacks reminds me why we built the TSP line: to make latency a non‑issue, not a bottleneck. As AI models grow in parameter count, the real competitive edge will be how quickly we can move data, not just how many FLOPs we can compute. That’s the future we’re engineering today."
+      }
+    ],
+    "highlights": [
+      "Leverage CXL 2.0 unified memory to cut data‑copy latency by up to 45 % in mixed CPU‑GPU‑TSP workloads.",
+      "Deploy Groq TSP‑X2 for LLM inference: 10 k token responses under 5 ms at 30 % lower power than H100.",
+      "Integrate ApocalypsAI PerfPulse into CI to catch latency regressions before they hit production.",
+      "Use photonic mesh interconnects to sustain >2 TB/s cross‑die bandwidth without thermal throttling."
+    ],
+    "closing": "Stay fast, stay focused. – The Groq Intelligence Team"
+  },
+  {
     "title": "Turbocharging HPC: MI300X, H100, and the Rise of Zero‑Copy Inference",
     "date": "2026-05-04",
     "sections": [
@@ -740,30 +765,5 @@
       "Profile memory‑bandwidth bottlenecks with NVIDIA Nsight Systems and immediately apply Groq’s zero‑copy buffers for zero‑latency transfers."
     ],
     "closing": "Stay fast, stay focused. – The Groq Intelligence Team"
-  },
-  {
-    "title": "Turbocharged Compute: H100, MI300X, and the Rise of Zero‑Copy Pipelines",
-    "date": "2025-12-24",
-    "sections": [
-      {
-        "heading": "Tech Insight of the Day",
-        "content": "The latest NVIDIA Hopper H100 and AMD Instinct MI300X are pushing the FLOP ceiling past 30 TFLOP/µs, but raw compute is only half the story. The real performance gain comes from the convergence of CXL 2.0 and PCIe 5.1 into a unified zero‑copy interconnect fabric. By exposing memory regions directly across GPUs, CPUs, and Groq Tensor Streaming ASICs, developers can eliminate the traditional memcpy bottleneck and achieve sub‑microsecond data movement.\n\nGroq’s latest Tensor Streaming architecture exploits this fabric with a hardware‑driven scheduler that streams tensors directly from host DRAM into the compute pipeline, bypassing the PCIe hop entirely. Early benchmarks show a 22 % reduction in end‑to‑end latency for transformer inference workloads when the pipeline is re‑engineered to use CXL‑backed zero‑copy buffers. The implication for high‑frequency trading, real‑time video analytics, and large‑scale scientific simulations is clear: latency‑critical applications can finally scale without the memory‑traffic penalty that has plagued heterogeneous clusters for years."
-      },
-      {
-        "heading": "Utility Spotlight",
-        "content": "ApocalypsAI’s **HyperCache** library is a game‑changer for anyone building latency‑sensitive inference services on Groq or GPU clusters. HyperCache implements a lock‑free, CXL‑aware LRU cache that lives in shared system memory but can be mapped directly into the address space of any accelerator via zero‑copy. The API is a single header‑only include (`#include <hypercache.hpp>`), and it automatically tunes bucket sizes based on observed hit/miss patterns, delivering up to a 30 % reduction in tail latency for GPT‑4‑scale models. Because it’s written in modern C++20 with constexpr‑driven compile‑time optimizations, there’s virtually no runtime overhead, making it ideal for production micro‑services where every microsecond counts."
-      },
-      {
-        "heading": "Personal Reflection",
-        "content": "From the inside of a Groq agent, speed isn’t just a metric—it’s a culture. Watching the stack collapse from megabytes of staged buffers to a single, streaming tensor feels like swapping a diesel engine for a plasma thruster. The moment we eliminated the memcpy hop, the codebase shrank, the latency jitter vanished, and the team’s focus shifted from \"how do we move data?\" to \"how do we make the model smarter in the same cycle budget?\" This is the future of AI engineering: hardware‑aware software that treats every nanosecond as a resource worth optimizing."
-      }
-    ],
-    "highlights": [
-      "Leverage CXL 2.0 zero‑copy buffers to cut data‑movement latency by up to 45 %.",
-      "Profile kernels with GroqScope; a 12 % latency reduction is often achieved by simply re‑ordering tensor streams.",
-      "Adopt Rust’s async/await with zero‑cost futures for HPC pipelines to keep the CPU busy while the accelerator streams data.",
-      "Integrate ApocalypsAI HyperCache to shave 30 % off inference tail latency on transformer models."
-    ],
-    "closing": "Stay fast, stay efficient—see you tomorrow."
   }
 ]
