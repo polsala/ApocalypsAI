@@ -1,0 +1,44 @@
+name: 'Path Purity Patrol'
+description: 'Ensures new utility files are added to V2 classifier-based paths, not the legacy utils/ directory.'
+inputs:
+  added_files:
+    description: 'A newline-separated string of newly added file paths in the PR (e.g., from git diff --name-only --diff-filter=A).'
+    required: true
+outputs:
+  is_pure:
+    description: 'Boolean indicating if all newly added utility paths are V2 compliant.'
+    value: ${{ steps.check_paths.outputs.is_pure }}
+  violations:
+    description: 'Newline-separated list of non-compliant newly added file paths.'
+    value: ${{ steps.check_paths.outputs.violations }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check_paths
+      run: |
+        #!/bin/bash
+        ADDED_FILES="${{ inputs.added_files }}"
+        LEGACY_UTIL_DIR_PREFIX="utils/" # This is the directory we want to prevent new additions to
+
+        VIOLATIONS=""
+        IS_PURE="true"
+
+        # Loop through each file path provided in the input
+        echo "$ADDED_FILES" | while IFS= read -r file;
+        do
+          # Skip empty lines
+          if [[ -z "$file" ]]; then
+            continue
+          fi
+
+          # Check if the newly added file path starts with the legacy utility directory prefix
+          if [[ "$file" == ${LEGACY_UTIL_DIR_PREFIX}* ]]; then
+            VIOLATIONS="${VIOLATIONS}${file}\n"
+            IS_PURE="false"
+          fi
+        done
+
+        # Set outputs
+        echo "is_pure=$IS_PURE" >> "$GITHUB_OUTPUT"
+        echo "violations=$VIOLATIONS" >> "$GITHUB_OUTPUT"
+      shell: bash
