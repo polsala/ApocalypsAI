@@ -1,0 +1,21 @@
+name: 'Nightly Whimsy Enforcer'
+description: 'Ensures PR titles or commit messages contain a touch of ApocalypsAI whimsy.'
+inputs:
+  whimsy-keywords:
+    description: 'Comma-separated list of keywords to search for (case-insensitive).'
+    required: true
+    default: 'void, temporal, anomaly, whisper, wasteland, cosmic, glitch, echo, paradox, shimmer'
+  target-type:
+    description: 'Where to look for whimsy: "pr_title" or "commit_message".'
+    required: false
+    default: 'pr_title'
+  github-token:
+    description: 'GitHub token for API calls (e.g., to fetch commit messages for PRs).'
+    required: false
+    default: ${{ github.token }}
+outputs:
+  whimsy-detected:
+    description: 'True if a whimsical keyword was found, false otherwise.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
