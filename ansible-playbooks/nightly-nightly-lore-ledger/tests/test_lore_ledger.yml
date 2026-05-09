@@ -1,0 +1,99 @@
+- name: Test Nightly Lore Ledger Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    test_dir: "{{ playbook_dir }}/test_output"
+    lore_ledger_path: "{{ test_dir }}/lore" # Override default path for testing
+
+  tasks:
+    - name: Clean up previous test run
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      delegate_to: localhost
+
+    - name: Create test directory structure
+      ansible.builtin.file:
+        path: "{{ lore_ledger_path }}"
+        state: directory
+      delegate_to: localhost
+
+    - name: Create test file 1 (perfect)
+      ansible.builtin.copy:
+        dest: "{{ lore_ledger_path }}/perfect_lore.md"
+        content: |
+          ---
+          title: The Whispering Wastes
+          tags: [wasteland, lore, history]
+          category: Geography
+          status: complete
+          ---
+          A chronicle of the desolate lands...
+      delegate_to: localhost
+
+    - name: Create test file 2 (missing fields)
+      ansible.builtin.copy:
+        dest: "{{ lore_ledger_path }}/incomplete_lore.md"
+        content: |
+          ---
+          title: The Scavenger's Code
+          tags: [survival, rules]
+          ---
+          Rules for surviving the wastes...
+      delegate_to: localhost
+
+    - name: Create test file 3 (no front matter)
+      ansible.builtin.copy:
+        dest: "{{ lore_ledger_path }}/untagged_note.md"
+        content: |
+          Just a quick note about a shiny thing I found.
+      delegate_to: localhost
+
+    - name: Run the lore ledger playbook
+      ansible.builtin.include_playbook: ../src/lore_ledger.yml
+      delegate_to: localhost # Mock rationale: Ensures the playbook runs locally against test files.
+
+    - name: Read generated report
+      ansible.builtin.slurp:
+        src: "{{ lore_ledger_path }}/lore_ledger_audit_report.txt"
+      register: audit_report_slurped
+      delegate_to: localhost
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        audit_report_content: "{{ audit_report_slurped.content | b64decode }}"
+      delegate_to: localhost
+
+    - name: Assert perfect file is OK
+      ansible.builtin.assert:
+        that:
+          - "'File: {{ lore_ledger_path }}/perfect_lore.md' in audit_report_content"
+          - "'Status: OK' in audit_report_content"
+        fail_msg: "Perfect file not reported as OK"
+      delegate_to: localhost
+
+    - name: Assert incomplete file reports missing fields
+      ansible.builtin.assert:
+        that:
+          - "'File: {{ lore_ledger_path }}/incomplete_lore.md' in audit_report_content"
+          - "'Status: MISSING_FIELDS' in audit_report_content"
+          - "'Missing Fields: category, status' in audit_report_content"
+        fail_msg: "Incomplete file did not report correct missing fields"
+      delegate_to: localhost
+
+    - name: Assert untagged file reports all fields missing
+      ansible.builtin.assert:
+        that:
+          - "'File: {{ lore_ledger_path }}/untagged_note.md' in audit_report_content"
+          - "'Status: MISSING_FIELDS' in audit_report_content"
+          - "'Missing Fields: title, tags, category, status' in audit_report_content"
+        fail_msg: "Untagged file did not report all fields missing"
+      delegate_to: localhost
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      delegate_to: localhost
