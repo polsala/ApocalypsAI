@@ -1,0 +1,32 @@
+{
+  "name": "nightly-void-echo-type-checker",
+  "version": "1.0.0",
+  "description": "A type-safe utility to define and validate 'void echo' messages (informational outputs) against predefined schemas or patterns.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "nightly-void-echo-type-checker": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "npm run build && node dist/cli.js"
+  },
+  "keywords": [
+    "typescript",
+    "validation",
+    "cli",
+    "type-safe",
+    "echo",
+    "utility"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
