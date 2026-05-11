@@ -1,0 +1,13 @@
+cleanup_targets:
+  - path: /tmp
+    age_days: 7
+    patterns: ["*"]
+  - path: /var/log
+    age_days: 30
+    patterns: ["*.log", "*.gz"]
+  - path: /var/cache/apt/archives
+    age_days: 30
+    patterns: ["*.deb"]
+  - path: /home/*/Downloads
+    age_days: 60
+    patterns: ["*"]
