@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket"\n  type        = string\n}\n\nvariable "region" {\n  description = "AWS region"\n  type        = string\n  default     = "us-east-1"\n}
