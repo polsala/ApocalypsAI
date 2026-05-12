@@ -1,0 +1,4 @@
+import os\nimport sys\nimport qrcode\n\n\ndef generate_qr_ascii(message: str) -> str:\n    """Return an ASCII representation of a QR code for *message*.
+\n    Black modules are rendered as two full‑block characters (\u2588\u2588)\n    to keep the aspect ratio roughly square. White modules are two spaces.
+    """
+    qr = qrcode.QRCode(border=1)\n    qr.add_data(message)\n    qr.make(fit=True)\n    matrix = qr.get_matrix()\n    rows = []\n    for row in matrix:\n        rows.append(''.join('██' if cell else '  ' for cell in row))\n    return '\n'.join(rows)\n\n\ndef main() -> None:\n    # Message can come from env var or first CLI argument\n    message = os.getenv('MESSAGE')\n    if not message and len(sys.argv) > 1:\n        message = sys.argv[1]\n    if not message:\n        print('Usage: set MESSAGE env var or pass as argument', file=sys.stderr)\n        sys.exit(1)\n    print(generate_qr_ascii(message))\n\n\nif __name__ == '__main__':\n    main()

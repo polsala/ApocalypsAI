@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\n# Install the QR code library (no heavy image dependencies)\nRUN pip install --no-cache-dir qrcode[pil]\n\n# Copy source code\nCOPY src/ /app/\nWORKDIR /app\n\n# Set entrypoint\nENTRYPOINT ["python", "app.py"]
