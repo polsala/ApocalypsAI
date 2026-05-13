@@ -1,0 +1,1 @@
+variable "bucket_prefix" {\n  description = "Prefix for bucket name"\n  type        = string\n  default     = "safehouse-"\n}\n\nvariable "lifecycle_days" {\n  description = "Days after which non‑current versions are deleted"\n  type        = number\n  default     = 30\n}
