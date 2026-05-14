@@ -1,0 +1,83 @@
+---
+- name: Test Nightly Knowledge Keeper Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_kb_path: "/tmp/nightly_knowledge_keeper_test_kb"
+    required_front_matter_keys:
+      - title
+      - date
+      - tags
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_kb_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create a compliant markdown file
+      ansible.builtin.copy:
+        dest: "{{ test_kb_path }}/compliant_note.md"
+        content: |
+          ---
+          title: "A Compliant Note"
+          date: "2023-10-27"
+          tags:
+            - ansible
+            - test
+          ---
+          This is a compliant note.
+
+    - name: Create a markdown file with missing keys
+      ansible.builtin.copy:
+        dest: "{{ test_kb_path }}/missing_key_note.md"
+        content: |
+          ---
+          title: "Missing Key Note"
+          tags:
+            - incomplete
+          ---
+          This note is missing the 'date' key.
+
+    - name: Create a markdown file with no front matter
+      ansible.builtin.copy:
+        dest: "{{ test_kb_path }}/no_front_matter_note.md"
+        content: |
+          This note has no front matter at all.
+
+    - name: Create a markdown file with malformed front matter
+      ansible.builtin.copy:
+        dest: "{{ test_kb_path }}/malformed_front_matter.md"
+        content: |
+          ---
+          title: "Malformed YAML"
+          date: "2023-10-27"
+          tags:
+            - bad-yaml
+          - This line is not valid YAML
+          ---
+          This note has malformed YAML.
+
+    - name: Run the main playbook against the test directory
+      ansible.builtin.include_tasks: ../src/playbook.yml
+      vars:
+        knowledge_base_paths:
+          - "{{ test_kb_path }}"
+        required_front_matter_keys: "{{ required_front_matter_keys }}"
+      register: playbook_run_result
+
+    - name: Assert that the playbook reported correctly
+      ansible.builtin.assert:
+        that:
+          - "'Compliant Files: 1' in playbook_run_result.ansible_facts.audit_report_output.msg"
+          - "'Non-Compliant Files: 3' in playbook_run_result.ansible_facts.audit_report_output.msg"
+          - "'missing_key_note.md (Missing keys: [\'date\'])' in playbook_run_result.ansible_facts.audit_report_output.msg"
+          - "'no_front_matter_note.md (Missing front matter)' in playbook_run_result.ansible_facts.audit_report_output.msg"
+          - "'malformed_front_matter.md (Missing keys: [\'date\', \'tags\'])' in playbook_run_result.ansible_facts.audit_report_output.msg" # Mock rationale: Malformed YAML will cause from_yaml to return default={}, leading to all required keys being reported as missing.
+        fail_msg: "Knowledge Keeper playbook did not report correctly."
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_kb_path }}"
+        state: absent

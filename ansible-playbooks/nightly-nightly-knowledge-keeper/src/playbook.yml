@@ -1,0 +1,41 @@
+---
+- name: Audit Knowledge Base Markdown Files
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Find markdown files
+      ansible.builtin.find:
+        paths: "{{ knowledge_base_paths }}"
+        patterns: "*.md"
+        recurse: true
+      register: markdown_files_result
+
+    - name: Initialize audit results
+      ansible.builtin.set_fact:
+        compliant_files: []
+        non_compliant_files: []
+
+    - name: Process each markdown file
+      ansible.builtin.include_tasks: process_markdown_file.yml
+      loop: "{{ markdown_files_result.files }}"
+      loop_control:
+        loop_var: current_file
+
+    - name: Report non-compliant files
+      ansible.builtin.debug:
+        msg: |
+          --- Knowledge Base Audit Report ---
+
+          Compliant Files: {{ compliant_files | length }}
+            {% for file in compliant_files %}
+            - {{ file }}
+            {% endfor %}
+
+          Non-Compliant Files: {{ non_compliant_files | length }}
+            {% for item in non_compliant_files %}
+            - {{ item.file }} ({{ item.reason }})
+            {% endfor %}
+      register: audit_report_output
