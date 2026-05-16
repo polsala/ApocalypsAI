@@ -1,0 +1,40 @@
+name: "Nightly Utility Structure Enforcer"
+description: "Ensures new utility directories adhere to the ApocalypsAI structure (README.md and tests/ directory)."
+
+inputs:
+  check-paths:
+    description: "Comma-separated list of parent directories to check for new utilities."
+    required: false
+    default: "utils/,python-utils/,rust-utils/,bash-utils/,react-webpage/,github-actions/,devops-tools/,docker-tools/,cli-apps/,web-apis/,js-utils/,node-utils/,typescript-utils/,data-scripts/,test-suite-tools/,monitoring-scripts/,infra-automation/,go-utils/,java-utils/,cpp-utils/,ansible-playbooks/,terraform-modules/,k8s-resources/,ci-cd-pipelines/,database-scripts/,ml-notebooks/,api-clients/"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get changed files
+      id: changed-files
+      shell: bash
+      run: |
+        # Determine the base ref for comparison
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_REF="${{ github.event.pull_request.base.sha }}"
+        else
+            echo "This action is intended for pull_request events. Skipping file diff."
+            echo "new_files=" >> $GITHUB_OUTPUT
+            exit 0 # Allow non-PR runs to pass without checks
+        fi
+
+        # Get newly added files (A for Added) compared to the base branch
+        # fetch-depth: 0 in checkout is crucial for this to work correctly
+        NEW_FILES=$(git diff --name-only --diff-filter=A "$BASE_REF" HEAD)
+        
+        echo "new_files<<EOF" >> $GITHUB_OUTPUT
+        echo "$NEW_FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Run structure check script
+      shell: bash
+      # The script is located relative to the action.yml, so we need to reference it directly.
+      # We pass the multiline output of new_files as a single space-separated string.
+      run: |
+        NEW_FILES_ESCAPED=$(echo "${{ steps.changed-files.outputs.new_files }}" | tr '\n' ' ')
+        "$GITHUB_ACTION_PATH/src/check_structure.sh" "$NEW_FILES_ESCAPED" "${{ inputs.check-paths }}"
