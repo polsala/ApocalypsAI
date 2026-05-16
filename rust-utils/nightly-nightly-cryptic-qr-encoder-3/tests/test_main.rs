@@ -1,0 +1,1 @@
+use nightly_cryptic_qr_encoder::encode_to_ascii;\n\n#[test]\nfn test_encode_hello() {\n    let ascii = encode_to_ascii("HELLO");\n    assert!(ascii.contains("██"));\n    assert!(!ascii.is_empty());\n}
