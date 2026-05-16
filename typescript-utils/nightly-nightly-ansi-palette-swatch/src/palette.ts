@@ -1,0 +1,1 @@
+export function generatePalette(rows: number, cols: number): string {\n  const total = rows * cols;\n  let output = "";\n  for (let i = 0; i < total; i++) {\n    const code = i;\n    const block = `\u001b[48;5;${code}m  \u001b[0m`;// two spaces inside the block\n    output += block;\n    if ((i + 1) % cols === 0) {\n      output += "\n";\n    }\n  }\n  return output;\n}
