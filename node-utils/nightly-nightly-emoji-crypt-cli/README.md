@@ -1,0 +1,1 @@
+Emoji Crypt CLI\n\nA whimsical command-line tool that encodes and decodes text using a fixed emoji substitution cipher.\n\nUsage:\n  node src/main.js encode \"your message\"\n  node src/main.js decode \"emoji string\"\n\nThe tool supports letters a‑z (case‑insensitive). Other characters are passed through unchanged.\n
