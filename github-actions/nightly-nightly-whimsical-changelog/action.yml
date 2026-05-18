@@ -1,0 +1,26 @@
+name: 'Whimsical Changelog Generator'
+description: 'Automatically compiles a delightful changelog from whimsically tagged commit messages.'
+inputs:
+  commit-prefix:
+    description: 'The prefix to look for in commit messages (e.g., "[whimsy]", "[joyful]").'
+    required: true
+    default: '[whimsy]'
+  output-file:
+    description: 'The path to the markdown file where the changelog will be written.'
+    required: true
+    default: 'WHIMSICAL_CHANGELOG.md'
+  max-commits:
+    description: 'The maximum number of recent commits to scan for whimsical messages.'
+    required: true
+    default: '50'
+  github-token:
+    description: 'GitHub token with `contents: read` permission. Usually `${{ github.token }}`.'
+    required: true
+outputs:
+  changelog-content:
+    description: 'The full content of the generated whimsical changelog.'
+  changelog-path:
+    description: 'The path to the file where the changelog was written.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
