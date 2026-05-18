@@ -1,0 +1,64 @@
+.App {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+h1 {
+  color: #61dafb;
+  text-align: center;
+}
+
+.filters {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filters label {
+  font-weight: bold;
+}
+
+.filters select {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #61dafb;
+  background-color: #3a3f47;
+  color: #f0f0f0;
+  cursor: pointer;
+}
+
+.echo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.echo-card {
+  background-color: #3a3f47;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-left: 5px solid;
+}
+
+.echo-card.severity-1 { border-color: #4CAF50; } /* Green */
+.echo-card.severity-2 { border-color: #8BC34A; } /* Light Green */
+.echo-card.severity-3 { border-color: #FFEB3B; } /* Yellow */
+.echo-card.severity-4 { border-color: #FF9800; } /* Orange */
+.echo-card.severity-5 { border-color: #F44336; } /* Red */
+
+.echo-card h3 {
+  margin-top: 0;
+  color: #61dafb;
+}
+
+.echo-card p {
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+
+.echo-card strong {
+  color: #f0f0f0;
+}
