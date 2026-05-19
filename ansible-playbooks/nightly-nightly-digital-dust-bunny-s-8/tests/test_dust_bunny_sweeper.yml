@@ -1,0 +1,178 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  gather_facts: yes
+  connection: local
+
+  vars:
+    test_base_dir: "{{ lookup('env', 'HOME') }}/ansible_test_dust_bunnies"
+    # Mock rationale: Using a temporary directory in the user's home ensures
+    # the test is self-contained and doesn't affect system files.
+    # The path is deterministic for the test run but unique per user/environment.
+
+    # Test-specific configuration for the sweeper
+    test_sweeper_paths:
+      - "{{ test_base_dir }}/old_files"
+      - "{{ test_base_dir }}/large_files"
+    test_sweeper_age_days: 30 # Files older than 30 days
+    test_sweeper_min_size_mb: 1 # Files larger than 1 MB (for easy testing)
+    test_sweeper_exclude_patterns:
+      - "important_log.txt" # Exclude this specific file
+
+  tasks:
+    - name: Ensure test base directory exists
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Clean up previous test files
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Ensures a clean slate for each test run, making it deterministic.
+
+    - name: Recreate test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create test directories for old and large files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ test_sweeper_paths }}"
+
+    - name: Create mock files for testing
+      ansible.builtin.shell: |
+        # Old file (should be deleted by age)
+        touch -d "2 months ago" "{{ test_base_dir }}/old_files/old_file_1.txt"
+        echo "old content" > "{{ test_base_dir }}/old_files/old_file_1.txt"
+
+        # Another old file
+        touch -d "45 days ago" "{{ test_base_dir }}/old_files/old_file_2.txt"
+        echo "more old content" > "{{ test_base_dir }}/old_files/old_file_2.txt"
+
+        # New file (should NOT be deleted by age)
+        touch "{{ test_base_dir }}/old_files/new_file.txt"
+        echo "new content" > "{{ test_base_dir }}/old_files/new_file.txt"
+
+        # Large file (should be deleted by size)
+        dd if=/dev/zero of="{{ test_base_dir }}/large_files/large_file_1.bin" bs=1M count=2
+        # Mock rationale: dd /dev/zero creates a large file quickly and deterministically.
+
+        # Another large file
+        dd if=/dev/zero of="{{ test_base_dir }}/large_files/large_file_2.bin" bs=1M count=1.5
+
+        # Small file (should NOT be deleted by size)
+        echo "small content" > "{{ test_base_dir }}/large_files/small_file.txt"
+
+        # File that is old AND large (should be deleted)
+        touch -d "60 days ago" "{{ test_base_dir }}/old_files/old_large_file.bin"
+        dd if=/dev/zero of="{{ test_base_dir }}/old_files/old_large_file.bin" bs=1M count=1.1
+
+        # Excluded file (should NOT be deleted)
+        touch -d "60 days ago" "{{ test_base_dir }}/old_files/important_log.txt"
+        dd if=/dev/zero of="{{ test_base_dir }}/old_files/important_log.txt" bs=1M count=1.1
+      args:
+        creates: "{{ test_base_dir }}/old_files/old_file_1.txt" # Idempotency check
+      # Mock rationale: Using 'touch -d' to set specific modification times
+      # and 'dd' for specific sizes allows precise control over test conditions.
+
+    - name: Run sweeper in DRY RUN mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_sweeper_paths: "{{ test_sweeper_paths }}"
+        dust_bunny_sweeper_age_days: "{{ test_sweeper_age_days }}"
+        dust_bunny_sweeper_min_size_mb: "{{ test_sweeper_min_size_mb }}"
+        dust_bunny_sweeper_dry_run: true
+        dust_bunny_sweeper_exclude_patterns: "{{ test_sweeper_exclude_patterns }}"
+      register: dry_run_result
+
+    - name: Assert dry run found expected files
+      ansible.builtin.assert:
+        that:
+          - "'old_file_1.txt' in dry_run_result.results[0].msg"
+          - "'old_file_2.txt' in dry_run_result.results[0].msg"
+          - "'large_file_1.bin' in dry_run_result.results[0].msg"
+          - "'large_file_2.bin' in dry_run_result.results[0].msg"
+          - "'old_large_file.bin' in dry_run_result.results[0].msg"
+          - "'new_file.txt' not in dry_run_result.results[0].msg" # Should not be found
+          - "'small_file.txt' not in dry_run_result.results[0].msg" # Should not be found
+          - "'important_log.txt' not in dry_run_result.results[0].msg" # Should be excluded
+      # Mock rationale: Checks the debug output of the dry run to ensure
+      # the correct files were identified without actual deletion.
+
+    - name: Verify files still exist after dry run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: stat_results
+      loop:
+        - "{{ test_base_dir }}/old_files/old_file_1.txt"
+        - "{{ test_base_dir }}/old_files/old_file_2.txt"
+        - "{{ test_base_dir }}/old_files/new_file.txt"
+        - "{{ test_base_dir }}/large_files/large_file_1.bin"
+        - "{{ test_base_dir }}/large_files/large_file_2.bin"
+        - "{{ test_base_dir }}/large_files/small_file.txt"
+        - "{{ test_base_dir }}/old_files/old_large_file.bin"
+        - "{{ test_base_dir }}/old_files/important_log.txt"
+      # Mock rationale: Confirms that dry run truly performs no changes.
+
+    - name: Assert all files exist after dry run
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is true
+      loop: "{{ stat_results.results }}"
+      loop_control:
+        label: "Verifying {{ item.item }}"
+
+    - name: Run sweeper in ACTUAL CLEANUP mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_sweeper_paths: "{{ test_sweeper_paths }}"
+        dust_bunny_sweeper_age_days: "{{ test_sweeper_age_days }}"
+        dust_bunny_sweeper_min_size_mb: "{{ test_sweeper_min_size_mb }}"
+        dust_bunny_sweeper_dry_run: false # This time, delete!
+        dust_bunny_sweeper_exclude_patterns: "{{ test_sweeper_exclude_patterns }}"
+      register: cleanup_result
+
+    - name: Verify files after actual cleanup
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: final_stat_results
+      loop:
+        # These should be gone
+        - "{{ test_base_dir }}/old_files/old_file_1.txt"
+        - "{{ test_base_dir }}/old_files/old_file_2.txt"
+        - "{{ test_base_dir }}/large_files/large_file_1.bin"
+        - "{{ test_base_dir }}/large_files/large_file_2.bin"
+        - "{{ test_base_dir }}/old_files/old_large_file.bin"
+        # These should remain
+        - "{{ test_base_dir }}/old_files/new_file.txt"
+        - "{{ test_base_dir }}/large_files/small_file.txt"
+        - "{{ test_base_dir }}/old_files/important_log.txt"
+      # Mock rationale: Checks the existence of files after the cleanup run.
+
+    - name: Assert expected files are deleted
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is false
+      loop: "{{ final_stat_results.results[0:5] }}" # The first 5 are the ones that should be deleted
+      loop_control:
+        label: "Verifying deletion of {{ item.item }}"
+
+    - name: Assert expected files remain
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is true
+      loop: "{{ final_stat_results.results[5:8] }}" # The last 3 are the ones that should remain
+      loop_control:
+        label: "Verifying retention of {{ item.item }}"
+
+    - name: Final cleanup of test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary test directory, leaving no artifacts.
