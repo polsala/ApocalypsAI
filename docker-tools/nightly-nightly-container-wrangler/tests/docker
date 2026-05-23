@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Mock rationale: We need to simulate Docker daemon responses without actually running Docker commands.
+# This mock 'docker' command will output predefined container lists based on test scenarios.
+
+# This variable will be set by the test script to control the mock's behavior
+MOCK_DOCKER_OUTPUT_SCENARIO="${MOCK_DOCKER_OUTPUT_SCENARIO:-}"
+
+# The actual docker command is passed as arguments to this script
+case "$1 $2" in
+    "ps -a")
+        case "$MOCK_DOCKER_OUTPUT_SCENARIO" in
+            "no_ephemeral")
+                echo "container1\t" # No labels
+                echo "container2\tcom.example.app=true"
+                ;;
+            "expired_ephemeral")
+                # One expired, one active, one non-ephemeral
+                EXPIRED_TS=$(($(date +%s) - 3600)) # 1 hour ago
+                ACTIVE_TS=$(($(date +%s) + 3600))  # 1 hour from now
+                echo "expired_id\tapocalypsai.ephemeral=true,apocalypsai.expires_at=${EXPIRED_TS}"
+                echo "active_id\tapocalypsai.ephemeral=true,apocalypsai.expires_at=${ACTIVE_TS}"
+                echo "non_ephemeral_id\tcom.example.service=true"
+                ;;
+            "ephemeral_no_expiry")
+                echo "no_expiry_id\tapocalypsai.ephemeral=true"
+                ;;
+            *)
+                echo "" # Default empty
+                ;;
+        esac
+        ;;
+    "stop "* | "rm "* )
+        echo "MOCK: Executed $@" # Just log that it would have run
+        ;;
+    *)
+        echo "MOCK: Unknown docker command: $@" >&2
+        exit 1
+        ;;
+esac
