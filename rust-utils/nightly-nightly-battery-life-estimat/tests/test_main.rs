@@ -1,0 +1,1 @@
+use battery_life_estimator::compute_runtime;\n\n#[test]\nfn test_estimate() {\n    // Battery: 5000 mAh @ 3.7 V, consumption 5 W\n    // Expected Wh = 5000 * 3.7 / 1000 = 18.5 Wh\n    // Runtime = 18.5 / 5 = 3.7 h\n    let runtime = compute_runtime(5000.0, 3.7, 5.0);\n    assert!((runtime - 3.7).abs() < 1e-6);\n}\n
