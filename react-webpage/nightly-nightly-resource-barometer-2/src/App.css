@@ -1,0 +1,115 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.app-container {
+  background-color: #3a3f47;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  max-width: 900px;
+  width: 100%;
+}
+
+h1 {
+  color: #61dafb;
+  margin-bottom: 10px;
+  font-size: 2.5em;
+}
+
+.tagline {
+  color: #a0a0a0;
+  margin-bottom: 30px;
+  font-style: italic;
+  font-size: 1.1em;
+}
+
+.gauges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.resource-gauge {
+  background-color: #4a4f57;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.resource-name {
+  color: #f0f0f0;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.4em;
+}
+
+.gauge-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: #555;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  border: 1px solid #666;
+}
+
+.gauge-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.gauge-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.gauge-controls button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 15px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-width: 40px;
+}
+
+.gauge-controls button:hover {
+  background-color: #21a1f1;
+}
+
+.gauge-controls button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  color: #bbb;
+}
+
+.resource-value {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #f0f0f0;
+  min-width: 60px;
+}
+
+.footer-note {
+  margin-top: 40px;
+  font-size: 0.9em;
+  color: #888;
+}
