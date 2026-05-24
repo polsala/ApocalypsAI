@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Determine PR label based on file extensions.\n# Usage: labeler.sh <file1> <file2> ...\n\nlabel="misc"\nfor file in "$@"; do\n  case "$file" in\n    *.py) label="python"; break ;;\n    *.md) label="docs"; break ;;\n    *.js) label="javascript"; break ;;\n  esac\n done\necho "$label"
