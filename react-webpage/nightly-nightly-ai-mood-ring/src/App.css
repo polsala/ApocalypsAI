@@ -1,0 +1,63 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mood-ring {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  cursor: pointer;
+  transition: background-color 0.5s ease-in-out;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border: 5px solid rgba(255, 255, 255, 0.3);
+}
+
+.mood-ring:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+}
+
+.mood-text {
+  font-size: 1.2em;
+  padding: 20px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.refresh-button {
+  background-color: #61dafb;
+  border: none;
+  color: #282c34;
+  padding: 15px 30px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1em;
+  margin: 10px 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.refresh-button:hover {
+  background-color: #21a1f1;
+  color: white;
+}
