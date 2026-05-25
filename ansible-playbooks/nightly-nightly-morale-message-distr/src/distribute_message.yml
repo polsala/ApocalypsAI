@@ -1,0 +1,42 @@
+---
+- name: Distribute Nightly Morale Message
+  hosts: outposts
+  become: yes # Requires root privileges to write to /etc/motd or similar system paths
+  vars:
+    motd_path: "/etc/motd"
+    # This variable can be overridden by test playbooks for deterministic testing.
+    # If 'test_message' is defined, it will be used instead of a random choice.
+    selected_message: "{{ test_message | default(all_messages | random_choice) }}"
+
+  tasks:
+    - name: Load morale messages
+      ansible.builtin.include_vars:
+        file: vars/messages.yml
+        name: message_data
+
+    - name: Set all_messages variable from loaded data
+      ansible.builtin.set_fact:
+        all_messages: "{{ message_data.messages }}"
+
+    - name: Ensure target directory exists (if not /etc)
+      ansible.builtin.file:
+        path: "{{ motd_path | dirname }}"
+        state: directory
+        mode: '0755'
+      when: motd_path != '/etc/motd' # Avoid trying to create /etc if it's the target
+
+    - name: Render and distribute message of the day
+      ansible.builtin.template:
+        src: templates/message_of_the_day.j2
+        dest: "{{ motd_path }}"
+        mode: '0644'
+      notify: Restart motd service (if applicable)
+
+  handlers:
+    - name: Restart motd service (if applicable)
+      # This is a placeholder. Most systems don't have a 'motd service' to restart.
+      # The file update is usually enough. This handler is for illustrative purposes
+      # if a custom service were to consume the MOTD file.
+      ansible.builtin.debug:
+        msg: "MOTD file updated. No service restart typically needed for /etc/motd."
+      listen: "Restart motd service (if applicable)"
