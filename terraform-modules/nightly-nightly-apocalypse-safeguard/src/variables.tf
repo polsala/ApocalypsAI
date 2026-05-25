@@ -1,0 +1,1 @@
+variable "bucket_name_prefix" {\n  description = "Prefix for the bucket name; a random suffix will be added."\n  type        = string\n}\n\nvariable "region" {\n  description = "AWS region where the bucket will be created."\n  type        = string\n}

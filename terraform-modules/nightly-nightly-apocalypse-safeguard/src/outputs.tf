@@ -1,0 +1,1 @@
+output "bucket_name" {\n  description = "The full bucket name."\n  value       = aws_s3_bucket.apocalypse_bucket.id\n}\n\noutput "bucket_arn" {\n  description = "The ARN of the bucket."\n  value       = aws_s3_bucket.apocalypse_bucket.arn\n}

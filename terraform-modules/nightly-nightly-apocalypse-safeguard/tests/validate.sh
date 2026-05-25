@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -euo pipefail\n\n# Initialize Terraform without a backend (offline)\nterraform init -backend=false > /dev/null\n\n# Validate configuration\nterraform validate\n\necho "✅ Terraform configuration is valid."
