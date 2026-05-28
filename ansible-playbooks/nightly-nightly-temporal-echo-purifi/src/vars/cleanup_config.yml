@@ -1,0 +1,17 @@
+---
+# Number of days after which files in /tmp and /var/tmp should be removed
+cleanup_tmp_days: 7
+
+# Number of days after which log files in /var/log should be removed
+cleanup_log_days: 30
+
+# List of log files (base names) to exclude from cleanup in /var/log
+cleanup_log_exclude:
+  - auth.log
+  - syslog
+  - kern.log
+  - dmesg
+  - bootstrap.log
+  - lastlog
+  - wtmp
+  - btmp

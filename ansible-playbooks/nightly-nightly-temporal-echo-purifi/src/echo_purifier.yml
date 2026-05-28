@@ -1,0 +1,81 @@
+---
+- name: Temporal Echo Chamber Purifier
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/cleanup_config.yml
+  vars: # Define defaults for testability
+    tmp_dir: "/tmp"
+    var_tmp_dir: "/var/tmp"
+    var_log_dir: "/var/log"
+
+  tasks:
+    - name: Gather service facts (for Docker detection)
+      ansible.builtin.service_facts
+
+    - name: Clean old files from {{ tmp_dir }}
+      ansible.builtin.find:
+        paths: "{{ tmp_dir }}"
+        age: "{{ cleanup_tmp_days }}d"
+        recurse: yes
+        file_type: any
+        hidden: yes
+      register: old_tmp_files
+
+    - name: Remove old files from {{ tmp_dir }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files.files }}"
+      when: old_tmp_files.files is defined and old_tmp_files.files | length > 0
+      tags: [ 'tmp_cleanup' ]
+
+    - name: Clean old files from {{ var_tmp_dir }}
+      ansible.builtin.find:
+        paths: "{{ var_tmp_dir }}"
+        age: "{{ cleanup_tmp_days }}d"
+        recurse: yes
+        file_type: any
+        hidden: yes
+      register: old_var_tmp_files
+
+    - name: Remove old files from {{ var_tmp_dir }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_var_tmp_files.files }}"
+      when: old_var_tmp_files.files is defined and old_var_tmp_files.files | length > 0
+      tags: [ 'tmp_cleanup' ]
+
+    - name: Find old log files in {{ var_log_dir }}
+      ansible.builtin.find:
+        paths: "{{ var_log_dir }}"
+        patterns: "*.log, *.log.*, *.gz, *.xz, *.bz2"
+        age: "{{ cleanup_log_days }}d"
+        recurse: yes
+        file_type: file
+        hidden: yes
+      register: old_log_files
+
+    - name: Remove old log files from {{ var_log_dir }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_log_files.files }}"
+      when:
+        - old_log_files.files is defined and old_log_files.files | length > 0
+        - item.path | basename not in cleanup_log_exclude
+      tags: [ 'log_cleanup' ]
+
+    - name: Prune unused Docker objects (if Docker is running)
+      community.docker.docker_prune:
+        images: yes
+        containers: yes
+        volumes: yes
+        networks: yes
+        all: yes
+        force: yes
+      when:
+        - ansible_facts.service_facts.docker is defined
+        - ansible_facts.service_facts.docker.state == 'running'
+      tags: [ 'docker_cleanup' ]

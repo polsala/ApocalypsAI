@@ -1,0 +1,131 @@
+---
+- name: Test Temporal Echo Chamber Purifier
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_base_dir: "/tmp/ansible_test_echo_purifier_{{ lookup('pipe', 'date +%s%N') }}"
+    cleanup_tmp_days: 1 # Clean files older than 1 day for testing
+    cleanup_log_days: 1 # Clean logs older than 1 day for testing
+    cleanup_log_exclude: [] # No exclusions for testing
+
+  tasks:
+    - name: Create test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_base_dir }}/tmp_test"
+        - "{{ test_base_dir }}/var_tmp_test"
+        - "{{ test_base_dir }}/var_log_test"
+
+    - name: Create old temporary files
+      ansible.builtin.command: "touch -d '2 days ago' {{ item }}"
+      loop:
+        - "{{ test_base_dir }}/tmp_test/old_file1.txt"
+        - "{{ test_base_dir }}/tmp_test/subdir/old_file2.log"
+        - "{{ test_base_dir }}/var_tmp_test/old_file3.tmp"
+      args:
+        creates: "{{ item }}"
+
+    - name: Create new temporary files (should not be removed)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+      loop:
+        - "{{ test_base_dir }}/tmp_test/new_file.txt"
+        - "{{ test_base_dir }}/var_tmp_test/new_file.tmp"
+
+    - name: Create old log files
+      ansible.builtin.command: "touch -d '2 days ago' {{ item }}"
+      loop:
+        - "{{ test_base_dir }}/var_log_test/app.log"
+        - "{{ test_base_dir }}/var_log_test/nginx/access.log.1.gz"
+      args:
+        creates: "{{ item }}"
+
+    - name: Create new log files (should not be removed)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+      loop:
+        - "{{ test_base_dir }}/var_log_test/current.log"
+
+    - name: Include and run the main purifier playbook with test paths
+      ansible.builtin.include_playbook:
+        file: ../src/echo_purifier.yml
+      vars:
+        # Mock rationale: Overriding system paths to target isolated test directories.
+        # This ensures the cleanup logic is tested without affecting the host system.
+        tmp_dir: "{{ test_base_dir }}/tmp_test"
+        var_tmp_dir: "{{ test_base_dir }}/var_tmp_test"
+        var_log_dir: "{{ test_base_dir }}/var_log_test"
+        cleanup_tmp_days: "{{ cleanup_tmp_days }}"
+        cleanup_log_days: "{{ cleanup_log_days }}"
+        cleanup_log_exclude: "{{ cleanup_log_exclude }}"
+      # Mock rationale: The docker_prune task will be skipped because service_facts
+      # will not report a running docker service in this isolated test environment.
+      # This is acceptable for offline testing of the file cleanup logic.
+      # For a full Docker test, a dedicated Molecule scenario would be needed.
+
+    - name: Verify old temporary files are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: stat_result
+      loop:
+        - "{{ test_base_dir }}/tmp_test/old_file1.txt"
+        - "{{ test_base_dir }}/tmp_test/subdir/old_file2.log"
+        - "{{ test_base_dir }}/var_tmp_test/old_file3.tmp"
+
+    - name: Assert old temporary files are absent
+      ansible.builtin.assert:
+        that: not item.stat.exists
+        msg: "Old temporary file {{ item.item }} was not removed."
+      loop: "{{ stat_result.results }}"
+
+    - name: Verify new temporary files are still present
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: stat_result_new_tmp
+      loop:
+        - "{{ test_base_dir }}/tmp_test/new_file.txt"
+        - "{{ test_base_dir }}/var_tmp_test/new_file.tmp"
+
+    - name: Assert new temporary files are present
+      ansible.builtin.assert:
+        that: item.stat.exists
+        msg: "New temporary file {{ item.item }} was unexpectedly removed."
+      loop: "{{ stat_result_new_tmp.results }}"
+
+    - name: Verify old log files are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: stat_result_logs
+      loop:
+        - "{{ test_base_dir }}/var_log_test/app.log"
+        - "{{ test_base_dir }}/var_log_test/nginx/access.log.1.gz"
+
+    - name: Assert old log files are absent
+      ansible.builtin.assert:
+        that: not item.stat.exists
+        msg: "Old log file {{ item.item }} was not removed."
+      loop: "{{ stat_result_logs.results }}"
+
+    - name: Verify new log files are still present
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: stat_result_new_logs
+      loop:
+        - "{{ test_base_dir }}/var_log_test/current.log"
+
+    - name: Assert new log files are present
+      ansible.builtin.assert:
+        that: item.stat.exists
+        msg: "New log file {{ item.item }} was unexpectedly removed."
+      loop: "{{ stat_result_new_logs.results }}"
+
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
