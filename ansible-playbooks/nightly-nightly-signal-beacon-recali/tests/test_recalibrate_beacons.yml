@@ -1,0 +1,157 @@
+---
+- name: Test Nightly Signal-Beacon Recalibrator
+  hosts: localhost
+  become: yes
+  vars_files:
+    - ../src/vars/main.yml # Use the same variables as the main playbook
+
+  tasks:
+    - name: Clean up previous test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ beacon_config_path }}"
+        - "{{ beacon_power_crystal_dir }}"
+        - "{{ beacon_log_file }}"
+        - "{{ beacon_log_file }}.old"
+        - "/etc/systemd/system/{{ beacon_signal_service_name }}.service"
+        - "/usr/local/bin/{{ beacon_signal_service_name }}"
+      # Mock rationale: Ensures a clean slate for each test run, making tests deterministic.
+
+    - name: Ensure systemd daemon is reloaded after cleanup
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      # Mock rationale: Necessary to ensure systemd is aware of service unit removal.
+
+    - name: Create dummy log file for rotation test
+      ansible.builtin.copy:
+        dest: "{{ beacon_log_file }}"
+        content: "Initial beacon log entry.\n"
+        mode: '0644'
+      # Mock rationale: Provides a file to be rotated by the playbook, making the log rotation task testable.
+
+    - name: Run main playbook for initial setup
+      ansible.builtin.include_tasks:
+        file: ../src/recalibrate_beacons.yml
+      vars:
+        ansible_connection: local # Ensure the included playbook runs locally
+      register: initial_run
+
+    - name: Assert initial run made changes
+      ansible.builtin.assert:
+        that:
+          - initial_run is changed
+        fail_msg: "Initial run should have made changes to set up the beacon."
+      # Mock rationale: Verifies that the playbook correctly configures a fresh environment.
+
+    - name: Verify config file content
+      ansible.builtin.command: "cat {{ beacon_config_path }}"
+      register: config_content
+      changed_when: false
+      # Mock rationale: Reads the content of the configuration file to assert its state.
+
+    - name: Assert config file has correct frequency
+      ansible.builtin.assert:
+        that:
+          - "{{ beacon_frequency_key }}={{ beacon_default_frequency }}" in config_content.stdout
+        fail_msg: "Config file does not contain the correct default frequency."
+      # Mock rationale: Verifies the core configuration parameter is set correctly.
+
+    - name: Verify service status
+      ansible.builtin.systemd:
+        name: "{{ beacon_signal_service_name }}"
+        state: started
+      check_mode: yes # Only check, don't change
+      register: service_check
+      changed_when: false
+      # Mock rationale: Checks the service status without altering it, for verification.
+
+    - name: Assert service is running
+      ansible.builtin.assert:
+        that:
+          - service_check.status.ActiveState == 'active'
+          - service_check.status.LoadState == 'loaded'
+        fail_msg: "Beacon service is not running or loaded correctly."
+      # Mock rationale: Verifies the service is in the expected 'active' state.
+
+    - name: Verify power crystal directory exists
+      ansible.builtin.stat:
+        path: "{{ beacon_power_crystal_dir }}"
+      register: power_crystal_dir_stat
+      # Mock rationale: Checks for the existence of the directory.
+
+    - name: Assert power crystal directory exists
+      ansible.builtin.assert:
+        that:
+          - power_crystal_dir_stat.stat.exists
+          - power_crystal_dir_stat.stat.isdir
+        fail_msg: "Power crystal directory does not exist or is not a directory."
+      # Mock rationale: Verifies the directory was created.
+
+    - name: Verify log file rotation
+      ansible.builtin.stat:
+        path: "{{ beacon_log_file }}.old"
+      register: log_old_stat
+      # Mock rationale: Checks if the old log file exists after rotation.
+
+    - name: Assert log file was rotated
+      ansible.builtin.assert:
+        that:
+          - log_old_stat.stat.exists
+        fail_msg: "Log file was not rotated."
+      # Mock rationale: Verifies the log rotation task executed.
+
+    - name: Run main playbook again to check idempotency
+      ansible.builtin.include_tasks:
+        file: ../src/recalibrate_beacons.yml
+      vars:
+        ansible_connection: local
+      register: idempotent_run
+
+    - name: Assert idempotent run made no changes
+      ansible.builtin.assert:
+        that:
+          - idempotent_run is not changed
+        fail_msg: "Idempotent run should not have made any changes."
+      # Mock rationale: Crucial test for Ansible playbooks, ensuring they only act when necessary.
+
+    - name: Simulate configuration drift (change frequency)
+      ansible.builtin.lineinfile:
+        path: "{{ beacon_config_path }}"
+        regexp: "^{{ beacon_frequency_key }}="
+        line: "{{ beacon_frequency_key }}=13.37"
+      # Mock rationale: Intentionally introduces a deviation to test the playbook's corrective action.
+
+    - name: Simulate service drift (stop service)
+      ansible.builtin.systemd:
+        name: "{{ beacon_signal_service_name }}"
+        state: stopped
+      # Mock rationale: Intentionally stops the service to test the playbook's corrective action.
+
+    - name: Run main playbook to correct drift
+      ansible.builtin.include_tasks:
+        file: ../src/recalibrate_beacons.yml
+      vars:
+        ansible_connection: local
+      register: drift_correction_run
+
+    - name: Assert drift correction run made changes
+      ansible.builtin.assert:
+        that:
+          - drift_correction_run is changed
+        fail_msg: "Drift correction run should have made changes to correct the drift."
+      # Mock rationale: Verifies the playbook successfully detected and corrected the simulated drift.
+
+    - name: Verify config file content after drift correction
+      ansible.builtin.command: "cat {{ beacon_config_path }}"
+      register: config_content_after_drift
+      changed_when: false
+      # Mock rationale: Reads the content after correction.
+
+    - name: Assert config file has correct frequency after drift correction
+      ansible.builtin.assert:
+        that:
+          - "{{ beacon_frequency_key }}={{ beacon_default_frequency }}" in config_content_after_drift.stdout
+        fail_msg: "Config file does not contain the correct default frequency after drift correction."
+      # Mock rationale: Final verification that the configuration is back to the desired state.
