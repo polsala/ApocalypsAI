@@ -1,0 +1,18 @@
+Digital Garden Report for {{ ansible_hostname }}
+Date: {{ ansible_date_time.date }}
+Time: {{ ansible_date_time.time }}
+
+--- Pruning Summary ---
+Paths targeted for pruning (files older than {{ garden_prune_age_days }} days):
+{% for path in garden_paths_to_prune %}
+  - {{ path }}
+{% endfor %}
+
+--- Composting Summary ---
+Paths targeted for composting (logs older than {{ garden_log_age_days }} days):
+{% for path in garden_log_paths_to_compost %}
+  - {{ path }}
+{% endfor %}
+
+--- Overall Status ---
+Your digital garden is looking spick and span!

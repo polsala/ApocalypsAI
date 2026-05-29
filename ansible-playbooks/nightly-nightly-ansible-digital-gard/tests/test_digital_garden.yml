@@ -1,0 +1,107 @@
+---
+- name: Test Digital Garden Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_prune_dir: "/tmp/ansible_test_garden_prune"
+    test_compost_dir: "/tmp/ansible_test_garden_compost"
+    garden_prune_age_days: 0 # Prune immediately for testing (anything older than 0 days)
+    garden_log_age_days: 0  # Compost immediately for testing (anything older than 0 days)
+    garden_paths_to_prune:
+      - "{{ test_prune_dir }}"
+    garden_log_paths_to_compost:
+      - "{{ test_compost_dir }}"
+    garden_report_path: "/tmp/digital_garden_test_report.txt"
+
+  pre_tasks:
+    - name: Clean up previous test runs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_prune_dir }}"
+        - "{{ test_compost_dir }}"
+        - "{{ garden_report_path }}"
+      # Mock rationale: Ensures a clean slate for each test run, making the test deterministic.
+
+    - name: Create test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_prune_dir }}"
+        - "{{ test_compost_dir }}"
+      # Mock rationale: Creates specific, controlled directories for the playbook to operate on.
+
+    - name: Create old files for pruning
+      ansible.builtin.file:
+        path: "{{ test_prune_dir }}/old_file_{{ item }}.txt"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - 86400) | string }}" # 1 day old
+      loop: range(3)
+      # Mock rationale: Creates files with a known 'old' timestamp, ensuring 'find' module will detect them.
+      # Using epoch time for deterministic age calculation.
+
+    - name: Create new file (should not be pruned if age > 0, but will be pruned with age=0)
+      ansible.builtin.file:
+        path: "{{ test_prune_dir }}/new_file.txt"
+        state: touch
+      # Mock rationale: Creates a file that, with garden_prune_age_days=0, will also be pruned.
+      # This tests the 'age: 0d' logic correctly. If age was >0, this would test non-pruning.
+
+    - name: Create old log files for composting
+      ansible.builtin.file:
+        path: "{{ test_compost_dir }}/old_log_{{ item }}.log"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - 86400) | string }}" # 1 day old
+      loop: range(2)
+      # Mock rationale: Creates log files with a known 'old' timestamp for 'find' module.
+
+  tasks:
+    - name: Include the main digital garden playbook
+      ansible.builtin.include_tasks:
+        file: ../src/digital_garden.yml
+      # Mock rationale: Executes the target playbook with the test-specific variables and environment.
+
+  post_tasks:
+    - name: Verify old files are pruned
+      ansible.builtin.stat:
+        path: "{{ test_prune_dir }}/old_file_{{ item }}.txt"
+      register: stat_result
+      loop: range(3)
+      failed_when: stat_result.results[loop.index].stat.exists
+      # Mock rationale: Asserts that the files created with old timestamps are now absent.
+
+    - name: Verify new file is pruned (due to age=0d)
+      ansible.builtin.stat:
+        path: "{{ test_prune_dir }}/new_file.txt"
+      register: stat_result
+      failed_when: stat_result.stat.exists
+      # Mock rationale: Asserts that the file created with a recent timestamp is also absent due to age=0d.
+
+    - name: Verify old log files are composted
+      ansible.builtin.stat:
+        path: "{{ test_compost_dir }}/old_log_{{ item }}.log"
+      register: stat_result
+      loop: range(2)
+      failed_when: stat_result.results[loop.index].stat.exists
+      # Mock rationale: Asserts that the log files created with old timestamps are now absent.
+
+    - name: Verify Digital Garden Report was generated
+      ansible.builtin.stat:
+        path: "{{ garden_report_path }}"
+      register: report_stat
+      failed_when: not report_stat.stat.exists
+      # Mock rationale: Asserts the existence of the report file, confirming the template task ran successfully.
+
+    - name: Clean up test directories and report
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_prune_dir }}"
+        - "{{ test_compost_dir }}"
+        - "{{ garden_report_path }}"
+      # Mock rationale: Cleans up all test artifacts, leaving the system in its original state.

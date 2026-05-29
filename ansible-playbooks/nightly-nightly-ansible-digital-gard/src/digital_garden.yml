@@ -1,0 +1,65 @@
+---
+- name: Tend to the Digital Garden
+  hosts: all
+  become: yes # Required for cleaning system directories like /var/log or /tmp
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure test directories exist for local connection (if running tests)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "/tmp/ansible_test_garden_prune"
+        - "/tmp/ansible_test_garden_compost"
+      when: ansible_connection == 'local' # Only create if running locally, e.g., for tests
+
+    - name: Prune old files in specified paths
+      ansible.builtin.find:
+        paths: "{{ item | expanduser }}"
+        age: "{{ garden_prune_age_days }}d"
+        recurse: yes
+        file_type: file
+      loop: "{{ garden_paths_to_prune }}"
+      register: files_to_prune
+      # Mock rationale: The 'find' module operates on the filesystem, which is part of the test setup.
+      # For offline testing, we create specific files with specific ages in the test setup.
+      # The 'find' module will then deterministically find these files.
+
+    - name: Delete pruned files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ files_to_prune.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      # Mock rationale: The 'file' module's 'state: absent' is deterministic. It will delete files
+      # that were specifically created for the test, making the test repeatable.
+
+    - name: Find old log files to compost
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ garden_log_age_days }}d"
+        recurse: yes
+        file_type: file
+        patterns: "*.log,*.gz,*.old"
+      loop: "{{ garden_log_paths_to_compost }}"
+      register: logs_to_compost
+      # Mock rationale: Similar to file pruning, 'find' operates on test-created log files.
+
+    - name: Delete composted log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ logs_to_compost.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      # Mock rationale: Deterministic deletion of test-created log files.
+
+    - name: Generate Digital Garden Report
+      ansible.builtin.template:
+        src: templates/garden_report.j2
+        dest: "{{ garden_report_path }}"
+        mode: '0644'
+      # Mock rationale: The 'template' module generates a file based on static input (variables) and a template.
+      # Its output is fully deterministic given the inputs.
