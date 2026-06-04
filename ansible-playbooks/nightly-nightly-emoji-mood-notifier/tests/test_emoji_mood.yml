@@ -1,0 +1,13 @@
+- name: Test Emoji Mood Notifier Playbook Syntax
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run playbook in check mode
+      ansible.builtin.command: ansible-playbook -i localhost, -c local src/main.yml --check
+      register: result
+      changed_when: false
+    - name: Assert success
+      ansible.builtin.assert:
+        that:
+          - result.rc == 0
+      # Mock rationale: assume playbook runs successfully in check mode.
