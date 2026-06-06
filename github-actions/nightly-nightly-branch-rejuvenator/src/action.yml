@@ -1,0 +1,43 @@
+name: 'Nightly Branch Rejuvenator'
+description: 'Identifies and rejuvenates stale branches with whimsical empty commits.'
+inputs:
+  days-stale:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '30'
+  commit-message-prefix:
+    description: 'Prefix for the whimsical rejuvenation commit message.'
+    required: false
+    default: 'Branch Rejuvenation Protocol Activated:'
+  exclude-branches:
+    description: 'Comma-separated list of branch names to exclude from rejuvenation (e.g., main,develop).'
+    required: false
+    default: 'main,master'
+  github-token:
+    description: 'GitHub token with permissions to push to branches. Usually ${{ github.token }}.'
+    required: true
+outputs:
+  rejuvenated-branches:
+    description: 'JSON array of branch names that were rejuvenated.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for accurate branch checks
+
+    - name: Run Branch Rejuvenator
+      shell: bash
+      env:
+        INPUT_DAYS_STALE: ${{ inputs.days-stale }}
+        INPUT_COMMIT_MESSAGE_PREFIX: ${{ inputs.commit-message-prefix }}
+        INPUT_EXCLUDE_BRANCHES: ${{ inputs.exclude-branches }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }} # Needed for git remote set-url
+      run: |
+        # Install jq for JSON output processing
+        sudo apt-get update && sudo apt-get install -y jq
+
+        # Execute the main rejuvenation script
+        "${{ github.action_path }}"/rejuvenate.sh
