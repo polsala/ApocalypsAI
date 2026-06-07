@@ -1,0 +1,14 @@
+log_files:
+  - /var/log/syslog
+  - /var/log/auth.log
+  - /var/log/kern.log
+
+error_keywords:
+  - error
+  - failed
+  - warning
+  - denied
+  - critical
+  - exception
+
+log_parsing_temp_dir: "/tmp/ansible_log_parsing_{{ ansible_date_time.epoch }}"
