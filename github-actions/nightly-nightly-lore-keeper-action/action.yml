@@ -1,0 +1,27 @@
+name: 'Nightly Lore Keeper'
+description: 'Ensures PR titles and descriptions align with predefined lore keywords.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls.'
+    required: true
+  lore-keywords:
+    description: 'Comma-separated list of required lore keywords or regex patterns.'
+    required: true
+  check-pr-title:
+    description: 'Whether to check the PR title.'
+    required: false
+    default: 'true'
+  check-pr-body:
+    description: 'Whether to check the PR body.'
+    required: false
+    default: 'true'
+  fail-on-mismatch:
+    description: 'Whether to fail the action if lore is not matched.'
+    required: false
+    default: 'false'
+outputs:
+  lore-compliant:
+    description: 'True if PR title/body are lore-compliant, false otherwise.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
