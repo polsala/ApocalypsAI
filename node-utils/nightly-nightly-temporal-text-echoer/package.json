@@ -1,0 +1,29 @@
+{
+  "name": "nightly-temporal-text-echoer",
+  "version": "1.0.0",
+  "description": "Applies whimsical temporal distortions to text.",
+  "main": "src/index.js",
+  "bin": {
+    "temporal-text-echoer": "src/index.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "cli",
+    "text-utility",
+    "apocalypse",
+    "whimsical",
+    "distortion",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
