@@ -1,0 +1,42 @@
+- name: Rotate SSH keys
+  hosts: all
+  become: true
+  vars:
+    key_path: "{{ playbook_dir }}/ssh_keys/id_rsa"
+    backup_path: "{{ playbook_dir }}/ssh_keys/backup_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+  tasks:
+    - name: Ensure ssh_keys directory exists
+      file:
+        path: "{{ playbook_dir }}/ssh_keys"
+        state: directory
+        mode: '0700'
+
+    - name: Stat RSA host key
+      stat:
+        path: /etc/ssh/ssh_host_rsa_key
+      register: rsa_key
+
+    - name: Backup existing SSH host keys
+      archive:
+        path:
+          - /etc/ssh/ssh_host_rsa_key
+          - /etc/ssh/ssh_host_ecdsa_key
+          - /etc/ssh/ssh_host_ed25519_key
+        dest: "{{ backup_path }}"
+        format: gz
+      when: rsa_key.stat.exists
+      ignore_errors: true
+
+    - name: Generate new RSA key pair for host
+      openssh_keypair:
+        path: "{{ key_path }}"
+        type: rsa
+        size: 2048
+        force: true
+        mode: '0600'
+
+    - name: Deploy new public key to authorized_keys
+      authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ lookup('file', key_path + '.pub') }}"
