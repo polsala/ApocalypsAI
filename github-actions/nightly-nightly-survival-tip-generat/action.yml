@@ -1,0 +1,17 @@
+name: "Survival Tip Generator"
+description: "Generate a deterministic post‑apocalyptic survival tip from a seed."
+inputs:
+  seed:
+    description: "Numeric seed to select tip"
+    required: true
+    default: "0"
+outputs:
+  survival_tip:
+    description: "Generated survival tip"
+runs:
+  using: "composite"
+  steps:
+    - name: Generate tip
+      shell: bash
+      run: |
+        ./src/generate_tip.sh "${{ inputs.seed }}"
