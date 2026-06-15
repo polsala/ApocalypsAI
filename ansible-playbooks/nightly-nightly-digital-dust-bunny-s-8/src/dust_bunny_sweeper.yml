@@ -1,0 +1,18 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/cleanup_targets.yml
+
+  tasks:
+    - name: Ensure cleanup_targets variable is defined
+      ansible.builtin.fail:
+        msg: "The 'cleanup_targets' variable is not defined in vars/cleanup_targets.yml"
+      when: cleanup_targets is not defined or cleanup_targets | length == 0
+
+    - name: Execute cleanup tasks
+      ansible.builtin.include_tasks: tasks/main.yml
+      loop: "{{ cleanup_targets }}"
+      loop_control:
+        loop_var: current_target

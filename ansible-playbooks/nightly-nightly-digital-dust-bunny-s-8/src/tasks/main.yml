@@ -1,0 +1,32 @@
+---
+- name: "Find files for cleanup in {{ current_target.path }} ({{ current_target.description | default('no description') }})"
+  ansible.builtin.find:
+    paths: "{{ current_target.path }}"
+    age: "{{ current_target.age_days | default(omit) }}d"
+    patterns: "{{ current_target.patterns | default([]) }}"
+    file_type: file
+    recurse: true
+  register: files_to_clean
+  when: current_target.age_days is defined or (current_target.patterns is defined and current_target.patterns | length > 0)
+
+- name: "Remove found files in {{ current_target.path }}"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ files_to_clean.files | default([]) }}"
+  when: files_to_clean.files is defined and files_to_clean.files | length > 0
+
+- name: "Find all directories in {{ current_target.path }} for potential empty directory cleanup"
+  ansible.builtin.find:
+    paths: "{{ current_target.path }}"
+    file_type: directory
+    recurse: true
+  register: all_dirs_in_path
+  when: current_target.empty_dirs | default(false)
+
+- name: "Attempt to remove empty directories in {{ current_target.path }}"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ all_dirs_in_path.files | default([]) | sort(attribute='path', reverse=true) }}"
+  when: current_target.empty_dirs | default(false) and all_dirs_in_path.files is defined
