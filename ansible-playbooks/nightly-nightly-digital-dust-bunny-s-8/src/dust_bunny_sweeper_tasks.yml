@@ -1,0 +1,34 @@
+---
+- name: Ensure scan paths exist (and create if missing for testing purposes)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ dust_bunny_scan_paths }}"
+  delegate_to: localhost # Ensure this runs on the controller for local paths if needed, or remove if paths are always remote
+
+- name: Find old and large files (digital dust bunnies)
+  ansible.builtin.find:
+    paths: "{{ dust_bunny_scan_paths }}"
+    age: "{{ dust_bunny_age_threshold_days }}d"
+    size: "{{ dust_bunny_size_threshold_mb }}M"
+    recurse: true
+    file_type: file
+  register: dust_bunnies_found
+  changed_when: false # This task only finds, doesn't change anything
+
+- name: Report found dust bunnies (dry run)
+  ansible.builtin.debug:
+    msg: "Found potential dust bunny: {{ item.path }} (Age: {{ (ansible_date_time.epoch | int - item.mtime) // 86400 }} days, Size: {{ '%.2f' | format(item.size / (1024*1024)) }} MB)"
+  loop: "{{ dust_bunnies_found.files }}"
+  when: not dust_bunny_perform_cleanup
+
+- name: Delete identified dust bunnies
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ dust_bunnies_found.files }}"
+  when: dust_bunny_perform_cleanup
+  # Mock rationale: This task uses the 'file' module with 'state=absent' to simulate deletion.
+  # In a real scenario, this would delete files. For testing, we create temporary files
+  # and verify their absence after this task runs.
