@@ -1,0 +1,187 @@
+---
+- name: Test Nightly Digital Garden Pruner
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/test_pruner_config.yml # Use test-specific config
+
+  vars:
+    test_base_path: "/tmp/ansible_test_garden"
+    report_path: "{{ test_base_path }}/pruning_report.txt"
+
+  tasks:
+    - name: Clean up previous test artifacts (if any)
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      when: test_base_path is defined and test_base_path != '/' # Safety check
+      tags: cleanup
+
+    - name: Ensure test base path exists
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create test environment
+      block:
+        - name: Create directories
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0755'
+          loop:
+            - "{{ test_base_path }}/logs/old"
+            - "{{ test_base_path }}/logs/new"
+            - "{{ test_base_path }}/notes/stale"
+            - "{{ test_base_path }}/notes/fresh"
+            - "{{ test_base_path }}/empty_dir_1"
+            - "{{ test_base_path }}/empty_dir_2"
+            - "{{ test_base_path }}/not_empty_dir"
+
+        - name: Create old log file
+          ansible.builtin.copy:
+            content: "Old log entry"
+            dest: "{{ test_base_path }}/logs/old/app.log"
+        - name: Set old log file mtime
+          ansible.builtin.command: "touch -d '35 days ago' {{ test_base_path }}/logs/old/app.log"
+          changed_when: true # Mock rationale: Simulate an old file by setting its modification time using 'touch'. This is a deterministic, offline way to create test fixtures for age-based file discovery.
+
+        - name: Create new log file
+          ansible.builtin.copy:
+            content: "New log entry"
+            dest: "{{ test_base_path }}/logs/new/current.log"
+
+        - name: Create stale note file
+          ansible.builtin.copy:
+            content: "Stale note content"
+            dest: "{{ test_base_path }}/notes/stale/idea.md"
+        - name: Set stale note file mtime
+          ansible.builtin.command: "touch -d '70 days ago' {{ test_base_path }}/notes/stale/idea.md"
+          changed_when: true # Mock rationale: Similar to above, setting mtime for a stale file.
+
+        - name: Create fresh note file
+          ansible.builtin.copy:
+            content: "Fresh note content"
+            dest: "{{ test_base_path }}/notes/fresh/new_idea.md"
+
+        - name: Create file in not_empty_dir
+          ansible.builtin.copy:
+            content: "Some content"
+            dest: "{{ test_base_path }}/not_empty_dir/file.txt"
+      tags: setup
+
+    - name: Run pruner playbook in dry-run mode
+      ansible.builtin.include_tasks: ../src/prune_garden.yml
+      vars:
+        pruner_dry_run: true
+        pruner_report_path: "{{ report_path }}"
+      tags: dry_run
+
+    - name: Assert dry-run report content
+      ansible.builtin.slurp:
+        src: "{{ report_path }}"
+      register: dry_run_report_content
+      changed_when: false
+      delegate_to: localhost
+
+    - name: Check for expected files in dry-run report
+      ansible.builtin.assert:
+        that:
+          - "'File: {{ test_base_path }}/logs/old/app.log' in dry_run_report_content.content | b64decode"
+          - "'File: {{ test_base_path }}/notes/stale/idea.md' in dry_run_report_content.content | b64decode"
+          - "'Empty Directory: {{ test_base_path }}/empty_dir_1' in dry_run_report_content.content | b64decode"
+          - "'Empty Directory: {{ test_base_path }}/empty_dir_2' in dry_run_report_content.content | b64decode"
+          - "'File: {{ test_base_path }}/logs/new/current.log' not in dry_run_report_content.content | b64decode"
+          - "'File: {{ test_base_path }}/notes/fresh/new_idea.md' not in dry_run_report_content.content | b64decode"
+          - "'Empty Directory: {{ test_base_path }}/not_empty_dir' not in dry_run_report_content.content | b64decode"
+        msg: "Dry-run report did not contain expected findings or contained unexpected ones."
+      delegate_to: localhost
+
+    - name: Run pruner playbook for actual pruning
+      ansible.builtin.include_tasks: ../src/prune_garden.yml
+      vars:
+        pruner_dry_run: false
+        pruner_report_path: "{{ report_path }}"
+      tags: actual_prune
+
+    - name: Assert files are removed
+      block:
+        - name: Check if old log file exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/logs/old/app.log"
+          register: old_log_stat
+        - name: Assert old log file is absent
+          ansible.builtin.assert:
+            that:
+              - not old_log_stat.stat.exists
+            msg: "Old log file was not removed."
+
+        - name: Check if stale note file exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/notes/stale/idea.md"
+          register: stale_note_stat
+        - name: Assert stale note file is absent
+          ansible.builtin.assert:
+            that:
+              - not stale_note_stat.stat.exists
+            msg: "Stale note file was not removed."
+
+        - name: Check if empty_dir_1 exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/empty_dir_1"
+          register: empty_dir_1_stat
+        - name: Assert empty_dir_1 is absent
+          ansible.builtin.assert:
+            that:
+              - not empty_dir_1_stat.stat.exists
+            msg: "Empty directory 1 was not removed."
+
+        - name: Check if empty_dir_2 exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/empty_dir_2"
+          register: empty_dir_2_stat
+        - name: Assert empty_dir_2 is absent
+          ansible.builtin.assert:
+            that:
+              - not empty_dir_2_stat.stat.exists
+            msg: "Empty directory 2 was not removed."
+
+        - name: Check if new log file exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/logs/new/current.log"
+          register: new_log_stat
+        - name: Assert new log file still exists
+          ansible.builtin.assert:
+            that:
+              - new_log_stat.stat.exists
+            msg: "New log file was unexpectedly removed."
+
+        - name: Check if fresh note file exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/notes/fresh/new_idea.md"
+          register: fresh_note_stat
+        - name: Assert fresh note file still exists
+          ansible.builtin.assert:
+            that:
+              - fresh_note_stat.stat.exists
+            msg: "Fresh note file was unexpectedly removed."
+
+        - name: Check if not_empty_dir exists
+          ansible.builtin.stat:
+            path: "{{ test_base_path }}/not_empty_dir"
+          register: not_empty_dir_stat
+        - name: Assert not_empty_dir still exists
+          ansible.builtin.assert:
+            that:
+              - not not_empty_dir_stat.stat.exists
+            msg: "Non-empty directory was unexpectedly removed."
+      tags: verify_prune
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      when: test_base_path is defined and test_base_path != '/' # Safety check
+      tags: cleanup

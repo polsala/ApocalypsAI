@@ -1,0 +1,18 @@
+---
+pruner_paths:
+  - path: "/tmp/ansible_test_garden/logs"
+    max_age_days: 30
+    file_patterns: ["*.log"]
+    age_stamp: mtime
+  - path: "/tmp/ansible_test_garden/notes"
+    max_age_days: 60
+    file_patterns: ["*.md"]
+    age_stamp: mtime
+
+pruner_empty_dirs_paths:
+  - "/tmp/ansible_test_garden/empty_dir_1"
+  - "/tmp/ansible_test_garden/empty_dir_2"
+  - "/tmp/ansible_test_garden/not_empty_dir"
+
+pruner_dry_run: true # This will be overridden by the test playbook
+pruner_report_path: "/tmp/ansible_test_garden/pruning_report.txt"
