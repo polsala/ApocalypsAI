@@ -1,0 +1,28 @@
+name: 'Nightly GitHub Action Lint Runner'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  workflow_paths:
+    description: 'Comma-separated string of paths to directories containing GitHub Actions workflow YAML files.'
+    required: false
+    default: '.github/workflows'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install action-validator
+      shell: bash
+      run: |+
+        npm install -g action-validator
+
+    - name: Lint and validate workflows
+      shell: bash
+      run: |+
+        IFS=',' read -ra PATHS <<< "${{ inputs.workflow_paths }}"
+        for path in "${{ toJSON(paths) }}"; do
+          echo "Scanning path: $path"
+          find "$path" -name '*.yml' -print0 | xargs -0 action-validator --fail-on error --fail-on warning
+        done
