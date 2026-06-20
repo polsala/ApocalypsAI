@@ -1,0 +1,56 @@
+---
+- name: Fortify Wasteland Data Archive Service
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure data archive service is running and enabled
+      ansible.builtin.service:
+        name: "{{ data_archive_service_name }}"
+        state: started
+        enabled: yes
+      # Mock rationale: In a real scenario, this would interact with systemd/init.d.
+      # For offline testing, we rely on the test playbook to simulate service presence
+      # or to check for the existence of a dummy service file.
+      # For this playbook, we assume the service is manageable by the target system's init system.
+
+    - name: Ensure data archive path exists and has correct permissions
+      ansible.builtin.file:
+        path: "{{ data_archive_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+      # Mock rationale: This task directly interacts with the filesystem.
+      # The test playbook will create a temporary directory and assert its properties.
+
+    - name: Ensure backup destination path exists
+      ansible.builtin.file:
+        path: "{{ backup_destination_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      # Mock rationale: Similar to data_archive_path, tested by creating a temporary directory.
+
+    - name: Deploy wasteland data backup script
+      ansible.builtin.template:
+        src: templates/backup_script.sh.j2
+        dest: "{{ backup_script_path }}"
+        owner: root
+        group: root
+        mode: '0700'
+      # Mock rationale: This task creates a file. The test playbook will verify its content and permissions.
+
+    - name: Schedule daily backup for wasteland data archive
+      ansible.builtin.cron:
+        name: "Wasteland Data Archive Daily Backup"
+        minute: "{{ backup_cron_schedule.split(' ')[0] }}"
+        hour: "{{ backup_cron_schedule.split(' ')[1] }}"
+        day: "{{ backup_cron_schedule.split(' ')[2] }}"
+        month: "{{ backup_cron_schedule.split(' ')[3] }}"
+        weekday: "{{ backup_cron_schedule.split(' ')[4] }}"
+        job: "{{ backup_script_path }} {{ data_archive_path }} {{ backup_destination_path }} > /dev/null 2>&1"
+      # Mock rationale: This task adds a cron job. The test playbook will check crontab -l output.
