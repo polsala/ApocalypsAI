@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Nightly Wasteland Atlas - An interactive map for survivors."
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>Nightly Wasteland Atlas</title>
+    <style>
+      body {
+        font-family: 'Courier New', monospace;
+        background-color: #1a1a1a;
+        color: #00ff00;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      #root {
+        max-width: 800px;
+        margin: 0 auto;
+        border: 2px solid #00ff00;
+        padding: 20px;
+        box-shadow: 0 0 15px #00ff00;
+      }
+      h1 {
+        text-align: center;
+        color: #00ff00;
+        text-shadow: 0 0 5px #00ff00;
+      }
+      h2 {
+        color: #00ff00;
+        border-bottom: 1px dashed #00ff00;
+        padding-bottom: 5px;
+        margin-top: 30px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #00ff00;
+      }
+      input[type="text"],
+      textarea,
+      select {
+        width: calc(100% - 12px);
+        padding: 8px;
+        border: 1px solid #00ff00;
+        background-color: #0d0d0d;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #008000;
+        color: #fff;
+        border: 1px solid #00ff00;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        margin-right: 10px;
+      }
+      button:hover {
+        background-color: #00b300;
+      }
+      .location-item {
+        border: 1px dashed #00ff00;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .location-item h3 {
+        margin-top: 0;
+        color: #00ff00;
+      }
+      .location-item p {
+        margin: 5px 0;
+      }
+      .filter-controls {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .filter-controls label {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
