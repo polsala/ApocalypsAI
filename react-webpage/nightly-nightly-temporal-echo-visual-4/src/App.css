@@ -1,0 +1,61 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+main {
+  width: 90%;
+  max-width: 1200px;
+  background-color: #3a3f47;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-section,
+.details-section {
+  margin-bottom: 40px;
+}
+
+.details-section h2,
+.timeline-section h2 {
+  color: #61dafb;
+  margin-bottom: 20px;
+}
+
+.echo-details-card {
+  background-color: #4a4f57;
+  border: 1px solid #61dafb;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: left;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+.echo-details-card h3 {
+  color: #61dafb;
+  margin-top: 0;
+}
+
+.echo-details-card p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.echo-details-card strong {
+  color: #a0a0a0;
+}
