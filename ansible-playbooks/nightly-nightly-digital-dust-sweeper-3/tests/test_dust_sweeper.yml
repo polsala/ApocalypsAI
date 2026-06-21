@@ -1,0 +1,98 @@
+---
+- name: Test Nightly Digital Dust-Bunny Sweeper
+  hosts: test_servers
+  gather_facts: yes
+  vars_files:
+    - ../src/vars/cleanup_targets.yml # Use the actual vars file
+  vars:
+    test_tmp_dir: "/tmp/ansible_test_dust_bunnies"
+    test_log_dir: "/tmp/ansible_test_log_lint"
+    report_dir: "/tmp/ansible_test_reports" # Use a test-specific report dir
+    report_file: "{{ report_dir }}/dust_report_test.txt"
+
+  tasks:
+    - name: Ensure test directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_tmp_dir }}"
+        - "{{ test_log_dir }}"
+        - "{{ report_dir }}"
+
+    - name: Create dummy temporary files (dust bunnies)
+      ansible.builtin.copy:
+        content: "old dust"
+        dest: "{{ test_tmp_dir }}/dust_file_{{ item }}.tmp"
+        mode: '0644'
+      loop: "{{ range(1, 4) | list }}"
+      # Mock rationale: Creating actual files to simulate the environment for the playbook to act upon.
+      # This is deterministic as the files are created by the test itself.
+
+    - name: Create dummy old log files (log lint)
+      ansible.builtin.copy:
+        content: "old log entry"
+        dest: "{{ test_log_dir }}/app.log.{{ item }}.gz"
+        mode: '0644'
+      loop: "{{ range(1, 3) | list }}"
+      # Mock rationale: Creating actual files to simulate the environment for the playbook to act upon.
+      # This is deterministic as the files are created by the test itself.
+
+    - name: Override cleanup_paths for testing to target test directories
+      ansible.builtin.set_fact:
+        cleanup_paths:
+          - path: "{{ test_tmp_dir }}"
+            age: 0d # Clean all files immediately
+            patterns: ["*"]
+          - path: "{{ test_log_dir }}"
+            age: 0d # Clean all files immediately
+            patterns: ["*.gz"]
+        cacheable: no # Ensure this fact is not cached across runs if this were a role
+
+    - name: Run dust_sweeper.yml in check mode to identify changes
+      ansible.builtin.include_tasks:
+        file: ../src/dust_sweeper.yml
+      args:
+        apply:
+          check_mode: yes
+      register: check_run_results
+      # Mock rationale: Using check_mode to simulate execution without actual changes.
+      # This allows testing the playbook's logic and what it *would* do.
+
+    - name: Assert that temporary files would be swept
+      ansible.builtin.assert:
+        that:
+          - "check_run_results.changed"
+          - "check_run_results.results | selectattr('task', 'match', 'Sweeping away old temporary files') | map(attribute='changed') | select('true') | list | length == 1"
+          - "check_run_results.results | selectattr('task', 'match', 'Sweeping away old temporary files') | first | json_query('results[].path') | length == 3"
+        fail_msg: "Expected 3 temporary files to be marked for sweeping."
+      # Mock rationale: Asserting on the 'changed' status and the number of files identified by the 'file' module in check_mode.
+      # This is deterministic based on the dummy files created.
+
+    - name: Assert that log files would be disposed
+      ansible.builtin.assert:
+        that:
+          - "check_run_results.changed"
+          - "check_run_results.results | selectattr('task', 'match', 'Disposing of ancient log scrolls') | map(attribute='changed') | select('true') | list | length == 1"
+          - "check_run_results.results | selectattr('task', 'match', 'Disposing of ancient log scrolls') | first | json_query('results[].path') | length == 2"
+        fail_msg: "Expected 2 log files to be marked for disposal."
+      # Mock rationale: Asserting on the 'changed' status and the number of files identified by the 'file' module in check_mode.
+      # This is deterministic based on the dummy files created.
+
+    - name: Assert report generation task is present (check mode doesn't write files, but task should be there)
+      ansible.builtin.assert:
+        that:
+          - "check_run_results.results | selectattr('task', 'match', 'Generate the Digital Dust-Bunny Sweeper Report') | list | length == 1"
+        fail_msg: "Report generation task was not found or did not run."
+      # Mock rationale: In check_mode, template tasks are marked as changed but don't write. We assert the task itself was processed.
+
+    - name: Clean up test directories and dummy files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_tmp_dir }}"
+        - "{{ test_log_dir }}"
+        - "{{ report_dir }}"
+      # Mock rationale: Cleaning up test artifacts to ensure a clean state for subsequent test runs.
