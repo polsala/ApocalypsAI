@@ -1,0 +1,65 @@
+---
+- name: Test Serenity Scroll Deployment
+  hosts: localhost
+  connection: local # Ensure tests run locally
+  gather_facts: false
+  vars_files:
+    - ../src/vars/main.yml # Reference the main vars file
+
+  tasks:
+    - name: Run the main playbook's tasks to deploy a scroll
+      ansible.builtin.include_tasks:
+        file: ../src/deploy_serenity_scroll.yml
+
+    - name: Verify serenity scroll directory exists
+      ansible.builtin.stat:
+        path: "{{ serenity_scroll_dir }}"
+      register: scroll_dir_stat
+
+    - name: Assert directory exists
+      ansible.builtin.assert:
+        that:
+          - scroll_dir_stat.stat.exists is true
+          - scroll_dir_stat.stat.isdir is true
+        msg: "Serenity scroll directory '{{ serenity_scroll_dir }}' does not exist or is not a directory."
+
+    - name: Verify serenity scroll file exists
+      ansible.builtin.stat:
+        path: "{{ serenity_scroll_dir }}/serenity_scroll.txt"
+      register: scroll_file_stat
+
+    - name: Assert scroll file exists
+      ansible.builtin.assert:
+        that:
+          - scroll_file_stat.stat.exists is true
+          - scroll_file_stat.stat.isreg is true
+        msg: "Serenity scroll file '{{ serenity_scroll_dir }}/serenity_scroll.txt' does not exist or is not a regular file."
+
+    - name: Read content of deployed scroll
+      ansible.builtin.slurp:
+        src: "{{ serenity_scroll_dir }}/serenity_scroll.txt"
+      register: deployed_scroll_content
+
+    - name: Decode content
+      ansible.builtin.set_fact:
+        decoded_content: "{{ deployed_scroll_content.content | b64decode }}"
+
+    - name: Load expected template contents
+      ansible.builtin.set_fact:
+        expected_contents: []
+
+    - name: Load content of each template
+      ansible.builtin.set_fact:
+        expected_contents: "{{ expected_contents + [lookup('ansible.builtin.file', '../src/templates/' + item)] }}"
+      loop: "{{ scroll_templates }}"
+
+    - name: Assert deployed content matches one of the expected templates
+      ansible.builtin.assert:
+        that:
+          - decoded_content in expected_contents
+        msg: "Deployed scroll content ('{{ decoded_content }}') does not match any of the expected template contents."
+
+    - name: Clean up deployed scroll for deterministic tests
+      ansible.builtin.file:
+        path: "{{ serenity_scroll_dir }}"
+        state: absent
