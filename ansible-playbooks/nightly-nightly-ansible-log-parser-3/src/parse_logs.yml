@@ -1,0 +1,49 @@
+---
+- name: Parse and analyze system logs
+  hosts: all
+  become: yes
+  vars:
+    log_files: ['/var/log/syslog', '/var/log/auth.log']
+    log_patterns:
+      "ERROR messages": "ERROR"
+      "Failed logins": "Failed password for"
+      "Critical events": "CRITICAL"
+    report_output_path: "/tmp/ansible_log_analysis_report.txt"
+
+  tasks:
+    - name: Ensure log analysis directory exists locally
+      local_action: file path={{ report_output_path | dirname }} state=directory
+      delegate_to: localhost
+
+    - name: Initialize report content
+      local_action: copy content="Log Analysis Report\n====================\n\n" dest={{ report_output_path }} state=present
+      delegate_to: localhost
+
+    - name: Iterate over log files and patterns
+      block:
+        - name: Parse log file {{ item.log_file }}
+          command: grep -E "{{ item.pattern.regex }}" {{ item.log_file }}
+          register: grep_result
+          changed_when: false
+          ignore_errors: yes # Continue even if a log file is not found or grep fails
+
+        - name: Count occurrences of pattern "{{ item.pattern.name }}"
+          set_fact:
+            pattern_count: "{{ grep_result.stdout_lines | length }}"
+
+        - name: Append pattern count to report
+          local_action: lineinfile
+            dest={{ report_output_path }}
+            line="{{ item.pattern.name }} in {{ item.log_file }}: {{ pattern_count }} occurrences"
+          delegate_to: localhost
+      loop:
+        - { log_file: "{{ item.0 }}", pattern: "{{ item.1 }}" }
+      loop_control:
+        loop_var: item
+      with_nested:
+        - "{{ log_files }}"
+        - "{{ log_patterns | dict2items }}"
+
+    - name: Display final report path
+      debug:
+        msg: "Log analysis report generated at {{ report_output_path }}"
