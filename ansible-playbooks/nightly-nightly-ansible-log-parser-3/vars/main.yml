@@ -1,0 +1,14 @@
+log_files:
+  - /var/log/syslog
+  - /var/log/auth.log
+
+# Mock variables for testing
+log_dir: "/tmp/ansible_log_test"
+mock_log_file: "mock_system.log"
+mock_log_content: |
+  2023-10-27 10:00:00 INFO: System started successfully.
+  2023-10-27 10:05:15 WARN: Disk space is getting low.
+  2023-10-27 10:10:30 ERROR: Failed to connect to database.
+  2023-10-27 10:15:45 INFO: User logged in.
+  2023-10-27 10:20:00 DENIED: Unauthorized access attempt.
+  2023-10-27 10:25:00 FAIL: Service restart failed.
