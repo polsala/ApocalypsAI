@@ -1,0 +1,57 @@
+---
+- name: Enforce Digital Serenity
+  hosts: serenity_targets
+  become: yes # Requires root privileges for service control and file cleanup
+  vars_files:
+    - ../vars/serenity_config.yml
+
+  tasks:
+    - name: Stop non-essential services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ serenity_services_to_stop }}"
+      ignore_errors: yes # Continue even if a service isn't found or fails to stop
+      tags:
+        - services
+
+    - name: Clean up temporary files and directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ serenity_temp_paths_to_clean }}"
+      ignore_errors: yes # Continue even if a path doesn't exist
+      tags:
+        - cleanup
+
+    - name: Ensure log directory for serenity logs exists
+      ansible.builtin.file:
+        path: /var/log/serenity
+        state: directory
+        owner: root
+        group: adm
+        mode: '0755'
+      tags:
+        - logrotate
+
+    - name: Configure logrotate for serenity logs
+      ansible.builtin.template:
+        src: ../templates/serenity_logrotate.j2
+        dest: "{{ serenity_logrotate_config_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        logrotate_path_to_monitor: /var/log/serenity/*.log
+        logrotate_rotate_count: "{{ serenity_logrotate_rotate_count | default(7) }}"
+        logrotate_create_mode: "{{ serenity_logrotate_create_mode | default('0640') }}"
+        logrotate_create_owner: "{{ serenity_logrotate_create_owner | default('root') }}"
+        logrotate_create_group: "{{ serenity_logrotate_create_group | default('adm') }}"
+      tags:
+        - logrotate
+
+    - name: Force logrotate to run immediately for serenity logs
+      ansible.builtin.command: /usr/sbin/logrotate -f "{{ serenity_logrotate_config_path }}"
+      changed_when: true # Assume logrotate always attempts a change
+      tags:
+        - logrotate

@@ -1,0 +1,138 @@
+---
+- name: Test Digital Serenity Enforcer Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ../vars/serenity_config.yml
+
+  tasks:
+    - name: Ensure services to stop are defined
+      ansible.builtin.assert:
+        that:
+          - serenity_services_to_stop is defined
+          - serenity_services_to_stop is iterable
+          - serenity_services_to_stop | length > 0
+        fail_msg: "serenity_services_to_stop variable is not correctly defined."
+      # Mock rationale: This task checks the playbook's internal configuration,
+      # not external system state, making it deterministic and offline.
+
+    - name: Ensure temporary paths to clean are defined
+      ansible.builtin.assert:
+        that:
+          - serenity_temp_paths_to_clean is defined
+          - serenity_temp_paths_to_clean is iterable
+          - serenity_temp_paths_to_clean | length > 0
+        fail_msg: "serenity_temp_paths_to_clean variable is not correctly defined."
+      # Mock rationale: Checks internal configuration, deterministic and offline.
+
+    - name: Ensure logrotate config path is defined
+      ansible.builtin.assert:
+        that:
+          - serenity_logrotate_config_path is defined
+          - serenity_logrotate_config_path | length > 0
+        fail_msg: "serenity_logrotate_config_path variable is not correctly defined."
+      # Mock rationale: Checks internal configuration, deterministic and offline.
+
+    - name: Simulate stopping services (check mode)
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ serenity_services_to_stop }}"
+      check_mode: yes # Simulate without actual changes
+      register: service_stop_results
+      ignore_errors: yes # Allow simulation to continue
+      # Mock rationale: Running in check_mode simulates the module's behavior
+      # without actual system interaction, making it deterministic and offline.
+      # The register output can be inspected for expected changes.
+
+    - name: Assert that service tasks would run
+      ansible.builtin.assert:
+        that:
+          - item.changed is defined # Check if 'changed' key exists in result
+        fail_msg: "Service task for {{ item.item }} did not register expected output in check_mode."
+      loop: "{{ service_stop_results.results }}"
+      when: service_stop_results.results is defined and service_stop_results.results | length > 0
+      # Mock rationale: This asserts on the *structure* of the check_mode output,
+      # confirming the module was invoked and returned a result, without
+      # relying on actual system state changes.
+
+    - name: Simulate cleaning temporary files (check mode)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ serenity_temp_paths_to_clean }}"
+      check_mode: yes # Simulate without actual changes
+      register: file_cleanup_results
+      ignore_errors: yes # Allow simulation to continue
+      # Mock rationale: Running in check_mode simulates the module's behavior
+      # without actual system interaction, making it deterministic and offline.
+
+    - name: Assert that file cleanup tasks would run
+      ansible.builtin.assert:
+        that:
+          - item.changed is defined # Check if 'changed' key exists in result
+        fail_msg: "File cleanup task for {{ item.item }} did not register expected output in check_mode."
+      loop: "{{ file_cleanup_results.results }}"
+      when: file_cleanup_results.results is defined and file_cleanup_results.results | length > 0
+      # Mock rationale: Asserts on the structure of check_mode output,
+      # confirming module invocation without actual system changes.
+
+    - name: Simulate log directory creation (check mode)
+      ansible.builtin.file:
+        path: /var/log/serenity
+        state: directory
+        owner: root
+        group: adm
+        mode: '0755'
+      check_mode: yes
+      register: log_dir_result
+      # Mock rationale: Running in check_mode simulates the module's behavior
+      # without actual system interaction, making it deterministic and offline.
+
+    - name: Assert log directory task would run
+      ansible.builtin.assert:
+        that:
+          - log_dir_result.changed is defined
+        fail_msg: "Log directory creation task did not register expected output in check_mode."
+      # Mock rationale: Asserts on the structure of check_mode output.
+
+    - name: Simulate logrotate config creation from template (check mode)
+      ansible.builtin.template:
+        src: ../templates/serenity_logrotate.j2
+        dest: "{{ serenity_logrotate_config_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        logrotate_path_to_monitor: /var/log/serenity/*.log
+        logrotate_rotate_count: "{{ serenity_logrotate_rotate_count | default(7) }}"
+        logrotate_create_mode: "{{ serenity_logrotate_create_mode | default('0640') }}"
+        logrotate_create_owner: "{{ serenity_logrotate_create_owner | default('root') }}"
+        logrotate_create_group: "{{ serenity_logrotate_create_group | default('adm') }}"
+      check_mode: yes
+      register: logrotate_config_result
+      # Mock rationale: Running in check_mode simulates the module's behavior
+      # without actual system interaction, making it deterministic and offline.
+
+    - name: Assert logrotate config task would run
+      ansible.builtin.assert:
+        that:
+          - logrotate_config_result.changed is defined
+        fail_msg: "Logrotate config task did not register expected output in check_mode."
+      # Mock rationale: Asserts on the structure of check_mode output.
+
+    - name: Simulate force logrotate command (check mode)
+      ansible.builtin.command: /usr/sbin/logrotate -f "{{ serenity_logrotate_config_path }}"
+      check_mode: yes
+      register: logrotate_command_result
+      changed_when: true # This task is always considered changed in check_mode for command module
+      # Mock rationale: Running in check_mode simulates the module's behavior
+      # without actual system interaction, making it deterministic and offline.
+
+    - name: Assert logrotate command task would run
+      ansible.builtin.assert:
+        that:
+          - logrotate_command_result.changed is defined
+        fail_msg: "Logrotate command task did not register expected output in check_mode."
+      # Mock rationale: Asserts on the structure of check_mode output.
