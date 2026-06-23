@@ -1,0 +1,12 @@
+# Log Summary Report
+# Generated on: {{ timestamp }}
+# For host: {{ host }}
+
+## Error Summary:
+{% if errors is defined and errors | length > 0 %}
+{% for error_type, count in errors.items() %}
+- {{ error_type | upper }}: {{ count }} occurrence(s)
+{% endfor %}
+{% else %}
+No significant errors found.
+{% endif %}

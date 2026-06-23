@@ -1,0 +1,23 @@
+# Mock rationale: This file simulates the output of the Ansible playbook for testing purposes.
+# In a real scenario, this would be a Molecule test file.
+
+# Test Case: Basic Log Parsing
+# Scenario: A simple log file with a few common errors.
+
+# Expected Output (on control node, in ./log_summary_report.txt):
+# Log Summary Report
+# Generated on: 2023-10-27T10:00:00+00:00 (example timestamp)
+# For host: localhost
+#
+# ## Error Summary:
+# - error: 2 occurrence(s)
+# - warn: 1 occurrence(s)
+# - critical: 1 occurrence(s)
+
+# To run this test manually:
+# 1. Save the playbook as src/parse_logs.yml
+# 2. Save this test file as tests/test_parse_logs.yml
+# 3. Save vars/main.yml and inventory.ini in the src/ directory.
+# 4. Save templates/log_summary.j2 in the src/templates/ directory.
+# 5. Run: ansible-playbook -i src/inventory.ini src/parse_logs.yml
+# 6. Verify the content of ./log_summary_report.txt matches the expected output.
