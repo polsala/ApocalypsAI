@@ -1,0 +1,72 @@
+name: 'Chrono-Sync Auditor'
+description: 'Detects files whose modification times are older than their last commit time.'
+inputs:
+  fail-on-anomaly:
+    description: 'Whether the action should fail if anomalies are found.'
+    required: false
+    default: 'true'
+outputs:
+  anomalies-found:
+    description: 'Boolean indicating if any chronological anomalies were found.'
+    value: ${{ steps.audit.outputs.anomalies-found }}
+  anomaly-list:
+    description: 'Newline-separated list of files with chronological anomalies.'
+    value: ${{ steps.audit.outputs.anomaly-list }}
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      id: audit
+      run: |
+        echo "Running Chrono-Sync Auditor..."
+        ANOMALIES=""
+        ANOMALIES_COUNT=0
+        
+        # Ensure git is available
+        if ! command -v git &> /dev/null; then
+            echo "::error::git command not found. Please ensure git is installed in the runner environment."
+            exit 1
+        fi
+
+        # Ensure stat is available and supports %Y (GNU stat)
+        if ! stat -c %Y . &> /dev/null; then
+            echo "::error::stat command does not support %Y. Please ensure a GNU-compatible stat is available (e.g., on Linux runners)."
+            exit 1
+        fi
+
+        # Get all tracked files, excluding submodules and untracked files
+        # Using -z for null-separated output to handle filenames with spaces
+        git ls-files -z | while IFS= read -r -d $'\0' file; do
+            if [ -f "$file" ]; then # Ensure it's a regular file
+                LAST_COMMIT_TIME=$(git log -1 --format="%ct" -- "$file" 2>/dev/null)
+                if [ -z "$LAST_COMMIT_TIME" ]; then
+                    # File might be new but staged, or in .gitignore but still listed by ls-files in some contexts.
+                    # For simplicity, we only care about files with a commit history.
+                    continue
+                fi
+                
+                FILE_MTIME=$(stat -c %Y "$file")
+
+                if [ "$FILE_MTIME" -lt "$LAST_COMMIT_TIME" ]; then
+                    echo "🚨 Anomaly detected: '$file' (mtime: $(date -d @$FILE_MTIME +'%Y-%m-%d %H:%M:%S') < last commit: $(date -d @$LAST_COMMIT_TIME +'%Y-%m-%d %H:%M:%S'))"
+                    ANOMALIES="${ANOMALIES}${file}\n"
+                    ANOMALIES_COUNT=$((ANOMALIES_COUNT + 1))
+                fi
+            fi
+        done
+
+        if [ "$ANOMALIES_COUNT" -gt 0 ]; then
+            echo "::warning::Found $ANOMALIES_COUNT chronological anomalies."
+            echo "anomalies-found=true" >> "$GITHUB_OUTPUT"
+            echo "anomaly-list<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ANOMALIES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            if [[ "${{ inputs.fail-on-anomaly }}" == "true" ]]; then
+                echo "::error::Failing due to chronological anomalies."
+                exit 1
+            fi
+        else
+            echo "✅ No chronological anomalies detected. All files are in sync with their last commit times."
+            echo "anomalies-found=false" >> "$GITHUB_OUTPUT"
+            echo "anomaly-list=" >> "$GITHUB_OUTPUT"
+        fi
