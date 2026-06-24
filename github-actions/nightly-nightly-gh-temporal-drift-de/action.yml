@@ -1,0 +1,80 @@
+name: 'Temporal Drift Detector'
+description: 'Detects files whose filesystem modification times are older than their last commit times, indicating potential temporal drift.'
+inputs:
+  path:
+    description: 'The path to scan for temporal drift. Defaults to the repository root.'
+    required: false
+    default: '.'
+  fail_on_drift:
+    description: 'If true, the action will fail if any temporal drift is detected.'
+    required: false
+    default: 'false'
+outputs:
+  drift_detected:
+    description: 'True if temporal drift was detected, false otherwise.'
+    value: ${{ steps.detect_drift.outputs.drift_detected }}
+  drifted_files:
+    description: 'A newline-separated list of files with detected temporal drift.'
+    value: ${{ steps.detect_drift.outputs.drifted_files }}
+runs:
+  using: 'composite'
+  steps:
+    - id: detect_drift
+      shell: bash
+      run: |
+        echo "Running Temporal Drift Detector in path: ${{ inputs.path }}"
+        DRIFT_DETECTED="false"
+        DRIFTED_FILES=""
+        
+        # Ensure git is available
+        if ! command -v git &> /dev/null; then
+            echo "Error: git command not found. Please ensure git is installed in the runner environment."
+            exit 1
+        fi
+        
+        # Ensure stat is available
+        if ! command -v stat &> /dev/null; then
+            echo "Error: stat command not found. Please ensure stat is installed in the runner environment."
+            exit 1
+        fi
+
+        # Get all tracked files in the specified path
+        # Using -z for null-terminated output to handle filenames with spaces
+        git ls-files -z --full-name "${{ inputs.path }}" | while IFS= read -r -d $'\0' file; do
+            if [ -f "$file" ]; then
+                # Get last commit timestamp (Unix epoch)
+                COMMIT_TIME=$(git log -1 --format=%ct -- "$file")
+                
+                # Get file modification timestamp (Unix epoch)
+                # Using GNU stat for %Y (modification time)
+                FILE_MTIME=$(stat -c %Y "$file")
+
+                # Allow a small buffer for checkout operations, etc. (e.g., 5 seconds)
+                # If file mtime is significantly older than commit time, it's drift.
+                # We're looking for mtime < commit_time - buffer
+                BUFFER_SECONDS=5
+                THRESHOLD_COMMIT_TIME=$((COMMIT_TIME - BUFFER_SECONDS))
+
+                if [ -n "$COMMIT_TIME" ] && [ -n "$FILE_MTIME" ] && [ "$FILE_MTIME" -lt "$THRESHOLD_COMMIT_TIME" ]; then
+                    echo "🚨 Temporal Drift Detected in: $file"
+                    echo "   Last Commit Time: $(date -d @$COMMIT_TIME)"
+                    echo "   File Mod Time:    $(date -d @$FILE_MTIME)"
+                    DRIFT_DETECTED="true"
+                    DRIFTED_FILES="${DRIFTED_FILES}${file}\n"
+                fi
+            fi
+        done
+        
+        echo "drift_detected=${DRIFT_DETECTED}" >> "$GITHUB_OUTPUT"
+        echo "drifted_files<<EOF" >> "$GITHUB_OUTPUT"
+        echo -e "${DRIFTED_FILES}" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        if [ "$DRIFT_DETECTED" = "true" ] && [ "${{ inputs.fail_on_drift }}" = "true" ]; then
+            echo "Error: Temporal drift detected and 'fail_on_drift' is true. Failing workflow."
+            exit 1
+        elif [ "$DRIFT_DETECTED" = "true" ]; then
+            echo "Warning: Temporal drift detected, but 'fail_on_drift' is false. Workflow will continue."
+        else
+            echo "✅ No temporal drift detected. All timelines are stable."
+        fi
