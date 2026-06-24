@@ -1,0 +1,142 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.App {
+  background-color: #16213e;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+}
+
+h1 {
+  color: #e94560;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+  text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+}
+
+.input-section {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 40px;
+}
+
+input[type="text"] {
+  padding: 12px 18px;
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  background-color: #0a192f;
+  color: #e0e0e0;
+  font-size: 1.1em;
+  width: 60%;
+  max-width: 400px;
+  transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+  border-color: #e94560;
+  box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+  outline: none;
+}
+
+button {
+  padding: 12px 25px;
+  background-color: #e94560;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: #ba374e;
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.echo-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+  justify-content: center;
+}
+
+.echo-card {
+  background-color: #0f3460;
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: left;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.echo-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  animation: pulse-glow 5s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(0.8); opacity: 0.1; }
+  100% { transform: scale(1.2); opacity: 0.2; }
+}
+
+.echo-type {
+  font-size: 1.4em;
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: inherit; /* Inherit color from parent for dynamic styling */
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.echo-content {
+  font-size: 1em;
+  line-height: 1.5;
+  margin-bottom: 15px;
+  flex-grow: 1;
+}
+
+.echo-intensity {
+  font-size: 0.9em;
+  color: #b0b0b0;
+  font-style: italic;
+}
+
+.no-echoes {
+  grid-column: 1 / -1;
+  color: #e94560;
+  font-style: italic;
+  font-size: 1.2em;
+  margin-top: 30px;
+}
