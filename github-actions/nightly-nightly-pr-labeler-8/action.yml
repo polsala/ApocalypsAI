@@ -1,0 +1,2 @@
+name: "Nightly PR Labeler"\ndescription: "Add labels to PRs based on title keywords and post a whimsical emoji comment."\ninputs:\n  github-token:\n    description: "GitHub token with repo scope"
+    required: true\n    default: "${{ github.token }}"\nruns:\n  using: "node12"\n  main: "src/index.js"\n
