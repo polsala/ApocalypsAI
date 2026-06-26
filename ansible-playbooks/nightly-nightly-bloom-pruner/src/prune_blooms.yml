@@ -1,0 +1,70 @@
+---
+- name: Prune stale or untagged Markdown notes from a digital garden
+  hosts: garden_servers
+  gather_facts: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure prune destination directory exists
+      ansible.builtin.file:
+        path: "{{ prune_destination }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find all Markdown files in the notes path
+      ansible.builtin.find:
+        paths: "{{ notes_path }}"
+        patterns: "*.md"
+        recurse: true
+      register: markdown_files
+
+    - name: Process each Markdown file
+      ansible.builtin.block:
+        - name: Get file stats
+          ansible.builtin.stat:
+            path: "{{ item.path }}"
+          register: file_stat
+
+        - name: Read file content
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content
+          when: file_stat.stat.exists
+
+        - name: Decode file content
+          ansible.builtin.set_fact:
+            decoded_content: "{{ file_content.content | b64decode | string }}"
+          when: file_stat.stat.exists
+
+        - name: Determine if file is stale and not evergreen
+          ansible.builtin.set_fact:
+            is_stale: >-
+              {{ (ansible_date_time.epoch | int - file_stat.stat.mtime | int) / (60 * 60 * 24) > stale_age_days }}
+            is_evergreen: >-
+              {{ decoded_content is defined and evergreen_tag in decoded_content }}
+          when: file_stat.stat.exists
+
+        - name: Report file to be pruned (Dry Run)
+          ansible.builtin.debug:
+            msg: "[DRY RUN] Would prune: {{ item.path }} (Stale: {{ is_stale }}, Evergreen: {{ is_evergreen }})"
+          when: >-
+            dry_run and is_stale and not is_evergreen and file_stat.stat.exists
+
+        - name: Prune file (move to archive)
+          ansible.builtin.command: >-
+            mv "{{ item.path }}" "{{ prune_destination }}/{{ item.path | basename }}"
+          when: >-
+            not dry_run and is_stale and not is_evergreen and file_stat.stat.exists
+          args:
+            creates: "{{ prune_destination }}/{{ item.path | basename }}"
+          changed_when: true
+
+        - name: Report file pruned
+          ansible.builtin.debug:
+            msg: "Pruned: {{ item.path }} -> {{ prune_destination }}/{{ item.path | basename }}"
+          when: >-
+            not dry_run and is_stale and not is_evergreen and file_stat.stat.exists
+      loop: "{{ markdown_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
