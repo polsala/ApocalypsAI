@@ -1,0 +1,94 @@
+---
+- name: Test Perimeter Shield Fortifier - Debian/UFW Scenario
+  hosts: test_hosts
+  gather_facts: no
+  vars:
+    ansible_facts: { os_family: 'Debian' }
+    force_firewall_type: ""
+    allowed_tcp_ports: [22, 80]
+    default_incoming_policy: "deny"
+  tasks:
+    - name: Mock ansible_facts for Debian
+      ansible.builtin.set_fact:
+        ansible_facts: { os_family: 'Debian' }
+      # Mock rationale: Simulates a Debian-based system for testing UFW logic.
+
+    - name: Include main playbook for UFW scenario
+      ansible.builtin.include_tasks: ../src/fortify_perimeter.yml
+      # Mock rationale: Includes the main playbook to test its conditional logic.
+
+    - name: Assert firewall_type is ufw
+      ansible.builtin.assert:
+        that:
+          - firewall_type == 'ufw'
+        msg: "Expected firewall_type to be 'ufw' for Debian, but got '{{ firewall_type }}'"
+      # Mock rationale: Verifies the playbook correctly identifies UFW for Debian.
+
+    - name: Debug tasks that would run for UFW
+      ansible.builtin.debug:
+        msg: "UFW tasks would be considered for execution."
+      when: firewall_type == 'ufw'
+      # Mock rationale: Confirms the UFW block is entered.
+
+- name: Test Perimeter Shield Fortifier - RedHat/Firewalld Scenario
+  hosts: test_hosts
+  gather_facts: no
+  vars:
+    ansible_facts: { os_family: 'RedHat' }
+    force_firewall_type: ""
+    allowed_tcp_ports: [22, 443]
+    default_incoming_policy: "deny"
+  tasks:
+    - name: Mock ansible_facts for RedHat
+      ansible.builtin.set_fact:
+        ansible_facts: { os_family: 'RedHat' }
+      # Mock rationale: Simulates a RedHat-based system for testing firewalld logic.
+
+    - name: Include main playbook for Firewalld scenario
+      ansible.builtin.include_tasks: ../src/fortify_perimeter.yml
+      # Mock rationale: Includes the main playbook to test its conditional logic.
+
+    - name: Assert firewall_type is firewalld
+      ansible.builtin.assert:
+        that:
+          - firewall_type == 'firewalld'
+        msg: "Expected firewall_type to be 'firewalld' for RedHat, but got '{{ firewall_type }}'"
+      # Mock rationale: Verifies the playbook correctly identifies firewalld for RedHat.
+
+    - name: Debug tasks that would run for Firewalld
+      ansible.builtin.debug:
+        msg: "Firewalld tasks would be considered for execution."
+      when: firewall_type == 'firewalld'
+      # Mock rationale: Confirms the firewalld block is entered.
+
+- name: Test Perimeter Shield Fortifier - Forced Firewall Type
+  hosts: test_hosts
+  gather_facts: no
+  vars:
+    ansible_facts: { os_family: 'SomeOtherOS' }
+    force_firewall_type: "ufw"
+    allowed_tcp_ports: [22]
+    default_incoming_policy: "allow"
+  tasks:
+    - name: Mock ansible_facts for unknown OS, force ufw
+      ansible.builtin.set_fact:
+        ansible_facts: { os_family: 'SomeOtherOS' }
+        force_firewall_type: "ufw"
+      # Mock rationale: Simulates an unknown OS but forces UFW, testing the 'force_firewall_type' logic.
+
+    - name: Include main playbook for forced UFW scenario
+      ansible.builtin.include_tasks: ../src/fortify_perimeter.yml
+      # Mock rationale: Includes the main playbook to test its conditional logic.
+
+    - name: Assert firewall_type is forced ufw
+      ansible.builtin.assert:
+        that:
+          - firewall_type == 'ufw'
+        msg: "Expected firewall_type to be 'ufw' when forced, but got '{{ firewall_type }}'"
+      # Mock rationale: Verifies the playbook respects the 'force_firewall_type' variable.
+
+    - name: Debug tasks that would run for forced UFW
+      ansible.builtin.debug:
+        msg: "Forced UFW tasks would be considered for execution."
+      when: firewall_type == 'ufw'
+      # Mock rationale: Confirms the UFW block is entered when forced.
