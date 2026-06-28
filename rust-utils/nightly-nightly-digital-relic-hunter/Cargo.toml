@@ -1,0 +1,12 @@
+[package]
+name = "nightly-digital-relic-hunter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "0.3"
