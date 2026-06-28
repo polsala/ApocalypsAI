@@ -1,0 +1,62 @@
+---
+- name: Provision Nightly Survival Kit
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Ensure apt cache is updated
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install essential survival tools
+      ansible.builtin.apt:
+        name: "{{ survival_packages }}"
+        state: present
+
+    - name: Ensure UFW is installed
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    - name: Allow SSH through UFW
+      community.general.ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+
+    - name: Allow HTTP through UFW
+      community.general.ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+
+    - name: Allow HTTPS through UFW
+      community.general.ufw:
+        rule: allow
+        port: 443
+        proto: tcp
+
+    - name: Deploy basic system health check script
+      ansible.builtin.copy:
+        src: ../files/health_check.sh
+        dest: /usr/local/bin/survival_health_check.sh
+        mode: '0755'
+
+    - name: Ensure NTP client is installed
+      ansible.builtin.apt:
+        name: ntp
+        state: present
+
+    - name: Ensure NTP service is running and enabled
+      ansible.builtin.service:
+        name: ntp
+        state: started
+        enabled: yes
