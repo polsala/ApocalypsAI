@@ -1,0 +1,11 @@
+[package]
+name = "lore-weaver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+# No specific dev-dependencies needed beyond what's in std for these tests.
+# std::process::Command and std::fs are sufficient for self-contained CLI testing.
