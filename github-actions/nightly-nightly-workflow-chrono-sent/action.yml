@@ -1,0 +1,24 @@
+name: 'Nightly Workflow Chrono-Sentry'
+description: 'Detects anomalous step durations in GitHub Actions workflows, reporting "temporal distortions" to keep your CI/CD speedy.'
+inputs:
+  github_token:
+    description: 'GitHub Token for API access (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  threshold_multiplier:
+    description: 'A step is flagged if its duration is more than this multiplier times the average step duration in its job.'
+    required: false
+    default: '2.0'
+  min_duration_seconds:
+    description: 'Minimum duration (in seconds) for a step to be considered for anomaly detection. Shorter steps are ignored.'
+    required: false
+    default: '5'
+outputs:
+  anomalies_detected:
+    description: 'True if any temporal distortions (anomalies) were detected.'
+    value: ${{ steps.chrono-sentry.outputs.anomalies_detected }}
+  anomaly_report:
+    description: 'JSON string containing details of detected temporal distortions.'
+    value: ${{ steps.chrono-sentry.outputs.anomaly_report }}
+runs:
+  using: 'node20'
+  main: 'src/index.js'
