@@ -1,0 +1,24 @@
+name: 'Nightly Branch Archivist'
+description: 'Identifies and reports on stale branches, suggesting a "Branch Retirement Party" for repository hygiene.'
+inputs:
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  protected-branches:
+    description: 'Comma-separated list of branch names or glob patterns to always ignore (e.g., main,master,develop,release/*).'
+    required: false
+    default: 'main,master,develop'
+  repo-token:
+    description: 'GitHub token for API access. Usually GITHUB_TOKEN.'
+    required: true
+outputs:
+  stale-branches-json:
+    description: 'JSON array of stale branch names.'
+  stale-branches-count:
+    description: 'The number of stale branches found.'
+  stale-branches-message:
+    description: 'A whimsical message about the stale branches found.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
