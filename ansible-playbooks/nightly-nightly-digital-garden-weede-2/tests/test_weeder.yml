@@ -1,0 +1,176 @@
+---
+- name: Test Digital Garden Weeder
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_garden_path: "/tmp/test_garden_weeder_garden"
+    test_quarantine_path: "/tmp/test_garden_weeder_quarantine"
+    test_stale_threshold_days: 1 # Make files stale quickly for testing
+
+  tasks:
+    - name: Clean up previous test runs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_quarantine_path }}"
+
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create test quarantine directory
+      ansible.builtin.file:
+        path: "{{ test_quarantine_path }}"
+        state: directory
+        mode: '0755'
+
+    # Mock rationale: We create files with specific content and mtimes to simulate different scenarios.
+    # This makes the test deterministic and independent of the actual system clock or external file changes.
+
+    - name: Create a fresh, linked note
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/fresh_linked_note.md"
+        content: |
+          # Fresh Linked Note
+          This note is fresh and links to stale_unlinked_note.
+          It also mentions another_fresh_note.
+        mode: '0644'
+    - name: Set mtime for fresh_linked_note
+      ansible.builtin.command: touch -m "{{ ansible_date_time.iso8601_basic | ansible.builtin.strftime('%Y%m%d%H%M.%S') }}" "{{ test_garden_path }}/fresh_linked_note.md"
+      changed_when: false
+
+    - name: Create another fresh, linked note
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/another_fresh_note.md"
+        content: |
+          # Another Fresh Note
+          This note is also fresh and links to fresh_linked_note.
+        mode: '0644'
+    - name: Set mtime for another_fresh_note
+      ansible.builtin.command: touch -m "{{ ansible_date_time.iso8601_basic | ansible.builtin.strftime('%Y%m%d%H%M.%S') }}" "{{ test_garden_path }}/another_fresh_note.md"
+      changed_when: false
+
+    - name: Create a stale, linked note
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/stale_linked_note.md"
+        content: |
+          # Stale Linked Note
+          This note is stale but linked by fresh_linked_note.
+        mode: '0644'
+    - name: Set mtime for stale_linked_note (past date)
+      ansible.builtin.command: touch -m "{{ (ansible_date_time.epoch | int - (test_stale_threshold_days + 1) * 24 * 3600) | ansible.builtin.strftime('%Y%m%d%H%M.%S') }}" "{{ test_garden_path }}/stale_linked_note.md"
+      changed_when: false
+
+    - name: Create a stale, unlinked note (quarantine candidate)
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/stale_unlinked_note.md"
+        content: |
+          # Stale Unlinked Note
+          This note is stale and not linked by anything.
+        mode: '0644'
+    - name: Set mtime for stale_unlinked_note (past date)
+      ansible.builtin.command: touch -m "{{ (ansible_date_time.epoch | int - (test_stale_threshold_days + 1) * 24 * 3600) | ansible.builtin.strftime('%Y%m%d%H%M.%S') }}" "{{ test_garden_path }}/stale_unlinked_note.md"
+      changed_when: false
+
+    - name: Create a fresh, unlinked note
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/fresh_unlinked_note.md"
+        content: |
+          # Fresh Unlinked Note
+          This note is fresh but not linked by anything.
+        mode: '0644'
+    - name: Set mtime for fresh_unlinked_note
+      ansible.builtin.command: touch -m "{{ ansible_date_time.iso8601_basic | ansible.builtin.strftime('%Y%m%d%H%M.%S') }}" "{{ test_garden_path }}/fresh_unlinked_note.md"
+      changed_when: false
+
+    - name: Run the weeder playbook in check mode (no quarantine)
+      ansible.builtin.include_tasks: src/weeder.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        quarantine_path: "{{ test_quarantine_path }}"
+        stale_threshold_days: "{{ test_stale_threshold_days }}"
+        perform_quarantine: false
+
+    - name: Get current date for report filename matching
+      ansible.builtin.command: date +%Y%m%d
+      register: current_date_result
+      changed_when: false
+
+    - name: Assert report file exists
+      ansible.builtin.stat:
+        path: "{{ test_quarantine_path }}/weeder_report_{{ current_date_result.stdout }}*.txt"
+      register: report_stat
+    - ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists
+        fail_msg: "Report file was not generated."
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ report_stat.stat.path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_b64.content | b64decode | decode('utf-8') }}"
+
+    - name: Assert report content for stale and unlinked files (check mode)
+      ansible.builtin.assert:
+        that:
+          - "'stale_linked_note.md' in report_content"
+          - "'stale_unlinked_note.md' in report_content"
+          - "'fresh_linked_note.md' not in report_content"
+          - "'another_fresh_note.md' not in report_content"
+          - "'fresh_unlinked_note.md' in report_content" # Fresh but unlinked
+          - "'stale_unlinked_note.md' in report_content and 'Quarantine Candidates' in report_content"
+          - "'Quarantine is disabled. No files were moved.' in report_content"
+        fail_msg: "Report content is incorrect in check mode."
+
+    - name: Assert no files were moved in check mode
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/stale_unlinked_note.md"
+      register: original_file_stat
+    - ansible.builtin.assert:
+        that:
+          - original_file_stat.stat.exists
+        fail_msg: "File was moved when quarantine was disabled."
+
+    - name: Run the weeder playbook in normal mode (with quarantine)
+      ansible.builtin.include_tasks: src/weeder.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        quarantine_path: "{{ test_quarantine_path }}"
+        stale_threshold_days: "{{ test_stale_threshold_days }}"
+        perform_quarantine: true
+
+    - name: Assert stale_unlinked_note.md was moved
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/stale_unlinked_note.md"
+      register: moved_from_garden_stat
+    - ansible.builtin.assert:
+        that:
+          - not moved_from_garden_stat.stat.exists
+        fail_msg: "stale_unlinked_note.md was not moved from garden."
+
+    - name: Assert stale_unlinked_note.md is in quarantine
+      ansible.builtin.stat:
+        path: "{{ test_quarantine_path }}/stale_unlinked_note.md"
+      register: moved_to_quarantine_stat
+    - ansible.builtin.assert:
+        that:
+          - moved_to_quarantine_stat.stat.exists
+        fail_msg: "stale_unlinked_note.md was not moved to quarantine."
+
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_quarantine_path }}"
