@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# This script is designed to be run inside a Docker container that has docker-compose installed.
+# It expects to be mounted with the directory containing the docker-compose.yml file.
+
+COMPOSE_FILE="docker-compose.yml"
+
+start() {
+    echo "Starting Docker environment..."
+    if [ -f "$COMPOSE_FILE" ]; then
+        docker-compose up -d
+        if [ $? -eq 0 ]; then
+            echo "Docker environment started successfully."
+        else
+            echo "Error starting Docker environment."
+            exit 1
+        fi
+    else
+        echo "Error: $COMPOSE_FILE not found in the current directory."
+        exit 1
+    fi
+}
+
+stop() {
+    echo "Stopping Docker environment..."
+    if [ -f "$COMPOSE_FILE" ]; then
+        docker-compose down
+        if [ $? -eq 0 ]; then
+            echo "Docker environment stopped successfully."
+        else
+            echo "Error stopping Docker environment."
+            exit 1
+        fi
+    else
+        echo "Error: $COMPOSE_FILE not found in the current directory."
+        exit 1
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
