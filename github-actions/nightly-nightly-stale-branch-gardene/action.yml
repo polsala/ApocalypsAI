@@ -1,0 +1,26 @@
+name: 'Stale Branch Gardener'
+description: 'Identifies and reports stale, unmerged branches in your repository.'
+inputs:
+  github_token:
+    description: 'GitHub token with repo scope for API access.'
+    required: true
+  base_branch:
+    description: 'The base branch to check against for merged status.'
+    required: false
+    default: 'main'
+  stale_days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '30'
+outputs:
+  stale_branches:
+    description: 'A JSON array of stale, unmerged branch names.'
+runs:
+  using: 'composite'
+  steps:
+    - run: ${{ github.action_path }}/src/main.sh
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        BASE_BRANCH: ${{ inputs.base_branch }}
+        STALE_DAYS: ${{ inputs.stale_days }}

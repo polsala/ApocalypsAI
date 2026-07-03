@@ -1,0 +1,55 @@
+#!/bin/bash
+# Mock rationale: To ensure deterministic and offline testing, the GitHub CLI commands
+# are mocked to simulate repository branch data and merge status without requiring
+# actual API calls or a live repository.
+
+set -euo pipefail
+
+# Simulate gh api calls
+if [[ "$1" == "api" ]]; then
+  ENDPOINT="$2"
+  # Remove --jq and -H flags for simpler parsing
+  ENDPOINT=$(echo "$ENDPOINT" | sed -E 's/--jq '\''[^'\']+'\''//g' | sed -E 's/-H '\''[^'\']+'\''//g')
+  ENDPOINT=$(echo "$ENDPOINT" | xargs) # Trim whitespace
+
+  case "$ENDPOINT" in
+    "repos/test_owner/test_repo/branches")
+      # Simulate branches: main, feature-fresh, feature-stale-unmerged, feature-stale-merged
+      echo '[{"name":"main"},{"name":"feature-fresh"},{"name":"feature-stale-unmerged"},{"name":"feature-stale-merged"}]'
+      ;;
+    "repos/test_owner/test_repo/branches/main")
+      echo '{"name":"main","commit":{"commit":{"author":{"date":"2024-01-01T12:00:00Z"}}}}' # Base branch, irrelevant for staleness
+      ;;
+    "repos/test_owner/test_repo/branches/feature-fresh")
+      # Last commit within the 30-day window (e.g., 5 days ago)
+      FRESH_DATE=$(date -u -d "5 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+      echo "{\"name\":\"feature-fresh\",\"commit\":{\"commit\":{\"author\":{\"date\":\"${FRESH_DATE}\"}}}}"
+      ;;
+    "repos/test_owner/test_repo/branches/feature-stale-unmerged")
+      # Last commit outside the 30-day window (e.g., 60 days ago)
+      STALE_DATE=$(date -u -d "60 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+      echo "{\"name\":\"feature-stale-unmerged\",\"commit\":{\"commit\":{\"author\":{\"date\":\"${STALE_DATE}\"}}}}"
+      ;;
+    "repos/test_owner/test_repo/branches/feature-stale-merged")
+      # Last commit outside the 30-day window (e.g., 60 days ago)
+      STALE_DATE=$(date -u -d "60 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+      echo "{\"name\":\"feature-stale-merged\",\"commit\":{\"commit\":{\"author\":{\"date\":\"${STALE_DATE}\"}}}}"
+      ;;
+    "repos/test_owner/test_repo/compare/main...feature-fresh")
+      echo '{"status":"ahead"}' # Fresh, so not reported
+      ;;
+    "repos/test_owner/test_repo/compare/main...feature-stale-unmerged")
+      echo '{"status":"ahead"}' # Stale AND ahead -> should be reported
+      ;;
+    "repos/test_owner/test_repo/compare/main...feature-stale-merged")
+      echo '{"status":"behind"}' # Stale but behind/merged -> should NOT be reported
+      ;;
+    *)
+      echo "Error: Unknown mock API endpoint: $ENDPOINT" >&2
+      exit 1
+      ;;
+  esac
+else
+  echo "Error: Unknown mock gh command: $*" >&2
+  exit 1
+fi
