@@ -1,0 +1,103 @@
+---
+- name: Test Digital Garden Pruner Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_id: "{{ lookup('pipe', 'date +%s%N') }}" # Unique ID for temporary directories
+    test_garden_path: "/tmp/ansible_test_garden_{{ test_id }}"
+    test_archive_path: "/tmp/ansible_test_garden_archive_{{ test_id }}"
+    test_prune_age_days: 30
+
+  tasks:
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a temporary directory to simulate the digital garden for testing.
+
+    - name: Create test archive directory
+      ansible.builtin.file:
+        path: "{{ test_archive_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a temporary directory to simulate the archive location for testing.
+
+    - name: Create an old file in the test garden
+      ansible.builtin.copy:
+        content: "This is an old file that should be pruned."
+        dest: "{{ test_garden_path }}/old_file.txt"
+      # Mock rationale: Creates a file that will be artificially aged to be older than the prune threshold.
+
+    - name: Set mtime for the old file
+      ansible.builtin.command: "touch -d '{{ test_prune_age_days + 10 }} days ago' '{{ test_garden_path }}/old_file.txt'"
+      changed_when: true # This command always changes the timestamp
+      # Mock rationale: Uses 'touch -d' to set a specific modification time, making the file 'old' for the test.
+
+    - name: Create a recent file in the test garden
+      ansible.builtin.copy:
+        content: "This is a recent file that should NOT be pruned."
+        dest: "{{ test_garden_path }}/recent_file.txt"
+      # Mock rationale: Creates a file that will have a current modification time, making it 'recent' for the test.
+
+    - name: Create an old directory with a nested old file
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}/old_dir"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a directory structure to test pruning of directories and their contents.
+    - name: Create nested old file
+      ansible.builtin.copy:
+        content: "This is a nested old file."
+        dest: "{{ test_garden_path }}/old_dir/nested_old_file.txt"
+      # Mock rationale: A file inside the old directory, also to be aged.
+    - name: Set mtime for old directory and nested file
+      ansible.builtin.command: "touch -d '{{ test_prune_age_days + 10 }} days ago' '{{ test_garden_path }}/old_dir' '{{ test_garden_path }}/old_dir/nested_old_file.txt'"
+      changed_when: true
+      # Mock rationale: Ages both the directory and its content to ensure they are considered old.
+
+    - name: Run the pruning playbook in dry-run mode
+      ansible.builtin.include_tasks:
+        file: ../src/prune_garden.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        archive_path: "{{ test_archive_path }}"
+        prune_age_days: "{{ test_prune_age_days }}"
+        dry_run: true # Ensure dry run for testing
+      # Mock rationale: Executes the main playbook against the mock environment. 'dry_run: true'
+      # ensures no actual file changes occur during the test, allowing assertions on identification.
+
+    - name: Assert old_file.txt was identified for pruning
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_garden_path }}/old_file.txt' in old_garden_items_paths"
+        fail_msg: "old_file.txt was not identified for pruning."
+      # Mock rationale: Verifies that the 'find' module in the main playbook correctly identified the mock old file.
+
+    - name: Assert old_dir was identified for pruning
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_garden_path }}/old_dir' in old_garden_items_paths"
+        fail_msg: "old_dir was not identified for pruning."
+      # Mock rationale: Verifies that the 'find' module correctly identified the mock old directory.
+
+    - name: Assert recent_file.txt was NOT identified for pruning
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_garden_path }}/recent_file.txt' not in old_garden_items_paths"
+        fail_msg: "recent_file.txt was incorrectly identified for pruning."
+      # Mock rationale: Verifies that the 'find' module correctly ignored the mock recent file.
+
+    - name: Clean up test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Removes the temporary test directory to ensure a clean state after the test.
+
+    - name: Clean up test archive directory
+      ansible.builtin.file:
+        path: "{{ test_archive_path }}"
+        state: absent
+      # Mock rationale: Removes the temporary archive directory.

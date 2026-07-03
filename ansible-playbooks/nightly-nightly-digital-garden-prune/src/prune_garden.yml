@@ -1,0 +1,59 @@
+---
+- name: Digital Garden Pruner
+  hosts: garden_servers
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure the digital garden path exists
+      ansible.builtin.stat:
+        path: "{{ garden_path }}"
+      register: garden_path_stat
+
+    - name: Fail if garden path does not exist
+      ansible.builtin.fail:
+        msg: "The specified digital garden path '{{ garden_path }}' does not exist or is not accessible."
+      when: not garden_path_stat.stat.exists
+
+    - name: Find old files and directories in the digital garden
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        age: "{{ prune_age_days }}d"
+        age_stamp: mtime
+        recurse: yes
+        file_type: any
+      register: old_garden_items_raw
+
+    - name: Extract paths of old items for easier processing
+      ansible.builtin.set_fact:
+        old_garden_items_paths: "{{ old_garden_items_raw.files | map(attribute='path') | list }}"
+
+    - name: Report items identified for pruning (Dry Run)
+      ansible.builtin.debug:
+        msg: "DRY RUN: Would prune '{{ item }}' (older than {{ prune_age_days }} days)"
+      loop: "{{ old_garden_items_paths }}"
+      when: dry_run | bool
+      # Mock rationale: In a real run, this would output to console. For testing, we capture this output
+      # indirectly by asserting on the 'old_garden_items_paths' fact which is the source of this loop.
+
+    - name: Ensure archive directory exists
+      ansible.builtin.file:
+        path: "{{ archive_path }}"
+        state: directory
+        mode: '0755'
+      when: not dry_run | bool and old_garden_items_paths | length > 0
+
+    - name: Archive old items
+      ansible.builtin.command: "mv '{{ item }}' '{{ archive_path }}/'"
+      loop: "{{ old_garden_items_paths }}"
+      when: not dry_run | bool
+      # Mock rationale: This task performs the actual file system modification. For testing, we rely on
+      # 'dry_run: true' to prevent execution and assert on the identification of files instead.
+      # The 'command' module is used for 'mv' as it handles both files and directories simply.
+      # 'changed_when: true' is not needed here as Ansible's command module typically detects changes.
+
+    - name: Report completion
+      ansible.builtin.debug:
+        msg: "Digital Garden Pruner completed. {{ old_garden_items_paths | length }} items identified. Actual pruning: {{ 'Enabled' if not dry_run else 'Disabled (Dry Run)' }}."
