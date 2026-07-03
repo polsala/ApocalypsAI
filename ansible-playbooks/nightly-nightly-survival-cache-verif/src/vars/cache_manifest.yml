@@ -1,0 +1,7 @@
+# Example manifest for critical survival cache files and their expected SHA256 checksums.
+# Users should populate this with their actual critical files and their known good checksums.
+# You can generate checksums using 'sha256sum /path/to/file' on a known good version.
+
+survival_cache_files:
+  "/etc/survival_kit/main_config.conf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # Example: empty file checksum
+  "/opt/critical_scripts/launch_sequence.sh": "da39a3ee5e6b4b0d3255bfef95601890afd80709" # Example: another empty file checksum

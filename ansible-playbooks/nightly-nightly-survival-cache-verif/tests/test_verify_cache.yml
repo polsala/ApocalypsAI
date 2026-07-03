@@ -1,0 +1,131 @@
+---
+- name: Test Survival Cache Integrity Verifier
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    test_dir: "/tmp/ansible_test_cache_verifier_{{ lookup('pipe', 'date +%s%N') }}"
+    file_ok_path: "{{ test_dir }}/config/important.conf"
+    file_corrupt_path: "{{ test_dir }}/data/backup.txt"
+    file_missing_path: "{{ test_dir }}/scripts/critical.sh"
+    file_ok_content: "This is the correct content for important.conf."
+    file_corrupt_content: "This is the original content for backup.txt."
+    file_corrupt_tampered_content: "This is the tampered content for backup.txt."
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creating a temporary directory on localhost to simulate a target file system.
+
+    - name: Create subdirectories for test files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_dir }}/config"
+        - "{{ test_dir }}/data"
+        - "{{ test_dir }}/scripts"
+      # Mock rationale: Setting up directory structure for test files.
+
+    - name: Create file_ok.txt with known content
+      ansible.builtin.copy:
+        content: "{{ file_ok_content }}"
+        dest: "{{ file_ok_path }}"
+      # Mock rationale: Creating a file with known content to represent an untampered file.
+
+    - name: Create file_corrupt.txt with original content
+      ansible.builtin.copy:
+        content: "{{ file_corrupt_content }}"
+        dest: "{{ file_corrupt_path }}"
+      # Mock rationale: Creating a file that will later be tampered with.
+
+    - name: Calculate checksum for file_ok.txt
+      ansible.builtin.checksum:
+        path: "{{ file_ok_path }}"
+        algorithm: sha256
+      register: checksum_ok
+      # Mock rationale: Calculating a deterministic checksum of the locally created file.
+
+    - name: Calculate checksum for file_corrupt.txt (original)
+      ansible.builtin.checksum:
+        path: "{{ file_corrupt_path }}"
+        algorithm: sha256
+      register: checksum_corrupt_original
+      # Mock rationale: Calculating a deterministic checksum of the locally created file before tampering.
+
+    - name: Tamper with file_corrupt.txt
+      ansible.builtin.copy:
+        content: "{{ file_corrupt_tampered_content }}"
+        dest: "{{ file_corrupt_path }}"
+      # Mock rationale: Modifying the file content to simulate tampering, making its checksum incorrect.
+
+    - name: Define test cache manifest
+      ansible.builtin.set_fact:
+        test_survival_cache_files:
+          "{{ file_ok_path }}": "{{ checksum_ok.checksum }}" # Correct checksum
+          "{{ file_corrupt_path }}": "{{ checksum_corrupt_original.checksum }}" # Intentionally wrong (original content's checksum)
+          "{{ file_missing_path }}": "a_dummy_checksum_for_missing_file" # Missing file
+      # Mock rationale: Dynamically creating the manifest with expected checksums, including one that will fail and one for a missing file.
+
+    - name: Run the main verification playbook
+      ansible.builtin.include_tasks: ../src/verify_cache.yml
+      vars:
+        survival_cache_files: "{{ test_survival_cache_files }}"
+      register: verification_run
+      ignore_errors: yes # Allow the main playbook to fail if checks fail, so we can assert the failure
+      # Mock rationale: Running the main playbook against the locally prepared test environment.
+
+    - name: Assert file_ok.txt integrity is OK
+      ansible.builtin.assert:
+        that:
+          - item.msg is search("File: {{ file_ok_path }}")
+          - item.msg is search("Status: OK")
+        msg: "Assertion failed for file_ok.txt"
+      loop: "{{ verification_run.results | selectattr('task_action', 'equalto', 'debug') | list }}"
+      loop_control:
+        label: "Asserting {{ file_ok_path }}"
+      when: item.msg is search("File: {{ file_ok_path }}")
+      # Mock rationale: Asserting the debug output from the main playbook matches the expected 'OK' status for the untampered file.
+
+    - name: Assert file_corrupt.txt integrity is FAILED
+      ansible.builtin.assert:
+        that:
+          - item.msg is search("File: {{ file_corrupt_path }}")
+          - item.msg is search("Status: FAILED")
+        msg: "Assertion failed for file_corrupt.txt"
+      loop: "{{ verification_run.results | selectattr('task_action', 'equalto', 'debug') | list }}"
+      loop_control:
+        label: "Asserting {{ file_corrupt_path }}"
+      when: item.msg is search("File: {{ file_corrupt_path }}")
+      # Mock rationale: Asserting the debug output from the main playbook matches the expected 'FAILED' status for the tampered file.
+
+    - name: Assert file_missing_path integrity is FAILED (File not found)
+      ansible.builtin.assert:
+        that:
+          - item.msg is search("File: {{ file_missing_path }}")
+          - item.msg is search("Status: FAILED")
+          - item.msg is search("Actual: File not found")
+        msg: "Assertion failed for file_missing_path"
+      loop: "{{ verification_run.results | selectattr('task_action', 'equalto', 'debug') | list }}"
+      loop_control:
+        label: "Asserting {{ file_missing_path }}"
+      when: item.msg is search("File: {{ file_missing_path }}")
+      # Mock rationale: Asserting the debug output from the main playbook matches the expected 'FAILED' status for the missing file.
+
+    - name: Assert that the overall playbook failed due to integrity issues
+      ansible.builtin.assert:
+        that:
+          - verification_run.failed is true
+        msg: "The main playbook should have failed due to integrity issues."
+      # Mock rationale: Verifying that the final 'fail' task in the main playbook was triggered as expected.
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: not ansible_check_mode # Don't clean up in check mode
+      # Mock rationale: Cleaning up temporary files to ensure deterministic and isolated test runs.
