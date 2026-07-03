@@ -1,0 +1,1 @@
+# Nightly Quote Dashboard\n\nA whimsical React web app that shows a random apocalypse‑themed quote each time it loads. Useful for a quick morale boost in chaotic times.\n\n## Usage\n\n```sh\nnpm install\nnpm start\n```\n\nOpen http://localhost:3000 to see the quote.\n\n## Testing\n\n```sh\nnpm test\n```
