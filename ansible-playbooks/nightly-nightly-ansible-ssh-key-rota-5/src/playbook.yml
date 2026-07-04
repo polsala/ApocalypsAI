@@ -1,0 +1,29 @@
+---
+- name: Rotate SSH host keys and update authorized_keys
+  hosts: all
+  become: true
+  vars:
+    new_key_path: /etc/ssh/ssh_host_rsa_key
+  tasks:
+    - name: Generate new RSA host key pair
+      ansible.builtin.openssl_privatekey:
+        path: "{{ new_key_path }}"
+        size: 4096
+        type: RSA
+        force: true
+
+    - name: Generate public key from private key
+      ansible.builtin.openssl_publickey:
+        privatekey_path: "{{ new_key_path }}"
+        path: "{{ new_key_path }}.pub"
+
+    - name: Distribute new public key to authorized_keys of all users
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ lookup('file', new_key_path + '.pub') }}"
+
+    - name: Restart SSH service
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
