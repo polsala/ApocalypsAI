@@ -1,0 +1,68 @@
+---
+- name: Test nightly-ansible-log-parser
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_files: "/tmp/test_syslog.log"
+    error_keywords: "error,failed,warning"
+    report_path: "/tmp/test_log_summary.txt"
+
+  tasks:
+    - name: Create mock log directory
+      file:
+        path: "/tmp"
+        state: directory
+
+    - name: Create mock log file
+      copy:
+        content: |
+          2023-10-27T10:00:00Z hostname kernel: Some informational message.
+          2023-10-27T10:01:00Z hostname systemd[1]: Starting Some Service...
+          2023-10-27T10:02:00Z hostname app: An error occurred during processing.
+          2023-10-27T10:03:00Z hostname auth: Failed to authenticate user.
+          2023-10-27T10:04:00Z hostname systemd[1]: Service started successfully.
+          2023-10-27T10:05:00Z hostname kernel: A warning about disk space.
+          2023-10-27T10:06:00Z hostname app: Another error happened.
+          2023-10-27T10:07:00Z hostname auth: Authentication failed for user.
+          2023-10-27T10:08:00Z hostname systemd[1]: Stopping Some Service...
+        dest: "{{ log_files }}"
+
+    - name: Run the log parsing playbook (mocked)
+      include_role:
+        name: ../src # Assuming src/parse_logs.yml is in the same directory as the test playbook
+      vars:
+        log_files: "{{ log_files }}"
+        error_keywords: "{{ error_keywords }}"
+        report_path: "{{ report_path }}"
+
+    - name: Assert that the report file was created
+      stat:
+        path: "{{ report_path }}"
+      register: report_file_stat
+      assert:
+        that:
+          - report_file_stat.stat.exists
+        fail_msg: "Log summary report was not created."
+
+    - name: Read the generated report content
+      slurp:
+        src: "{{ report_path }}"
+      register: generated_report_content
+
+    - name: Assert report content contains expected counts
+      assert:
+        that:
+          - "'error: 2' in generated_report_content.content | b64decode"
+          - "'failed: 2' in generated_report_content.content | b64decode"
+          - "'warning: 1' in generated_report_content.content | b64decode"
+        fail_msg: "Log summary report content is incorrect."
+
+    - name: Clean up mock log file and report
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop: 
+        - "{{ log_files }}"
+        - "{{ report_path }}"
