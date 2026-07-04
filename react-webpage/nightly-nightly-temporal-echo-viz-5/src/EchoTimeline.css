@@ -1,0 +1,103 @@
+.echo-timeline-container {
+  position: relative;
+  padding: 20px;
+  border: 1px dashed #ff6b6b;
+  border-radius: 8px;
+  margin-top: 30px;
+  background-color: #1f1f3a;
+}
+
+.echo-timeline-container h2 {
+  color: #ff6b6b;
+  margin-bottom: 30px;
+}
+
+.timeline-track {
+  position: relative;
+  height: 100px; /* Height of the timeline track */
+  background-color: #3a3a5e;
+  border-radius: 5px;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around; /* Distribute points */
+  padding: 0 20px; /* Padding for points not to touch edges */
+}
+
+.echo-point {
+  position: relative; /* Changed from absolute to relative for flexbox */
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px; /* Give points some width */
+  margin: 0 10px; /* Spacing between points */
+}
+
+.echo-point:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.7);
+  background-color: rgba(78, 205, 196, 0.1);
+}
+
+.echo-marker {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background-color: #ff6b6b;
+  border: 2px solid #4ecdc4;
+  box-shadow: 0 0 8px #ff6b6b;
+  margin-bottom: 5px;
+}
+
+.echo-label {
+  font-size: 0.7em;
+  color: #e0e0e0;
+  white-space: nowrap;
+}
+
+/* Specific styling for echo types */
+.temporal-shift .echo-marker { background-color: #ff6b6b; }
+.causal-loop .echo-marker { background-color: #4ecdc4; }
+.echo-resonance .echo-marker { background-color: #ffd166; } /* Yellowish */
+.chronal-ripple .echo-marker { background-color: #06d6a0; } /* Greenish */
+.temporal-inversion .echo-marker { background-color: #ef476f; } /* Pinkish */
+
+.echo-detail-panel {
+  background-color: #3a3a5e;
+  border: 1px solid #4ecdc4;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  text-align: left;
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+}
+
+.echo-detail-panel h3 {
+  color: #4ecdc4;
+  margin-top: 0;
+}
+
+.echo-detail-panel p {
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.echo-detail-panel button {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: background-color 0.2s;
+}
+
+.echo-detail-panel button:hover {
+  background-color: #e63946;
+}
