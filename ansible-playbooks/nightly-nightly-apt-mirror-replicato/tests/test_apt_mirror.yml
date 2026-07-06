@@ -1,0 +1,18 @@
+- hosts: localhost
+  gather_facts: false
+  vars:
+    apt_mirror_cmd: "touch /tmp/apt-mirror-done"
+    mirror_dir: "/tmp/apt-mirror-test"
+  tasks:
+    - import_playbook: ../src/apt_mirror.yml
+
+    - name: Verify mock command created file
+      stat:
+        path: /tmp/apt-mirror-done
+      register: mirror_file
+
+    - name: Assert mirror file exists
+      assert:
+        that:
+          - mirror_file.stat.exists
+        fail_msg: "Mock mirror file was not created"
