@@ -1,0 +1,59 @@
+---
+- name: Configure reverse SSH tunnel service
+  hosts: all
+  become: true
+  vars:
+    tunnel_user: "{{ tunnel_user | default('ssh_tunnel') }}"
+    remote_user: "{{ remote_user | default('root') }}"
+    remote_host: "{{ remote_host }}"
+    remote_port: "{{ remote_port | default('2222') }}"
+    local_port: "{{ local_port | default('22') }}"
+    service_path: /etc/systemd/system/ssh-reverse-tunnel.service
+
+  tasks:
+    - name: Ensure tunnel user exists
+      user:
+        name: "{{ tunnel_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Install autossh package
+      package:
+        name: autossh
+        state: present
+
+    - name: Create systemd service file
+      copy:
+        dest: "{{ service_path }}"
+        owner: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Persistent reverse SSH tunnel
+          After=network.target
+
+          [Service]
+          User={{ tunnel_user }}
+          ExecStart=/usr/bin/autossh -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -R {{ remote_port }}:localhost:{{ local_port }} {{ remote_user }}@{{ remote_host }}
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+      notify: Restart tunnel service
+
+    - name: Enable and start tunnel service
+      systemd:
+        name: ssh-reverse-tunnel.service
+        enabled: true
+        state: started
+
+  handlers:
+    - name: Restart tunnel service
+      systemd:
+        name: ssh-reverse-tunnel.service
+        state: restarted

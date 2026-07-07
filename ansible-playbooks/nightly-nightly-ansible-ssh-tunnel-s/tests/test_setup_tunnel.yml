@@ -1,0 +1,18 @@
+---
+- name: Test reverse SSH tunnel playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    remote_host: example.com
+    remote_user: testuser
+
+  tasks:
+    - name: Run the tunnel setup playbook in check mode
+      command: ansible-playbook -i localhost, ../../src/setup_tunnel.yml -e "remote_host={{ remote_host }} remote_user={{ remote_user }}" --check
+      register: result
+      # Mock rationale: simulate successful execution without real SSH connections
+
+    - name: Assert playbook ran without failures
+      assert:
+        that:
+          - result.rc == 0
