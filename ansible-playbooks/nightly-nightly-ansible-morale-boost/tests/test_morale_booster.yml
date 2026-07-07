@@ -1,0 +1,110 @@
+---
+- name: Test Nightly Ansible Morale Booster Playbook
+  hosts: localhost
+  connection: local
+  become: yes # Needed for file operations in /opt, /usr/local/bin, /etc/cron.d
+  vars:
+    test_morale_content_dir: "/tmp/apocalypsai_morale_test"
+    test_morale_display_script_path: "/tmp/display_morale_test.sh"
+    test_cron_schedule: "*/1 * * * *" # Every minute for testing
+    test_motd_path: "/tmp/motd_test"
+    test_log_path: "/tmp/apocalypsai_morale_test.log"
+
+  tasks:
+    - name: Clean up previous test artifacts (pre-run)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_morale_content_dir }}"
+        - "{{ test_morale_display_script_path }}"
+        - "{{ test_motd_path }}"
+        - "{{ test_log_path }}"
+      ignore_errors: yes # Mock rationale: Ensure a clean slate, ignore if files don't exist yet.
+
+    - name: Remove test cron job (pre-run)
+      ansible.builtin.cron:
+        name: "ApocalypsAI Morale Booster"
+        state: absent
+        user: root
+      ignore_errors: yes # Mock rationale: Ensure a clean slate, ignore if cron job doesn't exist yet.
+
+    - name: Create a dummy motd file for testing
+      ansible.builtin.copy:
+        content: "Initial MOTD content\n"
+        dest: "{{ test_motd_path }}"
+        mode: '0644'
+        owner: root
+        group: root
+      # Mock rationale: Provides a writable MOTD-like file for the script to append to,
+      # avoiding permission issues with /etc/motd in a non-privileged test environment.
+
+    - name: Run the main morale booster playbook with test variables
+      ansible.builtin.include_tasks: src/morale_booster.yml
+      vars:
+        morale_content_dir: "{{ test_morale_content_dir }}"
+        morale_display_script_path: "{{ test_morale_display_script_path }}"
+        cron_schedule: "{{ test_cron_schedule }}"
+        motd_path: "{{ test_motd_path }}"
+
+    - name: Verify morale content directory exists
+      ansible.builtin.stat:
+        path: "{{ test_morale_content_dir }}"
+      register: morale_dir_stat
+      failed_when: not morale_dir_stat.stat.exists or not morale_dir_stat.stat.isdir
+
+    - name: Verify quotes file exists
+      ansible.builtin.stat:
+        path: "{{ test_morale_content_dir }}/quotes.txt"
+      register: quotes_file_stat
+      failed_when: not quotes_file_stat.stat.exists or not quotes_file_stat.stat.isreg
+
+    - name: Verify affirmations file exists
+      ansible.builtin.stat:
+        path: "{{ test_morale_content_dir }}/affirmations.txt"
+      register: affirmations_file_stat
+      failed_when: not affirmations_file_stat.stat.exists or not affirmations_file_stat.stat.isreg
+
+    - name: Verify display script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ test_morale_display_script_path }}"
+      register: script_stat
+      failed_when: not script_stat.stat.exists or not script_stat.stat.isreg or not script_stat.stat.executable
+
+    - name: Verify cron job is configured
+      ansible.builtin.command: "crontab -l -u root"
+      register: crontab_output
+      changed_when: false
+      failed_when: "{{ test_morale_display_script_path }}" not in crontab_output.stdout
+      # Mock rationale: Checks the actual crontab for the entry. This is deterministic
+      # as we control the cron schedule and job path in the test.
+
+    - name: Run the display script manually to test output
+      ansible.builtin.command: "{{ test_morale_display_script_path }}"
+      register: script_run_output
+      changed_when: true # The script modifies a file (motd or log)
+
+    - name: Verify script appended to test motd or log
+      ansible.builtin.command: "grep -E 'ApocalypsAI Morale Booster|Morale Boost:' {{ test_motd_path }} {{ test_log_path }} || true"
+      register: grep_output
+      changed_when: false
+      failed_when: grep_output.stdout == ""
+      # Mock rationale: Checks if the script successfully wrote to either the test MOTD
+      # or the fallback log file. '|| true' prevents failure if grep finds nothing,
+      # allowing the failed_when condition to explicitly check for content.
+
+    - name: Clean up test artifacts (post-run)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_morale_content_dir }}"
+        - "{{ test_morale_display_script_path }}"
+        - "{{ test_motd_path }}"
+        - "{{ test_log_path }}"
+
+    - name: Remove test cron job (post-run)
+      ansible.builtin.cron:
+        name: "ApocalypsAI Morale Booster"
+        state: absent
+        user: root
