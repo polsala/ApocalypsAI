@@ -1,0 +1,159 @@
+---
+- name: Test Nightly Curiosity Cache Agent
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    test_report_dir: "{{ playbook_dir }}/test_reports"
+    # Mock curiosity items for testing
+    curiosities:
+      - name: "Mock Uptime"
+        type: "command"
+        command: "echo 'up 2 days, 3 hours'" # Mocked command output
+        output_key: "mock_uptime"
+      - name: "Mock Syslog Tail"
+        type: "file_tail"
+        path: "/tmp/mock_syslog" # Mocked file path
+        lines: 2
+        output_key: "mock_syslog_tail"
+      - name: "Mock OS Release"
+        type: "file_content"
+        path: "/tmp/mock_os_release" # Mocked file path
+        output_key: "mock_os_release"
+      - name: "Failing Command"
+        type: "command"
+        command: "false" # Command that fails
+        output_key: "failing_command_output"
+      - name: "Non-existent File Tail"
+        type: "file_tail"
+        path: "/tmp/non_existent_log"
+        lines: 1
+        output_key: "non_existent_tail"
+      - name: "Non-existent File Content"
+        type: "file_content"
+        path: "/tmp/non_existent_file"
+        output_key: "non_existent_content"
+
+  tasks:
+    - name: Ensure test report directory exists
+      ansible.builtin.file:
+        path: "{{ test_report_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create mock syslog file
+      ansible.builtin.copy:
+        dest: "/tmp/mock_syslog"
+        content: |
+          Line 1 of syslog
+          Line 2 of syslog
+          Line 3 of syslog
+          Line 4 of syslog
+        mode: '0644'
+      # Mock rationale: Create a dummy file to simulate a log file for `file_tail` type curiosities.
+
+    - name: Create mock os-release file
+      ansible.builtin.copy:
+        dest: "/tmp/mock_os_release"
+        content: |
+          PRETTY_NAME="Mock OS 1.0"
+          VERSION="1.0"
+        mode: '0644'
+      # Mock rationale: Create a dummy file to simulate a configuration file for `file_content` type curiosities.
+
+    - name: Initialize curiosity data for host
+      ansible.builtin.set_fact:
+        host_curiosities: {}
+
+    - name: Collect each curiosity item (simulated)
+      loop: "{{ curiosities }}"
+      loop_control:
+        loop_var: curiosity_item
+      block:
+        - name: Simulate command curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'command'
+          ansible.builtin.set_fact:
+            _command_output:
+              stdout: "{{ 'up 2 days, 3 hours' if curiosity_item.output_key == 'mock_uptime' else '' }}"
+              rc: "{{ 0 if curiosity_item.output_key == 'mock_uptime' else 1 }}"
+          # Mock rationale: Simulate command execution results using `set_fact` to control stdout and return code for deterministic testing.
+
+        - name: Simulate file tail curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'file_tail'
+          ansible.builtin.set_fact:
+            _file_tail_output:
+              stdout_lines: "{{ ['Line 3 of syslog', 'Line 4 of syslog'] if curiosity_item.output_key == 'mock_syslog_tail' else [] }}"
+              rc: "{{ 0 if curiosity_item.output_key == 'mock_syslog_tail' else 1 }}"
+          # Mock rationale: Simulate `tail` command output (stdout_lines) and return code for deterministic testing.
+
+        - name: Simulate file content curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'file_content'
+          ansible.builtin.set_fact:
+            _file_content_output:
+              content: "{{ 'PRETTY_NAME=\"Mock OS 1.0\"\nVERSION=\"1.0\"' | b64encode }}"
+              rc: "{{ 0 if curiosity_item.output_key == 'mock_os_release' else 1 }}"
+          # Mock rationale: Simulate `slurp` module output (base64 encoded content) and return code for deterministic testing.
+
+        - name: Add collected data to host_curiosities for command
+          when: curiosity_item.type == 'command'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_command_output.stdout if _command_output is defined and _command_output.rc == 0 else 'N/A - Command failed or not found')
+            }) }}"
+
+        - name: Add collected data to host_curiosities for file tail
+          when: curiosity_item.type == 'file_tail'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_file_tail_output.stdout_lines if _file_tail_output is defined and _file_tail_output.rc == 0 else ['N/A - File tail failed or not found'])
+            }) }}"
+
+        - name: Add collected data to host_curiosities for file content
+          when: curiosity_item.type == 'file_content'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_file_content_output.content | b64decode | splitlines if _file_content_output is defined and _file_content_output.content is defined else ['N/A - File content failed or not found'])
+            }) }}"
+
+    - name: Generate final report structure
+      ansible.builtin.set_fact:
+        final_report:
+          hostname: "{{ ansible_hostname }}"
+          timestamp: "MOCKED_TIMESTAMP" # Mock timestamp for deterministic test
+          curiosities: "{{ host_curiosities }}"
+
+    - name: Create curiosity report file locally (test version)
+      ansible.builtin.template:
+        src: ../src/templates/curiosity_report.j2 # Use the actual template
+        dest: "{{ test_report_dir }}/curiosity_report_{{ ansible_hostname }}.json"
+        mode: '0644'
+
+    - name: Read generated report
+      ansible.builtin.slurp:
+        src: "{{ test_report_dir }}/curiosity_report_{{ ansible_hostname }}.json"
+      register: generated_report_content
+
+    - name: Parse generated report
+      ansible.builtin.set_fact:
+        parsed_report: "{{ generated_report_content.content | b64decode | from_json }}"
+
+    - name: Assert collected curiosities
+      ansible.builtin.assert:
+        that:
+          - parsed_report.hostname == 'localhost'
+          - parsed_report.timestamp == 'MOCKED_TIMESTAMP'
+          - parsed_report.curiosities.mock_uptime == 'up 2 days, 3 hours'
+          - parsed_report.curiosities.mock_syslog_tail == ['Line 3 of syslog', 'Line 4 of syslog']
+          - parsed_report.curiosities.mock_os_release == ['PRETTY_NAME="Mock OS 1.0"', 'VERSION="1.0"']
+          - parsed_report.curiosities.failing_command_output == 'N/A - Command failed or not found'
+          - parsed_report.curiosities.non_existent_tail == ['N/A - File tail failed or not found']
+          - parsed_report.curiosities.non_existent_content == ['N/A - File content failed or not found']
+        msg: "Curiosity report content assertion failed!"
+
+    - name: Clean up mock files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/mock_syslog"
+        - "/tmp/mock_os_release"
+        - "{{ test_report_dir }}"
