@@ -1,0 +1,64 @@
+---
+- name: Synchronize, Backup, and Prune Digital Garden
+  hosts: garden_hosts
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure target garden directory exists
+      ansible.builtin.file:
+        path: "{{ garden_target_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Synchronize digital garden files from control node to managed host
+      ansible.posix.synchronize:
+        src: "{{ garden_source_path }}/"
+        dest: "{{ garden_target_path }}/"
+        mode: push
+        delete: yes # Ensure target reflects source exactly
+        recursive: yes
+      delegate_to: localhost # Source path is on the control node
+      run_once: true # Only run synchronization once for all hosts if source is same
+
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ garden_backup_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create timestamped backup of the digital garden
+      ansible.builtin.archive:
+        path: "{{ garden_target_path }}"
+        dest: "{{ garden_backup_path }}/digital_garden_backup_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        format: gz
+      register: backup_result
+      changed_when: backup_result.archived_file is defined
+
+    - name: Report backup status
+      ansible.builtin.debug:
+        msg: "Digital garden backed up to {{ backup_result.archived_file }}"
+      when: backup_result.archived_file is defined
+
+    - name: Find stale notes (not modified in {{ stale_days }} days)
+      ansible.builtin.find:
+        paths: "{{ garden_target_path }}"
+        file_type: file
+        age: "{{ stale_days }}d"
+        age_stamp: mtime # Look at modification time
+        recurse: yes
+      register: stale_notes_result
+
+    - name: Report stale notes
+      ansible.builtin.debug:
+        msg: "Stale note found: {{ item.path }}"
+      loop: "{{ stale_notes_result.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: stale_notes_result.files | length > 0
+
+    - name: No stale notes found
+      ansible.builtin.debug:
+        msg: "No stale notes found in the digital garden."
+      when: stale_notes_result.files | length == 0

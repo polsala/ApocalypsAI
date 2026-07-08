@@ -1,0 +1,4 @@
+garden_source_path: "./my_digital_garden" # Path on the Ansible control node
+garden_target_path: "/home/ansible/digital_garden" # Path on the managed nodes
+garden_backup_path: "/var/backups/digital_garden" # Backup path on managed nodes
+stale_days: 90 # Number of days after which a note is considered stale
