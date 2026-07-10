@@ -1,0 +1,14 @@
+---
+- name: Test SSH key rotator playbook syntax
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run rotate_ssh_keys.yml in check mode
+      ansible.builtin.command: ansible-playbook -i inventory.ini src/rotate_ssh_keys.yml --check
+      register: result
+      changed_when: false
+
+    - name: Ensure playbook exits with zero status
+      ansible.builtin.assert:
+        that:
+          - result.rc == 0
