@@ -1,0 +1,111 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f4f8;
+    color: #333;
+    line-height: 1.6;
+}
+
+header {
+    background-color: #4CAF50; /* Green header */
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.5em;
+}
+
+header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+#garden {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    justify-content: center;
+}
+
+.plant-card {
+    background-color: white;
+    border: 2px solid; /* Border color set by JS based on mood_color */
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.plant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.plant-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.plant-header h3 {
+    margin: 0 10px;
+    font-size: 1.4em;
+    flex-grow: 1;
+    color: #2c3e50;
+}
+
+.mood-emoji, .status-emoji {
+    font-size: 2em;
+    line-height: 1;
+}
+
+.plant-card p {
+    margin: 5px 0;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.plant-card p strong {
+    color: #333;
+}
+
+.loading-message, .empty-garden, .error-message {
+    grid-column: 1 / -1; /* Span across all columns */
+    text-align: center;
+    font-size: 1.2em;
+    color: #666;
+    padding: 40px;
+    background-color: #e9ecef;
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+.error-message {
+    color: #d9534f; /* Red for errors */
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 30px;
+    background-color: #34495e; /* Dark blue-gray footer */
+    color: white;
+    font-size: 0.9em;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+}
