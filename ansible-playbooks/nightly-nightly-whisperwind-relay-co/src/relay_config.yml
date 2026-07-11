@@ -1,0 +1,58 @@
+---
+- name: Configure Whisperwind Communication Relays
+  hosts: whisperwind_relays
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure relay software (nginx) is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian" # Only for Debian-based systems
+      # Mock rationale: In a real test, this would be skipped or mocked. For offline testing, we rely on syntax check and --check mode.
+
+    - name: Configure Nginx for Whisperwind Relay
+      ansible.builtin.template:
+        src: templates/nginx_relay.conf.j2
+        dest: /etc/nginx/sites-available/whisperwind_relay.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart nginx
+
+    - name: Enable Nginx relay site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/whisperwind_relay.conf
+        dest: /etc/nginx/sites-enabled/whisperwind_relay.conf
+        state: link
+      notify: Restart nginx
+
+    - name: Ensure Nginx service is running and enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Gather service facts for relay status
+      ansible.builtin.service_facts:
+      tags: report
+      # Mock rationale: This task gathers actual service facts. For offline testing, we'll mock these facts in the test playbook.
+
+    - name: Generate Whisperwind Relay Status Report
+      ansible.builtin.template:
+        src: templates/relay_status_report.j2
+        dest: "/tmp/whisperwind_relay_report_{{ ansible_hostname }}.txt"
+        mode: '0644'
+      delegate_to: localhost
+      run_once: true
+      tags: report
+      # Mock rationale: This task writes to a local file. In tests, we'll check if this file *would* be created with expected content.
+
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
