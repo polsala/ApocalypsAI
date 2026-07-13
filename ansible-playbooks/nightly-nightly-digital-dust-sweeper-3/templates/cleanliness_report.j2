@@ -1,0 +1,25 @@
+--- Digital Cleanliness Report for {{ ansible_hostname }} ---
+
+Date: {{ ansible_date_time.date }}
+Time: {{ ansible_date_time.time }}
+
+Digital Dust Bunny Sweep Summary:
+--------------------------------
+{% if log_cleanup_result.changed or tmp_cleanup_result.changed %}
+  Digital Dust Bunnies Swept: YES
+{% else %}
+  Digital Dust Bunnies Swept: NO (System already sparkling clean!)
+  (No files older than 7 days in {{ log_cleanup_paths | join(', ') }})
+  (No files older than 1 day in {{ tmp_cleanup_paths | join(', ') }})
+{% endif %}
+
+Critical Services Status:
+-------------------------
+{{ service_status_report }}
+
+Disk Space Overview:
+--------------------
+Filesystem      Size  Used Avail Use% Mounted on
+{{ disk_usage_report }}
+
+--- End of Report ---
