@@ -1,0 +1,109 @@
+name: Test Workflow Harmony Enforcer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'github-actions/nightly-workflow-harmony-enforcer/**'
+
+jobs:
+  test_bad_workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create bad workflow fixture
+        run: |
+          mkdir -p .github/workflows
+          cat <<EOF > .github/workflows/bad_workflow.yml
+          name: Bad Workflow
+          on: [push, pull_request]
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v2
+                - run: echo "Hello"
+          EOF
+
+      - name: Run Harmony Enforcer on bad workflow
+        id: harmony_check_bad
+        uses: ./github-actions/nightly-workflow-harmony-enforcer
+        with:
+          workflow-file-glob: '.github/workflows/bad_workflow.yml'
+
+      - name: Verify bad workflow report
+        run: |
+          REPORT_CONTENT=$(cat ${{ steps.harmony_check_bad.outputs.harmony-report }})
+          echo "Report content:\n$REPORT_CONTENT"
+          
+          # Mock rationale: We are asserting specific warning messages based on the known content of bad_workflow.yml.
+          # The grep commands are deterministic and operate on static file content.
+          if ! echo "$REPORT_CONTENT" | grep -q "Workflow is missing an explicit 'permissions' block."; then
+            echo "Error: Expected 'permissions' warning not found for bad_workflow.yml"
+            exit 1
+          fi
+          if ! echo "$REPORT_CONTENT" | grep -q "Found 'actions/checkout@v1' or 'v2'."; then
+            echo "Error: Expected 'checkout@v2' warning not found for bad_workflow.yml"
+            exit 1
+          fi
+          if ! echo "$REPORT_CONTENT" | grep -q "Workflow triggered by 'push' or 'pull_request' is missing a 'concurrency' group."; then
+            echo "Error: Expected 'concurrency' warning not found for bad_workflow.yml"
+            exit 1
+          fi
+          echo "Bad workflow test passed: All expected warnings found."
+
+  test_good_workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create good workflow fixture
+        run: |
+          mkdir -p .github/workflows
+          cat <<EOF > .github/workflows/good_workflow.yml
+          name: Good Workflow
+          on:
+            push:
+              branches: [ main ]
+            pull_request:
+              branches: [ main ]
+          permissions:
+            contents: read
+            pull-requests: write
+          concurrency: 
+            group: ${{ github.workflow }}-${{ github.ref }}
+            cancel-in-progress: true
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - run: echo "Hello"
+          EOF
+
+      - name: Run Harmony Enforcer on good workflow
+        id: harmony_check_good
+        uses: ./github-actions/nightly-workflow-harmony-enforcer
+        with:
+          workflow-file-glob: '.github/workflows/good_workflow.yml'
+
+      - name: Verify good workflow report
+        run: |
+          REPORT_CONTENT=$(cat ${{ steps.harmony_check_good.outputs.harmony-report }})
+          echo "Report content:\n$REPORT_CONTENT"
+          
+          # Mock rationale: We are asserting the absence of warning messages for the known good_workflow.yml.
+          # The grep commands are deterministic and operate on static file content.
+          if echo "$REPORT_CONTENT" | grep -q "::warning::"; then
+            echo "Error: Unexpected warnings found for good_workflow.yml"
+            exit 1
+          fi
+          if ! echo "$REPORT_CONTENT" | grep -q "All checked workflows are in harmony!"; then
+            echo "Error: Expected 'in harmony' message not found for good_workflow.yml"
+            exit 1
+          fi
+          echo "Good workflow test passed: No unexpected warnings found."
