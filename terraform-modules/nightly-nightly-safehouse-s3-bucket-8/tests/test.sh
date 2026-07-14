@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n\n# Ensure we are in the module directory\ncd "$(dirname "$0")/.."\n\n# Initialize Terraform without a remote backend (offline)\nterraform init -backend=false > /dev/null\n\n# Validate the configuration – this checks syntax and internal consistency\nterraform validate\n\n# If we reach this point, the module passed all checks\necho "Tests passed"\n
