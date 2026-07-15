@@ -1,0 +1,16 @@
+[package]
+name = "dust-bunny-sweeper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+walkdir = "2.5.0"
+chrono = "0.4.38"
+humantime = "2.1.0" # For parsing human-readable durations like "30d"
+
+[dev-dependencies]
+tempfile = "3.10.1"
+filetime = "0.2.23"
+assert_cmd = "2.0.14"
+predicates = "2.1.1"
