@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Nightly Docker Env Manager
+
+# This script acts as a wrapper around docker-compose to manage development environments.
+# It expects a docker-compose.yml file to be present in the current directory.
+
+# --- Configuration --- 
+# The name of the docker-compose file to use.
+COMPOSE_FILE="docker-compose.yml"
+
+# --- Helper Functions ---
+
+# Function to display messages with a whimsical prefix
+log() {
+  echo "✨ $(date +'%H:%M:%S') | $1"
+}
+
+# Function to check if docker-compose is available
+check_docker_compose() {
+  if ! command -v docker-compose &> /dev/null
+  then
+      log "ERROR: docker-compose could not be found. Please install it."
+      exit 1
+  fi
+}
+
+# Function to check if a docker-compose file exists
+check_compose_file() {
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    log "ERROR: '$COMPOSE_FILE' not found in the current directory. Please create one."
+    exit 1
+  fi
+}
+
+# --- Main Logic ---
+
+check_docker_compose
+
+case "$1" in
+  start)
+    check_compose_file
+    log "Initiating the cosmic dance of containers..."
+    docker-compose -f "$COMPOSE_FILE" up -d
+    if [ $? -eq 0 ]; then
+      log "Environment '$COMPOSE_FILE' has been successfully launched into orbit!"
+    else
+      log "Uh oh! Something went sideways during launch. Check the logs above."
+    fi
+    ;;
+  stop)
+    check_compose_file
+    log "Gently guiding our celestial bodies back to their orbits..."
+    docker-compose -f "$COMPOSE_FILE" stop
+    if [ $? -eq 0 ]; then
+      log "Environment '$COMPOSE_FILE' has gracefully powered down."
+    else
+      log "Even celestial bodies can have a rough landing. Check the logs."
+    fi
+    ;;
+  restart)
+    check_compose_file
+    log "Realigning the cosmic currents..."
+    docker-compose -f "$COMPOSE_FILE" restart
+    if [ $? -eq 0 ]; then
+      log "Environment '$COMPOSE_FILE' has been re-energized!"
+    else
+      log "A glitch in the matrix! Restart failed. Inspect the ethereal logs."
+    fi
+    ;;
+  destroy)
+    check_compose_file
+    log "Initiating the grand unravelling of the universe..."
+    docker-compose -f "$COMPOSE_FILE" down -v --remove-orphans
+    if [ $? -eq 0 ]; then
+      log "Environment '$COMPOSE_FILE' has been completely dismantled. A clean slate awaits!"
+    else
+      log "The fabric of reality is resilient! Destruction encountered issues. Review the logs."
+    fi
+    ;;
+  status)
+    check_compose_file
+    log "Consulting the cosmic oracle for status..."
+    docker-compose -f "$COMPOSE_FILE" ps
+    if [ $? -eq 0 ]; then
+      log "The stars are aligned (or not). See the output above."
+    else
+      log "The oracle is silent. Perhaps the compose file is missing or invalid."
+    fi
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|destroy|status}"
+    exit 1
+    ;;
+esac
+
+exit 0
