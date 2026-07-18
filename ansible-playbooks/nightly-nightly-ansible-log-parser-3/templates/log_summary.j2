@@ -1,0 +1,16 @@
+Log Analysis Report for {{ inventory_hostname }}
+===============================================
+
+Date: {{ ansible_date_time.iso8601 }}
+
+--- Errors ---
+Total Errors Found: {{ unique_error_lines | length }}
+{% for line in unique_error_lines %}
+- {{ line }}
+{% endfor %}
+
+--- Warnings ---
+Total Warnings Found: {{ unique_warning_lines | length }}
+{% for line in unique_warning_lines %}
+- {{ line }}
+{% endfor %}

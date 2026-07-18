@@ -1,0 +1,100 @@
+---
+- name: Test Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_file: "/tmp/test_syslog.log"
+    dummy_log_content: |
+      This is a normal log line.
+      An error occurred during processing.
+      Something failed to complete successfully.
+      A critical issue was detected.
+      This is another normal log line.
+      A warning about a deprecated feature.
+      A notice about system status.
+      Another error: unexpected input.
+      Yet another warning.
+
+  tasks:
+    - name: Mock the log file creation and content
+      ansible.builtin.copy:
+        content: "{{ dummy_log_content }}"
+        dest: "{{ log_file }}"
+        mode: '0644'
+      # Mock rationale: Simulating file creation and content for deterministic testing.
+
+    - name: Mock reading the log file
+      ansible.builtin.command: "cat {{ log_file }}"
+      register: log_content_raw
+      changed_when: false
+      # Mock rationale: Simulating the output of the 'cat' command.
+
+    - name: Mock extracting error lines
+      ansible.builtin.set_fact:
+        error_lines: "{{ (log_content_raw.stdout_lines | select('match', item) | list) }}"
+      loop:
+        - ".*error:.*"
+        - ".*failed to.*"
+        - ".*critical.*"
+      register: error_matches
+      # Mock rationale: Simulating the result of filtering lines based on error patterns.
+
+    - name: Mock extracting warning lines
+      ansible.builtin.set_fact:
+        warning_lines: "{{ (log_content_raw.stdout_lines | select('match', item) | list) }}"
+      loop:
+        - ".*warning:.*"
+        - ".*deprecated.*"
+        - ".*notice:.*"
+      register: warning_matches
+      # Mock rationale: Simulating the result of filtering lines based on warning patterns.
+
+    - name: Mock aggregating unique error lines
+      ansible.builtin.set_fact:
+        unique_error_lines: "{{ (error_matches.results | map(attribute='stdout') | flatten | unique | list) }}"
+      # Mock rationale: Simulating the aggregation of unique error lines.
+
+    - name: Mock aggregating unique warning lines
+      ansible.builtin.set_fact:
+        unique_warning_lines: "{{ (warning_matches.results | map(attribute='stdout') | flatten | unique | list) }}"
+      # Mock rationale: Simulating the aggregation of unique warning lines.
+
+    - name: Assert the number of unique errors
+      ansible.builtin.assert:
+        that:
+          - "unique_error_lines | length == 3"
+        fail_msg: "Assertion failed: Incorrect number of unique errors."
+        success_msg: "Assertion passed: Correct number of unique errors."
+
+    - name: Assert the number of unique warnings
+      ansible.builtin.assert:
+        that:
+          - "unique_warning_lines | length == 3"
+        fail_msg: "Assertion failed: Incorrect number of unique warnings."
+        success_msg: "Assertion passed: Correct number of unique warnings."
+
+    - name: Assert specific error lines are present
+      ansible.builtin.assert:
+        that:
+          - "'An error occurred during processing.' in unique_error_lines"
+          - "'Something failed to complete successfully.' in unique_error_lines"
+          - "'A critical issue was detected.' in unique_error_lines"
+        fail_msg: "Assertion failed: Specific error lines not found."
+        success_msg: "Assertion passed: Specific error lines found."
+
+    - name: Assert specific warning lines are present
+      ansible.builtin.assert:
+        that:
+          - "'A warning about a deprecated feature.' in unique_warning_lines"
+          - "'A notice about system status.' in unique_warning_lines"
+          - "'Yet another warning.' in unique_warning_lines"
+        fail_msg: "Assertion failed: Specific warning lines not found."
+        success_msg: "Assertion passed: Specific warning lines found."
+
+    - name: Clean up the mock log file
+      ansible.builtin.file:
+        path: "{{ log_file }}"
+        state: absent
+      # Mock rationale: Cleaning up the mock file after tests are complete.
