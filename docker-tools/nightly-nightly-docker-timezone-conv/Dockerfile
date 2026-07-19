@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\n# Install tzdata for zoneinfo database\nRUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*\n\nWORKDIR /app\n\nCOPY src/convert.py /app/convert.py\n\nENTRYPOINT ["python", "/app/convert.py"]
