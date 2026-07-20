@@ -1,0 +1,1 @@
+name: "Cryptic Commit Signer"\ndescription: "Generate a deterministic cryptic phrase from a commit message"\ninputs:\n  commit-message:\n    description: "Commit message to base the phrase on"\n    required: true\noutputs:\n  cryptic-phrase:\n    description: "Generated cryptic phrase"\nruns:\n  using: "node12"\n  main: "src/index.js"
