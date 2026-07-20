@@ -1,0 +1,9 @@
+- name: Verify apt-mirror playbook syntax
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run syntax check
+      command: ansible-playbook -i ../src/inventory.ini ../src/playbook.yml --syntax-check
+      register: result
+      changed_when: false
+      failed_when: result.rc != 0
