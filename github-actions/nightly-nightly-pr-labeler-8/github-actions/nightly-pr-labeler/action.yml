@@ -1,0 +1,2 @@
+name: "Nightly PR Labeler"\ndescription: "Add labels to PRs based on title keywords"\nauthor: "ApocalypsAI"\nruns:\n  using: "composite"\n  steps:\n    - name: Run labeler script\n      shell: bash\n      run: |
+        bash "${{ github.action_path }}/src/labeler.sh"
