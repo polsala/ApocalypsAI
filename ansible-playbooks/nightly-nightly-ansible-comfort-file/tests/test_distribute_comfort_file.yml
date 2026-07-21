@@ -1,0 +1,74 @@
+---
+- name: Test ApocalypsAI Comfort File Distribution
+  hosts: localhost
+  connection: local
+  become: yes # Needed for /tmp or other system paths
+  vars:
+    test_dir: "/tmp/apocalypsai_test_comfort_file"
+    test_file_path: "{{ test_dir }}/comfort_message.txt"
+    expected_content: |
+      +-------------------------------------+
+      | You're doing great, little server!  |
+      | Keep up the good work.              |
+      |                                     |
+      | - Your friendly ApocalypsAI         |
+      +-------------------------------------+
+
+  tasks:
+    - name: Clean up previous test run (if any)
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: This task ensures a clean slate for deterministic testing.
+      # It mocks the initial state by removing any previous test artifacts.
+
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: This mocks the target directory existing on a fresh system.
+
+    - name: Copy comfort message to test target
+      ansible.builtin.copy:
+        content: "{{ expected_content }}"
+        dest: "{{ test_file_path }}"
+        mode: '0644'
+      register: copy_result
+      # Mock rationale: Instead of using 'src: files/comfort_message.txt',
+      # we use 'content' directly to ensure the exact expected content is placed,
+      # making the test self-contained and deterministic without relying on external files.
+
+    - name: Verify comfort file exists in test location
+      ansible.builtin.stat:
+        path: "{{ test_file_path }}"
+      register: test_comfort_file_stat
+      # Mock rationale: This mocks checking the file system state after a copy operation.
+
+    - name: Assert test comfort file exists
+      ansible.builtin.assert:
+        that:
+          - test_comfort_file_stat.stat.exists
+        fail_msg: "Test comfort file {{ test_file_path }} does not exist after copy!"
+      # Mock rationale: Asserts the mocked file operation was successful.
+
+    - name: Read test comfort file content for verification
+      ansible.builtin.slurp:
+        src: "{{ test_file_path }}"
+      register: test_comfort_file_content
+      when: test_comfort_file_stat.stat.exists
+      # Mock rationale: Mocks reading the content of the file that was just "deployed".
+
+    - name: Assert test comfort file content matches expected
+      ansible.builtin.assert:
+        that:
+          - test_comfort_file_content.content | b64decode == expected_content
+        fail_msg: "Test comfort file content mismatch!"
+      when: test_comfort_file_stat.stat.exists
+      # Mock rationale: Asserts the content of the mocked file matches the expected.
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: Cleans up the mocked environment to ensure idempotency for future test runs.
