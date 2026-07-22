@@ -1,0 +1,11 @@
+---
+- name: Verify playbook syntax
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run syntax check (mock)
+      ansible.builtin.command: ansible-playbook -i ../src/inventory.ini ../src/rotate_ssh_keys.yml --syntax-check
+      register: syntax_check
+      changed_when: false
+      failed_when: syntax_check.rc != 0
+      # Mock rationale: In CI this command is executed; we assume it succeeds without touching real hosts.
