@@ -1,0 +1,113 @@
+---
+- name: Test Whisperwind Message Relay Deployment
+  hosts: localhost
+  connection: local
+  become: yes # Needed for creating directories in /tmp and /var/log (for testing)
+  vars:
+    test_relay_base_dir: "/tmp/test_whisperwind_relay"
+    test_whisper_script_path: "{{ test_relay_base_dir }}/whisper_relay.py"
+    test_whispers_data_path: "{{ test_relay_base_dir }}/whispers.txt"
+    test_whisper_log_file: "/tmp/test_whisperwind_relay.log"
+    test_cron_interval_minutes: "1" # For testing, run frequently
+
+  tasks:
+    - name: Clean up previous test environment (idempotent)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_relay_base_dir }}"
+        - "{{ test_whisper_log_file }}"
+      ignore_errors: yes # Mock rationale: Ensure a clean slate for deterministic testing by removing previous test artifacts.
+
+    - name: Run the deployment playbook with test variables
+      ansible.builtin.include_tasks: ../src/deploy_relay.yml
+      vars:
+        relay_base_dir: "{{ test_relay_base_dir }}"
+        whisper_script_path: "{{ test_whisper_script_path }}"
+        whispers_data_path: "{{ test_whispers_data_path }}"
+        whisper_log_file: "{{ test_whisper_log_file }}"
+        cron_interval_minutes: "{{ test_cron_interval_minutes }}"
+      # Mock rationale: This simulates running the main playbook on the test host. We pass test-specific paths to avoid interfering with actual system directories.
+
+    - name: Assert relay base directory exists
+      ansible.builtin.stat:
+        path: "{{ test_relay_base_dir }}"
+      register: relay_dir_stat
+      ansible.builtin.assert:
+        that:
+          - relay_dir_stat.stat.exists is true
+          - relay_dir_stat.stat.isdir is true
+          - relay_dir_stat.stat.mode == "0755" # Check mode
+        msg: "Relay base directory {{ test_relay_base_dir }} does not exist or has wrong permissions."
+
+    - name: Assert whisper_relay.py script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ test_whisper_script_path }}"
+      register: script_stat
+      ansible.builtin.assert:
+        that:
+          - script_stat.stat.exists is true
+          - script_stat.stat.isreg is true
+          - script_stat.stat.mode == "0755" # Check mode
+        msg: "Whisper relay script {{ test_whisper_script_path }} does not exist or is not executable."
+
+    - name: Assert whispers.txt data file exists
+      ansible.builtin.stat:
+        path: "{{ test_whispers_data_path }}"
+      register: data_file_stat
+      ansible.builtin.assert:
+        that:
+          - data_file_stat.stat.exists is true
+          - data_file_stat.stat.isreg is true
+          - data_file_stat.stat.mode == "0644" # Check mode
+        msg: "Whispers data file {{ test_whispers_data_path }} does not exist."
+
+    - name: Assert whisper log file exists
+      ansible.builtin.stat:
+        path: "{{ test_whisper_log_file }}"
+      register: log_file_stat
+      ansible.builtin.assert:
+        that:
+          - log_file_stat.stat.exists is true
+          - log_file_stat.stat.isreg is true
+          - log_file_stat.stat.mode == "0640" # Check mode
+        msg: "Whisper log file {{ test_whisper_log_file }} does not exist."
+
+    - name: Assert cron job is configured
+      ansible.builtin.cron:
+        name: "Whisperwind Message Relay"
+        minute: "*/{{ test_cron_interval_minutes }}"
+        job: "WHISPERS_FILE={{ test_whispers_data_path }} LOG_FILE={{ test_whisper_log_file }} {{ test_whisper_script_path }}"
+        user: root
+        state: present
+      check_mode: yes # Only check if it would be present, don't modify
+      register: cron_check
+      ansible.builtin.assert:
+        that:
+          - cron_check.changed == false # Should report no change if already present
+        msg: "Cron job for Whisperwind Relay is not configured correctly."
+      # Mock rationale: `check_mode` allows verifying cron job existence without actually adding/removing it during test runs, ensuring determinism.
+
+    - name: Run the whisper script manually to generate a log entry
+      ansible.builtin.command: "WHISPERS_FILE={{ test_whispers_data_path }} LOG_FILE={{ test_whisper_log_file }} {{ test_whisper_script_path }}"
+      changed_when: true # This command is expected to change the log file
+      # Mock rationale: Directly executing the script allows us to test its functionality and verify log output deterministically without waiting for cron.
+
+    - name: Assert log file contains a whisper entry
+      ansible.builtin.command: "grep 'Whisperwind:' {{ test_whisper_log_file }}"
+      register: grep_output
+      ansible.builtin.assert:
+        that:
+          - grep_output.rc == 0
+          - grep_output.stdout is search("Whisperwind:")
+        msg: "Log file {{ test_whisper_log_file }} does not contain a whisper entry."
+
+    - name: Clean up test environment after successful run
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_relay_base_dir }}"
+        - "{{ test_whisper_log_file }}"
+      # Mock rationale: Clean up ensures subsequent test runs are deterministic and do not leave artifacts on the system.
