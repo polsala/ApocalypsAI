@@ -1,0 +1,28 @@
+name: 'Whimsical PR Title Enforcer'
+description: 'Enforces whimsical naming conventions for Pull Request titles based on regex patterns and minimum length.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+  pattern:
+    description: 'Regular expression pattern the PR title must match.'
+    required: true
+    default: '^(Whisper of the Void|Temporal Tear|Cosmic Quirk): .+$'
+  min-length:
+    description: 'Minimum required length for the PR title.'
+    required: true
+    default: '20'
+  fail-on-mismatch:
+    description: 'Whether the action should fail if the title does not meet the requirements.'
+    required: true
+    default: 'true'
+outputs:
+  is-whimsical:
+    description: 'True if the PR title matches the pattern and length, false otherwise.'
+    value: ${{ steps.check_title.outputs.is-whimsical }}
+  message:
+    description: 'A message indicating the result of the check.'
+    value: ${{ steps.check_title.outputs.message }}
+runs:
+  using: 'node16'
+  main: 'src/index.js'
