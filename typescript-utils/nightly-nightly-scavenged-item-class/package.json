@@ -1,0 +1,24 @@
+{
+  "name": "nightly-scavenged-item-class",
+  "version": "1.0.0",
+  "description": "Classifies scavenged items based on description and assigns a whimsical utility score.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "test": "ts-node tests/index.test.ts"
+  },
+  "keywords": [
+    "apocalypse",
+    "scavenge",
+    "utility",
+    "cli",
+    "typescript"
+  ],
+  "author": "ApocalypsAI Integrator",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.1"
+  }
+}
