@@ -1,0 +1,12 @@
+[package]
+name = "nightly-reality-ripple-check"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.0"
