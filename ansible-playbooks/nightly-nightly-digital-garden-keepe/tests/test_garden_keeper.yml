@@ -1,0 +1,114 @@
+---
+- name: Test Digital Garden Keeper Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_retention_days: 7 # Shorter for testing
+    log_paths_to_clean:
+      - /tmp/test_logs
+
+  tasks:
+    - name: Mock ansible_facts for Debian
+      ansible.builtin.set_fact:
+        ansible_os_family: 'Debian'
+        ansible_distribution: 'Ubuntu'
+        ansible_distribution_version: '20.04'
+        ansible_date_time: { 'date': '2023-10-27', 'time': '01:23:45', 'epoch': '1698379425' }
+      # Mock rationale: Simulates a Debian-based system and current time for OS-specific task evaluation and age calculations.
+
+    - name: Create dummy old log files for testing cleanup
+      ansible.builtin.file:
+        path: "/tmp/test_logs/old_log_{{ item }}.log"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (item * 86400) - (log_retention_days * 86400)) | int }}"
+      loop: [1, 2, 3]
+      # Mock rationale: Creates files that would be considered 'old' by the playbook's age filter, using mocked epoch time.
+
+    - name: Create dummy new log files (should not be deleted)
+      ansible.builtin.file:
+        path: "/tmp/test_logs/new_log_{{ item }}.log"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (item * 3600)) | int }}"
+      loop: [1, 2]
+      # Mock rationale: Creates files that should be ignored by the playbook's age filter, using mocked epoch time.
+
+    - name: Mock apt_update_result
+      ansible.builtin.set_fact:
+        apt_update_result: { 'changed': true, 'stdout': 'All packages are up to date.' }
+      # Mock rationale: Simulates the output of an apt update task without actual execution.
+
+    - name: Mock apt_upgrade_result (changed)
+      ansible.builtin.set_fact:
+        apt_upgrade_result: { 'changed': true, 'stdout': 'The following packages will be upgraded: foo bar' }
+      # Mock rationale: Simulates an apt upgrade that made changes without actual execution.
+
+    - name: Mock apt_autoremove_result (changed)
+      ansible.builtin.set_fact:
+        apt_autoremove_result: { 'changed': true, 'stdout': 'The following packages were automatically installed and are no longer required: baz' }
+      # Mock rationale: Simulates an apt autoremove that made changes without actual execution.
+
+    - name: Mock apt_clean_result (changed)
+      ansible.builtin.set_fact:
+        apt_clean_result: { 'changed': true }
+      # Mock rationale: Simulates an apt clean that made changes without actual execution.
+
+    - name: Mock old_logs_to_delete result
+      ansible.builtin.set_fact:
+        old_logs_to_delete: {
+          "results": [
+            {"files": [{"path": "/tmp/test_logs/old_log_1.log"}, {"path": "/tmp/test_logs/old_log_2.log"}, {"path": "/tmp/test_logs/old_log_3.log"}], "item": "/tmp/test_logs"}
+          ]
+        }
+      # Mock rationale: Simulates the output of the find module, indicating old logs found, without actual filesystem scan.
+
+    - name: Mock deleted_logs_result
+      ansible.builtin.set_fact:
+        deleted_logs_result: {
+          "changed": true,
+          "results": [
+            {"path": "/tmp/test_logs/old_log_1.log", "changed": true},
+            {"path": "/tmp/test_logs/old_log_2.log", "changed": true},
+            {"path": "/tmp/test_logs/old_log_3.log", "changed": true}
+          ]
+        }
+      # Mock rationale: Simulates the output of the file module after deleting old logs, without actual deletion.
+
+    - name: Run the report generation task (without actual cleanup)
+      ansible.builtin.template:
+        src: templates/garden_report.j2
+        dest: /dev/stdout
+      delegate_to: localhost
+      run_once: true
+      vars:
+        report_updates: [
+          "Packages updated: The following packages will be upgraded: foo bar"
+        ]
+        report_cleanup: [
+          "Orphaned packages removed: The following packages were automatically installed and are no longer required: baz",
+          "Package cache cleaned.",
+          "Old log files deleted: /tmp/test_logs/old_log_1.log, /tmp/test_logs/old_log_2.log, /tmp/test_logs/old_log_3.log"
+        ]
+      register: generated_report
+      # Mock rationale: Directly provides the variables that the main playbook would compute, ensuring the template rendering logic is tested in isolation.
+
+    - name: Assert report content
+      ansible.builtin.assert:
+        that:
+          - "'Digital Garden Report - 2023-10-27 01:23:45' in generated_report.stdout"
+          - "'Host: localhost' in generated_report.stdout"
+          - "'OS: Debian Ubuntu 20.04' in generated_report.stdout"
+          - "'Packages updated: The following packages will be upgraded: foo bar' in generated_report.stdout"
+          - "'Orphaned packages removed: The following packages were automatically installed and are no longer required: baz' in generated_report.stdout"
+          - "'Package cache cleaned.' in generated_report.stdout"
+          - "'Old log files deleted: /tmp/test_logs/old_log_1.log, /tmp/test_logs/old_log_2.log, /tmp/test_logs/old_log_3.log' in generated_report.stdout"
+          - "'Your digital garden plot \'localhost\' is looking fresh and vibrant!' in generated_report.stdout"
+        msg: "Generated report does not contain expected content."
+      # Mock rationale: Verifies that the report template correctly processes and displays the mocked data.
+
+    - name: Clean up dummy log files
+      ansible.builtin.file:
+        path: /tmp/test_logs
+        state: absent
+      # Mock rationale: Ensures the test environment is clean after execution.
