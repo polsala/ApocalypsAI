@@ -1,0 +1,8 @@
+---
+- name: Ensure Cosmic Clocks are Aligned
+  hosts: all
+  become: yes
+  gather_facts: yes # Gather system facts for real runs
+  tasks:
+    - name: Include temporal drift correction tasks
+      ansible.builtin.include_tasks: temporal_drift_tasks.yml
