@@ -1,0 +1,30 @@
+{
+  "name": "nightly-survival-recipe-gen",
+  "version": "1.0.0",
+  "description": "Generates whimsical survival recipes based on available ingredients, ensuring type-safe ingredient handling.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "cli": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "survival",
+    "recipe",
+    "generator",
+    "typescript",
+    "cli",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
