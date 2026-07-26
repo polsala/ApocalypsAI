@@ -1,0 +1,20 @@
+name: 'Post-Apocalyptic Proverb PR Commenter'
+description: 'Adds a random, whimsical post-apocalyptic proverb or survival tip to new Pull Requests.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN)'
+    required: true
+  proverbs-file:
+    description: 'Path to a custom proverbs file. If not provided, uses the default proverbs.txt within the action directory.'
+    required: false
+    default: '${{ github.action_path }}/proverbs.txt'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run proverb commenter
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PROVERBS_FILE: ${{ inputs.proverbs-file }}
+      run: |
+        bash "${{ github.action_path }}/src/entrypoint.sh"
