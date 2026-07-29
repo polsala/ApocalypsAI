@@ -1,0 +1,34 @@
+- name: Bunker Setup Playbook
+  hosts: all
+  vars:
+    bunker_path: "{{ ansible_env.HOME }}/bunker"
+    sections:
+      - name: food
+        message: "Canned beans and hope."
+      - name: water
+        message: "Rain collector and optimism."
+      - name: tools
+        message: "Wrench, duct tape, and dreams."
+  tasks:
+    - name: Ensure bunker base directory exists
+      file:
+        path: "{{ bunker_path }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create bunker sections
+      loop: "{{ sections }}"
+      loop_control:
+        loop_var: section
+      block:
+        - name: Create section directory
+          file:
+            path: "{{ bunker_path }}/{{ section.name }}"
+            state: directory
+            mode: "0755"
+
+        - name: Create README with whimsical note
+          copy:
+            dest: "{{ bunker_path }}/{{ section.name }}/README.txt"
+            content: "{{ section.message }}\n"
+            mode: "0644"

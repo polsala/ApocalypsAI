@@ -1,0 +1,48 @@
+- name: Test Bunker Setup
+  hosts: all
+  gather_facts: false
+  vars:
+    bunker_path: "{{ ansible_env.HOME }}/bunker"
+  tasks:
+    - name: Run the bunker setup playbook
+      import_playbook: "../src/setup_bunker.yml"
+
+    - name: Verify bunker base directory exists
+      stat:
+        path: "{{ bunker_path }}"
+      register: bunker_dir
+
+    - name: Assert bunker directory is present
+      assert:
+        that:
+          - bunker_dir.stat.isdir
+
+    - name: Verify each section and README
+      vars:
+        sections:
+          - food
+          - water
+          - tools
+      loop: "{{ sections }}"
+      loop_control:
+        loop_var: sec
+      block:
+        - name: Check section directory
+          stat:
+            path: "{{ bunker_path }}/{{ sec }}"
+          register: sec_dir
+
+        - name: Assert section directory exists
+          assert:
+            that:
+              - sec_dir.stat.isdir
+
+        - name: Check README file
+          stat:
+            path: "{{ bunker_path }}/{{ sec }}/README.txt"
+          register: readme_file
+
+        - name: Assert README file exists
+          assert:
+            that:
+              - readme_file.stat.isfile
