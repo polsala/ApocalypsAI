@@ -1,0 +1,28 @@
+---
+- name: Ensure critical configuration files are blessed
+  hosts: all
+  become: true # Requires sudo/root privileges to modify system files
+  vars_files:
+    - ../vars/blessing_config.yml
+
+  tasks:
+    - name: Process each file for blessing
+      loop: "{{ files_to_bless }}"
+      loop_control:
+        loop_var: current_file
+      block:
+        - name: Check if blessing message is present in {{ current_file }}
+          ansible.builtin.shell: "head -n 10 {{ current_file }} | grep -q '{{ blessing_message | regex_escape }}'"
+          args:
+            warn: false
+          register: blessing_check_for_file
+          failed_when: false
+          changed_when: false
+
+        - name: Prepend blessing message to {{ current_file }} if not present
+          ansible.builtin.lineinfile:
+            path: "{{ current_file }}"
+            line: "{{ blessing_message }}"
+            insertbefore: BOF
+            state: present
+          when: blessing_check_for_file.rc != 0
