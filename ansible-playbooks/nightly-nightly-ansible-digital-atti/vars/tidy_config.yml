@@ -1,0 +1,29 @@
+---
+# Paths to scan for old temporary files
+temp_paths:
+  - /tmp
+  - /var/tmp
+
+# Files older than this many days will be considered for removal
+temp_file_age_days: 7
+
+# Paths to scan for old log files (e.g., .log.gz, .log.1, etc.)
+log_paths:
+  - /var/log
+  - /var/log/nginx # Example, adjust as needed
+  - /var/log/apache2 # Example, adjust as needed
+
+# Log files older than this many days will be considered for removal
+log_file_age_days: 30
+
+# Whether to clean package manager caches (e.g., apt clean for Debian/Ubuntu)
+# Set to 'false' if you don't want this or if your OS doesn't support it.
+enable_apt_clean: false
+enable_yum_clean: false
+enable_dnf_clean: false
+
+# Paths to scan for empty directories to remove
+empty_dir_paths:
+  - /tmp
+  - /var/tmp
+  - /var/log # Be careful with this, ensure only truly empty subdirs are removed
