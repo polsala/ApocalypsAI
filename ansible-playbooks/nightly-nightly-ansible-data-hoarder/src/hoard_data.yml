@@ -1,0 +1,41 @@
+---
+- name: Nightly Data Hoarder - Archive and Transfer Precious Data
+  hosts: hoard_targets
+  gather_facts: no
+  vars_files:
+    - vars/hoarding_config.yml
+
+  tasks:
+    - name: Ensure remote hoard path exists
+      ansible.builtin.file:
+        path: "{{ remote_hoard_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Get current timestamp for archive naming
+      ansible.builtin.set_fact:
+        current_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+    - name: Loop through source directories and hoard them
+      ansible.builtin.block:
+        - name: Archive source directory '{{ item }}'
+          ansible.builtin.archive:
+            path: "{{ item }}"
+            dest: "/tmp/{{ item | basename }}-{{ current_timestamp }}.tar.gz"
+            format: gz
+          register: archive_result
+          # Mock rationale: The archive module is run against a local path, simulating the creation of an archive file.
+
+        - name: Transfer archived data to remote hoard path
+          ansible.builtin.copy:
+            src: "{{ archive_result.dest }}"
+            dest: "{{ remote_hoard_path }}/{{ archive_result.dest | basename }}"
+            remote_src: yes # Source is on the remote host (which is localhost in our test case)
+          # Mock rationale: The copy module transfers a locally created archive to another local path, simulating a remote transfer.
+
+        - name: Clean up local temporary archive file
+          ansible.builtin.file:
+            path: "{{ archive_result.dest }}"
+            state: absent
+          when: archive_result.dest is defined and archive_result.dest != ''
+      loop: "{{ source_dirs }}"
