@@ -1,0 +1,32 @@
+Wasteland Wisdom Archive Curation Report (Generated: {{ current_timestamp }})
+-----------------------------------------------------------------------
+
+Total Files Scanned: {{ md_files.files | length }}
+Files Needing Attention: {{ files_missing_meta | length + stale_files | length }}
+
+{% if files_missing_meta %}
+--- Files with Missing Metadata ---
+{% for file in files_missing_meta %}
+- {{ file.path }}: {{ file.issues | join(', ') }}
+{% endfor %}
+{% else %}
+No files found with missing metadata.
+{% endif %}
+
+{% if stale_files %}
+--- Stale Files (Modified > {{ stale_threshold_days }} days ago) ---
+{% for file in stale_files %}
+- {{ file.path }} (Last Modified: {{ file.mtime_iso | split('T') | first }})
+{% endfor %}
+{% else %}
+No stale files found.
+{% endif %}
+
+{% if healthy_files %}
+--- Healthy Files ---
+{% for file in healthy_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No healthy files found. Keep up the good work!
+{% endif %}
