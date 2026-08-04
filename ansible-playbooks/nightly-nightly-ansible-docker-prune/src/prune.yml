@@ -1,0 +1,27 @@
+- name: Docker prune playbook
+  hosts: all
+  gather_facts: false
+  vars:
+    docker_prune_enabled: true   # can be overridden via -e
+    prune_containers: false      # can be overridden via -e
+  tasks:
+    - name: Set prune_skipped fact when pruning is disabled
+      set_fact:
+        prune_skipped: true
+      when: not docker_prune_enabled
+
+    - name: Debug message when pruning is disabled
+      debug:
+        msg: "Docker prune disabled by variable docker_prune_enabled=false"
+      when: not docker_prune_enabled
+
+    - name: Prune Docker images and optionally containers
+      community.docker.docker_prune:
+        images: true
+        containers: "{{ prune_containers }}"
+      when: docker_prune_enabled
+
+    - name: Ensure prune_skipped is false when pruning runs
+      set_fact:
+        prune_skipped: false
+      when: docker_prune_enabled
