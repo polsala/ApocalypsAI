@@ -1,0 +1,34 @@
+---
+- name: Archive Digital Artifacts
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+  vars:
+    current_timestamp: "{{ lookup('pipe', 'date +' + timestamp_format | regex_replace('^_', '') ) }}" # Mock rationale: This lookup provides a dynamic timestamp. In tests, this variable will be overridden for determinism.
+
+  tasks:
+    - name: Ensure archive base directory exists
+      ansible.builtin.file:
+        path: "{{ archive_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find files in source paths
+      community.general.find:
+        paths: "{{ item }}"
+        file_type: file
+        recurse: yes
+      loop: "{{ source_paths }}"
+      register: found_files_result
+      # Mock rationale: This module interacts with the filesystem. In tests, we ensure the test setup creates the files
+      # that this module is expected to find, making its output deterministic based on the test environment.
+
+    - name: Archive each found file with timestamp
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ archive_base_dir }}/{{ item.path | basename | regex_replace('\.(?=[^.]*$)', current_timestamp + '.') }}"
+        remote_src: yes
+        mode: '0644'
+      loop: "{{ found_files_result.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
