@@ -1,0 +1,31 @@
+.mood-ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.mood-ring {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  transition: background-color 0.5s ease-in-out;
+  border: 5px solid rgba(255, 255, 255, 0.2);
+}
+
+.mood-text {
+  color: white;
+  font-size: 1.5em;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.mood-label {
+  margin-top: 15px;
+  font-size: 0.7em;
+  color: #aaa;
+}
