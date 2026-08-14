@@ -1,0 +1,24 @@
+---
+- name: Distribute a random fun fact
+  hosts: all
+  become: true
+  vars:
+    dest_path: /etc/motd_fun_fact
+    fun_facts:
+      - "Honey never spoils."
+      - "Bananas are berries, but strawberries aren't."
+      - "Octopuses have three hearts."
+      - "A day on Venus is longer than its year."
+      - "There are more stars in the universe than grains of sand on Earth."
+  tasks:
+    - name: Choose a random fact
+      set_fact:
+        selected_fact: "{{ fun_facts | random }}"
+
+    - name: Write the fact to the destination file
+      copy:
+        dest: "{{ dest_path }}"
+        content: "{{ selected_fact }}\n"
+        owner: root
+        group: root
+        mode: '0644'
