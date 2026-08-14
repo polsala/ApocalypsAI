@@ -1,0 +1,28 @@
+{
+  "name": "nightly-chrono-compass",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool that suggests a 'temporal direction' and activity based on the current time and day.",
+  "main": "src/index.js",
+  "bin": {
+    "chrono-compass": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "apocalypse",
+    "whimsical",
+    "time"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
