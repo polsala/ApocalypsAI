@@ -1,0 +1,21 @@
+{
+  "name": "nightly-qr-code-cli",
+  "version": "1.0.0",
+  "description": "ASCII QR code generator CLI",
+  "bin": {
+    "nightly-qr-code-cli": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  }
+}
