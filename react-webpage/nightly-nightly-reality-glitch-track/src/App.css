@@ -1,0 +1,88 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.glitch-form-container {
+  background-color: #4a4f57;
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.glitch-form-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.glitch-form-container input[type="text"],
+.glitch-form-container select,
+.glitch-form-container textarea {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #3a3f47;
+  color: #e0e0e0;
+}
+
+.glitch-form-container button {
+  background-color: #61dafb;
+  color: #282c34;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.glitch-form-container button:hover {
+  background-color: #21a1f1;
+}
+
+.glitch-list-container {
+  text-align: left;
+}
+
+.glitch-list-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.glitch-item {
+  background-color: #4a4f57;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.glitch-item h3 {
+  margin-top: 0;
+  color: #61dafb;
+}
+
+.glitch-item p {
+  margin-bottom: 5px;
+}
+
+.glitch-item .timestamp {
+  font-size: 0.8em;
+  color: #bbb;
+}
