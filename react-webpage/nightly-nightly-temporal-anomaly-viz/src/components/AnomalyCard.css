@@ -1,0 +1,35 @@
+.anomaly-card {
+  text-align: left;
+  padding: 10px;
+}
+
+.anomaly-card h3 {
+  color: #61dafb;
+  margin-bottom: 15px;
+}
+
+.anomaly-card p {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.anomaly-card strong {
+  color: #e0e0e0;
+}
+
+.stabilize-button {
+  background-color: #61dafb;
+  color: #1a1c20;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  margin-top: 20px;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+}
+
+.stabilize-button:hover {
+  background-color: #4ac1e0;
+  transform: translateY(-1px);
+}
