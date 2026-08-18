@@ -1,0 +1,11 @@
+name: "Nightly PR Labeler"
+description: "Automatically label PRs based on title keywords and add a random emoji label"
+author: "ApocalypsAI"
+inputs: {}
+outputs:
+  labels:
+    description: "Comma‑separated list of labels the action suggests"
+    value: "${{ steps.labeler.outputs.labels }}"
+runs:
+  using: "node12"
+  main: "src/index.js"
