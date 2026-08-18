@@ -1,0 +1,38 @@
+---
+- name: Ensure server serenity
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Update MOTD with a comforting message
+      ansible.builtin.copy:
+        content: "{{ motd_message }}"
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install cowsay and fortune-mod
+      ansible.builtin.package:
+        name:
+          - cowsay
+          - fortune-mod
+        state: present
+
+    - name: Create serenity script for cron
+      ansible.builtin.template:
+        src: serenity_script.sh.j2
+        dest: /usr/local/bin/display_serenity_fortune.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Schedule daily serenity fortune
+      ansible.builtin.cron:
+        name: "display daily serenity fortune"
+        minute: "0"
+        hour: "8"
+        job: "/usr/local/bin/display_serenity_fortune.sh > /dev/null 2>&1"
+        user: root
+        state: present

@@ -1,0 +1,50 @@
+---
+- name: Verify server serenity setup
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Check if cowsay is installed
+      ansible.builtin.command: command -v cowsay
+      register: cowsay_check
+      changed_when: false
+      failed_when: cowsay_check.rc != 0
+      # Mock rationale: This command checks for the presence of the 'cowsay' executable using 'command -v'.
+      # It's deterministic as 'command -v' will either find it or not, and doesn't rely on external network calls.
+
+    - name: Check if fortune is installed
+      ansible.builtin.command: command -v fortune
+      register: fortune_check
+      changed_when: false
+      failed_when: fortune_check.rc != 0
+      # Mock rationale: This command checks for the presence of the 'fortune' executable using 'command -v'.
+      # It's deterministic as 'command -v' will either find it or not, and doesn't rely on external network calls.
+
+    - name: Check MOTD content
+      ansible.builtin.command: cat /etc/motd
+      register: motd_content
+      changed_when: false
+      failed_when: motd_content.stdout.find(motd_message) == -1
+      # Mock rationale: This command reads a local file. It's deterministic as it reads a static file and doesn't rely on external network calls.
+      # We check if the entire expected MOTD message is present in the file.
+
+    - name: Check serenity script exists and is executable
+      ansible.builtin.stat:
+        path: /usr/local/bin/display_serenity_fortune.sh
+      register: script_stat
+      failed_when: not script_stat.stat.exists or not script_stat.stat.executable
+      # Mock rationale: This module checks local file system properties. It's deterministic and doesn't rely on external network calls.
+
+    - name: Check cron job for serenity script
+      ansible.builtin.cron:
+        name: "display daily serenity fortune"
+        minute: "0"
+        hour: "8"
+        job: "/usr/local/bin/display_serenity_fortune.sh > /dev/null 2>&1"
+        user: root
+        state: present
+      check_mode: yes
+      register: cron_check
+      failed_when: cron_check.changed
+      # Mock rationale: This module interacts with the local crontab. Running in check_mode makes it deterministic for verification without actual changes, and it doesn't rely on external network calls.
