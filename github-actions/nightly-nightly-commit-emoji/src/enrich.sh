@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Reads a commit message from stdin and appends an emoji based on keywords.\n\nmessage=$(cat)\nlower=$(echo "$message" | tr '[:upper:]' '[:lower:]')\nif [[ "$lower" == *"fix"* ]]; then\n  emoji="🐛"\nelif [[ "$lower" == *"add"* ]]; then\n  emoji="✨"\nelif [[ "$lower" == *"docs"* ]]; then\n  emoji="📚"\nelse\n  emoji="🎉"\nfi\necho "$message $emoji"
