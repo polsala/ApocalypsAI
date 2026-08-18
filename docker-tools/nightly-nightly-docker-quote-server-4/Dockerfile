@@ -1,0 +1,1 @@
+# syntax=docker/dockerfile:1\nFROM python:3.11-alpine\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY src/ .\n# Default seed makes the output deterministic for tests\nENV QUOTE_SEED=0\nEXPOSE 8080\nCMD ["python", "app.py"]
