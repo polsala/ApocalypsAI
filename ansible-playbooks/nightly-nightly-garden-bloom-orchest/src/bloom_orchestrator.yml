@@ -1,0 +1,61 @@
+---
+- name: Cultivate Digital Garden
+  hosts: garden_hosts
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure garden path exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find all markdown files
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_result
+
+    - name: Get file stats for all markdown files
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+        get_md5: no
+        get_checksum: no
+      loop: "{{ md_files_result.files }}"
+      register: file_stats_result
+
+    - name: Process file stats to identify blooming and stale notes
+      ansible.builtin.set_fact:
+        current_timestamp: "{{ ansible_date_time.epoch }}"
+        blooming_notes: []
+        stale_notes: []
+
+    - name: Categorize notes as blooming
+      ansible.builtin.set_fact:
+        blooming_notes: "{{ blooming_notes + [item.stat] }}"
+      when:
+        - item.stat.exists
+        - (current_timestamp | int - item.stat.mtime | int) < (bloom_threshold_days | int * 86400)
+      loop: "{{ file_stats_result.results }}"
+      loop_control:
+        label: "Checking bloom for {{ item.stat.path | default('N/A') }}"
+
+    - name: Categorize notes as stale
+      ansible.builtin.set_fact:
+        stale_notes: "{{ stale_notes + [item.stat] }}"
+      when:
+        - item.stat.exists
+        - (current_timestamp | int - item.stat.mtime | int) > (stale_threshold_days | int * 86400)
+      loop: "{{ file_stats_result.results }}"
+      loop_control:
+        label: "Checking stale for {{ item.stat.path | default('N/A') }}"
+
+    - name: Generate bloom report
+      ansible.builtin.template:
+        src: templates/bloom_report.j2
+        dest: "{{ report_output_path }}"
+        mode: '0644'
+      delegate_to: localhost # Generate report on the control machine

@@ -1,0 +1,55 @@
+---
+- name: Run setup for bloom orchestrator tests
+  ansible.builtin.import_playbook: tests/setup_test_env.yml
+
+- name: Run the main bloom orchestrator playbook with test variables
+  ansible.builtin.import_playbook: src/bloom_orchestrator.yml
+  vars:
+    garden_path: "/tmp/test_garden_bloom"
+    report_output_path: "/tmp/test_garden_bloom_report.md"
+    stale_threshold_days: 90
+    bloom_threshold_days: 7
+  # Mock rationale: Run the main playbook against the test environment created by setup_test_env.yml.
+
+- name: Assert the generated report content
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_report_path: "/tmp/test_garden_bloom_report.md"
+  tasks:
+    - name: Read the generated report file
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+      # Mock rationale: Read the generated report to verify its content.
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_b64.content | b64decode }}"
+      # Mock rationale: Decode the base64 content for assertion.
+
+    - name: Assert 'fresh_note.md' is in blooming notes
+      ansible.builtin.assert:
+        that:
+          - "'fresh_note.md' in report_content"
+          - "'Blooming Notes' in report_content"
+        fail_msg: "fresh_note.md was not found in blooming notes section or blooming notes section is missing."
+      # Mock rationale: Verify that the 'fresh_note.md' (expected to be blooming) is present in the report.
+
+    - name: Assert 'old_note.md' is in stale notes
+      ansible.builtin.assert:
+        that:
+          - "'old_note.md' in report_content"
+          - "'Stale Notes' in report_content"
+        fail_msg: "old_note.md was not found in stale notes section or stale notes section is missing."
+      # Mock rationale: Verify that the 'old_note.md' (expected to be stale) is present in the report.
+
+    - name: Assert 'moderate_note.md' is NOT in blooming or stale notes
+      ansible.builtin.assert:
+        that:
+          - "'moderate_note.md' not in report_content"
+        fail_msg: "moderate_note.md was unexpectedly found in the report."
+      # Mock rationale: Verify that 'moderate_note.md' (expected to be neither) is not present in the report.
+
+- name: Run cleanup for bloom orchestrator tests
+  ansible.builtin.import_playbook: tests/cleanup_test_env.yml
