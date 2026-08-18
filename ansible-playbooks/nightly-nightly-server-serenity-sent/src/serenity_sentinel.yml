@@ -1,0 +1,73 @@
+---
+- name: Nightly Server Serenity Sentinel
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Gather system facts
+      ansible.builtin.setup:
+        gather_subset:
+          - "min"
+          - "hardware"
+          - "network"
+
+    - name: Check disk usage
+      ansible.builtin.command: df -h /
+      register: disk_usage_output
+      changed_when: false
+
+    - name: Check memory usage
+      ansible.builtin.command: free -m
+      register: memory_usage_output
+      changed_when: false
+
+    - name: Check CPU load
+      ansible.builtin.command: uptime
+      register: cpu_load_output
+      changed_when: false
+
+    - name: Check status of critical services
+      ansible.builtin.service_facts:
+      register: services_status
+
+    - name: Evaluate service serenity
+      ansible.builtin.set_fact:
+        serene_services: "{{ services_to_monitor | select('in', services_status.ansible_facts.services.keys()) | map('extract', services_status.ansible_facts.services) | selectattr('state', 'equalto', 'running') | list }}"
+        unserene_services: "{{ services_to_monitor | select('in', services_status.ansible_facts.services.keys()) | map('extract', services_status.ansible_facts.services) | selectattr('state', 'notequalto', 'running') | list }}"
+        missing_services: "{{ services_to_monitor | difference(services_status.ansible_facts.services.keys()) }}"
+
+    - name: Tidy up old logs
+      ansible.builtin.find:
+        paths: "{{ log_paths_to_tidy }}"
+        age: "{{ log_retention_days }}d"
+        file_type: file
+        recurse: yes
+      register: old_logs_to_delete
+      when: log_paths_to_tidy is defined and log_paths_to_tidy | length > 0
+
+    - name: Delete old logs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs_to_delete.files }}"
+      when: old_logs_to_delete.files is defined and old_logs_to_delete.files | length > 0
+      ignore_errors: yes # Continue even if some logs can't be deleted
+
+    - name: Generate Serenity Report
+      ansible.builtin.template:
+        src: serenity_report.j2
+        dest: "/tmp/serenity_report_{{ ansible_hostname }}.txt"
+      vars:
+        report_timestamp: "{{ ansible_date_time.iso8601_micro }}"
+        disk_usage: "{{ disk_usage_output.stdout_lines[1] | default('N/A') }}"
+        memory_usage: "{{ memory_usage_output.stdout_lines[2] | default('N/A') }}"
+        cpu_load: "{{ cpu_load_output.stdout | regex_search('load average: (.*)', '\\1') | default(['N/A']) | first }}"
+        serene_services_list: "{{ serene_services | map(attribute='name') | list }}"
+        unserene_services_list: "{{ unserene_services | map(attribute='name') | list }}"
+        missing_services_list: "{{ missing_services }}"
+        tidied_logs_count: "{{ old_logs_to_delete.files | length if old_logs_to_delete.files is defined else 0 }}"
+
+    - name: Display Serenity Report path
+      ansible.builtin.debug:
+        msg: "Serenity Report generated at /tmp/serenity_report_{{ ansible_hostname }}.txt"

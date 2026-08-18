@@ -1,0 +1,40 @@
+--- Nightly Server Serenity Report for {{ ansible_hostname }} ---
+Generated: {{ report_timestamp }}
+
+System Vitals:
+  Disk Usage (root): {{ disk_usage }}
+  Memory Usage: {{ memory_usage }}
+  CPU Load (1min, 5min, 15min): {{ cpu_load }}
+
+Service Serenity:
+  Serene Services (Running):
+    {% if serene_services_list %}
+    {% for service in serene_services_list %}
+    - {{ service }}
+    {% endfor %}
+    {% else %}
+    None identified as running from monitored list.
+    {% endif %}
+
+  Unserene Services (Not Running):
+    {% if unserene_services_list %}
+    {% for service in unserene_services_list %}
+    - {{ service }} (State: {{ services_status.ansible_facts.services[service].state | default('unknown') }})
+    {% endfor %}
+    {% else %}
+    All monitored services are serene!
+    {% endif %}
+
+  Missing Services (Not Found):
+    {% if missing_services_list %}
+    {% for service in missing_services_list %}
+    - {{ service }}
+    {% endfor %}
+    {% else %}
+    All monitored services are present.
+    {% endif %}
+
+Log Tidying:
+  {{ tidied_logs_count }} old log files were tidied (deleted).
+
+--- End of Report ---
