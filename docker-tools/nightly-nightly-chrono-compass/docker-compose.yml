@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  chrono-compass:
+    build: .
+    container_name: nightly-chrono-compass
+    environment:
+      # Comma-separated list of NTP servers
+      - NTP_SERVERS=pool.ntp.org,time.google.com,time.nist.gov
+      # Interval between checks in seconds
+      - CHECK_INTERVAL_SECONDS=60
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
