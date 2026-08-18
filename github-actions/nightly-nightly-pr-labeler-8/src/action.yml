@@ -1,0 +1,19 @@
+name: Nightly PR Labeler
+
+description: Add labels to PRs based on title keywords.
+
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler script
+      shell: bash
+      env:
+        PR_TITLE: ${{ env.PR_TITLE }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        "${{ github.action_path }}/labeler.sh"
