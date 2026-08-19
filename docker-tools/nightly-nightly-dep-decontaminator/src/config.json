@@ -1,0 +1,21 @@
+{
+  "heavy_packages": {
+    "django": "Consider Flask or FastAPI for lighter web frameworks.",
+    "numpy": "If only basic array ops are needed, explore `array` module or custom implementations.",
+    "pandas": "For simple CSV/data handling, `csv` module or custom parsing might suffice.",
+    "requests": "For basic HTTP, `urllib.request` is built-in and lighter.",
+    "scipy": "Heavy scientific library; only include if absolutely critical.",
+    "tensorflow": "Extremely heavy. Consider PyTorch Lite or ONNX Runtime for inference, or custom C/C++ for critical ops.",
+    "pytorch": "Similar to TensorFlow, very heavy. Optimize models for edge devices or use lighter frameworks."
+  },
+  "unnecessary_packages": [
+    "debugpy",
+    "pytest",
+    "black",
+    "flake8",
+    "mypy",
+    "pylint",
+    "jupyter",
+    "ipython"
+  ]
+}
