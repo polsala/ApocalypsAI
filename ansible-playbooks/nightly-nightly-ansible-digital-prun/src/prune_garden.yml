@@ -1,0 +1,47 @@
+---
+- name: Prune Digital Garden
+  hosts: all
+  become: yes # Requires sudo for cleaning system paths
+  vars:
+    prune_days: 7 # Default to 7 days
+    prune_paths:
+      - /tmp
+      - /var/tmp
+      - /var/log/nginx
+      - /var/log/apache2
+      - /var/log/syslog*
+      - /var/log/*.log
+    apt_cache_clean: true # Whether to clean apt cache
+
+  tasks:
+    - name: Clean APT package cache (if enabled and Debian-based)
+      ansible.builtin.apt:
+        autoclean: yes
+        autoremove: yes
+      when: ansible_facts['os_family'] == 'Debian' and apt_cache_clean
+
+    - name: Find and remove old files in specified paths
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ prune_days }}d"
+        file_type: file
+        recurse: yes
+      register: old_files_in_path
+      loop: "{{ prune_paths }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Delete identified old files
+      ansible.builtin.file:
+        path: "{{ file_item.path }}"
+        state: absent
+      loop: "{{ old_files_in_path.results | map(attribute='files') | flatten }}"
+      loop_control:
+        loop_var: file_item
+        label: "{{ file_item.path }}"
+      when: old_files_in_path.results is defined and (old_files_in_path.results | map(attribute='files') | flatten) | length > 0 and file_item.path is defined
+
+    - name: Report on pruned files
+      ansible.builtin.debug:
+        msg: "Pruned {{ (old_files_in_path.results | map(attribute='files') | flatten) | length }} files older than {{ prune_days }} days from {{ prune_paths | join(', ') }}"
+      when: old_files_in_path.results is defined and (old_files_in_path.results | map(attribute='files') | flatten) | length > 0

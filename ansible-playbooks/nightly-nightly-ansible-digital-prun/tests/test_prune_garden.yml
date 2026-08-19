@@ -1,0 +1,106 @@
+---
+- name: Test Digital Pruner Playbook
+  hosts: localhost
+  connection: local
+  become: yes # For creating files in /tmp or similar, and for running the main playbook
+
+  vars:
+    test_dir: "/tmp/ansible_test_pruner_files"
+    prune_days: 1 # Prune files older than 1 day for quick testing
+
+  pre_tasks:
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Ensure a clean slate for deterministic tests.
+
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Create a controlled environment for file operations.
+
+    - name: Create an old file (should be pruned)
+      ansible.builtin.copy:
+        content: "old content"
+        dest: "{{ test_dir }}/old_file.log"
+        mode: '0644'
+      # Mock rationale: Simulate an old file.
+    - name: Set modification time for old file
+      ansible.builtin.command: touch -d "2 days ago" "{{ test_dir }}/old_file.log"
+      changed_when: true # Mock rationale: `touch` command always changes state.
+
+    - name: Create a new file (should not be pruned)
+      ansible.builtin.copy:
+        content: "new content"
+        dest: "{{ test_dir }}/new_file.log"
+        mode: '0644'
+      # Mock rationale: Simulate a new file.
+
+    - name: Create another old file in a subdirectory (should be pruned)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/subdir"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Test recursive pruning.
+    - name: Create old file in subdir
+      ansible.builtin.copy:
+        content: "old subdir content"
+        dest: "{{ test_dir }}/subdir/old_subdir_file.txt"
+        mode: '0644'
+      # Mock rationale: Simulate an old file in a subdirectory.
+    - name: Set modification time for old subdir file
+      ansible.builtin.command: touch -d "2 days ago" "{{ test_dir }}/subdir/old_subdir_file.txt"
+      changed_when: true # Mock rationale: `touch` command always changes state.
+
+  tasks:
+    - name: Run the main digital pruner playbook
+      ansible.builtin.include_tasks:
+        file: ../src/prune_garden.yml
+      vars:
+        prune_paths:
+          - "{{ test_dir }}" # Override paths to target test directory
+        prune_days: "{{ prune_days }}"
+        apt_cache_clean: false # Disable apt cleaning for test idempotence
+
+  post_tasks:
+    - name: Verify old_file.log is absent
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/old_file.log"
+      register: old_file_stat
+      # Mock rationale: Check if the old file was successfully removed.
+    - name: Assert old_file.log is gone
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old file '{{ test_dir }}/old_file.log' was not pruned!"
+
+    - name: Verify new_file.log is present
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/new_file.log"
+      register: new_file_stat
+      # Mock rationale: Check if the new file was correctly left untouched.
+    - name: Assert new_file.log is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New file '{{ test_dir }}/new_file.log' was unexpectedly pruned!"
+
+    - name: Verify old_subdir_file.txt is absent
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/subdir/old_subdir_file.txt"
+      register: old_subdir_file_stat
+      # Mock rationale: Check if the old file in subdirectory was successfully removed.
+    - name: Assert old_subdir_file.txt is gone
+      ansible.builtin.assert:
+        that:
+          - not old_subdir_file_stat.stat.exists
+        fail_msg: "Old subdirectory file '{{ test_dir }}/subdir/old_subdir_file.txt' was not pruned!"
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: Remove all test artifacts to ensure no side effects.
