@@ -1,0 +1,1 @@
+# nightly-radiation-meter\n\nGenerates a whimsical radiation level reading for post‑apocalyptic scenarios.\n\n## Usage\n\n```sh\ncargo run -- [SEED]\n```\n\nOptional **SEED** (integer) makes the output deterministic.\n\n## Build\n\n```sh\ncargo build --release\n```\n\n## Example\n\n```\n$ cargo run -- 42\nRadiation reading: 673 mSv (Critical)\n```\n
