@@ -1,0 +1,16 @@
+{
+  "name": "nightly-workflow-whimsy-agent",
+  "version": "1.0.0",
+  "description": "A GitHub Action that posts whimsical, morale-boosting comments on workflow run statuses.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
