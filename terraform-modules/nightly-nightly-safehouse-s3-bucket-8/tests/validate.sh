@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Mock rationale: In CI we run this script with a local backend and no real AWS calls.\nset -e\n\n# Initialise the module (backend disabled to avoid remote state)\nterraform init -backend=false > /dev/null\n\n# Validate the configuration syntax and provider requirements\nterraform validate > /dev/null\n\necho \"Terraform validation passed\"\n
