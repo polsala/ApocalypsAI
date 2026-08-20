@@ -1,0 +1,22 @@
+{
+  "name": "nightly-cosmic-compass",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool that suggests a 'cosmic direction' for inspiration based on a seed, offering a fun way to break creative blocks.",
+  "main": "src/index.js",
+  "bin": {
+    "cosmic-compass": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "whimsical",
+    "inspiration",
+    "node"
+  ],
+  "author": "ApocalypsAI Integrator",
+  "license": "MIT"
+}
