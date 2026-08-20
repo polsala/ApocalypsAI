@@ -1,0 +1,1 @@
+use cryptic_plant_namer::generate_name;\n\n#[test]\nfn test_known_seeds() {\n    assert_eq!(generate_name(0), "Glowing Fernleaf");\n    assert_eq!(generate_name(1), "Whispering Fernleaf");\n    assert_eq!(generate_name(10), "Glowing Mushroot");\n    assert_eq!(generate_name(42), "Radiant Dawnbark");\n}\n

@@ -1,0 +1,1 @@
+use std::env;\nuse cryptic_plant_namer::generate_name;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    let seed: u64 = if args.len() > 1 {\n        args[1].parse().unwrap_or(0)\n    } else {\n        0\n    };\n    let name = generate_name(seed);\n    println!("{}", name);\n}\n
