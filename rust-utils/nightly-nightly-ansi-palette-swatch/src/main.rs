@@ -1,0 +1,1 @@
+use ansi_palette::{generate_palette};\n\nfn main() {\n    let args: Vec<String> = std::env::args().collect();\n    if args.len() > 1 && args[1] == "--all" {\n        println!("{}", generate_palette(0..256));\n    } else {\n        // default list first 16 colors\n        println!("{}", generate_palette(0..16));\n    }\n}\n
