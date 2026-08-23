@@ -1,0 +1,1 @@
+variable "destination" {\n  description = "Where the portal leads"\n  type        = string\n}\n\nvariable "activation_time" {\n  description = "ISO8601 timestamp when portal activates"\n  type        = string\n}\n
