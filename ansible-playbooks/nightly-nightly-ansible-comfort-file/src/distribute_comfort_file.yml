@@ -1,0 +1,45 @@
+---
+- name: Distribute the ApocalypsAI Comfort File
+  hosts: all
+  become: yes # May need root to write to /etc or other system paths
+  vars:
+    comfort_file_path: "/etc/apocalypsai/comfort_message.txt"
+    comfort_file_dir: "/etc/apocalypsai"
+
+  tasks:
+    - name: Ensure comfort file directory exists
+      ansible.builtin.file:
+        path: "{{ comfort_file_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy comfort message to target
+      ansible.builtin.copy:
+        src: files/comfort_message.txt
+        dest: "{{ comfort_file_path }}"
+        mode: '0644'
+      register: copy_result
+
+    - name: Verify comfort file exists and content matches
+      ansible.builtin.stat:
+        path: "{{ comfort_file_path }}"
+      register: comfort_file_stat
+
+    - name: Assert comfort file exists
+      ansible.builtin.assert:
+        that:
+          - comfort_file_stat.stat.exists
+        fail_msg: "Comfort file {{ comfort_file_path }} does not exist!"
+
+    - name: Read comfort file content for verification
+      ansible.builtin.slurp:
+        src: "{{ comfort_file_path }}"
+      register: comfort_file_content
+      when: comfort_file_stat.stat.exists
+
+    - name: Assert comfort file content matches expected
+      ansible.builtin.assert:
+        that:
+          - comfort_file_content.content | b64decode == lookup('file', 'files/comfort_message.txt')
+        fail_msg: "Comfort file content mismatch!"
+      when: comfort_file_stat.stat.exists
