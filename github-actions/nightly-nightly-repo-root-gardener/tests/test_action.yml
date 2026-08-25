@@ -1,0 +1,104 @@
+name: Test Nightly Repository Root Gardener
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test-gardener-* # Trigger on branches for testing
+
+jobs:
+  test_gardener:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scenario:
+          - name: "All Good - No Issues"
+            required_files: "README.md,LICENSE"
+            forbidden_files: ""
+            check_license_header: "false"
+            setup_script: "tests/test_repo_setup.sh"
+            expected_status: "success"
+            expected_report_contains: '"required_files_status": "success", "forbidden_files_status": "N/A", "license_header_status": "N/A", "overall_status": "success"'
+          - name: "Missing Required File"
+            required_files: "README.md,MISSING.md"
+            forbidden_files: ""
+            check_license_header: "false"
+            setup_script: "tests/test_repo_setup.sh"
+            expected_status: "failure"
+            expected_report_contains: '"required_files_status": "failure", "required_files_missing": ["MISSING.md"], "overall_status": "failure"'
+          - name: "Found Forbidden File"
+            required_files: ""
+            forbidden_files: ".DS_Store,temp_config.bak"
+            check_license_header: "false"
+            setup_script: "tests/test_repo_setup_forbidden.sh"
+            expected_status: "failure"
+            expected_report_contains: '"forbidden_files_status": "failure", "forbidden_files_found": [".DS_Store"], "overall_status": "failure"'
+          - name: "Missing License Header"
+            required_files: ""
+            forbidden_files: ""
+            check_license_header: "true"
+            setup_script: "tests/test_repo_setup_license.sh"
+            expected_status: "failure"
+            expected_report_contains: '"license_header_status": "failure", "license_header_missing": ["./src/main.py"], "overall_status": "failure"'
+          - name: "All Checks Pass with License"
+            required_files: "README.md,LICENSE"
+            forbidden_files: ""
+            check_license_header: "true"
+            setup_script: "tests/test_repo_setup_all_pass.sh"
+            expected_status: "success"
+            expected_report_contains: '"required_files_status": "success", "forbidden_files_status": "N/A", "license_header_status": "success", "overall_status": "success"'
+          - name: "No Inputs Provided"
+            required_files: ""
+            forbidden_files: ""
+            check_license_header: "false"
+            setup_script: "tests/test_repo_setup.sh"
+            expected_status: "success"
+            expected_report_contains: '"required_files_status": "N/A", "forbidden_files_status": "N/A", "license_header_status": "N/A", "overall_status": "success"'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Test Repository State
+        run: |
+          bash ${{ matrix.setup_script }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Nightly Repository Root Gardener
+        id: gardener
+        uses: ./nightly-repo-root-gardener # Use local action path
+        with:
+          required_files: ${{ matrix.required_files }}
+          forbidden_files: ${{ matrix.forbidden_files }}
+          check_license_header: ${{ matrix.check_license_header }}
+          # github_token is intentionally omitted for offline testing of report output
+          # Mock rationale: We are testing the action's logic and report generation,
+          # not its interaction with the GitHub API for creating issues/comments.
+          # Omitting the token ensures no actual API calls are made.
+
+      - name: Verify Output Status
+        run: |
+          echo "Expected status: ${{ matrix.expected_status }}"
+          echo "Actual status: ${{ steps.gardener.outputs.status }}"
+          if [ "${{ steps.gardener.outputs.status }}" != "${{ matrix.expected_status }}" ]; then
+            echo "::error::Status mismatch!"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Verify Report Content
+        run: |
+          echo "Expected report to contain: ${{ matrix.expected_report_contains }}"
+          echo "Actual report: ${{ steps.gardener.outputs.report }}"
+          if ! echo "${{ steps.gardener.outputs.report }}" | grep -q "${{ matrix.expected_report_contains }}"; then
+            echo "::error::Report content mismatch!"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Cleanup Test Repository State
+        if: always() # Run cleanup even if previous steps fail
+        run: |
+          rm -rf README.md LICENSE CONTRIBUTING.md MISSING.md .DS_Store temp_config.bak src/
+        shell: bash
+        working-directory: ${{ github.workspace }}
