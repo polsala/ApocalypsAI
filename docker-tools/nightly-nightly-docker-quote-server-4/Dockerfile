@@ -1,0 +1,1 @@
+FROM python:3.11-alpine\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY src/ ./src/\n\nENV FLASK_APP=src/app.py\nEXPOSE 5000\n\nCMD ["python", "src/app.py"]\n
