@@ -1,0 +1,19 @@
+name: 'Nightly PR Cheerleader'
+description: 'Celebrates positive emoji reactions on PR/issue comments with whimsical affirmations.'
+inputs:
+  github-token:
+    description: 'GitHub token with permissions to add comments (e.g., ${{ secrets.GITHUB_TOKEN }}).'
+    required: true
+  reaction-emojis:
+    description: 'Comma-separated list of emojis (without colons) to trigger the cheer. E.g., "+1,sparkles,tada".'
+    required: false
+    default: '+1,sparkles,tada,rocket,eyes,heart,hooray'
+  affirmations-file:
+    description: 'Path to a file containing custom affirmations, one per line. If not provided, uses internal default list.'
+    required: false
+outputs:
+  comment-id:
+    description: 'The ID of the comment posted, if any.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
