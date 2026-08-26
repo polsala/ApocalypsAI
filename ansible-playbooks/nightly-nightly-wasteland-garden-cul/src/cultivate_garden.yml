@@ -1,0 +1,49 @@
+---
+- name: Cultivate Wasteland Garden
+  hosts: all
+  become: yes # Needed for creating directories/files with specific permissions
+  vars:
+    garden_config:
+      - path: "/opt/wasteland_resources"
+        state: directory
+        mode: "0755"
+        owner: "root"
+        group: "root"
+        files:
+          - name: "scavenged_data.log"
+            content: "Initial log entry\n"
+            mode: "0644"
+          - name: ".resource_marker"
+            content: ""
+            mode: "0600"
+      - path: "/var/lib/settlement_cache"
+        state: directory
+        mode: "0770"
+        owner: "root" # Example user, can be overridden
+        group: "root" # Example group, can be overridden
+        files: [] # No specific files for this path initially
+
+  tasks:
+    - name: Ensure garden paths exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: "{{ item.state }}"
+        mode: "{{ item.mode }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+      loop: "{{ garden_config }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Ensure garden files exist within paths
+      ansible.builtin.copy:
+        dest: "{{ item.path }}/{{ file_item.name }}"
+        content: "{{ file_item.content | default('') }}"
+        mode: "{{ file_item.mode }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+      loop: "{{ garden_config }}"
+      loop_control:
+        label: "{{ item.path }}/{{ file_item.name }}"
+      when: item.files is defined and item.files | length > 0
+      with_items: "{{ item.files }}"
