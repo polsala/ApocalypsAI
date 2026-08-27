@@ -1,0 +1,10 @@
+[package]
+name = "nightly-stellar-dust-sweeper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+walkdir = "2"
+chrono = "0.4"
+filetime = "0.2" # Used for setting file times in tests
