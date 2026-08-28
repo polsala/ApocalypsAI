@@ -1,0 +1,11 @@
+- name: Generate survival tip
+  hosts: localhost
+  gather_facts: false
+  vars:
+    tip: "Always keep a spare can‑opener; you never know when canned beans become a delicacy."
+  tasks:
+    - name: Write tip to file
+      copy:
+        dest: "./survival_tip.txt"
+        content: "{{ tip }}\n"
+        mode: "0644"
