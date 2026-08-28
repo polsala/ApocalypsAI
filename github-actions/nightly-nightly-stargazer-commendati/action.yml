@@ -1,0 +1,13 @@
+name: 'Nightly Stargazer Commendation'
+description: 'Randomly commends a recently merged Pull Request with a whimsical, star-themed comment.'
+inputs:
+  github-token:
+    description: 'GitHub token with permissions to read PRs and create comments.'
+    required: true
+  days-back:
+    description: 'Number of days to look back for merged Pull Requests.'
+    required: false
+    default: '7'
+runs:
+  using: 'node16'
+  main: 'src/index.js'
