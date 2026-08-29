@@ -1,0 +1,128 @@
+name: 'Test PR Whimsy Blesser'
+on: [workflow_dispatch]
+
+jobs:
+  test_blessing_conditions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 'Test: PR with correct label and size'
+        id: bless_success
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '123'
+          pr-labels: 'feature,bless-me,bug'
+          pr-lines-changed: '25'
+      - name: 'Assert success'
+        run: |
+          echo "Blessing message: ${{ steps.bless_success.outputs.blessing-message }}"
+          echo "Blessing posted: ${{ steps.bless_success.outputs.blessing-posted }}"
+          if [[ "${{ steps.bless_success.outputs.blessing-posted }}" != "true" ]]; then
+            echo "Test failed: Blessing should have been posted."
+            exit 1
+          fi
+          if [[ -z "${{ steps.bless_success.outputs.blessing-message }}" ]]; then
+            echo "Test failed: Blessing message should not be empty."
+            exit 1
+          fi
+
+      - name: 'Test: PR without required label'
+        id: bless_no_label
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '456'
+          pr-labels: 'feature,bug'
+          pr-lines-changed: '10'
+      - name: 'Assert no label skip'
+        run: |
+          if [[ "${{ steps.bless_no_label.outputs.blessing-posted }}" != "false" ]]; then
+            echo "Test failed: Blessing should NOT have been posted (missing label)."
+            exit 1
+          fi
+          if [[ -n "${{ steps.bless_no_label.outputs.blessing-message }}" ]]; then
+            echo "Test failed: Blessing message should be empty (missing label)."
+            exit 1
+          fi
+
+      - name: 'Test: PR too large'
+        id: bless_too_large
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '789'
+          pr-labels: 'bless-me'
+          pr-lines-changed: '100'
+      - name: 'Assert too large skip'
+        run: |
+          if [[ "${{ steps.bless_too_large.outputs.blessing-posted }}" != "false" ]]; then
+            echo "Test failed: Blessing should NOT have been posted (PR too large)."
+            exit 1
+          fi
+          if [[ -n "${{ steps.bless_too_large.outputs.blessing-message }}" ]]; then
+            echo "Test failed: Blessing message should be empty (PR too large)."
+            exit 1
+          fi
+
+      - name: 'Test: PR too small (0 lines)'
+        id: bless_too_small
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '101'
+          pr-labels: 'bless-me'
+          pr-lines-changed: '0'
+      - name: 'Assert too small skip'
+        run: |
+          if [[ "${{ steps.bless_too_small.outputs.blessing-posted }}" != "false" ]]; then
+            echo "Test failed: Blessing should NOT have been posted (PR too small)."
+            exit 1
+          fi
+          if [[ -n "${{ steps.bless_too_small.outputs.blessing-message }}" ]]; then
+            echo "Test failed: Blessing message should be empty (PR too small)."
+            exit 1
+          fi
+
+      - name: 'Test: Empty blessings file (should error)'
+        id: bless_empty_file
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '202'
+          pr-labels: 'bless-me'
+          pr-lines-changed: '10'
+          blessings-file: 'tests/empty_blessings.txt' # Mock rationale: Test error handling for empty file.
+        continue-on-error: true # Allow the step to fail for assertion
+      - name: 'Assert empty file error'
+        run: |
+          if [[ "${{ steps.bless_empty_file.outcome }}" != "failure" ]]; then
+            echo "Test failed: Action should have failed for empty blessings file."
+            exit 1
+          fi
+          if [[ "${{ steps.bless_empty_file.outputs.blessing-posted }}" != "false" ]]; then
+            echo "Test failed: Blessing should NOT have been posted (empty file)."
+            exit 1
+          fi
+
+      - name: 'Test: Non-existent blessings file (should error)'
+        id: bless_non_existent_file
+        uses: ./
+        with:
+          github-token: 'mock_token' # Mock rationale: Not actually making API calls, just checking logic.
+          pr-number: '303'
+          pr-labels: 'bless-me'
+          pr-lines-changed: '10'
+          blessings-file: 'tests/non_existent_file.txt' # Mock rationale: Test error handling for missing file.
+        continue-on-error: true # Allow the step to fail for assertion
+      - name: 'Assert non-existent file error'
+        run: |
+          if [[ "${{ steps.bless_non_existent_file.outcome }}" != "failure" ]]; then
+            echo "Test failed: Action should have failed for non-existent blessings file."
+            exit 1
+          fi
+          if [[ "${{ steps.bless_non_existent_file.outputs.blessing-posted }}" != "false" ]]; then
+            echo "Test failed: Blessing should NOT have been posted (non-existent file)."
+            exit 1
+          fi
