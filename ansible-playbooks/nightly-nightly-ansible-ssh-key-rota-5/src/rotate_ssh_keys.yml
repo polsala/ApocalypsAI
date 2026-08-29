@@ -1,0 +1,60 @@
+---
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars:
+    ssh_key_type: "{{ ssh_key_type | default('rsa') }}"
+    ssh_key_bits: "{{ ssh_key_bits | default(4096) }}"
+    backup_dir: "{{ backup_dir | default('/etc/ssh/old_keys') }}"
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Find existing host key files
+      find:
+        paths: /etc/ssh
+        patterns: "ssh_host_*_key"
+        file_type: file
+      register: existing_keys
+
+    - name: Backup existing host keys
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ backup_dir }}/{{ item.path | basename }}.bak"
+        remote_src: true
+        mode: '0600'
+      loop: "{{ existing_keys.files }}"
+
+    - name: Remove existing host keys
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ existing_keys.files }}"
+
+    - name: Generate new SSH host key
+      command: >
+        ssh-keygen -t {{ ssh_key_type }} -b {{ ssh_key_bits }}
+        -f /etc/ssh/ssh_host_{{ ssh_key_type }}_key -N ''
+      args:
+        creates: "/etc/ssh/ssh_host_{{ ssh_key_type }}_key"
+
+    - name: Restart ssh service
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Remove old host key from control node known_hosts
+      delegate_to: localhost
+      known_hosts:
+        name: "{{ inventory_hostname }}"
+        state: absent
+
+    - name: Add new host key to control node known_hosts
+      delegate_to: localhost
+      known_hosts:
+        name: "{{ inventory_hostname }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -p {{ ansible_port | default(22) }} {{ inventory_hostname }}') }}"
+        state: present
