@@ -1,0 +1,18 @@
+# Use the same base image as the application
+FROM python:3.9-slim-buster
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container at /app
+COPY src/requirements.txt .
+
+# Install application dependencies and test dependencies
+RUN pip install --no-cache-dir -r requirements.txt Flask-Testing
+
+# Copy the application code and test files
+COPY src/ /app/src/
+COPY tests/ /app/tests/
+
+# Command to run the tests
+CMD ["python", "-m", "unittest", "tests/test_app.py"]
