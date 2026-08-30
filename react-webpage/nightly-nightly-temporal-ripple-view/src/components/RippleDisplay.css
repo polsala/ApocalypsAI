@@ -1,0 +1,73 @@
+.ripple-card {
+  background-color: #4a4f57;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+  border-left: 5px solid; /* For severity indicator */
+}
+
+.ripple-card:hover {
+  transform: translateY(-5px);
+}
+
+.ripple-card h3 {
+  color: #e0e0e0;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.3em;
+}
+
+.ripple-card p {
+  margin: 5px 0;
+  color: #c0c0c0;
+  font-size: 0.95em;
+}
+
+.ripple-card strong {
+  color: #f0f0f0;
+}
+
+/* Severity indicators */
+.severity-1 { border-color: #4CAF50; /* Green */ }
+.severity-2 { border-color: #8BC34A; /* Light Green */ }
+.severity-3 { border-color: #FFEB3B; /* Yellow */ }
+.severity-4 { border-color: #FF9800; /* Orange */ }
+.severity-5 { border-color: #F44336; /* Red */ }
+
+/* Status indicators */
+.status-active {
+  /* No specific background change, border color handles it */
+}
+
+.status-stabilized {
+  opacity: 0.7;
+  background-color: #5a5f67;
+}
+
+.stabilize-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+  margin-top: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.stabilize-button:hover {
+  background-color: #21a1f1;
+}
+
+.stabilized-indicator {
+  display: inline-block;
+  background-color: #4CAF50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-top: 10px;
+}
