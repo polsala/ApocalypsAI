@@ -1,0 +1,1 @@
+FROM python:3.11-slim\nWORKDIR /app\nCOPY src/ ./src/\nCOPY src/__init__.py ./src/__init__.py\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nENTRYPOINT ["python", "src/app.py"]
