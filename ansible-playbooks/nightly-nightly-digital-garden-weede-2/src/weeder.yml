@@ -1,0 +1,91 @@
+---
+- name: Digital Garden Weeder
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure garden path exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure quarantine path exists
+      ansible.builtin.file:
+        path: "{{ quarantine_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find all markdown files in the garden
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_result
+
+    - name: Get current timestamp for staleness calculation
+      ansible.builtin.command: date +%s
+      register: current_timestamp_result
+      changed_when: false
+
+    - name: Set current timestamp fact
+      ansible.builtin.set_fact:
+        current_timestamp: "{{ current_timestamp_result.stdout | int }}"
+
+    - name: Process each markdown file to get content and initial status
+      ansible.builtin.set_fact:
+        processed_files: "{{ processed_files | default([]) + [
+          {
+            'path': item.path,
+            'filename': item.path | basename,
+            'basename_no_ext': item.path | basename | splitext | first,
+            'mtime': item.mtime,
+            'content': (item.path | ansible.builtin.slurp | b64decode).decode('utf-8', errors='ignore'),
+            'is_stale': ((current_timestamp - item.mtime) > (stale_threshold_days * 24 * 3600)),
+            'is_linked': false # Placeholder, will be updated
+          }
+        ] }}"
+      loop: "{{ md_files_result.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Determine linked status for each file
+      ansible.builtin.set_fact:
+        processed_files: >
+          {% set updated_files = [] %}
+          {% for file_data in processed_files %}
+            {% set is_linked = false %}
+            {% for other_file_data in processed_files %}
+              {% if file_data.basename_no_ext != other_file_data.basename_no_ext %}
+                {% if other_file_data.content is search('\\b' + file_data.basename_no_ext + '\\b') %}
+                  {% set is_linked = true %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {% set _ = updated_files.append(file_data | combine({'is_linked': is_linked})) %}
+          {% endfor %}
+          {{ updated_files }}
+
+    - name: Identify files for quarantine (stale AND unlinked)
+      ansible.builtin.set_fact:
+        quarantine_candidates: "{{ processed_files | selectattr('is_stale', 'equalto', true) | selectattr('is_linked', 'equalto', false) | list }}"
+
+    - name: Generate weeder report
+      ansible.builtin.template:
+        src: templates/weeder_report.j2
+        dest: "{{ quarantine_path }}/weeder_report_{{ ansible_date_time.iso8601_basic }}.txt"
+      vars:
+        stale_files: "{{ processed_files | selectattr('is_stale', 'equalto', true) | list }}"
+        unlinked_files: "{{ processed_files | selectattr('is_linked', 'equalto', false) | list }}"
+        quarantine_files: "{{ quarantine_candidates }}"
+
+    - name: Move identified files to quarantine (if enabled)
+      ansible.builtin.command: mv "{{ item.path }}" "{{ quarantine_path }}/{{ item.filename }}"
+      loop: "{{ quarantine_candidates }}"
+      when: perform_quarantine
+      loop_control:
+        label: "Moving {{ item.filename }}"
