@@ -1,0 +1,6 @@
+---
+data_archive_service_name: wasteland-archive
+data_archive_path: /opt/wasteland_data
+backup_script_path: /usr/local/bin/backup_wasteland_data.sh
+backup_cron_schedule: "0 2 * * *" # Daily at 2 AM
+backup_destination_path: /mnt/wasteland_backups

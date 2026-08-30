@@ -1,0 +1,185 @@
+---
+- name: Test Nightly Wasteland Data Fortifier Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_data_archive_service_name: test-wasteland-archive
+    test_data_archive_path: "/tmp/test_wasteland_data_{{ lookup('pipe', 'date +%s') }}"
+    test_backup_script_path: "/tmp/test_backup_script_{{ lookup('pipe', 'date +%s') }}.sh"
+    test_backup_destination_path: "/tmp/test_wasteland_backups_{{ lookup('pipe', 'date +%s') }}"
+    test_cron_schedule: "*/5 * * * *" # Every 5 minutes for testing
+    test_cron_job_string: "{{ test_backup_script_path }} {{ test_data_archive_path }} {{ test_backup_destination_path }} > /dev/null 2>&1"
+
+  tasks:
+    - name: Ensure test environment is clean before starting
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_data_archive_path }}"
+        - "{{ test_backup_script_path }}"
+        - "{{ test_backup_destination_path }}"
+      # Mock rationale: Cleans up any previous test runs to ensure a clean slate.
+
+    - name: Remove test cron job if it exists from previous runs
+      ansible.builtin.cron:
+        name: "Wasteland Data Archive Daily Backup"
+        job: "{{ test_cron_job_string }}"
+        state: absent
+      # Mock rationale: Ensures cron is clean.
+
+    - name: Create a dummy service file for the test service
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Test Wasteland Archive Service
+          [Service]
+          ExecStart=/bin/true
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/{{ test_data_archive_service_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      # Mock rationale: Simulates the presence of a systemd service for the playbook to manage.
+      # This allows the 'service' module to find and attempt to start/enable it without a real application.
+
+    - name: Reload systemd to pick up dummy service
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      # Mock rationale: Necessary for systemd to recognize the newly created dummy service.
+
+    - name: Run the main playbook to fortify the data archive
+      ansible.builtin.include_playbook: src/fortify_data_archive.yml
+      vars:
+        data_archive_service_name: "{{ test_data_archive_service_name }}"
+        data_archive_path: "{{ test_data_archive_path }}"
+        backup_script_path: "{{ test_backup_script_path }}"
+        backup_cron_schedule: "{{ test_cron_schedule }}"
+        backup_destination_path: "{{ test_backup_destination_path }}"
+      # Mock rationale: Executes the playbook under test with test-specific variables.
+
+    - name: Verify data archive path exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_data_archive_path }}"
+      register: data_archive_stat
+      # Mock rationale: Checks the actual filesystem state after playbook execution.
+
+    - name: Assert data archive path properties
+      ansible.builtin.assert:
+        that:
+          - data_archive_stat.stat.exists
+          - data_archive_stat.stat.isdir
+          - data_archive_stat.stat.pw_name == 'root'
+          - data_archive_stat.stat.gr_name == 'root'
+          - data_archive_stat.stat.mode == '0750'
+        msg: "Data archive path {{ test_data_archive_path }} not correctly fortified."
+      # Mock rationale: Deterministically asserts the state of the directory.
+
+    - name: Verify backup destination path exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ test_backup_destination_path }}"
+      register: backup_dest_stat
+      # Mock rationale: Checks the actual filesystem state after playbook execution.
+
+    - name: Assert backup destination path properties
+      ansible.builtin.assert:
+        that:
+          - backup_dest_stat.stat.exists
+          - backup_dest_stat.stat.isdir
+          - backup_dest_stat.stat.pw_name == 'root'
+          - backup_dest_stat.stat.gr_name == 'root'
+          - backup_dest_stat.stat.mode == '0700'
+        msg: "Backup destination path {{ test_backup_destination_path }} not correctly created."
+      # Mock rationale: Deterministically asserts the state of the directory.
+
+    - name: Verify backup script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ test_backup_script_path }}"
+      register: backup_script_stat
+      # Mock rationale: Checks the actual filesystem state after playbook execution.
+
+    - name: Assert backup script properties
+      ansible.builtin.assert:
+        that:
+          - backup_script_stat.stat.exists
+          - backup_script_stat.stat.isreg
+          - backup_script_stat.stat.pw_name == 'root'
+          - backup_script_stat.stat.gr_name == 'root'
+          - backup_script_stat.stat.mode == '0700'
+        msg: "Backup script {{ test_backup_script_path }} not correctly deployed."
+      # Mock rationale: Deterministically asserts the state of the script file.
+
+    - name: Verify cron job exists
+      ansible.builtin.command: "crontab -l"
+      register: crontab_output
+      changed_when: false
+      # Mock rationale: Checks the actual crontab entries.
+
+    - name: Assert cron job entry is present
+      ansible.builtin.assert:
+        that:
+          - test_cron_job_string in crontab_output.stdout
+        msg: "Cron job for backup script not found in crontab."
+      # Mock rationale: Deterministically asserts the presence of the cron job.
+
+    - name: Verify dummy service is running
+      ansible.builtin.command: "systemctl is-active {{ test_data_archive_service_name }}"
+      register: service_status
+      changed_when: false
+      # Mock rationale: Checks the actual status of the dummy systemd service.
+
+    - name: Assert dummy service is active
+      ansible.builtin.assert:
+        that:
+          - service_status.stdout == 'active'
+        msg: "Dummy service {{ test_data_archive_service_name }} is not active."
+      # Mock rationale: Deterministically asserts the service status.
+
+    - name: Run the main playbook again in check_mode to verify idempotence
+      ansible.builtin.include_playbook: src/fortify_data_archive.yml
+      vars:
+        data_archive_service_name: "{{ test_data_archive_service_name }}"
+        data_archive_path: "{{ test_data_archive_path }}"
+        backup_script_path: "{{ test_backup_script_path }}"
+        backup_cron_schedule: "{{ test_cron_schedule }}"
+        backup_destination_path: "{{ test_backup_destination_path }}"
+      check_mode: yes
+      register: idempotence_check
+      # Mock rationale: Runs the playbook in check_mode to ensure no changes are reported
+      # when the system is already in the desired state.
+
+    - name: Assert no changes were reported in check_mode (idempotence)
+      ansible.builtin.assert:
+        that:
+          - idempotence_check.changed == false
+        msg: "Idempotence check failed: changes were reported in check_mode."
+      # Mock rationale: Deterministically asserts that the playbook is idempotent.
+
+  always:
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_data_archive_path }}"
+        - "{{ test_backup_script_path }}"
+        - "{{ test_backup_destination_path }}"
+        - "/etc/systemd/system/{{ test_data_archive_service_name }}.service"
+      ignore_errors: yes
+      # Mock rationale: Ensures the system is returned to its original state.
+
+    - name: Remove test cron job
+      ansible.builtin.cron:
+        name: "Wasteland Data Archive Daily Backup"
+        job: "{{ test_cron_job_string }}"
+        state: absent
+      ignore_errors: yes
+      # Mock rationale: Ensures the cron job is removed.
+
+    - name: Reload systemd after removing dummy service
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      ignore_errors: yes
+      # Mock rationale: Cleans up systemd's knowledge of the dummy service.
