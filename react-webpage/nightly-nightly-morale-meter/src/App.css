@@ -1,0 +1,119 @@
+.App {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+  background-color: #282c34;
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+h1 {
+  color: #61dafb;
+}
+
+main {
+  width: 100%;
+  max-width: 600px;
+  background-color: #3a3f47;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.morale-input-section,
+.morale-history-section {
+  margin-bottom: 30px;
+}
+
+.morale-slider {
+  width: 80%;
+  margin: 20px 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  border-radius: 5px;
+}
+
+.morale-slider:hover {
+  opacity: 1;
+}
+
+.morale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #61dafb;
+  cursor: pointer;
+}
+
+.morale-slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #61dafb;
+  cursor: pointer;
+}
+
+.log-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+}
+
+.log-button:hover {
+  background-color: #21a1f1;
+}
+
+.current-feedback {
+  margin-top: 20px;
+  font-style: italic;
+  color: #a0a0a0;
+}
+
+.morale-list {
+  list-style: none;
+  padding: 0;
+}
+
+.morale-item {
+  background-color: #4a4f57;
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.morale-level {
+  font-weight: bold;
+  color: #61dafb;
+}
+
+.morale-date {
+  font-size: 0.9em;
+  color: #a0a0a0;
+  margin-left: 10px;
+}
+
+.morale-feedback {
+  margin-top: 10px;
+  color: #e0e0e0;
+}
