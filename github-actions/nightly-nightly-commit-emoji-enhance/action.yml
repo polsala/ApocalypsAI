@@ -1,0 +1,5 @@
+name: "Commit Emoji Enhancer"\ndescription: "Appends an emoji to a commit message to make CI output more fun."\ninputs:\n  commit_message:\n    description: "The original commit message."
+    required: true\n    type: string\n  emoji:\n    description: "Optional emoji to use. If omitted, a default emoji is chosen."
+    required: false\n    type: string\noutputs:\n  enhanced_message:\n    description: "The commit message with an emoji appended."
+runs:\n  using: "composite"\n  steps:\n    - name: Enhance commit message\n      shell: bash\n      run: |
+        ./src/enhance.sh "${{ inputs.commit_message }}" "${{ inputs.emoji }}"
