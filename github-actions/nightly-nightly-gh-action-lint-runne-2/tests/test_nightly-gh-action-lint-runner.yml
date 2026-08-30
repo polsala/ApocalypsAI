@@ -1,0 +1,64 @@
+# This test workflow is designed to be run by a CI system to verify the functionality
+# of the nightly-gh-action-lint-runner workflow.
+
+name: Test Nightly GitHub Actions Lint Runner
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test_lint_runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Create a dummy workflow file that is intentionally malformed to test failure
+      - name: Create malformed workflow file
+        run: |
+          mkdir -p .github/workflows
+          echo "name: Malformed Workflow\n
+          on: push\n
+          jobs:\n            build:\n              runs-on: ubuntu-latest\n              steps:\n                - uses: actions/checkout@v4\n                - name: Run a command\n                  run: echo 'Hello, world!'\n                - name: Missing colon here\n                  run: echo 'This will fail linting'"
+            > .github/workflows/malformed_test.yml
+
+      # Use the reusable workflow to lint the malformed file. This should fail.
+      - name: Run the lint runner on malformed workflow (expected to fail)
+        id: lint_step
+        uses: ./.github/workflows/nightly-gh-action-lint-runner.yml
+        continue-on-error: true # We expect this to fail, so we continue
+
+      - name: Assert lint runner failed as expected
+        run: |
+          if [ "${{ steps.lint_step.outcome }}" != "failure" ]; then
+            echo "Error: The lint runner did not fail as expected when given a malformed workflow."
+            exit 1
+          else
+            echo "Success: The lint runner failed as expected."
+          fi
+
+      # Create a dummy workflow file that is syntactically correct
+      - name: Create valid workflow file
+        run: |
+          echo "name: Valid Workflow\n
+          on: push\n
+          jobs:\n            build:\n              runs-on: ubuntu-latest\n              steps:\n                - uses: actions/checkout@v4\n                - name: Run a command\n                  run: echo 'This is a valid workflow'"
+            > .github/workflows/valid_test.yml
+
+      # Use the reusable workflow to lint the valid file. This should succeed.
+      - name: Run the lint runner on valid workflow (expected to succeed)
+        id: lint_step_valid
+        uses: ./.github/workflows/nightly-gh-action-lint-runner.yml
+        continue-on-error: false # We expect this to succeed
+
+      - name: Assert lint runner succeeded as expected
+        run: |
+          if [ "${{ steps.lint_step_valid.outcome }}" != "success" ]; then
+            echo "Error: The lint runner failed unexpectedly on a valid workflow."
+            exit 1
+          else
+            echo "Success: The lint runner succeeded as expected."
+          fi
