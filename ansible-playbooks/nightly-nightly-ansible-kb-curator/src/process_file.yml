@@ -1,0 +1,67 @@
+---
+- name: Read file content
+  ansible.builtin.slurp:
+    src: "{{ current_file.path }}"
+  register: file_content_slurp
+
+- name: Decode file content
+  ansible.builtin.set_fact:
+    file_content: "{{ file_content_slurp.content | b64decode }}"
+
+- name: Check for YAML front matter and extract metadata
+  ansible.builtin.set_fact:
+    has_front_matter: "{{ file_content is search('^---\\n') and file_content is search('\\n---\\n') }}"
+    front_matter_raw: "{{ (file_content | regex_search('^---\\n(.*?)\\n---\\n', multiline=True, '\\1'))[0] if file_content is search('^---\\n') and file_content is search('\\n---\\n') else '' }}"
+    file_metadata: "{{ front_matter_raw | from_yaml(errors='ignore') if has_front_matter else {} }}"
+  when: file_content is defined
+
+- name: Check for missing title
+  ansible.builtin.set_fact:
+    _missing_title: true
+  when:
+    - has_front_matter
+    - file_metadata.title is not defined or file_metadata.title | trim == ''
+
+- name: Check for missing tags
+  ansible.builtin.set_fact:
+    _missing_tags: true
+  when:
+    - has_front_matter
+    - file_metadata.tags is not defined or file_metadata.tags | length == 0
+
+- name: Determine if file is stale
+  ansible.builtin.set_fact:
+    _is_stale: "{{ (ansible_date_time.epoch | int - current_file.mtime) > (stale_threshold_days * 24 * 60 * 60) }}"
+  # Mock rationale: ansible_date_time.epoch is provided by the test playbook for deterministic results.
+  # In a non-test run, ansible_date_time would be gathered facts or explicitly set.
+
+- name: Add file to appropriate lists (missing meta)
+  ansible.builtin.set_fact:
+    files_missing_meta: "{{ files_missing_meta + [ { 'path': current_file.path, 'issues': [] } ] }}"
+  when: not has_front_matter or (_missing_title is defined and _missing_title) or (_missing_tags is defined and _missing_tags)
+
+- name: Add missing title issue
+  ansible.builtin.set_fact:
+    files_missing_meta: "{{ files_missing_meta | map('combine', {'issues': (item.issues + ['Missing title'])}) | list }}"
+  loop: "{{ files_missing_meta }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: item.path == current_file.path and _missing_title is defined and _missing_title
+
+- name: Add missing tags issue
+  ansible.builtin.set_fact:
+    files_missing_meta: "{{ files_missing_meta | map('combine', {'issues': (item.issues + ['Missing tags'])}) | list }}"
+  loop: "{{ files_missing_meta }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: item.path == current_file.path and _missing_tags is defined and _missing_tags
+
+- name: Add stale file
+  ansible.builtin.set_fact:
+    stale_files: "{{ stale_files + [ { 'path': current_file.path, 'mtime_iso': current_file.mtime_iso } ] }}"
+  when: _is_stale
+
+- name: Add healthy file
+  ansible.builtin.set_fact:
+    healthy_files: "{{ healthy_files + [ current_file.path ] }}"
+  when: not _is_stale and not (not has_front_matter or (_missing_title is defined and _missing_title) or (_missing_tags is defined and _missing_tags))

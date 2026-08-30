@@ -1,0 +1,53 @@
+---
+- name: Curate the Wasteland Wisdom Archive
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/config.yml
+
+  vars:
+    report_file: "{{ playbook_dir }}/curation_report.txt"
+    current_timestamp: "{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}"
+    # Mock rationale: For non-test runs, dynamically get current epoch.
+    # This will be overridden in tests for determinism.
+    ansible_date_time:
+      epoch: "{{ lookup('pipe', 'date +%s') }}"
+      iso8601: "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%SZ') }}"
+    all_files: []
+    files_missing_meta: []
+    stale_files: []
+    healthy_files: []
+
+  tasks:
+    - name: Ensure knowledge base path exists
+      ansible.builtin.stat:
+        path: "{{ knowledge_base_path }}"
+      register: kb_path_stat
+      failed_when: not kb_path_stat.stat.exists or not kb_path_stat.stat.isdir
+
+    - name: Find all markdown files in the knowledge base
+      ansible.builtin.find:
+        paths: "{{ knowledge_base_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files
+
+    - name: Process each markdown file
+      ansible.builtin.include_tasks: process_file.yml
+      loop: "{{ md_files.files }}"
+      loop_control:
+        loop_var: current_file
+      vars: # Pass ansible_date_time to the included task
+        ansible_date_time: "{{ ansible_date_time }}"
+
+    - name: Generate curation report
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/curation_report.j2"
+        dest: "{{ report_file }}"
+      delegate_to: localhost
+
+    - name: Display report path
+      ansible.builtin.debug:
+        msg: "Curation report generated at: {{ report_file }}"
