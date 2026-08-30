@@ -1,0 +1,12 @@
+name: 'Nightly Workflow Emote Generator'
+description: 'Generates a whimsical emoji or message based on workflow status.'
+inputs:
+  status:
+    description: 'The status of the previous workflow step or job (e.g., success, failure, cancelled, skipped).'
+    required: true
+outputs:
+  emote:
+    description: 'A whimsical emoji or message representing the workflow status.'
+runs:
+  using: 'bash'
+  entrypoint: 'src/generate_emote.sh'
