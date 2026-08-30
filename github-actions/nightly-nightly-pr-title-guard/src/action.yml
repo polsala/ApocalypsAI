@@ -1,0 +1,17 @@
+name: "PR Title Guard"
+description: "Fail if PR title is shorter than a configurable minimum length."
+author: "ApocalypsAI"
+
+inputs:
+  min_length:
+    description: "Minimum title length"
+    required: false
+    default: "10"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check PR title
+      shell: bash
+      run: |
+        "${{ github.action_path }}/check_title.sh" "${{ inputs.min_length }}"
