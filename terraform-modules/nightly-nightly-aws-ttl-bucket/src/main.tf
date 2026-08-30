@@ -1,0 +1,1 @@
+resource \"aws_s3_bucket\" \"this\" {\n  bucket = var.bucket_name\n  force_destroy = true\n}\n\nresource \"aws_s3_bucket_lifecycle_configuration\" \"expire\" {\n  bucket = aws_s3_bucket.this.id\n\n  rule {\n    id     = \"expire-after-ttl\"\n    status = \"Enabled\"\n    expiration {\n      days = var.ttl_days\n    }\n    filter {}\n  }\n}\n

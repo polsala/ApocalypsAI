@@ -1,0 +1,1 @@
+variable \"bucket_name\" {\n  description = \"Name of the S3 bucket.\"\n  type        = string\n}\n\nvariable \"ttl_days\" {\n  description = \"Number of days after which objects expire.\"\n  type        = number\n  default     = 30\n}\n
