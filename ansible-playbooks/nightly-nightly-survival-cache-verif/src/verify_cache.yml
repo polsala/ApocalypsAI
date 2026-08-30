@@ -1,0 +1,42 @@
+---
+- name: Verify Survival Cache Integrity
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/cache_manifest.yml # Contains 'survival_cache_files' dictionary
+
+  tasks:
+    - name: Check integrity of survival cache files
+      ansible.builtin.stat:
+        path: "{{ item.key }}"
+        checksum_algorithm: sha256
+      register: file_stats
+      loop: "{{ survival_cache_files | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Report integrity status
+      ansible.builtin.debug:
+        msg: >
+          File: {{ item.item.key }}
+          Status: {% if item.stat.exists and item.stat.checksum == item.item.value %}OK{% else %}FAILED{% endif %}
+          Expected: {{ item.item.value }}
+          Actual: {% if item.stat.exists %}{{ item.stat.checksum }}{% else %}File not found{% endif %}
+      loop: "{{ file_stats.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      register: integrity_report_results
+
+    - name: Set fact if any integrity check failed
+      ansible.builtin.set_fact:
+        integrity_failed: "{{ true }}"
+      when: item.msg is search("FAILED")
+      loop: "{{ integrity_report_results.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      run_once: true
+
+    - name: Fail the playbook if any integrity check failed
+      ansible.builtin.fail:
+        msg: "Integrity check failed for one or more files. See report above."
+      when: integrity_failed is defined and integrity_failed
