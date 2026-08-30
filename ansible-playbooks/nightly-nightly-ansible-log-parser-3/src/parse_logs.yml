@@ -1,0 +1,49 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log directory exists (for mock testing)
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+      when: ansible_env.USER == 'root' # Only run if we have root privileges for mock setup
+
+    - name: Create mock log file for testing
+      copy:
+        content: "{{ mock_log_content }}"
+        dest: "{{ log_dir }}/{{ mock_log_file }}"
+      when: ansible_env.USER == 'root'
+
+    - name: Read log files
+      slurp:
+        src: "{{ item }}"
+      loop: "{{ log_files }}"
+      register: log_contents
+      ignore_errors: yes
+
+    - name: Process log entries and find errors/warnings
+      set_fact:
+        parsed_logs: "{{ parsed_logs | default([]) + [ {'file': item.item, 'lines': (item.content | b64decode).splitlines() | select('match', '(ERROR|WARN|FAIL|DENIED)') | list } ] }}"
+      loop: "{{ log_contents.results }}"
+      when: item.content is defined
+
+    - name: Summarize findings
+      set_fact:
+        log_summary:
+          total_errors: "{{ parsed_logs | sum(attribute='lines | length') }}"
+          issues_by_file: "{{ parsed_logs | community.general.dict_kv('file', 'lines | length') }}"
+      when: parsed_logs is defined and parsed_logs | length > 0
+
+    - name: Display log summary
+      debug:
+        msg: "Log Analysis Summary: {{ log_summary }}"
+      when: log_summary is defined
+
+    - name: No issues found message
+      debug:
+        msg: "No significant errors or warnings found in the specified log files."
+      when: log_summary is not defined or log_summary.total_errors == 0
