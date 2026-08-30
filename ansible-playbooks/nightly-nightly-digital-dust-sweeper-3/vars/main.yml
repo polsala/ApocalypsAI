@@ -1,0 +1,12 @@
+# vars/main.yml
+# Number of days after which files in /tmp should be considered 'old' and deleted.
+cleanup_tmp_days: 7
+
+# Number of days after which files in configured cleanup_paths should be considered 'old' and deleted.
+cleanup_log_days: 30
+
+# A list of additional directories where old files should be cleaned.
+# Ensure these paths exist on your target systems.
+cleanup_paths:
+  - /var/log/old_app_logs
+  - /opt/temp_data

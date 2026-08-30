@@ -1,0 +1,128 @@
+- name: Test Nightly Digital Dust Sweeper
+  hosts: localhost
+  gather_facts: false
+  become: yes # For creating/deleting files in system-like paths for testing
+  vars:
+    test_dir: "/tmp/ansible_test_dust_sweeper"
+    test_log_dir: "{{ test_dir }}/var/log/old_app_logs"
+    test_tmp_dir: "{{ test_dir }}/tmp"
+    cleanup_tmp_days: 0 # Clean immediately for testing
+    cleanup_log_days: 0 # Clean immediately for testing
+    cleanup_paths:
+      - "{{ test_log_dir }}"
+
+  pre_tasks:
+    - name: Ensure test directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0777'
+      loop:
+        - "{{ test_dir }}"
+        - "{{ test_log_dir }}"
+        - "{{ test_tmp_dir }}"
+
+    - name: Create dummy old files in test /tmp
+      ansible.builtin.copy:
+        content: "old tmp file content"
+        dest: "{{ test_tmp_dir }}/old_tmp_file_{{ item }}.txt"
+      loop: range(3)
+
+    - name: Create dummy old files in test log path
+      ansible.builtin.copy:
+        content: "old log file content"
+        dest: "{{ test_log_dir }}/old_log_file_{{ item }}.log"
+      loop: range(2)
+
+    - name: Create dummy recent file in test /tmp (should not be deleted)
+      ansible.builtin.copy:
+        content: "recent tmp file content"
+        dest: "{{ test_tmp_dir }}/recent_tmp_file.txt"
+      # Mock rationale: This file is created to ensure the age filter works correctly.
+      # It's recent, so it should not be deleted by the playbook.
+
+  tasks:
+    - name: Run dust sweeper playbook in check mode
+      ansible.builtin.include_tasks:
+        file: ../src/dust_sweeper.yml
+      vars:
+        cleanup_tmp_days: "{{ cleanup_tmp_days }}"
+        cleanup_log_days: "{{ cleanup_log_days }}"
+        cleanup_paths: "{{ cleanup_paths }}"
+      check_mode: yes
+      register: check_mode_result
+
+    - name: Assert check mode reports changes
+      ansible.builtin.assert:
+        that:
+          - check_mode_result is changed
+          - "'Delete old files in /tmp' in check_mode_result.results | map(attribute='task') | list"
+          - "'Delete old files in configured cleanup_paths' in check_mode_result.results | map(attribute='task') | list"
+        fail_msg: "Check mode did not report expected changes."
+      # Mock rationale: We are asserting against the 'changed' status and task names
+      # reported by Ansible's check_mode, which is a deterministic way to test
+      # without actual system modification.
+
+    - name: Run dust sweeper playbook for real cleanup
+      ansible.builtin.include_tasks:
+        file: ../src/dust_sweeper.yml
+      vars:
+        cleanup_tmp_days: "{{ cleanup_tmp_days }}"
+        cleanup_log_days: "{{ cleanup_log_days }}"
+        cleanup_paths: "{{ cleanup_paths }}"
+      register: real_cleanup_result
+
+    - name: Assert real cleanup reported changes
+      ansible.builtin.assert:
+        that:
+          - real_cleanup_result is changed
+        fail_msg: "Real cleanup did not report changes when it should have."
+      # Mock rationale: We expect changes because dummy files were present.
+
+    - name: Verify old files in test /tmp are gone
+      ansible.builtin.stat:
+        path: "{{ test_tmp_dir }}/old_tmp_file_{{ item }}.txt"
+      register: tmp_file_stats
+      loop: range(3)
+
+    - name: Assert old files in test /tmp are absent
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "Old tmp file {{ item.item }} was not deleted."
+      loop: "{{ tmp_file_stats.results }}"
+      # Mock rationale: We are checking the file system state after cleanup,
+      # which is deterministic for files created within the test environment.
+
+    - name: Verify old files in test log path are gone
+      ansible.builtin.stat:
+        path: "{{ test_log_dir }}/old_log_file_{{ item }}.log"
+      register: log_file_stats
+      loop: range(2)
+
+    - name: Assert old files in test log path are absent
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "Old log file {{ item.item }} was not deleted."
+      loop: "{{ log_file_stats.results }}"
+      # Mock rationale: Similar to above, checking file system state.
+
+    - name: Verify recent file in test /tmp still exists
+      ansible.builtin.stat:
+        path: "{{ test_tmp_dir }}/recent_tmp_file.txt"
+      register: recent_tmp_file_stat
+
+    - name: Assert recent file in test /tmp still exists
+      ansible.builtin.assert:
+        that:
+          - recent_tmp_file_stat.stat.exists
+        fail_msg: "Recent tmp file was unexpectedly deleted."
+      # Mock rationale: Verifying the age filter works by ensuring a recent file is untouched.
+
+  post_tasks:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: test_dir is defined and test_dir != '/' # Safety check
