@@ -1,0 +1,49 @@
+---
+- name: Monitor and report service moods
+  hosts: servers
+  become: yes
+  vars_files:
+    - vars/service_config.yml
+
+  tasks:
+    - name: Loop through critical services
+      loop: "{{ critical_services }}"
+      loop_control:
+        loop_var: current_service
+      block:
+        - name: Check initial status of {{ current_service.name }}
+          ansible.builtin.systemd:
+            name: "{{ current_service.name }}"
+          register: service_initial_status
+          ignore_errors: yes # Allow playbook to continue if service doesn't exist or status check fails
+
+        - name: Attempt to restart {{ current_service.name }} if not running
+          ansible.builtin.systemd:
+            name: "{{ current_service.name }}"
+            state: restarted
+          when:
+            - service_initial_status.status is defined
+            - service_initial_status.status.ActiveState != 'active'
+          register: restart_result
+          ignore_errors: yes # Restart might fail if service is truly broken
+
+        - name: Re-check status of {{ current_service.name }} after potential restart
+          ansible.builtin.systemd:
+            name: "{{ current_service.name }}"
+          register: service_final_status
+          ignore_errors: yes
+
+        - name: Determine and report the mood of {{ current_service.name }}
+          ansible.builtin.debug:
+            msg: >
+              Service '{{ current_service.name }}' ({{ current_service.description }})
+              is currently {{ service_moods[service_final_status.status.ActiveState | default('unknown')] | default(service_moods.unknown) }}
+              (ActiveState: {{ service_final_status.status.ActiveState | default('N/A') }}).
+          when: service_final_status.status is defined
+
+        - name: Report unknown mood if service status could not be determined
+          ansible.builtin.debug:
+            msg: >
+              Service '{{ current_service.name }}' ({{ current_service.description }})
+              is currently {{ service_moods.unknown }}. Could not determine status.
+          when: service_final_status.status is not defined

@@ -1,0 +1,126 @@
+---
+- name: Setup and run tests for Service Mood Monitor
+  hosts: test_servers
+  become: yes
+
+  vars:
+    dummy_service_name: "dummy-test-service"
+    dummy_service_file: "/etc/systemd/system/{{ dummy_service_name }}.service"
+    dummy_log_file: "/tmp/dummy_service.log"
+
+  tasks:
+    - name: Ensure systemd is available for testing
+      ansible.builtin.package:
+        name: systemd
+        state: present
+      when: ansible_service_mgr == 'systemd'
+      ignore_errors: yes # In case systemd is not the service manager
+
+    - name: Create dummy systemd service file
+      ansible.builtin.copy:
+        dest: "{{ dummy_service_file }}"
+        content: |
+          [Unit]
+          Description=Dummy Test Service for Ansible Playbook
+          After=network.target
+
+          [Service]
+          ExecStart=/bin/bash -c "echo 'Dummy service started at $(date)' >> {{ dummy_log_file }}; sleep infinity"
+          Restart=always
+          Type=simple
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload systemd daemon
+
+    - name: Ensure dummy service is stopped and disabled initially
+      ansible.builtin.systemd:
+        name: "{{ dummy_service_name }}"
+        state: stopped
+        enabled: no
+        daemon_reload: yes
+      ignore_errors: yes # In case it's not running or enabled
+
+    - name: Clean up dummy log file
+      ansible.builtin.file:
+        path: "{{ dummy_log_file }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Test 1: Service is initially stopped, should be restarted and reported active
+      block:
+        - name: Run main playbook (service should be restarted)
+          ansible.builtin.include_tasks:
+            file: ../src/service_mood_monitor.yml
+          vars:
+            # Override critical_services to only include our dummy service for focused testing
+            critical_services:
+              - name: "{{ dummy_service_name }}"
+                description: "A temporary service for testing"
+
+        - name: Assert dummy service is now active
+          ansible.builtin.systemd:
+            name: "{{ dummy_service_name }}"
+          register: dummy_service_status_after_run_1
+
+        - ansible.builtin.assert:
+            that:
+              - dummy_service_status_after_run_1.status.ActiveState == 'active'
+            fail_msg: "Dummy service was not active after initial run when it should have been restarted."
+            success_msg: "Dummy service correctly restarted and is active."
+
+    - name: Test 2: Service is already active, should be reported active (no restart needed)
+      block:
+        - name: Ensure dummy service is active
+          ansible.builtin.systemd:
+            name: "{{ dummy_service_name }}"
+            state: started
+            enabled: yes
+            daemon_reload: yes
+
+        - name: Run main playbook (service should remain active)
+          ansible.builtin.include_tasks:
+            file: ../src/service_mood_monitor.yml
+          vars:
+            # Override critical_services to only include our dummy service for focused testing
+            critical_services:
+              - name: "{{ dummy_service_name }}"
+                description: "A temporary service for testing"
+
+        - name: Assert dummy service is still active
+          ansible.builtin.systemd:
+            name: "{{ dummy_service_name }}"
+          register: dummy_service_status_after_run_2
+
+        - ansible.builtin.assert:
+            that:
+              - dummy_service_status_after_run_2.status.ActiveState == 'active'
+            fail_msg: "Dummy service was not active after second run when it should have remained active."
+            success_msg: "Dummy service correctly remained active."
+
+  handlers:
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+  always:
+    - name: Final cleanup - Stop and disable dummy service
+      ansible.builtin.systemd:
+        name: "{{ dummy_service_name }}"
+        state: stopped
+        enabled: no
+        daemon_reload: yes
+      ignore_errors: yes
+
+    - name: Final cleanup - Remove dummy service file
+      ansible.builtin.file:
+        path: "{{ dummy_service_file }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Final cleanup - Remove dummy log file
+      ansible.builtin.file:
+        path: "{{ dummy_log_file }}"
+        state: absent
+      ignore_errors: yes
+# Mock rationale: The test playbook creates and controls a `dummy-test-service.service` on `localhost` using `ansible.builtin.copy` and `ansible.builtin.systemd`. This simulates the presence and state changes of a service without relying on external network calls or pre-existing system services, making the test deterministic and self-contained. Assertions are made against the actual state of this controlled dummy service.

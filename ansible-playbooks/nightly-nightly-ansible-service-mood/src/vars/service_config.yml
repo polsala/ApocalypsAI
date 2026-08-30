@@ -1,0 +1,17 @@
+---
+critical_services:
+  - name: "nginx"
+    description: "Web Server"
+  - name: "postgresql"
+    description: "Database Server"
+  - name: "sshd"
+    description: "Secure Shell Daemon"
+
+service_moods:
+  active: "Chirping merrily 🐦"
+  inactive: "Slumbering peacefully 😴"
+  failed: "Grumpy and unresponsive 😠"
+  activating: "Stretching awake ✨"
+  deactivating: "Winding down ⏳"
+  reloading: "Taking a deep breath 💨"
+  unknown: "Lost in the void 🌌"
