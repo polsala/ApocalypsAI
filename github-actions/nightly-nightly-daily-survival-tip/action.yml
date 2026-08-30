@@ -1,0 +1,15 @@
+name: "Daily Survival Tip"
+description: "Creates a daily survival tip issue in the repository"
+inputs:
+  github_token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Run tip script"
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        bash "${{ github.action_path }}/src/tip.sh"
