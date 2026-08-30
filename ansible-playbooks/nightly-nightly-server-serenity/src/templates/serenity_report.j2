@@ -1,0 +1,28 @@
+--- Server Serenity Report for {{ inventory_hostname }} ---
+Date: {{ ansible_date_time.iso8601_micro | default(ansible_date_time.date + ' ' + ansible_date_time.time + ' UTC') }}
+
+[ Cosmic Clock Sync ]
+Status: {{ serenity_ntp_sync_status }}
+
+[ Forgotten Temporary Files (older than {{ tmp_file_age_days }} days) ]
+Status: {% if serenity_tmp_files_status.found %}
+  Found {{ serenity_tmp_files_status.files | length }} old temporary files.
+  {% if clean_old_tmp_files %}These files were cleaned.
+  {% else %}Consider cleaning: {{ serenity_tmp_files_status.files | join(', ') }}. (Not cleaned, 'clean_old_tmp_files' is false)
+  {% endif %}
+{% else %}
+  No old temporary files found.
+{% endif %}
+
+[ Pending Reboot Reminder ]
+Status: {{ serenity_reboot_status }}
+
+[ Disk Space Harmony ]
+{% if serenity_disk_clutter_status %}
+{{ serenity_disk_clutter_status }}
+{% else %}
+  No specific disk clutter detected or directories not found.
+{% endif %}
+
+--- Serenity Level: {% if 'Reboot required' in serenity_reboot_status or serenity_tmp_files_status.found or 'Not synchronized' in serenity_ntp_sync_status %}Moderate to Low{% else %}High{% endif %} ---
+May your server hum with the gentle rhythm of efficiency and peace.

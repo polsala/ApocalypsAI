@@ -1,0 +1,10 @@
+---
+- name: Check for /var/run/reboot-required file
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+  changed_when: false
+
+- name: Set fact for pending reboot status
+  ansible.builtin.set_fact:
+    serenity_reboot_status: "{{ 'Reboot required for system updates.' if reboot_required_file.stat.exists else 'No reboot required.' }}"
