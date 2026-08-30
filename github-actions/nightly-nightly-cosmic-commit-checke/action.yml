@@ -1,0 +1,56 @@
+name: 'Cosmic Commit Checker'
+description: 'Checks commit messages for cosmic alignment (keyword adherence).'
+
+inputs:
+  commit_range:
+    description: 'Git commit range (e.g., HEAD~5..HEAD, main..HEAD). Ignored if commit_messages_file is provided.'
+    required: false
+    default: 'HEAD~5..HEAD'
+  required_keywords:
+    description: 'Comma-separated list of keywords that MUST be present in at least one commit message.'
+    required: false
+    default: ''
+  forbidden_keywords:
+    description: 'Comma-separated list of keywords that MUST NOT be present in ANY commit message.'
+    required: false
+    default: ''
+  fail_on_mismatch:
+    description: 'If true, the action will fail if any rules are violated.'
+    required: false
+    default: 'true'
+  commit_messages_file:
+    description: 'Path to a file containing commit messages, one per line. Used for testing/mocking.'
+    required: false
+    default: ''
+
+outputs:
+  alignment_status:
+    description: 'Overall cosmic alignment status (aligned/misaligned)'
+    value: ${{ steps.check_script.outputs.alignment_status }}
+  required_found:
+    description: 'Comma-separated list of required keywords found'
+    value: ${{ steps.check_script.outputs.required_found }}
+  forbidden_found:
+    description: 'Comma-separated list of forbidden keywords found'
+    value: ${{ steps.check_script.outputs.forbidden_found }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code (for git log if file not provided)
+      uses: actions/checkout@v4
+      # We need to fetch history for git log to work correctly
+      with:
+        fetch-depth: 0 # Fetch all history for accurate range checks
+
+    - name: Run Cosmic Commit Check Script
+      id: check_script
+      shell: bash
+      run: |
+        ${{ github.action_path }}/src/check_commits.sh
+      env:
+        INPUT_COMMIT_RANGE: ${{ inputs.commit_range }}
+        INPUT_REQUIRED_KEYWORDS: ${{ inputs.required_keywords }}
+        INPUT_FORBIDDEN_KEYWORDS: ${{ inputs.forbidden_keywords }}
+        INPUT_FAIL_ON_MISMATCH: ${{ inputs.fail_on_mismatch }}
+        INPUT_COMMIT_MESSAGES_FILE: ${{ inputs.commit_messages_file }}
