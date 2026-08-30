@@ -1,0 +1,65 @@
+---
+# This file contains the core logic for temporal drift correction.
+# It expects 'ntp_service_status' and 'timedatectl_status_output' to be defined
+# either by actual command output or by 'set_fact' in testing.
+
+- name: Check NTP service status (actual command)
+  ansible.builtin.command: systemctl is-active systemd-timesyncd.service
+  register: _ntp_service_check_cmd
+  changed_when: false
+  failed_when: false
+  when: ntp_service_status is not defined # Only run if not mocked by tests
+  # Mock rationale: This command checks the actual service status. In tests,
+  # 'ntp_service_status' variable will be pre-set to simulate states, bypassing this task.
+
+- name: Set ntp_service_status fact from command output
+  ansible.builtin.set_fact:
+    ntp_service_status: "{{ _ntp_service_check_cmd.stdout | default('inactive') }}"
+  when: _ntp_service_check_cmd.rc is defined and ntp_service_status is not defined
+  # Mock rationale: This task derives a fact from the command output. In tests,
+  # 'ntp_service_status' will be directly set, bypassing this task.
+
+- name: Check timedatectl status (actual command)
+  ansible.builtin.command: timedatectl status
+  register: _timedatectl_status_cmd
+  changed_when: false
+  failed_when: false
+  when: timedatectl_status_output is not defined # Only run if not mocked by tests
+  # Mock rationale: This command checks the actual time synchronization status. In tests,
+  # 'timedatectl_status_output' variable will be pre-set to simulate states, bypassing this task.
+
+- name: Set timedatectl_status_output fact from command output
+  ansible.builtin.set_fact:
+    timedatectl_status_output: "{{ _timedatectl_status_cmd.stdout | default('') }}"
+  when: _timedatectl_status_cmd.rc is defined and timedatectl_status_output is not defined
+  # Mock rationale: This task derives a fact from the command output. In tests,
+  # 'timedatectl_status_output' will be directly set, bypassing this task.
+
+- name: Parse NTP sync status
+  ansible.builtin.set_fact:
+    is_ntp_synced: "{{ 'System clock synchronized: yes' in timedatectl_status_output }}"
+    is_ntp_service_active: "{{ 'NTP service: active' in timedatectl_status_output or ntp_service_status == 'active' }}"
+  # Mock rationale: This task parses the mocked or actual output to determine sync status.
+
+- name: Ensure NTP service is running
+  ansible.builtin.systemd:
+    name: systemd-timesyncd
+    state: started
+    enabled: yes
+  when: not is_ntp_service_active
+  # Mock rationale: This task would start the service. In tests, we assert if this task *would* run.
+
+- name: Synchronize system clock with NTP
+  ansible.builtin.command: timedatectl set-ntp true
+  when: not is_ntp_synced
+  # Mock rationale: This task would sync the clock. In tests, we assert if this task *would* run.
+
+- name: Report Cosmic Clock Alignment Status
+  ansible.builtin.debug:
+    msg: |
+      Cosmic Clock Alignment Report:
+      NTP Service Active: {{ is_ntp_service_active }}
+      System Clock Synced: {{ is_ntp_synced }}
+      Full timedatectl status:
+      {{ timedatectl_status_output }}
+  # Mock rationale: This task reports the final status, which can be captured and asserted in tests.

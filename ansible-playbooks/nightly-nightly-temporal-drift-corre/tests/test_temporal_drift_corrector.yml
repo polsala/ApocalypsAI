@@ -1,0 +1,91 @@
+---
+- name: Test Temporal Drift Corrector Playbook
+  hosts: localhost
+  gather_facts: false
+  become: yes # Needed for systemd and timedatectl commands if they were real
+  tasks:
+    - name: Test Scenario 1: NTP service stopped and unsynced
+      block:
+        - name: Mock NTP service stopped and unsynced state
+          ansible.builtin.set_fact:
+            ntp_service_status: "inactive"
+            timedatectl_status_output: |
+              System clock synchronized: no
+              NTP service: inactive
+              RTC in local TZ: no
+              Time zone: UTC (UTC, +0000)
+          # Mock rationale: Simulates a system where NTP is not running and clock is unsynced.
+
+        - name: Run the core tasks in check mode
+          ansible.builtin.include_tasks: ../src/temporal_drift_tasks.yml
+          args:
+            apply:
+              check_mode: true
+          register: result_scenario1
+          # Mock rationale: Runs the tasks without making actual changes,
+          # allowing us to inspect what *would* change.
+
+        - name: Assert corrective actions for Scenario 1
+          ansible.builtin.assert:
+            that:
+              - "result_scenario1.changed"
+              - "result_scenario1.results | selectattr('task_path', 'search', 'Ensure NTP service is running') | map(attribute='changed') | first | default(false)"
+              - "result_scenario1.results | selectattr('task_path', 'search', 'Synchronize system clock with NTP') | map(attribute='changed') | first | default(false)"
+            fail_msg: "Scenario 1 failed: Expected NTP service to start and clock to sync."
+          # Mock rationale: Asserts that the tasks to start NTP and sync clock were marked as 'changed' in check mode.
+
+    - name: Test Scenario 2: NTP service running but unsynced
+      block:
+        - name: Mock NTP service running but unsynced state
+          ansible.builtin.set_fact:
+            ntp_service_status: "active"
+            timedatectl_status_output: |
+              System clock synchronized: no
+              NTP service: active
+              RTC in local TZ: no
+              Time zone: UTC (UTC, +0000)
+          # Mock rationale: Simulates a system where NTP is running but clock is unsynced.
+
+        - name: Run the core tasks in check mode
+          ansible.builtin.include_tasks: ../src/temporal_drift_tasks.yml
+          args:
+            apply:
+              check_mode: true
+          register: result_scenario2
+          # Mock rationale: Runs the tasks without making actual changes.
+
+        - name: Assert corrective actions for Scenario 2
+          ansible.builtin.assert:
+            that:
+              - "result_scenario2.changed"
+              - "not (result_scenario2.results | selectattr('task_path', 'search', 'Ensure NTP service is running') | map(attribute='changed') | first | default(false))" # Service already active, not changed
+              - "result_scenario2.results | selectattr('task_path', 'search', 'Synchronize system clock with NTP') | map(attribute='changed') | first | default(false)"
+            fail_msg: "Scenario 2 failed: Expected clock to sync, but NTP service not to start."
+          # Mock rationale: Asserts that only the clock sync task was marked as 'changed'.
+
+    - name: Test Scenario 3: NTP service running and synced (no drift)
+      block:
+        - name: Mock NTP service running and synced state
+          ansible.builtin.set_fact:
+            ntp_service_status: "active"
+            timedatectl_status_output: |
+              System clock synchronized: yes
+              NTP service: active
+              RTC in local TZ: no
+              Time zone: UTC (UTC, +0000)
+          # Mock rationale: Simulates a healthy system with no temporal drift.
+
+        - name: Run the core tasks in check mode
+          ansible.builtin.include_tasks: ../src/temporal_drift_tasks.yml
+          args:
+            apply:
+              check_mode: true
+          register: result_scenario3
+          # Mock rationale: Runs the tasks without making actual changes.
+
+        - name: Assert no actions for Scenario 3
+          ansible.builtin.assert:
+            that:
+              - "not result_scenario3.changed" # Expect no changes
+            fail_msg: "Scenario 3 failed: Expected no changes for a healthy system."
+          # Mock rationale: Asserts that no tasks were marked as 'changed'.
