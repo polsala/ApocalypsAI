@@ -1,0 +1,18 @@
+{
+  "categories": [
+    { "id": "urgent-void", "name": "Urgent Void", "description": "Critical tasks requiring immediate attention before temporal collapse.", "priority": 1 },
+    { "id": "temporal-drift", "name": "Temporal Drift", "description": "Important but not immediate; can float for a bit.", "priority": 2 },
+    { "id": "future-echo", "name": "Future Echo", "description": "Long-term plans, ideas, or things to consider for the distant future.", "priority": 3 },
+    { "id": "forgotten-relic", "name": "Forgotten Relic", "description": "Low priority, archival, or items that might never be revisited.", "priority": 4 }
+  ],
+  "rules": [
+    { "keyword": "urgent", "targetCategoryId": "urgent-void" },
+    { "keyword": "critical", "targetCategoryId": "urgent-void" },
+    { "keyword": "bug", "targetCategoryId": "urgent-void" },
+    { "keyword": "review", "targetCategoryId": "temporal-drift" },
+    { "keyword": "plan", "targetCategoryId": "future-echo" },
+    { "keyword": "idea", "targetCategoryId": "future-echo" },
+    { "keyword": "archive", "targetCategoryId": "forgotten-relic" }
+  ],
+  "defaultCategoryId": "temporal-drift"
+}
