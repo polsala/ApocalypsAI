@@ -1,0 +1,41 @@
+---
+- name: Ensure Nightly Shelter Comforts are Maintained
+  hosts: shelters
+  gather_facts: no
+  vars:
+    report_file: "comfort_report.txt"
+    # Default thresholds (can be overridden by host/group vars)
+    solar_panel_clean_threshold: 0.8 # 80% clean
+    water_filter_clog_threshold: 0.2 # 20% clogged is acceptable
+    glow_moss_brightness_threshold: 70 # out of 100
+    nosh_nook_min_stock: 10 # minimum snack units
+    chimes_tangle_tolerance: 0.1 # 10% tangle is acceptable
+
+  tasks:
+    - name: Include power system check
+      ansible.builtin.include_tasks: tasks/check_power.yml
+
+    - name: Include water purification check
+      ansible.builtin.include_tasks: tasks/check_water.yml
+
+    - name: Include lighting array check
+      ansible.builtin.include_tasks: tasks/check_lighting.yml
+
+    - name: Include snack dispenser check
+      ansible.builtin.include_tasks: tasks/check_snacks.yml
+
+    - name: Include security chimes check
+      ansible.builtin.include_tasks: tasks/check_security.yml
+
+    - name: Generate comfort report
+      ansible.builtin.template:
+        src: templates/comfort_report.j2
+        dest: "{{ report_file }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Display comfort report summary
+      ansible.builtin.debug:
+        msg: "Comfort report generated at {{ report_file }}. Check it for details."
+      delegate_to: localhost
+      run_once: true

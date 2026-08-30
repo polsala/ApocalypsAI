@@ -1,0 +1,20 @@
+---
+- name: Simulate checking Automated Nosh Nook stock level
+  ansible.builtin.set_fact:
+    nosh_nook_stock: "{{ lookup('ansible.builtin.env', 'MOCK_NOSH_STOCK') | default(25) | int }}"
+  # Mock rationale: In a real scenario, this would query an inventory system or sensor.
+  # For testing, we mock the stock level.
+
+- name: Report Automated Nosh Nook stock level
+  ansible.builtin.debug:
+    msg: "Automated Nosh Nook stock: {{ nosh_nook_stock }} units"
+
+- name: Set fact if Automated Nosh Nook is low on stock
+  ansible.builtin.set_fact:
+    snacks_issue_detected: true
+  when: nosh_nook_stock < nosh_nook_min_stock
+
+- name: Suggest restocking Automated Nosh Nook if low
+  ansible.builtin.debug:
+    msg: "ACTION REQUIRED: Automated Nosh Nook is low on snacks! Current stock: {{ nosh_nook_stock }} units (Minimum: {{ nosh_nook_min_stock }} units). Time for a scavenging run!"
+  when: nosh_nook_stock < nosh_nook_min_stock

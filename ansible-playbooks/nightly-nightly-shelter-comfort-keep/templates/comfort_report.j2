@@ -1,0 +1,37 @@
+Nightly Shelter Comfort Report for {{ ansible_hostname }}
+Date: {{ ansible_date_time.date }}
+Time: {{ ansible_date_time.time }}
+
+--- Comfort Systems Status ---
+
+Solar Shimmer Panels:
+  Cleanliness: {{ (solar_panel_cleanliness * 100) | round(2) }}%
+  Status: {% if power_issue_detected is defined and power_issue_detected %}NEEDS CLEANING{% else %}OK{% endif %}
+
+Aqua-Purifier Gurgle-Filter:
+  Clog Level: {{ (water_filter_clog_level * 100) | round(2) }}%
+  Status: {% if water_issue_detected is defined and water_issue_detected %}CLOGGED{% else %}OK{% endif %}
+
+Glow-Moss Luminescence Array:
+  Brightness: {{ glow_moss_brightness }} units
+  Status: {% if lighting_issue_detected is defined and lighting_issue_detected %}DIM{% else %}OK{% endif %}
+
+Automated Nosh Nook:
+  Stock Level: {{ nosh_nook_stock }} units
+  Status: {% if snacks_issue_detected is defined and snacks_issue_detected %}LOW STOCK{% else %}OK{% endif %}
+
+Whisper-Wind Chimes:
+  Tangle Level: {{ (chimes_tangle_level * 100) | round(2) }}%
+  Status: {% if security_issue_detected is defined and security_issue_detected %}TANGLED{% else %}OK{% endif %}
+
+--- Summary ---
+
+Overall Comfort Status: {% if power_issue_detected is defined and power_issue_detected or \
+                             water_issue_detected is defined and water_issue_detected or \
+                             lighting_issue_detected is defined and lighting_issue_detected or \
+                             snacks_issue_detected is defined and snacks_issue_detected or \
+                             security_issue_detected is defined and security_issue_detected %}
+  ATTENTION REQUIRED: Some comfort systems need your care!
+{% else %}
+  All comfort systems are operating optimally. Enjoy your night!
+{% endif %}

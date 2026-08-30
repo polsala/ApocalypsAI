@@ -1,0 +1,20 @@
+---
+- name: Simulate checking Aqua-Purifier Gurgle-Filter clog level
+  ansible.builtin.set_fact:
+    water_filter_clog_level: "{{ lookup('ansible.builtin.env', 'MOCK_WATER_CLOG') | default(0.1) | float }}"
+  # Mock rationale: In a real scenario, this would involve reading a pressure sensor
+  # or flow rate. For testing, we mock the clog level.
+
+- name: Report Aqua-Purifier Gurgle-Filter status
+  ansible.builtin.debug:
+    msg: "Aqua-Purifier Gurgle-Filter clog level: {{ (water_filter_clog_level * 100) | round(2) }}%"
+
+- name: Set fact if Aqua-Purifier Gurgle-Filter needs attention
+  ansible.builtin.set_fact:
+    water_issue_detected: true
+  when: water_filter_clog_level > water_filter_clog_threshold
+
+- name: Suggest cleaning Aqua-Purifier Gurgle-Filter if needed
+  ansible.builtin.debug:
+    msg: "ACTION REQUIRED: Aqua-Purifier Gurgle-Filter is clogged! Current clog: {{ (water_filter_clog_level * 100) | round(2) }}% (Threshold: {{ (water_filter_clog_threshold * 100) | round(2) }}%)"
+  when: water_filter_clog_level > water_filter_clog_threshold
