@@ -1,0 +1,41 @@
+name: 'Nightly Branch Whisperer'
+description: 'Identifies stale branches and offers whimsical suggestions, without deleting them.'
+inputs:
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  repo-token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+    default: '${{ github.token }}'
+  exclude-branches:
+    description: 'Comma-separated list of branch names to exclude from staleness check (e.g., main,develop,release/*).'
+    required: false
+    default: 'main,master,develop'
+outputs:
+  stale-branches-count:
+    description: 'The number of stale branches found.'
+    value: ${{ steps.whisperer.outputs.stale-branches-count }}
+  stale-branches-report:
+    description: 'A markdown-formatted report of stale branches and whimsical suggestions.'
+    value: ${{ steps.whisperer.outputs.stale-branches-report }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for accurate git log dates
+
+    - name: Run Branch Whisperer
+      id: whisperer
+      shell: bash
+      run: |
+        # Pass inputs as environment variables for the script
+        export INPUT_STALE_DAYS="${{ inputs.stale-days }}"
+        export INPUT_REPO_TOKEN="${{ inputs.repo-token }}"
+        export INPUT_EXCLUDE_BRANCHES="${{ inputs.exclude-branches }}"
+        
+        # Execute the main script
+        bash "${{ github.action_path }}/src/branch_whisperer.sh"
