@@ -1,0 +1,8 @@
+---
+scavenger_paths:
+  - /tmp/apocalypsai_scavenge_area # Default path for testing/example
+  - /var/log
+
+scavenger_min_file_size_mb: 10 # Minimum file size in MB to report
+scavenger_max_file_age_days: 30 # Maximum age in days for files to be considered "old"
+scavenger_report_path: "/tmp/scavenger_report_{{ ansible_hostname }}.txt"
