@@ -1,0 +1,76 @@
+.empathy-visualizer-container {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.visual-feedback {
+  width: 100%;
+  min-height: 200px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.5s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden; /* Ensure shapes don't overflow */
+}
+
+.mood-text {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  z-index: 1; /* Ensure text is above shapes */
+}
+
+.mood-shape {
+  position: absolute;
+  opacity: 0.7;
+  transition: all 0.5s ease-in-out;
+  animation: pulse 2s infinite alternate;
+  z-index: 0; /* Ensure shapes are behind text */
+}
+
+/* Shape styles */
+.shape-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.shape-triangle {
+  width: 0;
+  height: 0;
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  border-bottom: 100px solid rgba(255, 255, 255, 0.3);
+}
+
+.shape-diamond {
+  width: 100px;
+  height: 100px;
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: rotate(45deg);
+}
+
+.shape-square {
+  width: 100px;
+  height: 100px;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.shape-none {
+  display: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
