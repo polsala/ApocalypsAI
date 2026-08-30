@@ -1,0 +1,1 @@
+# syntax=docker/dockerfile:1\n\n# Build stage\nFROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/ ./\nRUN go build -o quote-server .\n\n# Run stage\nFROM alpine:3.19\nWORKDIR /app\nCOPY --from=builder /app/quote-server .\nEXPOSE 8080\nENTRYPOINT ["./quote-server"]\n
