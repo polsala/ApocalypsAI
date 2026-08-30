@@ -1,0 +1,20 @@
+---
+- name: Clean up Digital Garden Gnome artifacts
+  hosts: garden_servers
+  become: yes
+  vars:
+    gnome_base_dir: "/opt/digital_garden"
+  tasks:
+    - name: Ensure gnome base directory is absent
+      ansible.builtin.file:
+        path: "{{ gnome_base_dir }}"
+        state: absent
+      ignore_errors: yes
+      # Mock rationale: Ensures a clean, deterministic starting state for the test.
+
+    - name: Remove cron job
+      ansible.builtin.cron:
+        name: "digital garden gnome greeting"
+        state: absent
+      ignore_errors: yes
+      # Mock rationale: Ensures a clean, deterministic starting state for the test.
