@@ -1,0 +1,42 @@
+---
+- name: Setup apt-mirror for offline package cache
+  hosts: mirror
+  become: true
+  vars:
+    mirror_url: "{{ mirror_url | default('http://archive.ubuntu.com/ubuntu') }}"
+    target_dir: "{{ target_dir | default('/var/spool/apt-mirror') }}"
+  tasks:
+    - name: Ensure apt-mirror package is installed
+      apt:
+        name: apt-mirror
+        state: present
+        update_cache: yes
+
+    - name: Create mirror configuration
+      copy:
+        dest: /etc/apt/mirror.list
+        content: |
+          set base_path {{ target_dir }}
+          set defaultarch amd64
+          set nthreads 20
+          set _tilde 0
+          deb {{ mirror_url }} focal main restricted universe multiverse
+          deb {{ mirror_url }} focal-updates main restricted universe multiverse
+          deb {{ mirror_url }} focal-security main restricted universe multiverse
+        mode: '0644'
+
+    - name: Run apt-mirror to download packages
+      command: apt-mirror
+      args:
+        creates: "{{ target_dir }}/var"
+
+    - name: Ensure rsync is installed for optional sync
+      apt:
+        name: rsync
+        state: present
+
+    - name: Sync mirror to secondary hosts (optional)
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['clients'] | default([]) }}"
+      command: rsync -a --delete {{ target_dir }}/ {{ item }}:{{ target_dir }}/
+      when: groups['clients'] is defined and groups['clients'] | length > 0
