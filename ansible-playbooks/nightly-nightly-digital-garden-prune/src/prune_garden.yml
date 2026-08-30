@@ -1,0 +1,120 @@
+---
+- name: Nightly Digital Garden Pruner
+  hosts: garden_servers
+  gather_facts: false
+  vars_files:
+    - vars/pruner_config.yml
+
+  tasks:
+    - name: Ensure report directory exists locally
+      ansible.builtin.file:
+        path: "{{ pruner_report_path | dirname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Report is generated locally
+
+    - name: Initialize pruning report
+      ansible.builtin.copy:
+        content: |
+          Digital Garden Pruning Report - {{ ansible_date_time.iso8601_micro }}
+          --------------------------------------------------------------------
+          Dry Run: {{ pruner_dry_run }}
+          --------------------------------------------------------------------
+        dest: "{{ pruner_report_path }}"
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: Find and report/prune old files
+      block:
+        - name: Find old files in {{ item.path }}
+          ansible.builtin.find:
+            paths: "{{ item.path }}"
+            patterns: "{{ item.file_patterns | join(',') }}"
+            age: "{{ item.max_age_days }}d"
+            age_stamp: "{{ item.age_stamp | default('mtime') }}"
+            recurse: true
+          register: old_files_result
+          ignore_errors: true # Path might not exist
+
+        - name: Add old files to report
+          ansible.builtin.lineinfile:
+            path: "{{ pruner_report_path }}"
+            line: "- File: {{ found_file.path }} (Last modified: {{ found_file.mtime | to_datetime('%Y%m%d%H%M%S') | community.general.strftime('%Y-%m-%d %H:%M:%S') }})"
+            insertafter: "--------------------------------------------------------------------"
+          loop: "{{ old_files_result.files | default([]) }}"
+          loop_control:
+            loop_var: found_file
+          when: old_files_result.files is defined and old_files_result.files | length > 0
+          delegate_to: localhost
+
+        - name: Prune old files (if not dry run)
+          ansible.builtin.file:
+            path: "{{ found_file.path }}"
+            state: absent
+          loop: "{{ old_files_result.files | default([]) }}"
+          loop_control:
+            loop_var: found_file
+          when: not pruner_dry_run and old_files_result.files is defined and old_files_result.files | length > 0
+      loop: "{{ pruner_paths }}"
+      loop_control:
+        loop_var: item
+      tags: files
+
+    - name: Find and report/prune empty directories
+      block:
+        - name: Initialize empty_dirs_found list
+          ansible.builtin.set_fact:
+            empty_dirs_found: []
+
+        - name: Find all directories in {{ item }}
+          ansible.builtin.find:
+            paths: "{{ item }}"
+            file_type: directory
+            recurse: true
+            get_checksum: false
+          register: all_dirs_result
+          ignore_errors: true
+
+        - name: Filter for truly empty directories
+          ansible.builtin.set_fact:
+            empty_dirs_found: "{{ empty_dirs_found + [found_dir.path] }}"
+          loop: "{{ all_dirs_result.files | default([]) }}"
+          loop_control:
+            loop_var: found_dir
+          when: found_dir.isdir and found_dir.files | length == 0
+
+        - name: Add empty directories to report
+          ansible.builtin.lineinfile:
+            path: "{{ pruner_report_path }}"
+            line: "- Empty Directory: {{ empty_dir }}"
+            insertafter: "--------------------------------------------------------------------"
+          loop: "{{ empty_dirs_found | default([]) }}"
+          loop_control:
+            loop_var: empty_dir
+          when: empty_dirs_found is defined and empty_dirs_found | length > 0
+          delegate_to: localhost
+
+        - name: Prune empty directories (if not dry run)
+          ansible.builtin.file:
+            path: "{{ empty_dir }}"
+            state: absent
+          loop: "{{ empty_dirs_found | default([]) }}"
+          loop_control:
+            loop_var: empty_dir
+          when: not pruner_dry_run and empty_dirs_found is defined and empty_dirs_found | length > 0
+      loop: "{{ pruner_empty_dirs_paths }}"
+      loop_control:
+        loop_var: item
+      tags: empty_dirs
+
+    - name: Read and display pruning report
+      ansible.builtin.slurp:
+        src: "{{ pruner_report_path }}"
+      register: final_report
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Display final report
+      ansible.builtin.debug:
+        msg: "{{ final_report.content | b64decode }}"
+      delegate_to: localhost
