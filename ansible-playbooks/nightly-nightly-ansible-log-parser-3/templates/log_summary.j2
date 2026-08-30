@@ -1,0 +1,9 @@
+Log Analysis Summary for {{ inventory_hostname }}
+===================================================
+
+Detected Issues:
+{% for keyword, count in sorted_keyword_counts %}
+- {{ keyword }}: {{ count }}
+{% endfor %}
+
+(This is an automated report. For detailed logs, please check the original system logs.)
