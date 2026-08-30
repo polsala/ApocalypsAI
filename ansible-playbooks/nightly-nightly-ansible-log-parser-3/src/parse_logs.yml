@@ -1,0 +1,58 @@
+---
+- name: Parse system logs and generate summary
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes)
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: touch
+        mode: '0644'
+      when: ansible_connection == 'local' # Only run on control node for local testing simulation
+
+    - name: Create dummy log content (for testing purposes)
+      ansible.builtin.copy:
+        content: |
+          {{ ansible_date_time.iso8601 }} INFO: System started successfully.
+          {{ ansible_date_time.iso8601 }} WARN: Low disk space detected on /var.
+          {{ ansible_date_time.iso8601 }} ERROR: Failed to connect to database.
+          {{ ansible_date_time.iso8601 }} INFO: User logged in.
+          {{ ansible_date_time.iso8601 }} CRITICAL: Service crashed unexpectedly.
+          {{ ansible_date_time.iso8601 }} ERROR: Another connection error.
+        dest: "{{ log_file_path }}"
+      when: ansible_connection == 'local' # Only run on control node for local testing simulation
+
+    - name: Read log file content
+      ansible.builtin.slurp:
+        src: "{{ log_file_path }}"
+      register: log_content_raw
+
+    - name: Decode log content
+      ansible.builtin.set_fact:
+        log_content: "{{ log_content_raw['content'] | b64decode }}"
+
+    - name: Initialize error counts fact
+      ansible.builtin.set_fact:
+        error_counts: {}
+
+    - name: Iterate over log lines and count errors
+      ansible.builtin.set_fact:
+        error_counts: "{{ error_counts | combine({ item: (error_counts[item] | default(0)) + 1 }) }}"
+      loop: "{{ log_content.splitlines() | select('match', '(ERROR|FAIL|WARN|CRITICAL)') | map('regex_search', '(ERROR|FAIL|WARN|CRITICAL)') | map('lower') | list }}"
+      when: log_content is defined and log_content != ''
+
+    - name: Generate summary report
+      ansible.builtin.template:
+        src: templates/log_summary.j2
+        dest: "{{ report_output_path }}"
+      vars:
+        host: "{{ inventory_hostname }}"
+        errors: "{{ error_counts }}"
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display report path
+      ansible.builtin.debug:
+        msg: "Log summary report generated at: {{ report_output_path }} on the control node."
