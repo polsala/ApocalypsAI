@@ -1,0 +1,44 @@
+---
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars:
+    target_user: "{{ target_user | default('root') }}"
+    backup_dir: "/etc/ssh/backup_{{ ansible_date_time.iso8601_basic_short }}"
+  tasks:
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing host keys
+      ansible.builtin.command: cp /etc/ssh/ssh_host_* "{{ backup_dir }}/"
+      args:
+        removes: "{{ backup_dir }}/ssh_host_rsa_key"
+      ignore_errors: true
+
+    - name: Generate new RSA host key
+      ansible.builtin.command: ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ''
+      register: keygen_result
+      changed_when: keygen_result.rc == 0
+
+    - name: Set fact for new public key
+      ansible.builtin.set_fact:
+        new_pub_key: "{{ lookup('file', '/etc/ssh/ssh_host_rsa_key.pub') }}"
+
+    - name: Ensure target user exists
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        state: present
+
+    - name: Deploy new public key to authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ target_user }}"
+        key: "{{ new_pub_key }}"
+        state: present
+
+    - name: Cleanup old authorized_keys entries (optional)
+      # This step is left as a placeholder for manual review
+      ansible.builtin.debug:
+        msg: "Old keys retained for safety. Review backup at {{ backup_dir }}."
