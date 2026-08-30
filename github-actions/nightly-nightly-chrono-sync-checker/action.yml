@@ -1,0 +1,64 @@
+name: 'Nightly Chrono-Sync Checker'
+description: 'Detects files with modification times newer than the latest commit, flagging potential "chrono-desynchronization" in the repository.'
+inputs:
+  tolerance_seconds:
+    description: 'Time in seconds to tolerate between file modification time and latest commit time.'
+    required: false
+    default: '5'
+outputs:
+  desynchronized_files_found:
+    description: 'Boolean indicating if any desynchronized files were found.'
+    value: ${{ steps.run_check.outputs.desynchronized_files_found }}
+runs:
+  using: "composite"
+  steps:
+    - name: Run Chrono-Sync Check Script
+      id: run_check
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "Starting Nightly Chrono-Sync Checker..."
+
+        # Get the latest commit timestamp (Unix epoch)
+        LATEST_COMMIT_TIMESTAMP=$(git log -1 --format=%ct)
+        echo "Latest commit timestamp: $(date -d @$LATEST_COMMIT_TIMESTAMP)"
+
+        # Use input tolerance or default
+        TIMESTAMP_TOLERANCE="${{ inputs.tolerance_seconds }}"
+        echo "Using timestamp tolerance: ${TIMESTAMP_TOLERANCE} seconds"
+
+        DESYNCHRONIZED_FILES=""
+        FOUND_DESYNC=false
+
+        # Find all regular files and check their modification times
+        # Exclude .git directory and the action's own files if it's running in its own repo
+        find . -type f -print0 | while IFS= read -r -d $'\0' file; do
+            # Exclude .git directory
+            if [[ "$file" == "./.git"* ]]; then
+                continue
+            fi
+            # Exclude the action's own files if it's running in its own repo (e.g., during self-testing)
+            if [[ "$file" == "./action.yml" || "$file" == "./README.md" || "$file" == "./tests/test_workflow.yml" ]]; then
+                continue
+            fi
+
+            FILE_MTIME=$(stat -c %Y "$file") # Get modification time in Unix epoch
+            
+            # Check if file's modification time is significantly newer than the latest commit
+            if (( FILE_MTIME > (LATEST_COMMIT_TIMESTAMP + TIMESTAMP_TOLERANCE) )); then
+                DESYNCHRONIZED_FILES+="$file (Modified: $(date -d @$FILE_MTIME))\n"
+                FOUND_DESYNC=true
+            fi
+        done
+
+        if [ "$FOUND_DESYNC" = true ]; then
+            echo "::error::Chrono-desynchronization detected! The following files have modification times newer than the latest commit (plus tolerance):"
+            echo -e "$DESYNCHRONIZED_FILES"
+            echo "Please ensure all changes are committed and pushed, or investigate why these files are newer."
+            echo "desynchronized_files_found=true" >> "$GITHUB_OUTPUT"
+            exit 1
+        else
+            echo "Chrono-sync check passed. All files are in harmony with the latest commit."
+            echo "desynchronized_files_found=false" >> "$GITHUB_OUTPUT"
+        fi

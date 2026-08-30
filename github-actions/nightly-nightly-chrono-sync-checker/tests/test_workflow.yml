@@ -1,0 +1,72 @@
+name: Test Nightly Chrono-Sync Checker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-clean-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create a dummy file and commit
+        run: |
+          echo "Hello, world!" > dummy.txt
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add dummy.txt
+          git commit -m "Add dummy.txt for clean test"
+          # Mock rationale: Simulating a clean repository state with a committed file.
+
+      - name: Run Chrono-Sync Checker (Clean)
+        id: chrono_check_clean
+        uses: ./
+        continue-on-error: true
+
+      - name: Verify Clean Check Result
+        run: |
+          if [[ "${{ steps.chrono_check_clean.outcome }}" != "success" ]]; then
+            echo "::error::Chrono-sync check unexpectedly failed for a clean repo."
+            exit 1
+          fi
+          echo "Clean repo check passed as expected."
+
+  test-desynchronized-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create initial file and commit
+        run: |
+          echo "Initial content" > initial.txt
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add initial.txt
+          git commit -m "Initial commit for desync test"
+          # Mock rationale: Establishing a baseline commit.
+
+      - name: Touch a file after the last commit
+        run: |
+          echo "New content" > desynced.txt
+          touch -d "tomorrow" desynced.txt
+          # Mock rationale: Intentionally creating a file with a modification time
+          # newer than the latest commit to test the detection logic.
+
+      - name: Run Chrono-Sync Checker (Desynchronized)
+        id: chrono_check_desync
+        uses: ./
+        continue-on-error: true
+
+      - name: Verify Desynchronized Check Result
+        run: |
+          if [[ "${{ steps.chrono_check_desync.outcome }}" != "failure" ]]; then
+            echo "::error::Chrono-sync check unexpectedly passed for a desynchronized repo."
+            exit 1
+          fi
+          echo "Desynchronized repo check failed as expected."
