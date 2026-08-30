@@ -1,0 +1,39 @@
+- name: Rotate SSH keys across inventory
+  hosts: all
+  become: true
+  vars:
+    ssh_key_path: "{{ ssh_key_path | default('~/.ssh/id_rsa_nightly') }}"
+  tasks:
+    - name: Ensure ssh-keygen is available
+      ansible.builtin.command: which ssh-keygen
+      register: ssh_keygen_path
+      changed_when: false
+
+    - name: Check if private key exists
+      ansible.builtin.stat:
+        path: "{{ ssh_key_path }}"
+      register: key_stat
+
+    - name: Generate new SSH key pair if not present
+      ansible.builtin.command: >
+        ssh-keygen -t rsa -b 4096 -f {{ ssh_key_path }} -N ""
+      args:
+        creates: "{{ ssh_key_path }}"
+      when: not key_stat.stat.exists
+
+    - name: Read public key
+      ansible.builtin.slurp:
+        src: "{{ ssh_key_path }}.pub"
+      register: pub_key_content
+
+    - name: Set authorized key for user
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ pub_key_content.content | b64decode }}"
+
+    - name: Remove old private key backup if exists
+      ansible.builtin.file:
+        path: "{{ ssh_key_path }}.old"
+        state: absent
+      ignore_errors: true
