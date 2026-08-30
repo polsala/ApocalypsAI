@@ -1,0 +1,126 @@
+---
+- name: Test Digital Dustbunny Sweeper
+  hosts: localhost
+  become: yes
+  vars_files:
+    - ../vars/main.yml # Use the same vars for consistency
+
+  tasks:
+    - name: Ensure test environment is clean
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/test_dustbunny_sweeper
+        - "{{ dustbunny_quarantine_path }}"
+        - "{{ dustbunny_report_path }}"
+      ignore_errors: yes # Clean up even if paths don't exist
+
+    - name: Create test directory for temporary files
+      ansible.builtin.file:
+        path: /tmp/test_dustbunny_sweeper
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy temporary files
+      ansible.builtin.copy:
+        content: "This is a temporary file."
+        dest: "/tmp/test_dustbunny_sweeper/{{ item }}"
+      loop:
+        - "file1.tmp"
+        - "old_backup.bak"
+        - "another_temp~"
+        - "#vim_swap#"
+        - "recent_file.log" # Should not be archived by age initially
+      # Mock rationale: Creating dummy files to simulate a dirty system for the playbook to clean.
+
+    - name: Create an old log file for archiving
+      ansible.builtin.copy:
+        content: "This is an old log entry."
+        dest: "/tmp/test_dustbunny_sweeper/old_log.log"
+      # Mock rationale: Creating a specific old log file to test archiving.
+
+    - name: Set modification time for old log file
+      ansible.builtin.command: touch -d "2 months ago" /tmp/test_dustbunny_sweeper/old_log.log
+      # Mock rationale: Manipulating file age to ensure it meets the archiving criteria.
+
+    - name: Run the dustbunny sweeper playbook
+      ansible.builtin.include_tasks: ../src/dustbunny_sweeper.yml
+      vars:
+        dustbunny_scan_paths:
+          - /tmp/test_dustbunny_sweeper
+        dustbunny_temp_age: '1s' # Make all dummy temp files "old enough" for deletion
+        dustbunny_log_age: '1s' # Make all dummy log files "old enough" for archiving
+      # Mock rationale: Overriding scan paths and ages to target the test directory and ensure immediate action.
+
+    - name: Verify temporary files are deleted
+      ansible.builtin.stat:
+        path: "/tmp/test_dustbunny_sweeper/{{ item }}"
+      loop:
+        - "file1.tmp"
+        - "old_backup.bak"
+        - "another_temp~"
+        - "#vim_swap#"
+      register: temp_file_stats
+      # Mock rationale: Checking for the absence of files that should have been deleted.
+
+    - name: Assert temporary files are absent
+      ansible.builtin.assert:
+        that: not item.stat.exists
+        msg: "Temporary file {{ item.item }} was not deleted."
+      loop: "{{ temp_file_stats.results }}"
+
+    - name: Verify old log file is archived
+      ansible.builtin.find:
+        paths: "{{ dustbunny_quarantine_path }}"
+        patterns: "old_log.log.*"
+        file_type: file
+      register: archived_log_files
+      # Mock rationale: Checking if the old log file was moved to the quarantine directory.
+
+    - name: Assert old log file is in quarantine
+      ansible.builtin.assert:
+        that: archived_log_files.files | length == 1
+        msg: "Old log file was not archived correctly."
+
+    - name: Verify report file exists
+      ansible.builtin.stat:
+        path: "{{ dustbunny_report_path }}"
+      register: report_file_stat
+      # Mock rationale: Confirming the report was generated.
+
+    - name: Assert report file exists
+      ansible.builtin.assert:
+        that: report_file_stat.stat.exists
+        msg: "Dustbunny report file was not created."
+
+    - name: Verify report content (deleted files)
+      ansible.builtin.shell: cat "{{ dustbunny_report_path }}" | grep "file1.tmp"
+      register: report_grep_deleted
+      changed_when: false
+      # Mock rationale: Checking report content for expected deleted files.
+
+    - name: Assert report contains deleted file entry
+      ansible.builtin.assert:
+        that: report_grep_deleted.rc == 0
+        msg: "Report does not contain expected deleted file entry."
+
+    - name: Verify report content (archived files)
+      ansible.builtin.shell: cat "{{ dustbunny_report_path }}" | grep "old_log.log"
+      register: report_grep_archived
+      changed_when: false
+      # Mock rationale: Checking report content for expected archived files.
+
+    - name: Assert report contains archived file entry
+      ansible.builtin.assert:
+        that: report_grep_archived.rc == 0
+        msg: "Report does not contain expected archived file entry."
+
+    - name: Clean up test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/test_dustbunny_sweeper
+        - "{{ dustbunny_quarantine_path }}"
+        - "{{ dustbunny_report_path }}"
