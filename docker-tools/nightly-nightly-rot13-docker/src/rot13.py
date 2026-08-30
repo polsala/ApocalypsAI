@@ -1,0 +1,1 @@
+#!/usr/bin/env python3\nimport sys\nimport codecs\n\ndef rot13_transform(text: str) -> str:\n    """Return the ROT13 encoding of *text* using the stdlib codec."""\n    return codecs.encode(text, "rot_13")\n\ndef main() -> None:\n    data = sys.stdin.read()\n    if data:\n        sys.stdout.write(rot13_transform(data))\n\nif __name__ == "__main__":\n    main()
