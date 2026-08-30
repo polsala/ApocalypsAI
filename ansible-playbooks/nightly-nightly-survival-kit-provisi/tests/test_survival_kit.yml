@@ -1,0 +1,163 @@
+---
+- name: Test Nightly Survival Kit Provisioner in Check Mode
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Ensure apt cache is updated (check mode)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      check_mode: yes
+      register: apt_cache_update_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where cache update is needed, thus expecting 'changed'.
+
+    - name: Assert apt cache update would run
+      ansible.builtin.assert:
+        that:
+          - apt_cache_update_result.changed
+        fail_msg: "APT cache update task did not report 'changed' in check mode."
+
+    - name: Install essential survival tools (check mode)
+      ansible.builtin.apt:
+        name: "{{ survival_packages }}"
+        state: present
+      check_mode: yes
+      register: install_packages_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where packages are not yet installed, thus expecting 'changed'.
+
+    - name: Assert essential packages would be installed
+      ansible.builtin.assert:
+        that:
+          - install_packages_result.changed
+        fail_msg: "Essential packages installation task did not report 'changed' in check mode."
+
+    - name: Ensure UFW is installed (check mode)
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+      check_mode: yes
+      register: install_ufw_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where UFW is not installed, thus expecting 'changed'.
+
+    - name: Assert UFW would be installed
+      ansible.builtin.assert:
+        that:
+          - install_ufw_result.changed
+        fail_msg: "UFW installation task did not report 'changed' in check mode."
+
+    - name: Enable UFW (check mode)
+      community.general.ufw:
+        state: enabled
+        policy: deny
+      check_mode: yes
+      register: enable_ufw_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where UFW is not enabled, thus expecting 'changed'.
+
+    - name: Assert UFW would be enabled
+      ansible.builtin.assert:
+        that:
+          - enable_ufw_result.changed
+        fail_msg: "UFW enablement task did not report 'changed' in check mode."
+
+    - name: Allow SSH through UFW (check mode)
+      community.general.ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+      check_mode: yes
+      register: allow_ssh_ufw_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where the SSH UFW rule is not present, thus expecting 'changed'.
+
+    - name: Assert SSH UFW rule would be configured
+      ansible.builtin.assert:
+        that:
+          - allow_ssh_ufw_result.changed
+        fail_msg: "SSH UFW rule configuration task did not report 'changed' in check mode."
+
+    - name: Allow HTTP through UFW (check mode)
+      community.general.ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+      check_mode: yes
+      register: allow_http_ufw_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where the HTTP UFW rule is not present, thus expecting 'changed'.
+
+    - name: Assert HTTP UFW rule would be configured
+      ansible.builtin.assert:
+        that:
+          - allow_http_ufw_result.changed
+        fail_msg: "HTTP UFW rule configuration task did not report 'changed' in check mode."
+
+    - name: Allow HTTPS through UFW (check mode)
+      community.general.ufw:
+        rule: allow
+        port: 443
+        proto: tcp
+      check_mode: yes
+      register: allow_https_ufw_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where the HTTPS UFW rule is not present, thus expecting 'changed'.
+
+    - name: Assert HTTPS UFW rule would be configured
+      ansible.builtin.assert:
+        that:
+          - allow_https_ufw_result.changed
+        fail_msg: "HTTPS UFW rule configuration task did not report 'changed' in check mode."
+
+    - name: Deploy basic system health check script (check mode)
+      ansible.builtin.copy:
+        src: ../files/health_check.sh
+        dest: /usr/local/bin/survival_health_check.sh
+        mode: '0755'
+      check_mode: yes
+      register: deploy_health_script_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where the script is not present or differs, thus expecting 'changed'.
+
+    - name: Assert health check script would be deployed
+      ansible.builtin.assert:
+        that:
+          - deploy_health_script_result.changed
+        fail_msg: "Health check script deployment task did not report 'changed' in check mode."
+
+    - name: Ensure NTP client is installed (check mode)
+      ansible.builtin.apt:
+        name: ntp
+        state: present
+      check_mode: yes
+      register: install_ntp_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where NTP is not installed, thus expecting 'changed'.
+
+    - name: Assert NTP client would be installed
+      ansible.builtin.assert:
+        that:
+          - install_ntp_result.changed
+        fail_msg: "NTP client installation task did not report 'changed' in check mode."
+
+    - name: Ensure NTP service is running and enabled (check mode)
+      ansible.builtin.service:
+        name: ntp
+        state: started
+        enabled: yes
+      check_mode: yes
+      register: enable_ntp_service_result
+      # Mock rationale: Running in check_mode prevents actual system modifications.
+      # We assume a fresh system where NTP service is not running/enabled, thus expecting 'changed'.
+
+    - name: Assert NTP service would be running and enabled
+      ansible.builtin.assert:
+        that:
+          - enable_ntp_service_result.changed
+        fail_msg: "NTP service enablement task did not report 'changed' in check mode."
