@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\n# Copy source code\nCOPY src/ ./src/\n\n# Install any needed packages (none required beyond stdlib)\n# If future dependencies are added, they can be installed here\n\n# Set entrypoint\nENTRYPOINT ["python", "-m", "src.app"]\n
