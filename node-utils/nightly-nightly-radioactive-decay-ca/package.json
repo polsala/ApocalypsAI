@@ -1,0 +1,14 @@
+{
+  "name": "nightly-radioactive-decay-calculator",
+  "version": "1.0.0",
+  "description": "CLI to calculate remaining radioactive material based on half-life",
+  "main": "src/cli.js",
+  "bin": {
+    "decay-calc": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node tests/decay.test.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
