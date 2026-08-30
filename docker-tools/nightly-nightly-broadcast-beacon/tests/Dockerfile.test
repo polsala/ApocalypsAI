@@ -1,0 +1,15 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY src/requirements.txt .
+COPY tests/test_requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r test_requirements.txt
+
+COPY src/ ./src/
+
+COPY tests/test_app.py ./tests/
+
+CMD ["pytest", "tests/test_app.py"]
