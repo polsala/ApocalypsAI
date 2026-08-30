@@ -1,0 +1,1 @@
+FROM alpine:3.18\nRUN apk add --no-cache bash\nCOPY src/quote_mixer.sh /usr/local/bin/quote_mixer.sh\nCOPY data/quotes1.txt /data/quotes1.txt\nCOPY data/quotes2.txt /data/quotes2.txt\nRUN chmod +x /usr/local/bin/quote_mixer.sh\nENTRYPOINT ["/usr/local/bin/quote_mixer.sh"]

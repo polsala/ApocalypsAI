@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\nQUOTE1_FILE="/data/quotes1.txt"\nQUOTE2_FILE="/data/quotes2.txt"\nIDX1=${QUOTE1_IDX:-0}\nIDX2=${QUOTE2_IDX:-0}\nLINE1=$(sed -n "$((IDX1+1))p" "$QUOTE1_FILE")\nLINE2=$(sed -n "$((IDX2+1))p" "$QUOTE2_FILE")\necho "$LINE1 $LINE2"
