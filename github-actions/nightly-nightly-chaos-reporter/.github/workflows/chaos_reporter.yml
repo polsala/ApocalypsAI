@@ -1,0 +1,53 @@
+name: Chaos Reporter Example Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      chaos_level:
+        description: 'Chaos Level'
+        required: true
+        default: 'moderate'
+        type: choice
+        options:
+          - low
+          - moderate
+          - high
+      reporting_style:
+        description: 'Reporting Style'
+        required: true
+        default: 'poetic'
+        type: choice
+        options:
+          - poetic
+          - technical
+          - humorous
+
+jobs:
+  run_chaos_reporter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Chaos Reporter Action
+        run: | 
+          cd utils/github-actions/nightly-chaos-reporter
+          npm install
+          npm run build
+
+      - name: Run Chaos Reporter
+        id: chaos_reporter
+        uses: ./utils/github-actions/nightly-chaos-reporter
+        with:
+          chaos_level: ${{ github.event.inputs.chaos_level }}
+          reporting_style: ${{ github.event.inputs.reporting_style }}
+
+      - name: Display Chaos Report
+        run: |
+          echo "## The Grand Chaos Report ##"
+          echo "${{ steps.chaos_reporter.outputs.chaos_report }}"
