@@ -1,0 +1,47 @@
+name: 'Workflow Wellness Report'
+description: 'Generates a wellness report for GitHub Actions workflows, highlighting long-running or frequently failing runs.'
+inputs:
+  token:
+    description: 'GitHub token with workflow read permissions.'
+    required: true
+  repo:
+    description: 'The repository to check (e.g., owner/repo).'
+    required: true
+  max-runs:
+    description: 'Maximum number of recent workflow runs to analyze.'
+    required: false
+    default: '100'
+  long-run-threshold-minutes:
+    description: 'Threshold in minutes for a workflow run to be considered "long-running".'
+    required: false
+    default: '10'
+  failure-frequency-threshold:
+    description: 'Number of failures within max-runs to consider a workflow "frequently failing".'
+    required: false
+    default: '3'
+outputs:
+  report-summary:
+    description: 'A summary of the workflow wellness report.'
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        # Ensure gh CLI is available. GitHub-hosted runners usually have it.
+        # For self-hosted, user needs to ensure it's installed.
+        if ! command -v gh &> /dev/null; then
+            echo "Error: GitHub CLI (gh) is not installed or not in PATH. Please install it." >&2
+            exit 1
+        fi
+        if ! command -v jq &> /dev/null; then
+            echo "Error: jq is not installed or not in PATH. Please install it." >&2
+            exit 1
+        fi
+        # Execute the main reporting script
+        ${{ github.action_path }}/src/report.sh \
+          "${{ inputs.repo }}" \
+          "${{ inputs.max-runs }}" \
+          "${{ inputs.long-run-threshold-minutes }}" \
+          "${{ inputs.failure-frequency-threshold }}"
