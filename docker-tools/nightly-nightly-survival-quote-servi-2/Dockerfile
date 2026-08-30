@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\n# Install Flask (lightweight web framework)\nRUN pip install --no-cache-dir Flask\n\n# Copy application source\nCOPY src/app.py /app/app.py\n\nEXPOSE 8080\n\n# Run the Flask app\nCMD ["python", "/app/app.py"]\n
