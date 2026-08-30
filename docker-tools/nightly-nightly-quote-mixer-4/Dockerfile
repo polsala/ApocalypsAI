@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/*.go ./\nRUN CGO_ENABLED=0 GOOS=linux go build -o quote-mixer .\n\nFROM alpine:3.18\nWORKDIR /app\nCOPY --from=builder /app/quote-mixer .\nEXPOSE 8080\nCMD ["./quote-mixer"]\n
