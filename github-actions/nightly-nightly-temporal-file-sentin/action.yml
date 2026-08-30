@@ -1,0 +1,41 @@
+name: 'Temporal File Sentinel'
+description: 'Identifies files in the repository that haven\'t been modified in a long time, suggesting they might need a temporal re-blessing.'
+inputs:
+  age-threshold-days:
+    description: 'Number of days a file must be untouched to be considered "ancient".'
+    required: true
+    default: '365'
+outputs:
+  stale-files-count:
+    description: 'The number of ancient files found.'
+    value: ${{ steps.run_sentinel.outputs.stale-files-count }}
+  stale-files-list:
+    description: 'A newline-separated list of ancient files.'
+    value: ${{ steps.run_sentinel.outputs.stale-files-list }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Temporal File Sentinel
+      id: run_sentinel
+      shell: bash
+      run: |
+        echo "Running Temporal File Sentinel with threshold: ${{ inputs.age-threshold-days }} days"
+        STALE_FILES_OUTPUT=$(bash ${{ github.action_path }}/src/check_stale_files.sh ${{ inputs.age-threshold-days }})
+        
+        STALE_COUNT=$(echo "$STALE_FILES_OUTPUT" | wc -l)
+        # Remove potential empty line from wc -l if no files, ensuring count is accurate
+        if [ -z "$STALE_FILES_OUTPUT" ]; then
+          STALE_COUNT=0
+        fi
+
+        echo "stale-files-count=$STALE_COUNT" >> $GITHUB_OUTPUT
+        echo "stale-files-list<<EOF" >> $GITHUB_OUTPUT
+        echo "$STALE_FILES_OUTPUT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        if [ "$STALE_COUNT" -gt 0 ]; then
+          echo "::warning::Found $STALE_COUNT ancient files that might need a temporal re-blessing:"
+          echo "$STALE_FILES_OUTPUT"
+        else
+          echo "No ancient files detected. All temporal timelines are stable."
+        fi
