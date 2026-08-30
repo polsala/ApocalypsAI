@@ -1,0 +1,22 @@
+{
+  "name": "nightly-cosmic-task-weaver",
+  "version": "1.0.0",
+  "description": "A Node.js CLI tool that helps you choose your next task from a list, guided by cosmic whims and configurable probabilities.",
+  "main": "src/index.js",
+  "bin": {
+    "cosmic-weaver": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/weaver.test.js"
+  },
+  "keywords": [
+    "cli",
+    "task",
+    "decision",
+    "whimsical",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT"
+}
