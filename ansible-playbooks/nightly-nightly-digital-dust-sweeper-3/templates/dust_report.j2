@@ -1,0 +1,24 @@
+--- Digital Dust-Bunny Sweeper Report ---
+Date: {{ ansible_date_time.iso8601_micro }} UTC
+
+{% for host in ansible_play_hosts_all %}
+Server: {{ hostvars[host].ansible_hostname | default(host) }}
+{% if hostvars[host].cleanup_results is defined %}
+  {% for result in hostvars[host].cleanup_results %}
+  {% if result.cleaned_count > 0 %}
+  🗑️ Swept away {{ result.cleaned_count }} {{ 'file' if result.cleaned_count == 1 else 'files' }} from {{ result.path }} (older than {{ result.age }}).
+  {% else %}
+  ✨ {{ result.path }} is sparkling clean! No dust bunnies found here (older than {{ result.age }}).
+  {% endif %}
+  {% endfor %}
+{% else %}
+  ⚠️ No cleanup results recorded for this server. Perhaps the dust bunnies were too elusive?
+{% endif %}
+{% if hostvars[host].apt_autoremove_needed is defined and hostvars[host].apt_autoremove_needed %}
+  📦 Found orphaned packages. Consider running 'apt autoremove' manually if desired.
+{% else %}
+  📦 No orphaned packages detected. Package manager is tidy!
+{% endif %}
+
+{% endfor %}
+--- End of Report ---
