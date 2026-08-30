@@ -1,0 +1,15 @@
+name: 'Cosmic Blessing'
+description: 'Posts a whimsical cosmic blessing to a PR or commit upon successful workflow completion.'
+inputs:
+  token:
+    description: 'GitHub token for posting comments.'
+    required: true
+  blessings:
+    description: 'Comma-separated list of custom blessings. If empty, uses default.'
+    required: false
+outputs:
+  blessing-message:
+    description: 'The blessing message that was posted.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
