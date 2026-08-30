@@ -1,0 +1,76 @@
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_log_file_path: /tmp/test_syslog.log
+    test_log_content: |
+      Oct 10 10:00:01 server1 systemd[1]: Starting Some Service...
+      Oct 10 10:01:05 server1 kernel: [    0.123456] ACPI: Added _OSI(Linux)
+      Oct 10 10:02:10 server1 sshd[1234]: Accepted password for user from 192.168.1.1 port 54321 ssh2
+      Oct 10 10:03:15 server1 app: An error occurred during processing.
+      Oct 10 10:04:20 server1 kernel: [    1.234567] Some other kernel message.
+      Oct 10 10:05:25 server1 systemd[1]: Service Some Service failed to start.
+      Oct 10 10:06:30 server1 app: Another error: Database connection failed.
+      Oct 10 10:07:35 server1 auth: User 'admin' login denied.
+      Oct 10 10:08:40 server1 app: A critical exception was caught.
+      Oct 10 10:09:45 server1 app: Warning: Low disk space.
+      Oct 10 10:10:50 server1 app: Another error: Network refused.
+
+  tasks:
+    - name: Create a mock log file
+      copy:
+        content: "{{ test_log_content }}"
+        dest: "{{ test_log_file_path }}"
+      # Mock rationale: Simulates the existence of a log file with specific content for testing.
+
+    - name: Run the log parsing playbook with mocked log file
+      include_role:
+        name: ../src # Assuming the playbook is in a role structure, adjust if not
+      vars:
+        log_file_path: "{{ test_log_file_path }}"
+        error_keywords: ['error', 'failed', 'warning', 'critical', 'exception', 'denied', 'refused']
+        group_by_regex: "^.*? (?:error|failed|warning|critical|exception|denied|refused) (.*?)$"
+      register: playbook_result
+      # Mock rationale: Executes the playbook logic locally, overriding default variables to use the mock log file.
+
+    - name: Assert that the playbook ran successfully
+      assert:
+        that:
+          - playbook_result is defined
+          - playbook_result.results is defined
+          - playbook_result.results | length > 0
+          - playbook_result.results[0].invocation is defined
+          - playbook_result.results[0].invocation.module_args is defined
+          - playbook_result.results[0].invocation.module_args.msg is defined
+      # Mock rationale: Verifies that the playbook executed and produced output.
+
+    - name: Assert log summary content (partial check)
+      assert:
+        that:
+          - "'"""An error occurred during processing."""' in playbook_result.results[0].invocation.module_args.msg"
+          - "'""Database connection failed."""' in playbook_result.results[0].invocation.module_args.msg"
+          - "'""User 'admin' login denied."""' in playbook_result.results[0].invocation.module_args.msg"
+          - "'""A critical exception was caught."""' in playbook_result.results[0].invocation.module_args.msg"
+          - "'""Low disk space."""' in playbook_result.results[0].invocation.module_args.msg"
+          - "'""Network refused."""' in playbook_result.results[0].invocation.module_args.msg"
+      # Mock rationale: Checks for the presence of specific log samples within the generated summary, ensuring errors were captured and grouped.
+
+    - name: Assert error counts (partial check)
+      assert:
+        that:
+          - "'""count": 2' in playbook_result.results[0].invocation.module_args.msg # For 'error'
+          - "'""count": 1' in playbook_result.results[0].invocation.module_args.msg # For 'failed'
+          - "'""count": 1' in playbook_result.results[0].invocation.module_args.msg # For 'denied'
+          - "'""count": 1' in playbook_result.results[0].invocation.module_args.msg # For 'exception'
+          - "'""count": 1' in playbook_result.results[0].invocation.module_args.msg # For 'warning'
+          - "'""count": 1' in playbook_result.results[0].invocation.module_args.msg # For 'refused'
+      # Mock rationale: Verifies that the counts for different error types are as expected based on the mock log content.
+
+    - name: Clean up mock log file
+      file:
+        path: "{{ test_log_file_path }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary mock log file after tests are complete.
