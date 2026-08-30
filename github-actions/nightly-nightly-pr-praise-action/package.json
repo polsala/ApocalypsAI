@@ -1,0 +1,26 @@
+{
+  "name": "nightly-pr-praise-action",
+  "version": "1.0.0",
+  "description": "A GitHub Action that automatically adds a whimsical, encouraging comment to merged Pull Requests.",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "github-actions",
+    "pr",
+    "praise",
+    "whimsical",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-when": "^3.5.2"
+  }
+}
