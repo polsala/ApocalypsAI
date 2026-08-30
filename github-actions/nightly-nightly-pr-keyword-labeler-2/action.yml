@@ -1,0 +1,12 @@
+name: "PR Keyword Labeler"
+description: "Outputs a label when PR title contains a keyword"
+inputs:
+  keyword:
+    description: "Keyword to search for"
+    required: true
+  label:
+    description: "Label to output if keyword found"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
