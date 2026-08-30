@@ -1,0 +1,1 @@
+use std::env;\n\nmod lib;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    }\n    let input = &args[1];\n    let ascii_qr = lib::generate_qr_ascii(input);\n    println!("{}", ascii_qr);\n}\n
