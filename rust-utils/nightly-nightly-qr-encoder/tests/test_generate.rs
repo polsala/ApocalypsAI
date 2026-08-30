@@ -1,0 +1,1 @@
+use nightly_qr_encoder::generate_qr;\n\n#[test]\nfn test_generate_contains_blocks() {\n    let out = generate_qr("HELLO");\n    // The dense Unicode block character (█) should appear in the rendered QR\n    assert!(out.contains("█"));\n}
