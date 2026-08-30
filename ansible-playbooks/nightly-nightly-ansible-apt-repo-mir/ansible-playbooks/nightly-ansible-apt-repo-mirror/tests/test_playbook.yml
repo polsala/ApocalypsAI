@@ -1,0 +1,20 @@
+- hosts: localhost
+  gather_facts: false
+  vars:
+    # Use a dummy URL and a temporary path to avoid any real network traffic.
+    mirror_url: "http://example.com/apt"
+    local_path: "/tmp/apt-mirror-test"
+  tasks:
+    - name: Include the mirror playbook (will run in check mode)
+      import_playbook: "../src/main.yml"
+
+    - name: Verify that the target directory was NOT created (check mode should be dry‑run)
+      stat:
+        path: "{{ local_path }}"
+      register: dir_stat
+
+    - name: Assert directory does not exist after check mode run
+      assert:
+        that:
+          - dir_stat.stat.exists == false
+        fail_msg: "Directory {{ local_path }} should not exist when the playbook is executed with --check"
