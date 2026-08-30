@@ -1,0 +1,93 @@
+---
+- name: Setup test environment for dust bunny sweeper
+  hosts: test_servers
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies_{{ lookup('pipe', 'date +%s') }}"
+    old_file_path: "{{ test_dir }}/old_large_file.log"
+    new_file_path: "{{ test_dir }}/new_small_file.txt"
+    old_large_file_size_mb: 150
+    age_threshold_days: 1 # For testing, make "old" very recent
+    size_threshold_mb: 100
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create an old, large file (should be deleted)
+      ansible.builtin.shell: |
+        head -c {{ old_large_file_size_mb }}M /dev/urandom > {{ old_file_path }}
+        touch -d "2 days ago" {{ old_file_path }}
+      args:
+        creates: "{{ old_file_path }}"
+      # Mock rationale: Using 'head -c' and 'touch -d' to create a file of specific size and age.
+      # This simulates real-world conditions for the 'find' module.
+
+    - name: Create a new, small file (should NOT be deleted)
+      ansible.builtin.copy:
+        content: "This is a new, small file."
+        dest: "{{ new_file_path }}"
+      # Mock rationale: Using 'copy' module to create a small, new file.
+
+    - name: Run the dust bunny sweeper in dry run mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper_tasks.yml
+      vars:
+        dust_bunny_scan_paths:
+          - "{{ test_dir }}"
+        dust_bunny_age_threshold_days: "{{ age_threshold_days }}"
+        dust_bunny_size_threshold_mb: "{{ size_threshold_mb }}"
+        dust_bunny_perform_cleanup: false
+      # Mock rationale: Running the main playbook's tasks with 'perform_cleanup: false' to test dry-run behavior.
+      # We will check for file existence after this, expecting no changes.
+      register: dry_run_result
+      ignore_errors: true # Allow dry run to complete even if no files found
+
+    - name: Assert old file still exists after dry run
+      ansible.builtin.stat:
+        path: "{{ old_file_path }}"
+      register: old_file_stat_dry_run
+      failed_when: not old_file_stat_dry_run.stat.exists
+      # Mock rationale: Verifying that the file created for deletion still exists after a dry run.
+
+    - name: Assert new file still exists after dry run
+      ansible.builtin.stat:
+        path: "{{ new_file_path }}"
+      register: new_file_stat_dry_run
+      failed_when: not new_file_stat_dry_run.stat.exists
+      # Mock rationale: Verifying that the file created to remain still exists after a dry run.
+
+    - name: Run the dust bunny sweeper to perform cleanup
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper_tasks.yml
+      vars:
+        dust_bunny_scan_paths:
+          - "{{ test_dir }}"
+        dust_bunny_age_threshold_days: "{{ age_threshold_days }}"
+        dust_bunny_size_threshold_mb: "{{ size_threshold_mb }}"
+        dust_bunny_perform_cleanup: true
+      # Mock rationale: Running the main playbook's tasks with 'perform_cleanup: true' to test actual deletion.
+      register: cleanup_result
+
+    - name: Assert old file is DELETED after cleanup
+      ansible.builtin.stat:
+        path: "{{ old_file_path }}"
+      register: old_file_stat_after_cleanup
+      failed_when: old_file_stat_after_cleanup.stat.exists
+      # Mock rationale: Verifying that the file intended for deletion is indeed gone.
+
+    - name: Assert new file still exists after cleanup
+      ansible.builtin.stat:
+        path: "{{ new_file_path }}"
+      register: new_file_stat_after_cleanup
+      failed_when: not new_file_stat_after_cleanup.stat.exists
+      # Mock rationale: Verifying that the file intended to remain is still present.
+
+  always:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      ignore_errors: true # Ensure cleanup happens even if tests fail
+      # Mock rationale: Ensures the test environment is reset, making tests deterministic and non-interfering.
