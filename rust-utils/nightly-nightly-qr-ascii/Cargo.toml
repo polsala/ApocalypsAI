@@ -1,0 +1,1 @@
+[package]\nname = "nightly-qr-ascii"\nversion = "0.1.0"\nedition = "2021"\ndescription = "CLI tool to generate QR codes as ASCII art"\nlicense = "MIT"\n\n[lib]\nname = "nightly_qr_ascii"\npath = "src/lib.rs"\n\n[dependencies]\nqrcode = "0.7"\nclap = { version = "4.2", features = ["derive"] }
