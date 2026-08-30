@@ -1,0 +1,1 @@
+function isTitleValid(title) {\n  // Emoji range based on Unicode Emoji block (covers most common emojis)\n  // Uses a Unicode property escape; requires the "u" flag.\n  const emojiRegex = /^[\u{1F300}-\u{1FAFF}]/u;\n  return emojiRegex.test(title);\n}\n\nmodule.exports = { isTitleValid };
