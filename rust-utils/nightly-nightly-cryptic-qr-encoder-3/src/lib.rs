@@ -1,0 +1,1 @@
+pub fn encode_to_ascii(text: &str) -> String {\n    let code = qrcode::QrCode::new(text.as_bytes()).unwrap();\n    code.render::<qrcode::render::unicode::Dense1x2>()\n        .quiet_zone(false)\n        .build()\n}
