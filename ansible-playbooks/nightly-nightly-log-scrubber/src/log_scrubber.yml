@@ -1,0 +1,51 @@
+---
+- name: Nightly Log Scrubber
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Ensure log directories exist and have correct permissions
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      loop: "{{ log_paths }}"
+
+    - name: Find all log files in specified paths
+      ansible.builtin.find:
+        paths: "{{ log_paths }}"
+        patterns: "*.log*, *.gz, *.old"
+        recurse: yes
+      register: all_log_files
+
+    - name: Set secure permissions for all found log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        mode: '0640' # Read/write for owner, read for group, no access for others
+        owner: root
+        group: adm # Common group for log access
+      loop: "{{ all_log_files.files }}"
+      when: all_log_files.files | length > 0
+      # Mock rationale: In tests, this task will apply permissions to mock files
+      # created by the test playbook, verifying the permission changes.
+
+    - name: Find old log files for deletion
+      ansible.builtin.find:
+        paths: "{{ log_paths }}"
+        patterns: "*.log*, *.gz, *.old"
+        age: "{{ log_retention_days }}d"
+        age_stamp: atime # Access time is often a good indicator of last read
+        recurse: yes
+      register: old_logs_to_delete
+
+    - name: Delete old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs_to_delete.files }}"
+      when: old_logs_to_delete.files | length > 0
+      # Mock rationale: In tests, this task will delete mock files created
+      # by the test playbook, ensuring the deletion logic works as expected.

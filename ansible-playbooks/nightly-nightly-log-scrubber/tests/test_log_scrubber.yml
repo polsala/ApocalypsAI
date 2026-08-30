@@ -1,0 +1,116 @@
+---
+- name: Test Nightly Log Scrubber
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_log_dir: "/tmp/ansible_test_logs_scrubber"
+    log_retention_days: 7 # Must match the value in src/vars/main.yml for consistency in testing age logic
+  tasks:
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ test_log_dir }}"
+        state: absent
+      # Mock rationale: Ensures a clean slate for deterministic testing by removing any leftover files from previous runs.
+
+    - name: Create test log directory
+      ansible.builtin.file:
+        path: "{{ test_log_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      # Mock rationale: Provides a controlled, isolated environment for creating mock log files without affecting system logs.
+
+    - name: Create a recent log file
+      ansible.builtin.copy:
+        content: "This is a recent log entry."
+        dest: "{{ test_log_dir }}/recent.log"
+        mode: '0644'
+      # Mock rationale: Simulates a log file that should NOT be deleted by the scrubber due to its recent access time.
+
+    - name: Create an old log file (to be deleted)
+      ansible.builtin.copy:
+        content: "This is an old log entry."
+        dest: "{{ test_log_dir }}/old.log"
+        mode: '0644'
+      # Mock rationale: Simulates a log file that SHOULD be deleted by the scrubber due to its old access time.
+
+    - name: Set access time for old log file
+      ansible.builtin.command: "touch -a -d '{{ log_retention_days + 1 }} days ago' {{ test_log_dir }}/old.log"
+      changed_when: true # This command always changes the timestamp, so it's expected to report a change.
+      # Mock rationale: Manipulates the access time of the mock 'old.log' file to ensure it falls outside the retention period, triggering deletion by the main playbook.
+
+    - name: Create a log file with incorrect permissions (to be corrected)
+      ansible.builtin.copy:
+        content: "This log has bad permissions."
+        dest: "{{ test_log_dir }}/bad_perms.log"
+        mode: '0666' # Intentionally wrong permissions to test correction logic
+      # Mock rationale: Simulates a log file whose permissions are not compliant with the desired secure state, testing the permission hardening feature.
+
+    - name: Run the main log scrubber playbook
+      ansible.builtin.include_tasks:
+        file: ../src/log_scrubber.yml
+      vars:
+        log_paths:
+          - "{{ test_log_dir }}"
+        log_retention_days: "{{ log_retention_days }}"
+      # Mock rationale: Executes the target playbook's tasks within the test environment. Variables are overridden to ensure it operates only on the mock files in the temporary directory.
+
+    - name: Verify old log file is deleted
+      ansible.builtin.stat:
+        path: "{{ test_log_dir }}/old.log"
+      register: old_log_stat
+      # Mock rationale: Checks the existence status of the mock old log file after the scrubber has run.
+
+    - name: Assert old log file is absent
+      ansible.builtin.assert:
+        that:
+          - not old_log_stat.stat.exists
+        fail_msg: "Old log file '{{ test_log_dir }}/old.log' was not deleted."
+      # Mock rationale: Verifies that the scrubber's deletion logic correctly removed the old mock file.
+
+    - name: Verify recent log file still exists
+      ansible.builtin.stat:
+        path: "{{ test_log_dir }}/recent.log"
+      register: recent_log_stat
+      # Mock rationale: Checks the existence status of the mock recent log file after the scrubber has run.
+
+    - name: Assert recent log file is present
+      ansible.builtin.assert:
+        that:
+          - recent_log_stat.stat.exists
+        fail_msg: "Recent log file '{{ test_log_dir }}/recent.log' was unexpectedly deleted."
+      # Mock rationale: Verifies that the scrubber correctly preserved the recent mock file.
+
+    - name: Verify permissions of recent log file
+      ansible.builtin.stat:
+        path: "{{ test_log_dir }}/recent.log"
+      register: recent_log_perms
+      # Mock rationale: Checks the file permissions of the mock recent log file after the scrubber has run.
+
+    - name: Assert recent log file has correct permissions
+      ansible.builtin.assert:
+        that:
+          - recent_log_perms.stat.mode == '0640'
+        fail_msg: "Permissions for '{{ test_log_dir }}/recent.log' are incorrect: {{ recent_log_perms.stat.mode }}"
+      # Mock rationale: Verifies that the scrubber correctly applied the secure permissions to the recent mock file.
+
+    - name: Verify permissions of corrected log file
+      ansible.builtin.stat:
+        path: "{{ test_log_dir }}/bad_perms.log"
+      register: bad_perms_log_perms
+      # Mock rationale: Checks the file permissions of the mock file that initially had incorrect permissions.
+
+    - name: Assert corrected log file has correct permissions
+      ansible.builtin.assert:
+        that:
+          - bad_perms_log_perms.stat.mode == '0640'
+        fail_msg: "Permissions for '{{ test_log_dir }}/bad_perms.log' are incorrect: {{ bad_perms_log_perms.stat.mode }}"
+      # Mock rationale: Verifies that the scrubber correctly corrected the permissions of the mock file.
+
+    - name: Clean up test log directory
+      ansible.builtin.file:
+        path: "{{ test_log_dir }}"
+        state: absent
+      # Mock rationale: Cleans up the mock environment to leave no artifacts on the system after the test run, ensuring idempotence and isolation.
