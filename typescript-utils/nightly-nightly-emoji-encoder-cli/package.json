@@ -1,0 +1,16 @@
+{
+  "name": "nightly-emoji-encoder-cli",
+  "version": "0.1.0",
+  "description": "Encode and decode text to a whimsical emoji cipher.",
+  "bin": {
+    "nemoji": "./src/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node ./tests/test_index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "type": "module"
+}
