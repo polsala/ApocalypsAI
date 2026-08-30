@@ -1,0 +1,87 @@
+---
+- name: Collect Whimsical System Curiosities
+  hosts: servers
+  gather_facts: yes
+  vars_files:
+    - vars/curiosity_items.yml
+  vars:
+    report_dir: "{{ playbook_dir }}/../reports" # Store reports in a 'reports' directory one level up from src/
+
+  tasks:
+    - name: Ensure report directory exists locally
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+
+    - name: Initialize curiosity data for host
+      ansible.builtin.set_fact:
+        host_curiosities: {}
+
+    - name: Collect each curiosity item
+      loop: "{{ curiosities }}"
+      loop_control:
+        loop_var: curiosity_item
+      block:
+        - name: Execute command curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'command'
+          ansible.builtin.shell: "{{ curiosity_item.command }}"
+          args:
+            warn: false
+          register: _command_output
+          changed_when: false
+          ignore_errors: true
+
+        - name: Read file tail curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'file_tail'
+          ansible.builtin.shell: "tail -n {{ curiosity_item.lines | default(10) }} {{ curiosity_item.path }}"
+          args:
+            warn: false
+          register: _file_tail_output
+          changed_when: false
+          ignore_errors: true
+
+        - name: Read file content curiosity: {{ curiosity_item.name }}
+          when: curiosity_item.type == 'file_content'
+          ansible.builtin.slurp:
+            src: "{{ curiosity_item.path }}"
+          register: _file_content_output
+          changed_when: false
+          ignore_errors: true
+
+        - name: Add collected data to host_curiosities for command
+          when: curiosity_item.type == 'command'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_command_output.stdout if _command_output is defined and _command_output.rc == 0 else 'N/A - Command failed or not found')
+            }) }}"
+
+        - name: Add collected data to host_curiosities for file tail
+          when: curiosity_item.type == 'file_tail'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_file_tail_output.stdout_lines if _file_tail_output is defined and _file_tail_output.rc == 0 else ['N/A - File tail failed or not found'])
+            }) }}"
+
+        - name: Add collected data to host_curiosities for file content
+          when: curiosity_item.type == 'file_content'
+          ansible.builtin.set_fact:
+            host_curiosities: "{{ host_curiosities | combine({
+              curiosity_item.output_key: (_file_content_output.content | b64decode | splitlines if _file_content_output is defined and _file_content_output.content is defined else ['N/A - File content failed or not found'])
+            }) }}"
+
+    - name: Generate final report structure
+      ansible.builtin.set_fact:
+        final_report:
+          hostname: "{{ ansible_hostname }}"
+          timestamp: "{{ ansible_date_time.iso8601_micro }}"
+          curiosities: "{{ host_curiosities }}"
+
+    - name: Create curiosity report file locally
+      delegate_to: localhost
+      ansible.builtin.template:
+        src: templates/curiosity_report.j2
+        dest: "{{ report_dir }}/curiosity_report_{{ ansible_hostname }}.json"
+        mode: '0644'
