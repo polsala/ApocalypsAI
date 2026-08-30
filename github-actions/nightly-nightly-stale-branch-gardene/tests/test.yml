@@ -1,0 +1,41 @@
+name: Test Stale Branch Gardener
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up mock gh CLI
+        run: |
+          mkdir -p tests/bin
+          cp ${{ github.action_path }}/tests/bin/mock_gh tests/bin/gh
+          chmod +x tests/bin/gh
+          echo "PATH=$(pwd)/tests/bin:$PATH" >> "$GITHUB_ENV"
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Stale Branch Gardener Action
+        id: gardener
+        uses: ./
+        with:
+          github_token: 'mock_token' # Mocked, so value doesn't matter
+          base_branch: 'main'
+          stale_days: '30'
+        env:
+          GITHUB_REPOSITORY: 'test_owner/test_repo' # Override for mock
+
+      - name: Verify output
+        run: |
+          EXPECTED_OUTPUT='["feature-stale-unmerged"]'
+          ACTUAL_OUTPUT="${{ steps.gardener.outputs.stale_branches }}"
+          echo "Expected: $EXPECTED_OUTPUT"
+          echo "Actual: $ACTUAL_OUTPUT"
+          if [ "$ACTUAL_OUTPUT" != "$EXPECTED_OUTPUT" ]; then
+            echo "Test failed: Output does not match expected value."
+            exit 1
+          fi
+          echo "Test passed: Output matches expected value."
