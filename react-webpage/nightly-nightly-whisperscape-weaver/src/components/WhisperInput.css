@@ -1,0 +1,47 @@
+.whisper-input-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.whisper-input-form input {
+  flex-grow: 1;
+  padding: 12px 15px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background-color: #2a2a4a;
+  color: #e0e0e0;
+  font-size: 1em;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.whisper-input-form input::placeholder {
+  color: #888;
+}
+
+.whisper-input-form input:focus {
+  border-color: #8d3a7d;
+}
+
+.whisper-input-form button {
+  padding: 12px 20px;
+  background-color: #8d3a7d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.whisper-input-form button:hover:not(:disabled) {
+  background-color: #a74a96;
+}
+
+.whisper-input-form button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}

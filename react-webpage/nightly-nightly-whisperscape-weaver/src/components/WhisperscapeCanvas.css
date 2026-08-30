@@ -1,0 +1,46 @@
+.whisperscape-canvas {
+  background-color: #2a2a4a;
+  border-radius: 10px;
+  padding: 20px;
+  min-height: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.whisperscape-canvas h2 {
+  color: #8d3a7d;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+.no-whispers {
+  color: #b0b0b0;
+  font-style: italic;
+  margin-top: 50px;
+}
+
+.whisper-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.whisper-bubble {
+  background-color: #4a2a4a; /* Slightly lighter purple */
+  color: #e0e0e0;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-width: 200px;
+  word-wrap: break-word;
+  text-align: left;
+  transition: transform 0.2s ease-in-out;
+}
+
+.whisper-bubble:hover {
+  transform: translateY(-3px);
+}
