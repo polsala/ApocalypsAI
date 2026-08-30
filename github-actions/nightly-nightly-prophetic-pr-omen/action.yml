@@ -1,0 +1,18 @@
+name: 'Prophetic PR Omen'
+description: 'Adds a whimsical, prophetic omen to PRs based on changes.'
+inputs:
+  pr-title:
+    description: 'The title of the pull request.'
+    required: true
+  pr-body:
+    description: 'The body of the pull request.'
+    required: false
+  github-token:
+    description: 'GitHub token for commenting on the PR.'
+    required: true
+outputs:
+  omen-message:
+    description: 'The generated prophetic omen.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
