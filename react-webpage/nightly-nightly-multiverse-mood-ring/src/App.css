@@ -1,0 +1,105 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+h1 {
+  color: #61dafb;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 1.1em;
+  max-width: 600px;
+  margin: 0 auto 20px auto;
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  width: 100%;
+  max-width: 1200px;
+}
+
+section {
+  background-color: #3a3f47;
+  border-radius: 10px;
+  padding: 30px;
+  margin: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  min-width: 300px;
+}
+
+h2 {
+  color: #98c379;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+label {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+input[type="text"] {
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #444;
+  color: #e0e0e0;
+  font-size: 1em;
+  margin-bottom: 15px;
+  width: 80%;
+  max-width: 300px;
+}
+
+button {
+  background-color: #61dafb;
+  color: #282c34;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #21a1f1;
+}
+
+.mood-result {
+  margin-top: 20px;
+}
+
+.mood-result h3 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.mood-result p {
+  font-style: italic;
+  font-size: 1em;
+  margin-bottom: 20px;
+}
