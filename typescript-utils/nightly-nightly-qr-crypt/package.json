@@ -1,0 +1,1 @@
+{\n  "name": "nightly-qr-crypt",\n  "version": "0.1.0",\n  "bin": {\n    "nqr": "./dist/index.js"\n  },\n  "scripts": {\n    "build": "tsc",\n    "test": "node ./dist/index.test.js"\n  },\n  "dependencies": {\n    "commander": "^10.0.0",\n    "qrcode-terminal": "^0.12.0"\n  },\n  "devDependencies": {\n    "@types/node": "^20.0.0",\n    "typescript": "^5.0.0"\n  }\n}
