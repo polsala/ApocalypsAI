@@ -1,0 +1,79 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.App-header p {
+  font-style: italic;
+  color: #bbb;
+}
+
+.App-main {
+  width: 90%;
+  max-width: 800px;
+  background-color: #3a3f47;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.input-section {
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.input-section label {
+  font-size: 1.1em;
+  color: #a0a0a0;
+}
+
+.input-section input[type="text"] {
+  width: 80%;
+  padding: 10px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background-color: #4a4f57;
+  color: #e0e0e0;
+  font-size: 1em;
+  outline: none;
+}
+
+.input-section input[type="text"]::placeholder {
+  color: #888;
+}
+
+.input-section button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.input-section button:hover {
+  background-color: #21a1f1;
+}

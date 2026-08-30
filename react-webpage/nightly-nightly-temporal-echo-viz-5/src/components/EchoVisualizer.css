@@ -1,0 +1,94 @@
+.echo-visualizer-container {
+  margin-top: 40px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #333;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.echo-visualizer-container h2 {
+  color: #61dafb;
+  margin-bottom: 25px;
+}
+
+.no-echoes {
+  color: #aaa;
+  font-style: italic;
+}
+
+.timeline {
+  position: relative;
+  width: 100%;
+  height: 150px; /* Increased height for better visibility */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 20px;
+}
+
+.timeline-axis {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #888;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.timeline-axis::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 15px;
+  background-color: #61dafb;
+  top: -6px;
+  border-radius: 2px;
+}
+
+.axis-label {
+  position: absolute;
+  color: #aaa;
+  font-size: 0.8em;
+  top: -25px;
+}
+
+.axis-label.start { left: 0; }
+.axis-label.center { left: 50%; transform: translateX(-50%); color: #61dafb; font-weight: bold; font-size: 0.9em; }
+.axis-label.end { right: 0; }
+
+.echo-display {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-top: 30px; /* Space for axis labels */
+}
+
+.echo-bar {
+  position: absolute;
+  height: 20px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  color: #1a1a1a;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+  transition: all 0.5s ease-out;
+  top: 50%; /* Vertically center within echo-display */
+  transform: translateY(-50%);
+}
+
+.echo-label {
+  padding: 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
