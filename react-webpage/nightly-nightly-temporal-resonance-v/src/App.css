@@ -1,0 +1,117 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.app-container {
+  background-color: #16213e;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+h1 {
+  color: #e94560;
+  margin-bottom: 30px;
+}
+
+.event-input-form,
+.resonance-display,
+.event-list-container {
+  background-color: #0f3460;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.event-input-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #bae8e8;
+  text-align: left;
+}
+
+.event-input-form input,
+.event-input-form select {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #533483;
+  border-radius: 5px;
+  background-color: #3e206d;
+  color: #e0e0e0;
+}
+
+.event-input-form button {
+  background-color: #e94560;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.event-input-form button:hover {
+  background-color: #ba2d4a;
+}
+
+.resonance-display p {
+  font-size: 1.2em;
+  color: #bae8e8;
+}
+
+.resonance-score {
+  font-size: 2em;
+  font-weight: bold;
+  color: #e94560;
+}
+
+.event-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.event-list li {
+  background-color: #533483;
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.event-list li span {
+  margin-right: 10px;
+}
+
+.event-list li .event-name {
+  font-weight: bold;
+  color: #bae8e8;
+}
+
+.event-list li .event-date {
+  font-size: 0.9em;
+  color: #a0a0a0;
+}
+
+.event-list li .event-resonance {
+  background-color: #e94560;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.8em;
+}
