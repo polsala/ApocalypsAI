@@ -1,0 +1,32 @@
+---
+- name: Nightly Server Lullaby - Gentle Maintenance and Whimsical MOTD
+  hosts: all
+  become: yes
+  gather_facts: true
+  vars_files:
+    - vars/lullaby_config.yml
+  tasks:
+    - name: Ensure package lists are up-to-date (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # For 1 hour
+      when: ansible_os_family == "Debian"
+
+    - name: Clean up old packages and caches (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoremove: yes
+        autoclean: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Clean up old packages and caches (RedHat/CentOS)
+      ansible.builtin.yum:
+        autoremove: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Set a whimsical Message of the Day (MOTD)
+      ansible.builtin.copy:
+        content: "{{ motd_content }}"
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
