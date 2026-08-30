@@ -1,0 +1,80 @@
+---
+- name: Test Nightly Log Rotate & Archive Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Mock variables for testing
+    logrotate_path: "/tmp/mock_logrotate"
+    log_files:
+      - "/tmp/mock_logs/app.log"
+    rotate_days: 3
+    backup_enabled: true
+    backup_destination: "localhost:/tmp/mock_backup"
+    backup_user: "root"
+  tasks:
+    - name: Create mock log directory
+      file:
+        path: "/tmp/mock_logs"
+        state: directory
+        mode: "0755"
+
+    - name: Create a dummy log file
+      copy:
+        dest: "/tmp/mock_logs/app.log"
+        content: "Test log entry\n"
+        mode: "0644"
+
+    - name: Include the main playbook
+      include_tasks: "../src/log_rotate.yml"
+
+    - name: Verify that the logrotate configuration was created
+      stat:
+        path: "{{ logrotate_path }}/nightly_logrotate.conf"
+      register: conf_stat
+
+    - name: Assert configuration file exists
+      assert:
+        that:
+          - conf_stat.stat.exists
+        fail_msg: "Logrotate configuration was not created."
+
+    - name: Verify that the mock log was rotated (gz file exists)
+      find:
+        paths: "/tmp/mock_logs"
+        patterns: "app.log.1.gz"
+      register: rotated
+
+    - name: Assert rotated log exists
+      assert:
+        that:
+          - rotated.matched > 0
+        fail_msg: "Log file was not rotated/compressed."
+
+    - name: Verify backup directory exists
+      file:
+        path: "/tmp/mock_backup"
+        state: directory
+        mode: "0755"
+
+    - name: Check that rotated log was synchronized to backup (mocked via copy)
+      stat:
+        path: "/tmp/mock_backup/app.log.1.gz"
+      register: backup_stat
+
+    - name: Assert backup file exists
+      assert:
+        that:
+          - backup_stat.stat.exists
+        fail_msg: "Rotated log was not backed up."
+
+    # Clean up mock files (optional)
+    - name: Remove mock directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/mock_logs"
+        - "/tmp/mock_backup"
+        - "{{ logrotate_path }}"
+
+# Mock rationale: This test uses temporary directories under /tmp to avoid touching real system logs.

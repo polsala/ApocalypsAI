@@ -1,0 +1,72 @@
+---
+- name: Nightly Log Rotate & Archive
+  hosts: all
+  become: true
+  vars:
+    logrotate_path: "/etc/logrotate.d"
+    log_files:
+      - "/var/log/*.log"
+    rotate_days: 7
+    backup_enabled: false
+    backup_destination: "backup@example.com:/backups/logs"
+    backup_user: "backup"
+  tasks:
+    - name: Ensure logrotate configuration directory exists
+      file:
+        path: "{{ logrotate_path }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy logrotate configuration
+      copy:
+        dest: "{{ logrotate_path }}/nightly_logrotate.conf"
+        content: |
+          {{ log_files | join(' ') }} {
+              daily
+              rotate {{ rotate_days }}
+              compress
+              missingok
+              notifempty
+              create 0640 root adm
+              sharedscripts
+              postrotate
+                  /usr/lib/rsyslog/rsyslog-rotate
+              endscript
+          }
+        mode: "0644"
+
+    - name: Force logrotate run (dry-run for safety)
+      command: logrotate -d {{ logrotate_path }}/nightly_logrotate.conf
+      register: logrotate_output
+      changed_when: false
+
+    - name: Debug logrotate output
+      debug:
+        var: logrotate_output.stdout_lines
+
+    - name: Perform actual logrotate if not in check mode
+      command: logrotate {{ logrotate_path }}/nightly_logrotate.conf
+      when: not ansible_check_mode
+
+    - name: Find rotated log files
+      find:
+        paths: "/var/log"
+        patterns: "*.gz"
+        age: "{{ rotate_days }}d"
+        age_stamp: mtime
+      register: rotated_logs
+
+    - name: Ensure backup destination is reachable (when backup enabled)
+      ping:
+      delegate_to: "{{ backup_destination.split(':')[0] }}"
+      when: backup_enabled
+
+    - name: Rsync rotated logs to remote backup
+      synchronize:
+        src: "{{ item.path }}"
+        dest: "{{ backup_destination }}/"
+        mode: push
+        rsync_opts:
+          - "--chmod=0644"
+      loop: "{{ rotated_logs.files }}"
+      when: backup_enabled
