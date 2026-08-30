@@ -1,0 +1,34 @@
+---
+- name: Propagate whimsical ApocalypsAI MOTD whispers
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/motd_messages.yml
+  tasks:
+    - name: Select a random MOTD message
+      set_fact:
+        selected_motd: "{{ motd_messages | random }}"
+      run_once: true # Ensure the same message is selected for all hosts in this run
+      delegate_to: localhost # Select on controller, then propagate
+
+    - name: Ensure /etc directory exists (parent of /etc/motd)
+      ansible.builtin.file:
+        path: /etc
+        state: directory
+        mode: '0755'
+
+    - name: Update /etc/motd with the selected whisper
+      ansible.builtin.copy:
+        content: "{{ selected_motd }}\n"
+        dest: /etc/motd
+        mode: '0644'
+      notify: Log MOTD update
+
+  handlers:
+    - name: Log MOTD update
+      # In most Linux systems, /etc/motd is read directly by login programs
+      # and doesn't require a service restart. This handler is primarily for logging.
+      # Mock rationale: This handler is included for completeness but is often
+      # not strictly necessary for /etc/motd. For testing, we'll focus on file content.
+      debug:
+        msg: "MOTD updated on {{ inventory_hostname }} with: '{{ selected_motd }}'"

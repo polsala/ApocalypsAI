@@ -1,0 +1,50 @@
+---
+- name: Test Nightly MOTD Whisperer Playbook
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../src/vars/motd_messages.yml # Load the messages for assertion
+  tasks:
+    - name: Run the main playbook in check mode first
+      ansible.builtin.include_tasks: ../src/motd_whisperer.yml
+      args:
+        apply:
+          check_mode: yes
+      register: check_result
+      # Mock rationale: Running in check_mode simulates a dry run without actual changes.
+      # This allows us to verify the playbook logic without modifying the system state.
+
+    - name: Assert that check mode ran (basic check)
+      ansible.builtin.assert:
+        that:
+          - check_result is defined
+        fail_msg: "Check mode did not run as expected."
+        success_msg: "Check mode ran successfully."
+      # Mock rationale: This assert is a basic check that the playbook executed in check_mode.
+      # A more robust check would involve comparing 'diff' output, but that's complex
+      # for a simple random selection. The main test is the content check after full run.
+
+    - name: Run the main playbook for real
+      ansible.builtin.include_tasks: ../src/motd_whisperer.yml
+      register: run_result
+      # Mock rationale: This executes the playbook, including the random selection and file copy.
+
+    - name: Read the content of /etc/motd
+      ansible.builtin.slurp:
+        src: /etc/motd
+      register: motd_content
+      # Mock rationale: Slurp reads the file content, simulating a system check.
+
+    - name: Decode MOTD content
+      set_fact:
+        decoded_motd: "{{ motd_content['content'] | b64decode | trim }}"
+      # Mock rationale: Decoding the base64 content from slurp for comparison.
+
+    - name: Assert that the MOTD content is one of the expected messages
+      ansible.builtin.assert:
+        that:
+          - decoded_motd in motd_messages
+        fail_msg: "MOTD content '{{ decoded_motd }}' is not one of the expected messages."
+        success_msg: "MOTD content is a valid whisper."
+      # Mock rationale: This is the core deterministic test, ensuring the output
+      # matches one of the predefined, known possible random outcomes from the vars file.
