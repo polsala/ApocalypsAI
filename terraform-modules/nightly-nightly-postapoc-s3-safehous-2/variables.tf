@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket."\n  type        = string\n}\n\nvariable "aws_region" {\n  description = "AWS region."\n  type        = string\n  default     = "us-east-1"\n}\n\nvariable "tags" {\n  description = "Tags to apply to the bucket."\n  type        = map(string)\n  default     = {}\n}
