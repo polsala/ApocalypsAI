@@ -1,0 +1,59 @@
+---
+- name: Ensure Cosmic Clock Alignment
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Gather distribution-specific facts for celestial guidance
+      ansible.builtin.setup:
+        gather_subset:
+          - distribution
+          - service_mgr
+
+    - name: Determine the preferred NTP client package for this cosmic node
+      ansible.builtin.set_fact:
+        ntp_package: "{{ 'chrony' if ansible_facts.distribution in ['CentOS', 'RedHat', 'Fedora', 'Rocky', 'AlmaLinux', 'Debian', 'Ubuntu'] else 'chrony' }}"
+        # Mock rationale: For simplicity, assuming chrony is the preferred client across common Linux distros.
+        # In a real-world scenario, this might involve more granular checks or fallback to 'ntp' if 'chrony' is unavailable.
+
+    - name: Install the chosen NTP client (chrony) to commune with celestial timekeepers
+      ansible.builtin.package:
+        name: "{{ ntp_package }}"
+        state: present
+
+    - name: Configure chrony for cosmic synchronization with stellar precision
+      ansible.builtin.template:
+        src: ../templates/chrony.conf.j2
+        dest: /etc/chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart chrony service
+
+    - name: Ensure chrony service is enabled and actively listening to the cosmos
+      ansible.builtin.service:
+        name: chronyd
+        state: started
+        enabled: yes
+
+    - name: Report current time synchronization status to the ApocalypsAI log
+      ansible.builtin.command: timedatectl status
+      register: timedatectl_status
+      changed_when: false
+      failed_when: timedatectl_status.rc != 0 and 'NTP service: active' not in timedatectl_status.stdout
+      # Mock rationale: This task is for reporting and requires a live system to provide meaningful output.
+      # For offline testing, its output would be mocked or the task skipped, as done in the test playbook.
+      # It's included here for the completeness of the utility's runtime function.
+
+    - name: Display the celestial alignment status
+      ansible.builtin.debug:
+        msg: "{{ timedatectl_status.stdout_lines }}"
+      when: timedatectl_status is defined
+
+  handlers:
+    - name: Restart chrony service
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted

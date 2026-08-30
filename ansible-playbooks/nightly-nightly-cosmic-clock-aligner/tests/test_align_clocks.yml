@@ -1,0 +1,58 @@
+---
+- name: Test Cosmic Clock Aligner Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+
+  vars:
+    temp_config_dir: "{{ lookup('env', 'HOME') }}/.ansible_test_temp_config"
+    # Mock rationale: Using a temporary directory in the user's home for isolated,
+    # non-invasive testing of configuration file generation. This avoids modifying
+    # system files during the test run, ensuring determinism and offline execution.
+
+  tasks:
+    - name: Ensure temporary test directory exists for celestial configuration simulation
+      ansible.builtin.file:
+        path: "{{ temp_config_dir }}/etc"
+        state: directory
+        mode: '0755'
+
+    - name: Mock chrony configuration rendering to temporary cosmic archive
+      ansible.builtin.template:
+        src: ../templates/chrony.conf.j2
+        dest: "{{ temp_config_dir }}/etc/chrony.conf"
+        owner: root
+        group: root
+        mode: '0644'
+      # Mock rationale: This task simulates the main playbook's configuration step
+      # by rendering the template to a controlled temporary location instead of /etc.
+      # This allows testing the template's output without requiring root privileges
+      # or a live chrony service, making the test deterministic and offline.
+
+    - name: Read mocked chrony configuration from temporary cosmic archive
+      ansible.builtin.slurp:
+        src: "{{ temp_config_dir }}/etc/chrony.conf"
+      register: mocked_chrony_config
+
+    - name: Assert mocked chrony config contains expected NTP servers for cosmic alignment
+      ansible.builtin.assert:
+        that:
+          - "'pool {{ ntp_servers | join(' ') }} iburst' in (mocked_chrony_config.content | b64decode)"
+          - "'driftfile /var/lib/chrony/chrony.drift' in (mocked_chrony_config.content | b64decode)"
+          - "'rtcsync' in (mocked_chrony_config.content | b64decode)"
+        msg: "Mocked chrony.conf does not contain expected configuration for cosmic alignment."
+      # Mock rationale: Verifies that the template correctly incorporates variables
+      # and static configuration lines, ensuring the core logic of the configuration
+      # is sound without needing a live chrony service or network access. This is a
+      # deterministic check of the playbook's output generation.
+
+    - name: Clean up temporary test directory after cosmic verification
+      ansible.builtin.file:
+        path: "{{ temp_config_dir }}"
+        state: absent
+      when: not ansible_check_mode
+      # Mock rationale: Ensures the test environment is clean after execution,
+      # leaving no artifacts from the mocked configuration. This maintains the
+      # isolation and determinism of subsequent test runs.

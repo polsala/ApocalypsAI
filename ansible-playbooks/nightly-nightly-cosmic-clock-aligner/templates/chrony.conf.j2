@@ -1,0 +1,23 @@
+# This file is managed by Ansible for cosmic clock alignment.
+# Any manual changes will be overwritten by celestial forces.
+
+pool {{ ntp_servers | join(' ') }} iburst
+
+# Drift file. This file contains the measured frequency error of the system clock.
+driftfile /var/lib/chrony/chrony.drift
+
+# Log directory. This directory contains log files for chrony.
+logdir /var/log/chrony
+
+# Select which information is logged.
+# log measurements statistics tracking rtc
+
+# This directive tells chronyd to in-memory keep the system time in sync
+# with the real time clock (RTC) in case of a system reboot.
+rtcsync
+
+# Enable NTP client logging.
+# log measurements statistics tracking rtc
+
+# Allow NTP client access from local network (uncomment and adjust as needed).
+# allow 192.168.0.0/16
