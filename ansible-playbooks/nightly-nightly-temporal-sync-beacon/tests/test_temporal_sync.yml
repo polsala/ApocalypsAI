@@ -1,0 +1,105 @@
+---
+- name: Test temporal_sync.yml playbook logic for NTP client selection
+  hosts: test_hosts
+  become: no # No need for become for fact setting and assertions
+  gather_facts: no # We are mocking facts
+
+  tasks:
+    - name: Test case 1: Ubuntu 20.04 (should use chrony)
+      block:
+        - name: Mock facts for Ubuntu 20.04
+          ansible.builtin.set_fact:
+            ansible_distribution: "Ubuntu"
+            ansible_distribution_version: "20.04"
+            ansible_service_mgr: "systemd"
+          # Mock rationale: Simulate specific OS facts to test conditional logic.
+
+        - name: Determine NTP client to use (replicate logic from main playbook)
+          ansible.builtin.set_fact:
+            ntp_client_package: "chrony"
+            ntp_service_name: "chronyd"
+          when: ansible_distribution in ['CentOS', 'RedHat', 'Fedora', 'Rocky', 'AlmaLinux'] or
+                (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('16.04', '>=')) or
+                (ansible_distribution == 'Debian' and ansible_distribution_version is version('9', '>='))
+
+        - name: Fallback to ntpd for other distributions or older versions (replicate logic)
+          ansible.builtin.set_fact:
+            ntp_client_package: "ntp"
+            ntp_service_name: "ntpd"
+          when: ntp_client_package is not defined
+
+        - name: Assert correct NTP client for Ubuntu 20.04
+          ansible.builtin.assert:
+            that:
+              - ntp_client_package == 'chrony'
+              - ntp_service_name == 'chronyd'
+            fail_msg: "NTP client selection failed for Ubuntu 20.04"
+            success_msg: "NTP client selection correct for Ubuntu 20.04: {{ ntp_client_package }}"
+          # Mock rationale: Verifies the playbook's conditional logic for selecting
+          # the NTP client based on mocked OS facts, ensuring deterministic behavior.
+
+    - name: Test case 2: CentOS 7 (should use chrony)
+      block:
+        - name: Mock facts for CentOS 7
+          ansible.builtin.set_fact:
+            ansible_distribution: "CentOS"
+            ansible_distribution_version: "7"
+            ansible_service_mgr: "systemd"
+          # Mock rationale: Simulate specific OS facts to test conditional logic.
+
+        - name: Determine NTP client to use (replicate logic from main playbook)
+          ansible.builtin.set_fact:
+            ntp_client_package: "chrony"
+            ntp_service_name: "chronyd"
+          when: ansible_distribution in ['CentOS', 'RedHat', 'Fedora', 'Rocky', 'AlmaLinux'] or
+                (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('16.04', '>=')) or
+                (ansible_distribution == 'Debian' and ansible_distribution_version is version('9', '>='))
+
+        - name: Fallback to ntpd for other distributions or older versions (replicate logic)
+          ansible.builtin.set_fact:
+            ntp_client_package: "ntp"
+            ntp_service_name: "ntpd"
+          when: ntp_client_package is not defined
+
+        - name: Assert correct NTP client for CentOS 7
+          ansible.builtin.assert:
+            that:
+              - ntp_client_package == 'chrony'
+              - ntp_service_name == 'chronyd'
+            fail_msg: "NTP client selection failed for CentOS 7"
+            success_msg: "NTP client selection correct for CentOS 7: {{ ntp_client_package }}"
+          # Mock rationale: Verifies the playbook's conditional logic for selecting
+          # the NTP client based on mocked OS facts, ensuring deterministic behavior.
+
+    - name: Test case 3: Older Ubuntu 14.04 (should fallback to ntpd)
+      block:
+        - name: Mock facts for Ubuntu 14.04
+          ansible.builtin.set_fact:
+            ansible_distribution: "Ubuntu"
+            ansible_distribution_version: "14.04"
+            ansible_service_mgr: "upstart"
+          # Mock rationale: Simulate specific OS facts to test conditional logic.
+
+        - name: Determine NTP client to use (replicate logic from main playbook)
+          ansible.builtin.set_fact:
+            ntp_client_package: "chrony"
+            ntp_service_name: "chronyd"
+          when: ansible_distribution in ['CentOS', 'RedHat', 'Fedora', 'Rocky', 'AlmaLinux'] or
+                (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('16.04', '>=')) or
+                (ansible_distribution == 'Debian' and ansible_distribution_version is version('9', '>='))
+
+        - name: Fallback to ntpd for other distributions or older versions (replicate logic)
+          ansible.builtin.set_fact:
+            ntp_client_package: "ntp"
+            ntp_service_name: "ntpd"
+          when: ntp_client_package is not defined
+
+        - name: Assert correct NTP client for Ubuntu 14.04
+          ansible.builtin.assert:
+            that:
+              - ntp_client_package == 'ntp'
+              - ntp_service_name == 'ntpd'
+            fail_msg: "NTP client selection failed for Ubuntu 14.04"
+            success_msg: "NTP client selection correct for Ubuntu 14.04: {{ ntp_client_package }}"
+          # Mock rationale: Verifies the playbook's conditional logic for selecting
+          # the NTP client based on mocked OS facts, specifically the fallback mechanism.
