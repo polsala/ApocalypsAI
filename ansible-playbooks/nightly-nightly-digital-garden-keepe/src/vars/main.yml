@@ -1,0 +1,13 @@
+---
+# Number of days after which log files are considered 'old' and eligible for deletion.
+log_retention_days: 30
+
+# List of paths where old log files should be searched and cleaned.
+# Use glob patterns for broader coverage.
+log_paths_to_clean:
+  - /var/log/*.log
+  - /var/log/*/*.log
+  - /var/log/nginx/*.log
+  - /var/log/apache2/*.log
+  - /var/log/syslog
+  - /var/log/auth.log

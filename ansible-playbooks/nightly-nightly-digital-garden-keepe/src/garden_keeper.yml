@@ -1,0 +1,103 @@
+---
+- name: Nightly Digital Garden Keeper
+  hosts: garden_servers
+  become: yes
+  vars_files:
+    - vars/main.yml
+  gather_facts: yes
+
+  tasks:
+    - name: Initialize report variables
+      ansible.builtin.set_fact:
+        garden_report_updates: []
+        garden_report_cleanup: []
+      run_once: true # Ensure these are initialized once per playbook run
+
+    - name: Watering - Update apt cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      register: apt_update_result
+      ignore_errors: yes
+      tags: watering
+
+    - name: Watering - Upgrade all packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        upgrade: dist
+      when: ansible_os_family == 'Debian'
+      register: apt_upgrade_result
+      ignore_errors: yes
+      tags: watering
+
+    - name: Weeding - Autoremove orphaned packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoremove: yes
+      when: ansible_os_family == 'Debian'
+      register: apt_autoremove_result
+      ignore_errors: yes
+      tags: weeding
+
+    - name: Weeding - Clean apt cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        clean: yes
+      when: ansible_os_family == 'Debian'
+      register: apt_clean_result
+      ignore_errors: yes
+      tags: weeding
+
+    - name: Weeding - Find old log files
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ log_retention_days }}d"
+        file_type: file
+        recurse: yes
+      loop: "{{ log_paths_to_clean }}"
+      register: old_logs_to_delete
+      when: log_paths_to_clean is defined and log_paths_to_clean | length > 0
+      tags: weeding
+
+    - name: Weeding - Delete old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs_to_delete.results | selectattr('files', 'defined') | map(attribute='files') | flatten }}"
+      when: old_logs_to_delete.results is defined and item.path is defined
+      register: deleted_logs_result
+      ignore_errors: yes
+      tags: weeding
+
+    - name: Update report with watering results
+      ansible.builtin.set_fact:
+        garden_report_updates: "{{ (hostvars['localhost'].garden_report_updates | default([])) + ['Packages updated: ' + apt_upgrade_result.stdout if apt_upgrade_result.changed else 'No package updates needed.'] }}"
+      when: apt_upgrade_result is defined
+      delegate_to: localhost
+
+    - name: Update report with cleanup results (apt autoremove)
+      ansible.builtin.set_fact:
+        garden_report_cleanup: "{{ (hostvars['localhost'].garden_report_cleanup | default([])) + ['Orphaned packages removed: ' + apt_autoremove_result.stdout if apt_autoremove_result.changed else 'No orphaned packages to remove.'] }}"
+      when: apt_autoremove_result is defined
+      delegate_to: localhost
+
+    - name: Update report with cleanup results (apt cache)
+      ansible.builtin.set_fact:
+        garden_report_cleanup: "{{ (hostvars['localhost'].garden_report_cleanup | default([])) + ['Package cache cleaned.'] }}"
+      when: apt_clean_result is defined and apt_clean_result.changed
+      delegate_to: localhost
+
+    - name: Update report with cleanup results (old logs)
+      ansible.builtin.set_fact:
+        garden_report_cleanup: "{{ (hostvars['localhost'].garden_report_cleanup | default([])) + ['Old log files deleted: ' + (deleted_logs_result.results | selectattr('changed', 'defined') | selectattr('changed') | map(attribute='path') | list | join(', ')) if deleted_logs_result.changed else 'No old log files to delete.'] }}"
+      when: deleted_logs_result is defined
+      delegate_to: localhost
+
+    - name: Generate and display the Garden Report
+      ansible.builtin.template:
+        src: templates/garden_report.j2
+        dest: /dev/stdout
+      delegate_to: localhost
+      run_once: true
+      vars:
+        report_updates: "{{ hostvars['localhost'].garden_report_updates | default([]) }}"
+        report_cleanup: "{{ hostvars['localhost'].garden_report_cleanup | default([]) }}"
+      tags: report

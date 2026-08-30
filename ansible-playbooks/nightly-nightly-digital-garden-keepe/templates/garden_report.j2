@@ -1,0 +1,28 @@
+Digital Garden Report - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+===================================================================
+
+Host: {{ inventory_hostname }}
+OS: {{ ansible_os_family }} {{ ansible_distribution }} {{ ansible_distribution_version }}
+
+--- Watering (Updates) ---
+{% if report_updates %}
+{% for item in report_updates %}
+- {{ item }}
+{% endfor %}
+{% else %}
+- No watering activities recorded.
+{% endif %}
+
+--- Weeding (Cleanup) ---
+{% if report_cleanup %}
+{% for item in report_cleanup %}
+- {{ item }}
+{% endfor %}
+{% else %}
+- No weeding activities recorded.
+{% endif %}
+
+--- Garden Status ---
+Your digital garden plot '{{ inventory_hostname }}' is looking {{ 'fresh and vibrant' if report_updates or report_cleanup else 'peacefully dormant' }}!
+
+-------------------------------------------------------------------
