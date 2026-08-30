@@ -1,0 +1,102 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  gather_facts: true
+  vars:
+    test_base_dir: "/tmp/ansible_test_dust_bunnies_{{ lookup('pipe', 'date +%s%N') }}" # Unique temp dir
+
+  tasks:
+    - name: Create a temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Set cleanup_targets for testing
+      ansible.builtin.set_fact:
+        cleanup_targets:
+          - path: "{{ test_base_dir }}"
+            age_days: 1 # Target files older than 1 day
+            patterns:
+              - "*.log"
+              - "*.tmp"
+            description: "Test files"
+          - path: "{{ test_base_dir }}/empty_dir_test"
+            empty_dirs: true
+            description: "Test empty directories"
+          - path: "{{ test_base_dir }}/nested_empty_dir_test"
+            empty_dirs: true
+            description: "Test nested empty directories"
+
+    - name: Create dummy files and directories for cleanup (older than 1 day)
+      ansible.builtin.shell: |
+        # Calculate timestamp for 2 days ago
+        {% set two_days_ago = (ansible_date_time.epoch | int - 86400 * 2) | int %}
+        {% set timestamp_str = two_days_ago | to_datetime | strftime('%Y%m%d%H%M.%S') %}
+        touch -t {{ timestamp_str }} {{ test_base_dir }}/old_log_file.log
+        touch -t {{ timestamp_str }} {{ test_base_dir }}/old_tmp_file.tmp
+        touch {{ test_base_dir }}/recent_file.txt # Should not be deleted
+      args:
+        creates: "{{ test_base_dir }}/old_log_file.log"
+      # Mock rationale: These files are created specifically for the test,
+      # simulating "dust bunnies" that the playbook should remove.
+      # `ansible_date_time.epoch` is a fact, making the timestamp deterministic relative to test run.
+
+    - name: Create dummy files and directories for empty directory test
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_base_dir }}/empty_dir_test/sub_empty"
+        - "{{ test_base_dir }}/empty_dir_test"
+        - "{{ test_base_dir }}/nested_empty_dir_test/level1/level2"
+        - "{{ test_base_dir }}/nested_empty_dir_test/level1"
+        - "{{ test_base_dir }}/nested_empty_dir_test"
+      # Mock rationale: These directories are created to test the empty directory cleanup logic.
+
+    - name: Execute cleanup tasks with test targets
+      ansible.builtin.include_tasks: ../src/tasks/main.yml
+      loop: "{{ cleanup_targets }}"
+      loop_control:
+        loop_var: current_target
+
+    - name: Verify old log file is absent
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/old_log_file.log"
+      register: old_log_file_stat
+      failed_when: old_log_file_stat.stat.exists
+      # Mock rationale: Verifies the playbook's action on a mock file.
+
+    - name: Verify old tmp file is absent
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/old_tmp_file.tmp"
+      register: old_tmp_file_stat
+      failed_when: old_tmp_file_stat.stat.exists
+      # Mock rationale: Verifies the playbook's action on a mock file.
+
+    - name: Verify recent file is present (not deleted)
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}/recent_file.txt"
+      register: recent_file_stat
+      failed_when: not recent_file_stat.stat.exists
+      # Mock rationale: Verifies the playbook's selectivity on mock files.
+
+    - name: Verify empty directories are absent
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dir_stat
+      failed_when: dir_stat.stat.exists
+      loop:
+        - "{{ test_base_dir }}/empty_dir_test/sub_empty"
+        - "{{ test_base_dir }}/empty_dir_test"
+        - "{{ test_base_dir }}/nested_empty_dir_test/level1/level2"
+        - "{{ test_base_dir }}/nested_empty_dir_test/level1"
+        - "{{ test_base_dir }}/nested_empty_dir_test"
+      # Mock rationale: Verifies the playbook's action on mock directories.
+
+    - name: Clean up the temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Ensures test isolation and cleans up mock environment.

@@ -1,0 +1,37 @@
+# Default cleanup targets. Customize these to fit your needs.
+#
+# Each item in the list can have:
+# - path: The base directory to search.
+# - age_days: Files/directories older than this many days will be targeted.
+# - patterns: A list of glob patterns (e.g., "*.log", "temp_*").
+# - empty_dirs: Set to true to target empty directories within the path.
+# - description: A human-readable description of the target.
+#
+# Note: age_days and patterns are for files. empty_dirs is for directories.
+# If both age_days/patterns and empty_dirs are specified, they act independently.
+
+cleanup_targets:
+  - path: /tmp
+    age_days: 7
+    patterns:
+      - "*.log"
+      - "*.tmp"
+    description: "Temporary files older than 7 days in /tmp"
+  - path: "{{ ansible_env.HOME }}/Downloads"
+    age_days: 30
+    patterns:
+      - "*.old"
+      - "*.bak"
+    description: "Old downloads and backup files in user's Downloads folder"
+  - path: "{{ ansible_env.HOME }}/.cache"
+    age_days: 60
+    description: "Cache files older than 60 days in user's cache directory"
+  - path: "/var/log"
+    age_days: 14
+    patterns:
+      - "*.gz"
+      - "*.1"
+    description: "Archived logs in /var/log"
+  - path: "/opt/old_projects"
+    empty_dirs: true
+    description: "Empty directories in /opt/old_projects"
