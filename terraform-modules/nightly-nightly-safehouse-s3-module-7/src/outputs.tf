@@ -1,0 +1,1 @@
+output "bucket_id" {\n  description = "The name of the created bucket"\n  value       = aws_s3_bucket.safehouse.id\n}\n\noutput "bucket_arn" {\n  description = "ARN of the bucket"\n  value       = aws_s3_bucket.safehouse.arn\n}
