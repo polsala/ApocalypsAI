@@ -1,0 +1,33 @@
+{
+  "name": "nightly-cosmic-whisper-oracle",
+  "version": "1.0.0",
+  "description": "A type-safe CLI tool to generate whimsical, structured advice for post-apocalyptic decisions, consulting the 'Cosmic Whispers'.",
+  "main": "dist/cli.js",
+  "types": "dist/generator.d.ts",
+  "bin": {
+    "cosmic-whisper": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "apocalypse",
+    "cli",
+    "typescript",
+    "utility",
+    "whimsical",
+    "decision-making"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
