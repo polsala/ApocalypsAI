@@ -1,0 +1,1 @@
+- hosts: all\n  gather_facts: false\n  vars:\n    quotes:\n      - "The only limit to our realization of tomorrow is our doubts of today."\n      - "Life is what happens when you're busy making other plans."\n  tasks:\n    - name: Write quote of the day\n      copy:\n        dest: /tmp/quote_of_the_day.txt\n        content: "{{ quotes[0] }}\n"\n
