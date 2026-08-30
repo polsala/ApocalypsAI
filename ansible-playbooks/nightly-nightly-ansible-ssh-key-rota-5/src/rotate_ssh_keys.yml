@@ -1,0 +1,59 @@
+- name: Ensure backup directory exists
+  file:
+    path: "{{ ssh_key_dir }}/backup"
+    state: directory
+    mode: "0700"
+  become: true
+
+- name: Backup existing host keys (if any)
+  copy:
+    src: "{{ ssh_key_dir }}/ssh_host_{{ item }}_key"
+    dest: "{{ ssh_key_dir }}/backup/ssh_host_{{ item }}_key_{{ ansible_date_time.iso8601 }}"
+    remote_src: true
+  with_items:
+    - rsa
+    - ecdsa
+    - ed25519
+  ignore_errors: true
+  become: true
+
+- name: Generate new RSA host key
+  command: "ssh-keygen -t rsa -f {{ ssh_key_dir }}/ssh_host_rsa_key -N '' -q"
+  args:
+    creates: "{{ ssh_key_dir }}/ssh_host_rsa_key"
+  become: true
+
+- name: Generate new ECDSA host key
+  command: "ssh-keygen -t ecdsa -f {{ ssh_key_dir }}/ssh_host_ecdsa_key -N '' -q"
+  args:
+    creates: "{{ ssh_key_dir }}/ssh_host_ecdsa_key"
+  become: true
+
+- name: Generate new Ed25519 host key
+  command: "ssh-keygen -t ed25519 -f {{ ssh_key_dir }}/ssh_host_ed25519_key -N '' -q"
+  args:
+    creates: "{{ ssh_key_dir }}/ssh_host_ed25519_key"
+  become: true
+
+- name: Restart SSH service to load new keys
+  service:
+    name: ssh
+    state: restarted
+  become: true
+
+- name: Set fact indicating rotation succeeded
+  set_fact:
+    ssh_key_rotated: true
+
+- name: Gather new RSA host key fingerprint
+  command: "ssh-keygen -lf {{ ssh_key_dir }}/ssh_host_rsa_key.pub"
+  register: host_fingerprint
+  changed_when: false
+
+- name: Update known_hosts on control node
+  known_hosts:
+    name: "{{ inventory_hostname }}"
+    key: "{{ host_fingerprint.stdout }}"
+    path: "~/.ssh/known_hosts"
+  delegate_to: localhost
+  become: false
