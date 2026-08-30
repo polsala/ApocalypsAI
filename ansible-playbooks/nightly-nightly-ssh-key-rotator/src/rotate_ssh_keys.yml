@@ -1,0 +1,47 @@
+---
+- name: Rotate SSH keys across fleet
+  hosts: all
+  become: true
+  vars:
+    key_path: "{{ lookup('env','HOME') + '/.ssh/' + key_name }}"
+    pub_key_path: "{{ key_path }}.pub"
+    old_pub_key_path: "{{ key_path }}.old.pub"
+  tasks:
+    - name: Ensure ssh-keygen is present
+      ansible.builtin.command: which ssh-keygen
+      register: ssh_keygen_path
+      changed_when: false
+
+    - name: Generate new SSH key pair if missing
+      ansible.builtin.command: >
+        ssh-keygen -t rsa -b 4096 -f "{{ key_path }}" -N "" -C "rotated-{{ inventory_hostname }}"
+      args:
+        creates: "{{ key_path }}"
+      when: not lookup('file', key_path, errors='ignore')
+      register: gen_key
+      changed_when: gen_key.rc == 0
+
+    - name: Read new public key
+      ansible.builtin.slurp:
+        src: "{{ pub_key_path }}"
+      register: new_pub_key
+
+    - name: Backup existing authorized_keys
+      ansible.builtin.copy:
+        src: "~/.ssh/authorized_keys"
+        dest: "~/.ssh/authorized_keys.bak"
+        remote_src: true
+      when: remove_old
+
+    - name: Add new public key to authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ new_pub_key.content | b64decode }}"
+
+    - name: Remove old public key if requested
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: absent
+        key: "{{ lookup('file', old_pub_key_path) | default('') }}"
+      when: remove_old and lookup('file', old_pub_key_path, errors='ignore')
