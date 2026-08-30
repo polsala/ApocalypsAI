@@ -1,0 +1,32 @@
+---
+- name: Manage Whispering Wall Post-it Notes
+  hosts: all
+  gather_facts: true
+  vars:
+    target_file: "/opt/whispering_wall/message.txt" # Default target file
+  vars_files:
+    - ../vars/messages.yml
+
+  tasks:
+    - name: Fail if no messages are defined
+      ansible.builtin.fail:
+        msg: "No 'whispering_wall_messages' found in vars/messages.yml. Please define some messages."
+      when: whispering_wall_messages is not defined or whispering_wall_messages | length == 0
+
+    - name: Select today's whimsical message
+      ansible.builtin.set_fact:
+        # Mock rationale: Uses ansible_date_time.date for deterministic daily selection.
+        # For testing, this fact is mocked to ensure consistent results.
+        selected_message: "{{ whispering_wall_messages[((ansible_date_time.date | hash('md5')) | int(base=16) % whispering_wall_messages | length)] }}"
+
+    - name: Ensure target file directory exists
+      ansible.builtin.file:
+        path: "{{ target_file | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy the selected message to the target file
+      ansible.builtin.copy:
+        content: "{{ selected_message }}\n"
+        dest: "{{ target_file }}"
+        mode: '0644'
