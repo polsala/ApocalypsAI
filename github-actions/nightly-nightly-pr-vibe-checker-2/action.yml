@@ -1,0 +1,43 @@
+name: 'PR Vibe Checker'
+description: 'Checks Pull Request titles for thematic keywords to maintain repository vibe.'
+inputs:
+  required-keywords:
+    description: 'Comma-separated list of keywords. At least one must be present in the PR title.'
+    required: false
+    default: ''
+  forbidden-keywords:
+    description: 'Comma-separated list of keywords. None of these must be present in the PR title.'
+    required: false
+    default: ''
+  fail-on-no-match-required:
+    description: 'Whether to fail the action if no required keywords are found.'
+    required: false
+    default: 'true'
+  fail-on-match-forbidden:
+    description: 'Whether to fail the action if any forbidden keywords are found.'
+    required: false
+    default: 'true'
+outputs:
+  vibe-status:
+    description: 'The status of the vibe check: "pass" or "fail".'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Vibe Check Script
+      shell: bash
+      env:
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+        INPUT_REQUIRED_KEYWORDS: ${{ inputs.required-keywords }}
+        INPUT_FORBIDDEN_KEYWORDS: ${{ inputs.forbidden-keywords }}
+        INPUT_FAIL_ON_NO_MATCH_REQUIRED: ${{ inputs.fail-on-no-match-required }}
+        INPUT_FAIL_ON_MATCH_FORBIDDEN: ${{ inputs.fail-on-match-forbidden }}
+      run: |
+        # Ensure jq is available
+        if ! command -v jq &> /dev/null
+        then
+            echo "jq could not be found, attempting to install..."
+            # Attempt to install jq, common on ubuntu-latest runners
+            sudo apt-get update && sudo apt-get install -y jq || \
+            echo "Warning: Could not install jq. Script may fail if jq is not present." >&2
+        fi
+        "${{ github.action_path }}/src/check_vibe.sh"
