@@ -1,0 +1,106 @@
+- name: Build Digital Fortress
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/fortress_config.yml
+  vars:
+    # Default path for sshd_config, can be overridden for testing
+    sshd_config_path: /etc/ssh/sshd_config
+  tasks:
+    - name: Ensure apt cache is updated and packages are upgraded
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        autoclean: yes
+        autoremove: yes
+      when: ansible_connection != 'local' # Mock rationale: Skip apt tasks for local testing to avoid actual system changes.
+
+    - name: Install UFW and Fail2Ban
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ufw
+        - fail2ban
+      when: ansible_connection != 'local' # Mock rationale: Skip package installation for local testing.
+
+    - name: Configure UFW - deny all incoming by default
+      community.general.ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+      when: ansible_connection != 'local' # Mock rationale: Skip UFW configuration for local testing.
+      notify: Reload ufw
+
+    - name: Configure UFW - allow SSH port
+      community.general.ufw:
+        rule: allow
+        port: "{{ ssh_port }}"
+        proto: tcp
+      when: ansible_connection != 'local' # Mock rationale: Skip UFW configuration for local testing.
+      notify: Reload ufw
+
+    - name: Configure UFW - allow HTTP/HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '80'
+        - '443'
+      when: ansible_connection != 'local' # Mock rationale: Skip UFW configuration for local testing.
+      notify: Reload ufw
+
+    - name: Ensure SSH configuration file exists (for testing purposes)
+      ansible.builtin.file:
+        path: "{{ sshd_config_path }}"
+        state: touch
+        mode: '0600'
+      # Mock rationale: This task ensures the file exists for subsequent lineinfile operations.
+      # In a real scenario, sshd_config would already exist. For local testing, we might create a temp file.
+
+    - name: Harden SSH - disable root login
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+      notify: Restart sshd
+
+    - name: Harden SSH - disable password authentication
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+      when: disable_password_auth | bool
+      notify: Restart sshd
+
+    - name: Harden SSH - ensure PermitEmptyPasswords is no
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        state: present
+      notify: Restart sshd
+
+    - name: Harden SSH - set MaxAuthTries
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config_path }}"
+        regexp: '^MaxAuthTries'
+        line: 'MaxAuthTries 3'
+        state: present
+      notify: Restart sshd
+
+  handlers:
+    - name: Reload ufw
+      ansible.builtin.command: ufw reload
+      listen: "Reload ufw"
+      when: ansible_connection != 'local' # Mock rationale: Only run on remote hosts; for local tests, this command is skipped.
+
+    - name: Restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+      listen: "Restart sshd"
+      when: ansible_connection != 'local' # Mock rationale: Only run on remote hosts; for local tests, this command is skipped.

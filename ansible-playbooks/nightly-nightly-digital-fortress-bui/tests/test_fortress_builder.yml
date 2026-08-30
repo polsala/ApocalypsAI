@@ -1,0 +1,121 @@
+- name: Test Digital Fortress Builder
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    test_dir: "/tmp/ansible_test_fortress_{{ lookup('pipe', 'date +%s%N') }}"
+    sshd_config_path: "{{ test_dir }}/sshd_config"
+    ssh_port: 2222 # Use a different port for testing SSH rules
+    disable_password_auth: true
+
+  pre_tasks:
+    - name: Create temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Creates a unique temporary directory for each test run to ensure isolation and determinism.
+
+    - name: Copy baseline sshd_config to temporary location
+      ansible.builtin.copy:
+        content: |
+          # This is a baseline sshd_config for testing
+          Port 22
+          PermitRootLogin yes
+          PasswordAuthentication yes
+          PermitEmptyPasswords yes
+          MaxAuthTries 6
+          UsePAM yes
+          Subsystem sftp /usr/lib/openssh/sftp-server
+        dest: "{{ sshd_config_path }}"
+        mode: '0600'
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Creates a controlled, initial state for sshd_config in a temporary directory.
+      # This allows deterministic testing of file modifications without affecting the actual system's sshd_config.
+
+  tasks:
+    - name: Run the fortress builder playbook in check mode (first pass)
+      ansible.builtin.include_playbook: ../src/fortress_builder.yml
+      vars:
+        sshd_config_path: "{{ sshd_config_path }}"
+        ssh_port: "{{ ssh_port }}"
+        disable_password_auth: "{{ disable_password_auth }}"
+      check_mode: yes
+      register: check_mode_result_first
+      # Mock rationale: Running in check_mode verifies what changes *would* be made without applying them.
+      # We expect tasks related to sshd_config to report 'changed' on the first run because the baseline config is non-compliant.
+
+    - name: Assert that changes would be made in check mode (first pass)
+      ansible.builtin.assert:
+        that:
+          - check_mode_result_first is changed
+        fail_msg: "Fortress builder playbook did not report changes in check_mode on first run."
+      # Mock rationale: Verifies that the playbook correctly identifies the need for changes based on the initial mock state.
+
+    - name: Run the fortress builder playbook to apply changes
+      ansible.builtin.include_playbook: ../src/fortress_builder.yml
+      vars:
+        sshd_config_path: "{{ sshd_config_path }}"
+        ssh_port: "{{ ssh_port }}"
+        disable_password_auth: "{{ disable_password_auth }}"
+      register: apply_result
+      # Mock rationale: Applies the configuration changes to the temporary sshd_config file.
+
+    - name: Assert that changes were applied
+      ansible.builtin.assert:
+        that:
+          - apply_result is changed
+        fail_msg: "Fortress builder playbook did not report changes when applying."
+      # Mock rationale: Verifies that the playbook actually made changes to the mock configuration.
+
+    - name: Run the fortress builder playbook in check mode (second pass for idempotency)
+      ansible.builtin.include_playbook: ../src/fortress_builder.yml
+      vars:
+        sshd_config_path: "{{ sshd_config_path }}"
+        ssh_port: "{{ ssh_port }}"
+        disable_password_auth: "{{ disable_password_auth }}"
+      check_mode: yes
+      register: check_mode_result_second
+      # Mock rationale: Running again in check_mode verifies idempotency. After changes are applied,
+      # we expect no further changes to be reported.
+
+    - name: Assert that no changes would be made in check mode (second pass - idempotency)
+      ansible.builtin.assert:
+        that:
+          - check_mode_result_second is not changed
+        fail_msg: "Fortress builder playbook reported changes in check_mode on second run (not idempotent)."
+      # Mock rationale: Verifies that the playbook is idempotent, meaning running it multiple times
+      # results in the same desired state without making further modifications.
+
+    - name: Read the modified sshd_config file
+      ansible.builtin.slurp:
+        src: "{{ sshd_config_path }}"
+      register: modified_sshd_config_content
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Reads the content of the temporary sshd_config after the playbook has run
+      # to allow direct assertion of its final state.
+
+    - name: Assert sshd_config content
+      ansible.builtin.assert:
+        that:
+          - "'PermitRootLogin no' in (modified_sshd_config_content.content | b64decode)"
+          - "'PasswordAuthentication no' in (modified_sshd_config_content.content | b64decode)"
+          - "'PermitEmptyPasswords no' in (modified_sshd_config_content.content | b64decode)"
+          - "'MaxAuthTries 3' in (modified_sshd_config_content.content | b64decode)"
+        fail_msg: "Modified sshd_config content does not match expected hardening."
+      # Mock rationale: Directly asserts the final state of the configuration file, ensuring all
+      # specified hardening rules have been correctly applied to the mock file.
+
+  post_tasks:
+    - name: Clean up temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Ensures the temporary test environment is cleaned up after execution,
+      # leaving no artifacts behind.
