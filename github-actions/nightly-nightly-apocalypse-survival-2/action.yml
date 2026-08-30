@@ -1,0 +1,9 @@
+name: "Apocalypse Survival Tip"
+description: "Posts a random whimsical survival tip on PRs"
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
