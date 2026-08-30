@@ -1,0 +1,126 @@
+---
+- name: Test Nightly Config Blesser
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    test_blessing_message: "# TEST BLESSING: This file is under the watchful eye of the Integrator."
+    test_unblessed_file: "/tmp/test_unblessed_config.txt"
+    test_blessed_file: "/tmp/test_blessed_config.txt"
+
+  tasks:
+    - name: Ensure /tmp directory exists
+      ansible.builtin.file:
+        path: /tmp
+        state: directory
+        mode: '0755'
+
+    - name: Create a mock unblessed config file
+      ansible.builtin.copy:
+        dest: "{{ test_unblessed_file }}"
+        content: |
+          # This is an unblessed configuration file.
+          setting1=value1
+          setting2=value2
+      # Mock rationale: Creates a temporary file to simulate a configuration that needs blessing.
+
+    - name: Create a mock already blessed config file
+      ansible.builtin.copy:
+        dest: "{{ test_blessed_file }}"
+        content: |
+          {{ test_blessing_message }}
+          # This is an already blessed configuration file.
+          settingA=valueA
+          settingB=valueB
+      # Mock rationale: Creates a temporary file to simulate a configuration that already has the blessing.
+
+    - name: Run bless_configs.yml in check mode on unblessed file (expecting change)
+      ansible.builtin.command: >
+        ansible-playbook -i {{ playbook_dir }}/test_inventory.ini
+        {{ playbook_dir }}/../src/bless_configs.yml
+        --check
+        -e "blessing_message='{{ test_blessing_message }}' files_to_bless=['{{ test_unblessed_file }}']"
+      register: check_mode_unblessed_result
+      changed_when: false # This is a check mode run, no actual changes
+      failed_when: "'changed=1' not in check_mode_unblessed_result.stdout"
+      # Mock rationale: Simulates running the playbook without applying changes to verify it detects a needed change.
+
+    - name: Assert check mode on unblessed file indicates change
+      ansible.builtin.assert:
+        that:
+          - "'changed=1' in check_mode_unblessed_result.stdout"
+          - "'{{ test_unblessed_file }}' in check_mode_unblessed_result.stdout"
+        fail_msg: "Check mode on unblessed file did not indicate a change."
+      # Mock rationale: Verifies the output of the check mode run.
+
+    - name: Run bless_configs.yml on unblessed file (applying blessing)
+      ansible.builtin.command: >
+        ansible-playbook -i {{ playbook_dir }}/test_inventory.ini
+        {{ playbook_dir }}/../src/bless_configs.yml
+        -e "blessing_message='{{ test_blessing_message }}' files_to_bless=['{{ test_unblessed_file }}']"
+      register: apply_blessing_result
+      changed_when: false # We'll assert the content, not the playbook's changed status directly
+      failed_when: "'changed=1' not in apply_blessing_result.stdout"
+      # Mock rationale: Simulates running the playbook to apply the blessing.
+
+    - name: Verify blessing was applied to unblessed file
+      ansible.builtin.command: "head -n 1 {{ test_unblessed_file }}"
+      register: blessed_content
+      changed_when: false
+      failed_when: false
+      # Mock rationale: Reads the first line of the modified file to verify the blessing.
+
+    - name: Assert blessing is present in unblessed file
+      ansible.builtin.assert:
+        that:
+          - "blessed_content.stdout == test_blessing_message"
+        fail_msg: "Blessing was not correctly applied to the unblessed file."
+      # Mock rationale: Verifies the content of the modified file.
+
+    - name: Run bless_configs.yml in check mode on now-blessed file (expecting no change - idempotency)
+      ansible.builtin.command: >
+        ansible-playbook -i {{ playbook_dir }}/test_inventory.ini
+        {{ playbook_dir }}/../src/bless_configs.yml
+        --check
+        -e "blessing_message='{{ test_blessing_message }}' files_to_bless=['{{ test_unblessed_file }}']"
+      register: check_mode_idempotent_result
+      changed_when: false
+      failed_when: "'changed=0' not in check_mode_idempotent_result.stdout"
+      # Mock rationale: Simulates running the playbook in check mode on an already blessed file to verify idempotency.
+
+    - name: Assert check mode on now-blessed file indicates no change
+      ansible.builtin.assert:
+        that:
+          - "'changed=0' in check_mode_idempotent_result.stdout"
+        fail_msg: "Check mode on now-blessed file indicated a change, violating idempotency."
+      # Mock rationale: Verifies the output of the check mode run for idempotency.
+
+    - name: Run bless_configs.yml in check mode on already blessed file (expecting no change)
+      ansible.builtin.command: >
+        ansible-playbook -i {{ playbook_dir }}/test_inventory.ini
+        {{ playbook_dir }}/../src/bless_configs.yml
+        --check
+        -e "blessing_message='{{ test_blessing_message }}' files_to_bless=['{{ test_blessed_file }}']"
+      register: check_mode_already_blessed_result
+      changed_when: false
+      failed_when: "'changed=0' not in check_mode_already_blessed_result.stdout"
+      # Mock rationale: Simulates running the playbook in check mode on a file that was blessed from the start.
+
+    - name: Assert check mode on already blessed file indicates no change
+      ansible.builtin.assert:
+        that:
+          - "'changed=0' in check_mode_already_blessed_result.stdout"
+        fail_msg: "Check mode on already blessed file indicated a change."
+      # Mock rationale: Verifies the output of the check mode run.
+
+    - name: Clean up mock unblessed config file
+      ansible.builtin.file:
+        path: "{{ test_unblessed_file }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary file created for testing.
+
+    - name: Clean up mock blessed config file
+      ansible.builtin.file:
+        path: "{{ test_blessed_file }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary file created for testing.
