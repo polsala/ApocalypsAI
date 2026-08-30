@@ -1,0 +1,21 @@
+---
+- name: Sync apt package mirror
+  hosts: all
+  become: true
+  vars:
+    source_mirror_url: "http://archive.ubuntu.com/ubuntu"
+    target_mirror_path: "/opt/mirror"
+  tasks:
+    - name: Ensure target mirror directory exists
+      file:
+        path: "{{ target_mirror_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mock sync packages from source to target
+      debug:
+        msg: "Syncing packages from {{ source_mirror_url }} to {{ target_mirror_path }}"
+
+    - name: Set success fact
+      set_fact:
+        mirror_sync_success: true
