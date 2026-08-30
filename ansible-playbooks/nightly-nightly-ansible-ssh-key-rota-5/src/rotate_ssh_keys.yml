@@ -1,0 +1,44 @@
+---
+- name: Rotate SSH keys for a user
+  hosts: all
+  become: true
+  vars:
+    key_comment: "rotated-key-{{ target_user }}"
+    key_path: "{{ playbook_dir }}/{{ target_user }}_id_rsa"
+  tasks:
+    - name: Ensure target_user is defined
+      assert:
+        that: target_user is defined
+        fail_msg: "target_user variable must be provided"
+
+    - name: Generate new SSH key pair
+      openssh_keypair:
+        path: "{{ key_path }}"
+        type: rsa
+        size: 2048
+        comment: "{{ key_comment }}"
+        force: true
+      register: keypair
+
+    - name: Ensure .ssh directory exists
+      file:
+        path: "/home/{{ target_user }}/.ssh"
+        state: directory
+        owner: "{{ target_user }}"
+        mode: '0700'
+
+    - name: Add new public key to authorized_keys
+      authorized_key:
+        user: "{{ target_user }}"
+        state: present
+        key: "{{ lookup('file', key_path + '.pub') }}"
+        comment: "{{ key_comment }}"
+
+    - name: Remove old rotated keys (except the newly added one)
+      authorized_key:
+        user: "{{ target_user }}"
+        state: absent
+        comment: "{{ key_comment }}"
+        key: "{{ item }}"
+      loop: "{{ lookup('fileglob', '/home/{{ target_user }}/.ssh/authorized_keys') | splitlines }}"
+      when: item != lookup('file', key_path + '.pub')
