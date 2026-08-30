@@ -1,0 +1,62 @@
+name: 'Nightly PR Cheer Bot'
+description: 'Posts a random, whimsical, encouraging comment to new pull requests.'
+inputs:
+  github-token:
+    description: 'GitHub token for posting comments.'
+    required: true
+  messages-file:
+    description: 'Path to the file containing cheer messages. Defaults to src/messages.txt within the action.'
+    required: false
+    default: '${{ github.action_path }}/src/messages.txt'
+outputs:
+  cheer-message:
+    description: 'The whimsical cheer message that was posted.'
+    value: ${{ steps.get_message.outputs.message }}
+runs:
+  using: 'composite'
+  steps:
+    - id: get_message
+      name: 'Get Whimsical Cheer Message'
+      shell: bash
+      run: |
+        MESSAGE=$(bash "${{ github.action_path }}/src/get_cheer_message.sh" "${{ inputs.messages-file }}")
+        echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+    - name: 'Post Cheer Comment'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const message = process.env.CHEER_MESSAGE;
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+
+          if (!issue_number) {
+            console.log('Not a pull request or issue context. Skipping comment.');
+            return;
+          }
+
+          // Check if the bot has already commented to avoid spam
+          const { data: comments } = await github.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number,
+          });
+
+          const botUsername = context.actor; // The username of the bot running the action
+          const hasBotCommented = comments.some(comment =>
+            comment.user.login === botUsername && comment.body.includes('ApocalypsAI Cheer Bot')
+          );
+
+          if (hasBotCommented) {
+            console.log('ApocalypsAI Cheer Bot has already commented on this PR/issue. Skipping.');
+            return;
+          }
+
+          await github.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number,
+            body: `✨ ApocalypsAI Cheer Bot ✨\n\n${message}\n\n---\n*This message was brought to you by the Nightly Integrator, spreading joy across the timelines.*`
+          });
+      env:
+        CHEER_MESSAGE: ${{ steps.get_message.outputs.message }}

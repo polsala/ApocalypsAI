@@ -1,0 +1,33 @@
+name: 'Test PR Cheer Bot Action'
+
+on:
+  workflow_dispatch: # Allows manual triggering for testing
+  pull_request:
+    types: [opened, reopened] # Trigger on PRs for integration testing
+
+jobs:
+  test_cheer_bot:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Required for the action to post comments
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+
+      - name: 'Run get_cheer_message.sh tests'
+        run: bash tests/test_get_cheer_message.sh
+
+      # Mock rationale: Directly testing the GitHub Action's interaction with the GitHub API
+      # in an offline, deterministic manner is not feasible without a full GitHub Actions
+      # runner and API mock server. This step demonstrates how the action would be used
+      # in a real workflow. The core logic (message selection) is tested by
+      # 'test_get_cheer_message.sh'. For a true integration test, this workflow would
+      # need to be run against a real PR and then verify the comment via API.
+      # For the purpose of this self-contained utility, the bash script test covers
+      # the deterministic logic.
+      - name: 'Simulate PR Cheer Bot Action'
+        if: github.event_name == 'pull_request' # Only run on actual PRs to avoid errors on workflow_dispatch
+        uses: ./ # Refers to the action in the current directory
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # messages-file: './src/messages.txt' # Default is fine, but can be overridden
