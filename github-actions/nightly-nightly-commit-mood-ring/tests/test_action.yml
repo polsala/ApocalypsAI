@@ -1,0 +1,113 @@
+name: Test Commit Mood Ring Action
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main # Trigger on push to main for CI testing
+
+jobs:
+  test_mood_ring:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with 'fix' keyword
+        id: fix_msg
+        uses: ./ # Refers to the action in the current repository
+        with:
+          commit-message: 'Fix: Resolve critical bug in authentication module.'
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Mock rationale: Token is required by the action definition, but the `Add reaction to PR` step is skipped in this non-PR test context. The test focuses on the `reaction-emoji` output.
+        run: |
+          echo "Output emoji: ${{ steps.fix_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.fix_msg.outputs.reaction-emoji }}" == "🩹" ]] || { echo "'Fix' keyword test failed"; exit 1; }
+
+      - name: Test with 'feat' keyword
+        id: feat_msg
+        uses: ./
+        with:
+          commit-message: 'Feat: Implement new user profile dashboard.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.feat_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.feat_msg.outputs.reaction-emoji }}" == "🚀" ]] || { echo "'Feat' keyword test failed"; exit 1; }
+
+      - name: Test with 'refactor' keyword
+        id: refactor_msg
+        uses: ./ 
+        with:
+          commit-message: 'Refactor: Clean up old API endpoints.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.refactor_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.refactor_msg.outputs.reaction-emoji }}" == "🧹" ]] || { echo "'Refactor' keyword test failed"; exit 1; }
+
+      - name: Test with 'docs' keyword
+        id: docs_msg
+        uses: ./ 
+        with:
+          commit-message: 'Docs: Update README with new usage instructions.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.docs_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.docs_msg.outputs.reaction-emoji }}" == "📚" ]] || { echo "'Docs' keyword test failed"; exit 1; }
+
+      - name: Test with 'breaking' keyword
+        id: breaking_msg
+        uses: ./ 
+        with:
+          commit-message: 'BREAKING CHANGE: Remove legacy database support.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.breaking_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.breaking_msg.outputs.reaction-emoji }}" == "🚨" ]] || { echo "'Breaking' keyword test failed"; exit 1; }
+
+      - name: Test with very short message (no keywords)
+        id: very_short_msg
+        uses: ./ 
+        with:
+          commit-message: 'Tiny'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.very_short_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.very_short_msg.outputs.reaction-emoji }}" == "🐛" ]] || { echo "Very short message test failed"; exit 1; }
+
+      - name: Test with medium message (no keywords)
+        id: medium_msg
+        uses: ./ 
+        with:
+          commit-message: 'Improve user interface responsiveness.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.medium_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.medium_msg.outputs.reaction-emoji }}" == "✨" ]] || { echo "Medium message test failed"; exit 1; }
+
+      - name: Test with long message (no keywords)
+        id: long_msg
+        uses: ./ 
+        with:
+          commit-message: 'This is an exceptionally long commit message that details a comprehensive overhaul of the entire system architecture, addressing scalability and performance concerns across multiple modules and services. It includes extensive changes to the database schema, API contracts, and front-end components to ensure future compatibility and maintainability.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.long_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.long_msg.outputs.reaction-emoji }}" == "📜" ]] || { echo "Long message test failed"; exit 1; }
+
+      - name: Test with default message (no keywords, medium length)
+        id: default_msg
+        uses: ./ 
+        with:
+          commit-message: 'A simple commit message.'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.default_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.default_msg.outputs.reaction-emoji }}" == "✨" ]] || { echo "Default message test failed"; exit 1; }
+
+      - name: Test with empty message (should default to 🐛 due to length < 10)
+        id: empty_msg
+        uses: ./ 
+        with:
+          commit-message: ''
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Output emoji: ${{ steps.empty_msg.outputs.reaction-emoji }}"
+          [[ "${{ steps.empty_msg.outputs.reaction-emoji }}" == "🐛" ]] || { echo "Empty message test failed"; exit 1; }
