@@ -1,0 +1,1 @@
+use serde::Deserialize;\n\n#[derive(Debug, Deserialize)]\npub struct Item {\n    pub name: String,\n    pub weight: f64,\n}\n\n/// Compute the total weight of a slice of `Item`s.\npub fn compute_total(items: &[Item]) -> f64 {\n    items.iter().map(|i| i.weight).sum()\n}\n
