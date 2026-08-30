@@ -1,0 +1,39 @@
+---
+- name: Ensure Temporal Beacons are Synchronized
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Ensure NTP service (systemd-timesyncd) is running and enabled
+      systemd:
+        name: systemd-timesyncd
+        state: started
+        enabled: yes
+      register: timesyncd_service_result
+      ignore_errors: yes # Allow playbook to continue even if service management fails
+
+    - name: Get current time synchronization status
+      command: timedatectl status
+      register: timedatectl_output
+      changed_when: false
+      ignore_errors: yes # Allow playbook to continue even if timedatectl fails
+
+    - name: Parse time synchronization status
+      set_fact:
+        ntp_service_active: "{{ timesyncd_service_result.status.ActiveState | default('unknown') }}"
+        ntp_service_enabled: "{{ timesyncd_service_result.status.LoadState | default('loaded') == 'loaded' and timesyncd_service_result.status.UnitFileState | default('unknown') == 'enabled' }}"
+        ntp_sync_status: "Unknown"
+
+    - name: Determine synchronization status from timedatectl output
+      set_fact:
+        ntp_sync_status: "Synchronized" if 'NTP synchronized: yes' in timedatectl_output.stdout else "Not Synchronized"
+      when: timedatectl_output.rc == 0 and timedatectl_output.stdout is defined
+
+    - name: Report Temporal Beacon Status
+      debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          NTP Service (systemd-timesyncd) Active: {{ ntp_service_active }}
+          NTP Service (systemd-timesyncd) Enabled: {{ ntp_service_enabled }}
+          Time Synchronization Status: {{ ntp_sync_status }}
