@@ -1,0 +1,25 @@
+name: "Commit Emoji Annotator"
+description: "Add an emoji reaction to a commit based on its message."
+author: "ApocalypsAI Nightly Integrator"
+inputs:
+  github_token:
+    description: "GitHub token with repo scope"
+    required: true
+  commit_sha:
+    description: "SHA of the commit to react to"
+    required: true
+  message:
+    description: "Commit message (optional). If omitted, the action will fetch it via the API."
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: "Annotate commit with emoji"
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_COMMIT_SHA: ${{ inputs.commit_sha }}
+        INPUT_MESSAGE: ${{ inputs.message }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        bash "${{ github.action_path }}/src/annotate.sh"
