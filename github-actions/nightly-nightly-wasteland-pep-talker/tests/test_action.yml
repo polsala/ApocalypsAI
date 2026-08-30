@@ -1,0 +1,96 @@
+name: Test Wasteland Pep Talker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'github-actions/nightly-wasteland-pep-talker/**'
+
+jobs:
+  test-pr-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create deterministic pep talk script
+        run: |
+          echo '#!/bin/bash' > "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+          echo 'echo "Even in the deepest void, a single line of code can spark a new world. Keep building, wanderer!"' >> "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+          chmod +x "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+        # Mock rationale: Replaces the random script with a deterministic one for testing purposes, ensuring consistent output.
+
+      - name: Set up mock gh CLI for PR comment
+        run: |
+          mkdir -p /tmp/mock_bin
+          cp "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/tests/mock_gh_cli.sh" /tmp/mock_bin/gh
+          chmod +x /tmp/mock_bin/gh
+          echo "/tmp/mock_bin" >> "$GITHUB_PATH"
+          echo "MOCK_OUTPUT_FILE=/tmp/mock_gh_output.txt" >> "$GITHUB_ENV" # Set for subsequent steps
+          touch /tmp/mock_gh_output.txt # Ensure file exists for subsequent checks
+        # Mock rationale: We need to prevent actual GitHub API calls during testing and instead verify that the correct 'gh' command would have been executed.
+        # This step creates a mock 'gh' executable and adds its directory to PATH, ensuring our action calls the mock instead of the real CLI.
+
+      - name: Run action for PR comment
+        id: run_action_pr
+        uses: ./github-actions/nightly-wasteland-pep-talker # Path to the action
+        with:
+          github-token: 'mock_token' # Mock token, not used by mock_gh_cli.sh
+          event-type: pull_request
+          event-id: 123
+
+      - name: Verify PR comment call
+        run: |
+          if ! grep -q "pr comment 123 --body \"Even in the deepest void, a single line of code can spark a new world. Keep building, wanderer!\"" "$MOCK_OUTPUT_FILE"; then
+            echo "::error::Mock gh cli output for PR comment did not match expected."
+            cat "$MOCK_OUTPUT_FILE"
+            exit 1
+          fi
+        env:
+          MOCK_OUTPUT_FILE: /tmp/mock_gh_output.txt
+        # Mock rationale: The test verifies the content of the mock output file, which captures the arguments passed to the mock 'gh' script.
+        # This confirms that the action constructed the 'gh pr comment' command correctly.
+
+  test-release-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create deterministic pep talk script
+        run: |
+          echo '#!/bin/bash' > "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+          echo 'echo "Even in the deepest void, a single line of code can spark a new world. Keep building, wanderer!"' >> "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+          chmod +x "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/src/generate_pep_talk.sh"
+        # Mock rationale: Replaces the random script with a deterministic one for testing purposes, ensuring consistent output.
+
+      - name: Set up mock gh CLI for Release comment
+        run: |
+          mkdir -p /tmp/mock_bin
+          cp "${{ github.workspace }}/github-actions/nightly-wasteland-pep-talker/tests/mock_gh_cli.sh" /tmp/mock_bin/gh
+          chmod +x /tmp/mock_bin/gh
+          echo "/tmp/mock_bin" >> "$GITHUB_PATH"
+          echo "MOCK_OUTPUT_FILE=/tmp/mock_gh_output.txt" >> "$GITHUB_ENV" # Set for subsequent steps
+          touch /tmp/mock_gh_output.txt # Ensure file exists for subsequent checks
+        # Mock rationale: Same as above, for release comment scenario.
+
+      - name: Run action for Release comment
+        id: run_action_release
+        uses: ./github-actions/nightly-wasteland-pep-talker # Path to the action
+        with:
+          github-token: 'mock_token' # Mock token
+          event-type: release
+          event-id: 456
+
+      - name: Verify Release comment call
+        run: |
+          if ! grep -q "release comment 456 --body \"Even in the deepest void, a single line of code can spark a new world. Keep building, wanderer!\"" "$MOCK_OUTPUT_FILE"; then
+            echo "::error::Mock gh cli output for Release comment did not match expected."
+            cat "$MOCK_OUTPUT_FILE"
+            exit 1
+          fi
+        env:
+          MOCK_OUTPUT_FILE: /tmp/mock_gh_output.txt
+        # Mock rationale: Verifies the 'gh release comment' command.
