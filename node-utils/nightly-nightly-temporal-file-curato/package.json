@@ -1,0 +1,23 @@
+{
+  "name": "nightly-temporal-file-curator",
+  "version": "1.0.0",
+  "description": "A Node.js CLI tool to identify and suggest archival strategies for files based on their temporal decay (last modified date).",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "file-management",
+    "temporal-decay",
+    "archival",
+    "node-utils",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
