@@ -1,0 +1,1 @@
+use std::env;\nuse nightly_emoji_decoder::decode;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <emoji_string>", args[0]);\n        std::process::exit(1);\n    }\n    let input = &args[1];\n    let output = decode(input);\n    println!("{}", output);\n}\n
