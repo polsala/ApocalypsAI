@@ -1,0 +1,131 @@
+.App {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+h1 {
+  color: #61dafb;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #bbb;
+}
+
+section {
+  background-color: #3a3f47;
+  border-radius: 8px;
+  padding: 25px;
+  margin-bottom: 30px;
+  width: 90%;
+  max-width: 700px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+h2 {
+  color: #98c379;
+  margin-bottom: 20px;
+}
+
+.mood-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.mood-option {
+  display: flex;
+  align-items: center;
+  background-color: #4a4f58;
+  padding: 10px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.mood-option:hover {
+  background-color: #5a5f68;
+}
+
+.mood-option input[type="radio"] {
+  margin-right: 10px;
+  accent-color: #61dafb; /* Highlight color for radio button */
+}
+
+.mood-option input[type="radio"]:checked + .emoji {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
+}
+
+.mood-option input[type="radio"]:checked {
+  border-color: #61dafb;
+}
+
+.emoji {
+  font-size: 1.5em;
+  margin-right: 8px;
+}
+
+.log-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 25px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.log-button:hover:not(:disabled) {
+  background-color: #21a1f1;
+  transform: translateY(-2px);
+}
+
+.log-button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.recent-moods ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recent-moods li {
+  background-color: #4a4f58;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+}
+
+.mood-description {
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.timestamp {
+  color: #999;
+  font-size: 0.8em;
+}
