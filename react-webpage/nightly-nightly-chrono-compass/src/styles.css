@@ -1,0 +1,149 @@
+body {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.App {
+  background-color: #16213e;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+h1 {
+  color: #e94560;
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+  text-shadow: 0 0 10px rgba(233, 69, 96, 0.7);
+}
+
+.event-input-container {
+  background-color: #0f3460;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.event-input-container h2 {
+  color: #00e676;
+  margin-top: 0;
+  text-align: center;
+  font-size: 1.8em;
+}
+
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.event-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 1.1em;
+  color: #a0a0a0;
+}
+
+.event-form input[type="text"],
+.event-form input[type="datetime-local"] {
+  padding: 10px;
+  border: 1px solid #3e206d;
+  border-radius: 5px;
+  background-color: #0c1a30;
+  color: #e0e0e0;
+  font-size: 1em;
+  margin-top: 5px;
+}
+
+.event-form input[type="text"]:focus,
+.event-form input[type="datetime-local"]:focus {
+  outline: none;
+  border-color: #e94560;
+  box-shadow: 0 0 5px rgba(233, 69, 96, 0.5);
+}
+
+.event-form button {
+  padding: 12px 20px;
+  background-color: #00e676;
+  color: #16213e;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.event-form button:hover {
+  background-color: #00c853;
+  transform: translateY(-2px);
+}
+
+.chrono-compass-container {
+  background-color: #0f3460;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.chrono-compass-container h2 {
+  color: #e94560;
+  margin-top: 0;
+  text-align: center;
+  font-size: 1.8em;
+}
+
+.event-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.event-item {
+  background-color: #1a1a2e;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 5px solid #e94560;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.event-item strong {
+  color: #00e676;
+  font-size: 1.2em;
+}
+
+.event-item span {
+  color: #a0a0a0;
+}
+
+.event-item .shifted-date {
+  color: #ffeb3b; /* Yellow for shifted */
+}
+
+.event-item .echo-date {
+  color: #9c27b0; /* Purple for echo */
+}
