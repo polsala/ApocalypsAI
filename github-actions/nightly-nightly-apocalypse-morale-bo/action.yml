@@ -1,0 +1,16 @@
+name: "Apocalypse Morale Boost"
+description: "Outputs a random morale‑boosting message for post‑apocalypse themed workflows."
+author: "ApocalypsAI"
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Generate boost"
+      id: generate
+      run: |
+        bash "${{ github.action_path }}/src/boost.sh"
+      shell: bash
+outputs:
+  message:
+    description: "The morale‑boosting message"
+    value: ${{ steps.generate.outputs.message }}
