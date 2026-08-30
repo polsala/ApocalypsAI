@@ -1,0 +1,1 @@
+const assert = require('assert');\nconst { analyzeMood } = require('../src/index');\n\n// Mock rationale: deterministic tests using known word lists\nassert.strictEqual(analyzeMood('I love sunny days'), '😊');\nassert.strictEqual(analyzeMood('I hate rainy mornings'), '😢');\nassert.strictEqual(analyzeMood('Just another day'), '😐');\n\nconsole.log('All tests passed.');
