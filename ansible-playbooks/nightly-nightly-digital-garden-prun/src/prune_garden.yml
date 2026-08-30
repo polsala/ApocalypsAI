@@ -1,0 +1,51 @@
+---
+- name: Prune the Digital Garden
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure report output path exists
+      ansible.builtin.file:
+        path: "{{ report_output_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find old temporary files
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        file_type: any
+        age: "{{ max_age_temp_files }}"
+        recurse: yes
+      loop: "{{ temp_dirs_to_clean }}"
+      register: old_temp_files
+
+    - name: Remove old temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_temp_files.files }}"
+      when: old_temp_files.files | length > 0
+      ignore_errors: yes # Some files might be in use, gracefully skip
+
+    - name: Clean APT package cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: yes
+        clean: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Clean YUM/DNF package cache (RHEL/CentOS/Fedora)
+      ansible.builtin.yum:
+        clean: all
+      when: ansible_os_family == 'RedHat'
+
+    - name: Gather disk facts
+      ansible.builtin.setup:
+        gather_subset: '!all,disk_facts'
+
+    - name: Generate disk usage report
+      ansible.builtin.template:
+        src: garden_report.j2
+        dest: "{{ report_output_path }}/garden_report.txt"
+        mode: '0644'

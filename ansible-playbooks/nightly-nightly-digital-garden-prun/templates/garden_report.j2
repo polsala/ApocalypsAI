@@ -1,0 +1,15 @@
+Digital Garden Health Report - {{ ansible_hostname }}
+Generated: {{ ansible_date_time.iso8601_micro }}
+
+{% for device in ansible_mounts %}
+  {% if device.mount == '/' or device.mount.startswith('/var') or device.mount.startswith('/opt') %}
+    Filesystem: {{ device.device }}
+    Mount Point: {{ device.mount }}
+    Total Size: {{ (device.size_total / (1024*1024*1024)) | round(2) }} GB
+    Used Space: {{ (device.size_used / (1024*1024*1024)) | round(2) }} GB ({{ device.size_percent }}%)
+    Free Space: {{ (device.size_available / (1024*1024*1024)) | round(2) }} GB
+    --------------------------------------------------
+  {% endif %}
+{% endfor %}
+
+Garden Status: {% if (ansible_mounts | selectattr('size_percent', '>', '80') | list) | length > 0 %}Some areas are overgrown!{% else %}Thriving and tidy!{% endif %}
