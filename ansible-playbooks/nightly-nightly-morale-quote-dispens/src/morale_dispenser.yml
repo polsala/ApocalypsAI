@@ -1,0 +1,29 @@
+---
+- name: Deploy post‑apocalyptic morale quote
+  hosts: all
+  become: true
+  vars:
+    # Default destinations – can be overridden via extra_vars
+    morale_path: "/etc/morale_of_the_day.txt"
+    script_path: "/etc/profile.d/morale.sh"
+    quotes:
+      - "Keep calm and hoard supplies."
+      - "Every day is a new scavenger hunt."
+      - "Radiation today, hope tomorrow."
+      - "When in doubt, barter."
+  tasks:
+    - name: Write a random morale quote to file
+      copy:
+        dest: "{{ morale_path }}"
+        content: "{{ quotes | random }}\n"
+        mode: "0644"
+
+    - name: Install login script to display the quote
+      copy:
+        dest: "{{ script_path }}"
+        content: |
+          #!/bin/sh
+          if [ -f "{{ morale_path }}" ]; then
+            cat "{{ morale_path }}"
+          fi
+        mode: "0755"
