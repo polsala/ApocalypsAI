@@ -1,0 +1,25 @@
+name: 'Temporal Title Tamer'
+description: 'Detects and comments on "temporal anomalies" in PR titles, ensuring chronological stability.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  anomaly-keywords:
+    description: 'Comma-separated list of keywords to detect temporal anomalies.'
+    required: false
+    default: 'time,future,past,paradox,chronos,epoch,temporal,anachronism,revert,forward,backward,timeline,rift,glitch'
+  comment-template:
+    description: 'Template for the comment to post on detected anomalies. Use {title} for PR title.'
+    required: false
+    default: |
+      🚨 Temporal Anomaly Detected in PR Title! 🚨
+      The title "{title}" seems to be playing fast and loose with the spacetime continuum.
+      While we appreciate your adventurous spirit, let\'s try to keep our timelines stable, shall we?
+      Perhaps a more chronologically sound title would prevent unforeseen paradoxes!
+outputs:
+  anomaly-detected:
+    description: 'Boolean indicating if a temporal anomaly was detected.'
+    value: ${{ steps.check_title.outputs.anomaly_detected }}
+runs:
+  using: 'node16'
+  main: 'src/main.js'
