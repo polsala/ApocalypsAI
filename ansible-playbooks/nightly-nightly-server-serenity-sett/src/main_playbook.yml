@@ -1,0 +1,15 @@
+---
+- name: Ensure Server Serenity
+  hosts: all
+  become: yes
+  vars:
+    motd_dest_path: /etc/motd # Default path for MOTD
+  vars_files:
+    - vars/serenity_messages.yml
+  tasks:
+    - ansible.builtin.include_tasks: serenity_setter_tasks.yml
+
+  handlers:
+    - name: Restart motd service (placeholder)
+      ansible.builtin.debug:
+        msg: "MOTD updated. No service restart typically needed for /etc/motd."

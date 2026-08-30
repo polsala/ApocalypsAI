@@ -1,0 +1,30 @@
+---
+- name: Select a random serenity message for MOTD
+  ansible.builtin.set_fact:
+    selected_message: "{{ serenity_messages | random }}"
+
+- name: Update Message Of The Day (MOTD)
+  ansible.builtin.copy:
+    content: |
+      {{ selected_message }}
+
+      ---
+      ApocalypsAI Nightly Integrator - Serenity Setter
+    dest: "{{ motd_dest_path }}"
+    mode: '0644'
+  notify: Restart motd service (if applicable) # Though motd usually doesn't need a restart
+
+- name: Find old temporary files
+  ansible.builtin.find:
+    paths: /tmp
+    file_type: any
+    age: 1d # Files older than 1 day
+    recurse: yes
+  register: old_tmp_files
+
+- name: Remove old temporary files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_tmp_files.files }}"
+  when: old_tmp_files.files is defined and old_tmp_files.files | length > 0
