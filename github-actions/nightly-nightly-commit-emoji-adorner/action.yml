@@ -1,0 +1,13 @@
+name: "Commit Emoji Adorner"
+description: "Adds a random emoji to commit messages and comments on the PR"
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+  emoji-list:
+    description: "Comma‑separated list of emojis to choose from"
+    required: false
+    default: "🚀,✨,🔥,💡,🎉,🤖,🧩"
+runs:
+  using: "node12"
+  main: "src/main.js"
