@@ -1,0 +1,52 @@
+- name: Test SSH key rotator
+  hosts: localhost
+  become: true
+  vars:
+    test_backup_dir: /tmp/ssh_backup_test
+  tasks:
+    - name: Ensure a clean environment – remove any existing test keys
+      file:
+        path: /etc/ssh/ssh_host_rsa_key
+        state: absent
+      ignore_errors: true
+
+    - name: Ensure a clean environment – remove backup dir if present
+      file:
+        path: "{{ test_backup_dir }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Create a fake existing RSA host key (simulating an old key)
+      copy:
+        dest: /etc/ssh/ssh_host_rsa_key
+        content: "old-key-placeholder"
+        mode: '0600'
+
+    - name: Run the rotator playbook with a custom backup directory
+      import_playbook: ../src/rotate_ssh_keys.yml
+      vars:
+        backup_dir: "{{ test_backup_dir }}"
+        ssh_key_type: rsa
+        ssh_key_bits: 2048
+
+    - name: Verify new RSA key was created
+      stat:
+        path: /etc/ssh/ssh_host_rsa_key
+      register: new_key
+
+    - name: Assert the new key exists and is non‑empty
+      assert:
+        that:
+          - new_key.stat.exists
+          - new_key.stat.size > 0
+
+    - name: Find backup files created by the playbook
+      find:
+        paths: "{{ test_backup_dir }}"
+        patterns: "ssh_host_rsa_key.*"
+      register: backups
+
+    - name: Assert exactly one backup file was created
+      assert:
+        that:
+          - backups.files | length == 1
