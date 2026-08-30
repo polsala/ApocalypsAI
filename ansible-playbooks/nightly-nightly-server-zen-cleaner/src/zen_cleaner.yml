@@ -1,0 +1,59 @@
+---
+- name: Perform digital decluttering for {{ ansible_hostname }}
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Ensure apt cache is updated (if applicable)
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Remove unused packages (if applicable)
+      ansible.builtin.apt:
+        autoremove: yes
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Clean apt cache (if applicable)
+      ansible.builtin.apt:
+        clean: yes
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Clean old journal logs
+      ansible.builtin.command: "journalctl --vacuum-time={{ journal_vacuum_time }}"
+      args:
+        warn: no # Suppress warning about command module not being idempotent
+      changed_when: true # Assume it always changes something if logs exist
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Find old files in /tmp
+      ansible.builtin.find:
+        paths: /tmp
+        age: "{{ tmp_age_days }}d"
+        file_type: any
+      register: old_tmp_files
+      when: tmp_age_days is defined and tmp_age_days > 0
+
+    - name: Delete old files from /tmp
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files.files | default([]) }}"
+      when: old_tmp_files.files is defined and old_tmp_files.files | length > 0
+
+    - name: Find old files in /var/tmp
+      ansible.builtin.find:
+        paths: /var/tmp
+        age: "{{ vartmp_age_days }}d"
+        file_type: any
+      register: old_vartmp_files
+      when: vartmp_age_days is defined and vartmp_age_days > 0
+
+    - name: Delete old files from /var/tmp
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_vartmp_files.files | default([]) }}"
+      when: old_vartmp_files.files is defined and old_vartmp_files.files | length > 0
