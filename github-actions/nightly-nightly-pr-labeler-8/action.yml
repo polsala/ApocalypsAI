@@ -1,0 +1,19 @@
+name: "PR Labeler"
+description: "Adds a label to the PR that triggered the workflow."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+  label:
+    description: "Label to add"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Add label to PR
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/src/label_pr.sh"
+      env:
+        GITHUB_TOKEN: "${{ inputs.github-token }}"
+        LABEL: "${{ inputs.label }}"
