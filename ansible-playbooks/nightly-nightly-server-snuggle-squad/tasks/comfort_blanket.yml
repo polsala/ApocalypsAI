@@ -1,0 +1,8 @@
+---
+- name: Create the server comfort directory (comfort blanket)
+  ansible.builtin.file:
+    path: "{{ comfort_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
