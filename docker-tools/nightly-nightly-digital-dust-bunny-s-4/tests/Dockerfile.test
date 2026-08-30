@@ -1,0 +1,14 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+# Install Docker SDK for Python (needed for import, even if mocked) and pytest
+RUN pip install docker pytest
+
+COPY src/dust_bunny_sweeper.py src/
+COPY tests/test_sweeper.py tests/
+
+# Set Python path to include src for tests
+ENV PYTHONPATH=/app/src:$PYTHONPATH
+
+CMD ["pytest", "tests/test_sweeper.py"]
