@@ -1,0 +1,63 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.App-header {
+  background-color: #0f0f1a;
+  padding: 20px;
+  border-bottom: 2px solid #4a4a6a;
+}
+
+.App-header h1 {
+  color: #00ffcc;
+  margin-bottom: 5px;
+}
+
+.App-header p {
+  color: #a0a0a0;
+  font-style: italic;
+}
+
+.App-main {
+  flex-grow: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-container {
+  width: 90%;
+  max-width: 1000px;
+  margin-top: 40px;
+  background-color: #2a2a4a;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+}
+
+.timeline-container h2 {
+  color: #00ffcc;
+  margin-bottom: 20px;
+}
+
+.App-footer {
+  background-color: #0f0f1a;
+  padding: 10px;
+  margin-top: 20px;
+  border-top: 1px solid #4a4a6a;
+  color: #a0a0a0;
+  font-size: 0.8em;
+}
