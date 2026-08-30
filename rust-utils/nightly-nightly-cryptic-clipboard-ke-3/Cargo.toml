@@ -1,0 +1,14 @@
+[package]
+name = "cryptic-clipboard"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[lib]
+name = "cryptic_clipboard"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cryptic-clipboard"
+path = "src/main.rs"
