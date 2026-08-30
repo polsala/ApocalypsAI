@@ -1,0 +1,25 @@
+Digital Dust Bunny Sweep Report - {{ report_timestamp }}
+
+--- Findings & Actions ---
+
+Total Digital Dust Bunnies Deleted: {{ total_deleted }}
+{% if deleted_files %}
+Deleted Files:
+{% for file in deleted_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No digital dust bunnies found to delete. Your system is sparkling!
+{% endif %}
+
+Total Ancient Data Relics Archived: {{ total_archived }}
+{% if archived_files %}
+Archived Files:
+{% for file in archived_files %}
+- {{ file }} -> {{ archive_base_dir }}/{{ file | basename }}
+{% endfor %}
+{% else %}
+No ancient data relics found to archive. All data is fresh!
+{% endif %}
+
+--- End of Report ---

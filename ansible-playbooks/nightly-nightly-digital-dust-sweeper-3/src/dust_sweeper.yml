@@ -1,0 +1,100 @@
+---
+- name: Nightly Digital Dust Bunny Sweeper
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure archive base directory exists
+      ansible.builtin.file:
+        path: "{{ archive_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Initialize lists for report
+      ansible.builtin.set_fact:
+        deleted_files: []
+        archived_files: []
+
+    - name: Find and delete digital dust bunnies
+      block:
+        - name: Find dust bunnies in {{ item }}
+          ansible.builtin.find:
+            paths: "{{ item }}"
+            age: "{{ dust_bunny_age_days }}d"
+            recurse: yes
+            file_type: file
+          register: found_dust_bunnies_result
+          loop_control:
+            loop_var: item
+          loop: "{{ dust_bunny_paths | default([]) }}"
+
+        - name: Delete found dust bunnies
+          ansible.builtin.file:
+            path: "{{ file_item.path }}"
+            state: absent
+          loop: "{{ found_dust_bunnies_result.results | map(attribute='files') | flatten }}"
+          loop_control:
+            loop_var: file_item
+          when: found_dust_bunnies_result.results is defined and file_item.path is defined
+          register: delete_results
+
+        - name: Add deleted files to report list
+          ansible.builtin.set_fact:
+            deleted_files: "{{ deleted_files + [file_item.path] }}"
+          loop: "{{ delete_results.results }}"
+          loop_control:
+            loop_var: file_item
+          when: file_item.changed and file_item.path is defined
+
+    - name: Find and archive ancient data relics
+      block:
+        - name: Find relics in {{ item }}
+          ansible.builtin.find:
+            paths: "{{ item }}"
+            age: "{{ relic_age_days }}d"
+            recurse: yes
+            file_type: file
+          register: found_relics_result
+          loop_control:
+            loop_var: item
+          loop: "{{ relic_paths | default([]) }}"
+
+        - name: Archive found relics
+          ansible.builtin.copy:
+            src: "{{ file_item.path }}"
+            dest: "{{ archive_base_dir }}/{{ file_item.path | basename }}"
+            remote_src: yes
+          loop: "{{ found_relics_result.results | map(attribute='files') | flatten }}"
+          loop_control:
+            loop_var: file_item
+          when: found_relics_result.results is defined and file_item.path is defined
+          register: archive_results
+
+        - name: Delete original relic after archiving
+          ansible.builtin.file:
+            path: "{{ file_item.path }}"
+            state: absent
+          loop: "{{ archive_results.results }}"
+          loop_control:
+            loop_var: file_item
+          when: file_item.changed and file_item.path is defined
+
+        - name: Add archived files to report list
+          ansible.builtin.set_fact:
+            archived_files: "{{ archived_files + [file_item.path] }}"
+          loop: "{{ archive_results.results }}"
+          loop_control:
+            loop_var: file_item
+          when: file_item.changed and file_item.path is defined
+
+    - name: Generate sweep report
+      ansible.builtin.template:
+        src: sweep_report.j2
+        dest: "{{ sweep_report_path }}"
+        mode: '0644'
+      vars:
+        report_timestamp: "{{ ansible_date_time.iso8601_micro }}"
+        total_deleted: "{{ deleted_files | length }}"
+        total_archived: "{{ archived_files | length }}"
