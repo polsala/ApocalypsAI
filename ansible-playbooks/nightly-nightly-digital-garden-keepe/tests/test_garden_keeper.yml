@@ -1,0 +1,121 @@
+---
+- name: Test Digital Garden Keeper Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_garden_path: "{{ playbook_dir }}/test_garden_content"
+    test_archive_path: "{{ test_garden_path }}/_archive"
+    test_report_file: "{{ test_garden_path }}/digital_garden_report.md"
+    # Set a very short archive period for testing to ensure files are archived
+    test_archive_after_days: 0.00001 # Effectively archives any file older than a few seconds
+
+  tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Ensures a clean slate for each test run by removing previous test artifacts.
+
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Sets up the controlled directory structure for testing.
+
+    - name: Create test files
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/{{ item.name }}"
+        content: |
+          ---
+          title: {{ item.title }}
+          {% if item.tags is defined %}tags: {{ item.tags }}{% endif %}
+          date: {{ item.date }}
+          ---
+          This is content for {{ item.name }}.
+          {% if item.link is defined %}[Link to another file]({{ item.link }}){% endif %}
+      loop:
+        - { name: "file_with_tags.md", title: "Tagged File", tags: "[ansible, garden]", date: "2023-01-01" }
+        - { name: "file_no_tags.md", title: "Untagged File", date: "2023-01-01" }
+        - { name: "file_empty_tags.md", title: "Empty Tags File", tags: "[]", date: "2023-01-01" }
+        - { name: "file_with_broken_link.md", title: "Broken Link File", tags: "[test]", date: "2023-01-01", link: "non_existent_file.md" }
+        - { name: "file_with_valid_link.md", title: "Valid Link File", tags: "[test]", date: "2023-01-01", link: "linked_file.md" }
+        - { name: "linked_file.md", title: "Linked File", tags: "[linked]", date: "2023-01-01" }
+        - { name: "old_file.md", title: "Old File", tags: "[old]", date: "2022-01-01" } # This should be archived
+      # Mock rationale: Creates a controlled set of markdown files with specific content and metadata for testing various scenarios.
+
+    - name: Set mtime for old_file.md to ensure archiving
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_garden_path }}/old_file.md"
+      # Mock rationale: Manipulates file system timestamps deterministically to simulate file age for testing the archiving logic.
+
+    - name: Run the Digital Garden Keeper playbook
+      ansible.builtin.include_playbook: "{{ playbook_dir }}/../src/garden_keeper.yml"
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        archive_path: "{{ test_archive_path }}"
+        archive_after_days: "{{ test_archive_after_days }}"
+      # Mock rationale: Executes the target playbook against the controlled test environment.
+
+    - name: Read generated report content
+      ansible.builtin.set_fact:
+        report_content: "{{ lookup('file', test_report_file) }}"
+      # Mock rationale: Reads the generated report file from the controlled test environment for assertion.
+
+    - name: Assert untagged files are reported
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_garden_path }}/file_no_tags.md' in report_content"
+          - "'{{ test_garden_path }}/file_empty_tags.md' in report_content"
+          - "'{{ test_garden_path }}/file_with_tags.md' not in report_content"
+        fail_msg: "Untagged files assertion failed."
+      # Mock rationale: Asserts the content of the locally generated report, which is deterministic.
+
+    - name: Assert broken links are reported
+      ansible.builtin.assert:
+        that:
+          - "'Broken Link: `non_existent_file.md`' in report_content"
+          - "'Broken Link: `linked_file.md`' not in report_content"
+        fail_msg: "Broken links assertion failed."
+      # Mock rationale: Asserts the content of the locally generated report, which is deterministic.
+
+    - name: Stat original old_file.md
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/old_file.md"
+      register: stat_old_file
+      # Mock rationale: `stat` module operates on the local filesystem.
+
+    - name: Stat archived old_file.md
+      ansible.builtin.stat:
+        path: "{{ test_archive_path }}/old_file.md"
+      register: stat_archived_file
+      # Mock rationale: `stat` module operates on the local filesystem.
+
+    - name: Assert old file was archived and reported
+      ansible.builtin.assert:
+        that:
+          - "not stat_old_file.stat.exists" # Original file should be gone
+          - "stat_archived_file.stat.exists" # Archived file should exist
+          - "'{{ test_garden_path }}/old_file.md' in report_content" # Should be listed in report
+        fail_msg: "Archived files assertion failed."
+      # Mock rationale: Checks local file system state and report content, both deterministic.
+
+    - name: Assert report file exists
+      ansible.builtin.stat:
+        path: "{{ test_report_file }}"
+      register: report_stat
+      # Mock rationale: `stat` module operates on the local filesystem.
+
+    - name: Assert report file was created
+      ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists
+        fail_msg: "Report file was not created."
+      # Mock rationale: Checks local variable `report_stat` derived from file system.
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Cleans up the controlled test environment after tests complete.

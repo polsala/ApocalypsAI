@@ -1,0 +1,76 @@
+---
+- name: Read file content for {{ current_file.path }}
+  ansible.builtin.slurp:
+    src: "{{ current_file.path }}"
+  register: file_content_slurp
+  # Mock rationale: `slurp` module operates on the local filesystem, which is controlled by the test setup.
+
+- name: Decode file content for {{ current_file.path }}
+  ansible.builtin.set_fact:
+    file_content: "{{ file_content_slurp.content | b64decode }}"
+  # Mock rationale: Decodes local file content, no external calls.
+
+- name: Extract front matter for {{ current_file.path }}
+  ansible.builtin.set_fact:
+    front_matter: "{{ file_content | regex_search('^---\n(.*?)\n---\n', multiline=True, '\\1') | first | from_yaml(default={}) }}"
+  when: file_content | regex_search('^---\n(.*?)\n---\n', multiline=True)
+  # Mock rationale: Uses regex and YAML parsing on local file content, no external calls.
+
+- name: Check for missing or empty '{{ required_tags_field }}' in {{ current_file.path }}
+  ansible.builtin.set_fact:
+    untagged_files: "{{ untagged_files + [current_file.path] }}"
+  when:
+    - front_matter is defined
+    - required_tags_field not in front_matter or
+      (front_matter[required_tags_field] is string and front_matter[required_tags_field] | trim == '') or
+      (front_matter[required_tags_field] is iterable and front_matter[required_tags_field] | length == 0)
+  # Mock rationale: Checks local variable `front_matter` derived from file content.
+
+- name: Find internal markdown links in {{ current_file.path }}
+  ansible.builtin.set_fact:
+    _links_in_file: "{{ file_content | regex_findall('\[[^\]]+\]\\(([^)]+\\.md)\\)') }}"
+  # Mock rationale: Uses regex on local file content.
+
+- name: Validate each internal link in {{ current_file.path }}
+  ansible.builtin.stat:
+    path: "{{ current_file.path | dirname }}/{{ item }}"
+  register: link_stat_result
+  loop: "{{ _links_in_file }}"
+  loop_control:
+    loop_var: link_target
+  when: _links_in_file | length > 0
+  # Mock rationale: `stat` module operates on the local filesystem, which is controlled by the test setup.
+
+- name: Add broken link to list for {{ current_file.path }}
+  ansible.builtin.set_fact:
+    broken_links_found: "{{ broken_links_found + [{ 'source': current_file.path, 'link': link_target, 'target_path': current_file.path | dirname + '/' + link_target }] }}"
+  loop: "{{ _links_in_file }}"
+  loop_control:
+    loop_var: link_target
+    index_var: link_idx
+  when:
+    - link_stat_result.results is defined
+    - not link_stat_result.results[link_idx].stat.exists
+  # Mock rationale: Uses results from previous `stat` task, which is deterministic.
+
+- name: Get file modification time for {{ current_file.path }}
+  ansible.builtin.stat:
+    path: "{{ current_file.path }}"
+  register: file_stat_mtime
+  # Mock rationale: `stat` module operates on the local filesystem, which is controlled by the test setup.
+
+- name: Archive old file {{ current_file.path }} if older than {{ archive_after_days }} days
+  ansible.builtin.command: "mv {{ current_file.path }} {{ archive_path }}/"
+  args:
+    creates: "{{ archive_path }}/{{ current_file.path | basename }}"
+  when:
+    - file_stat_mtime.stat.mtime is defined
+    - (ansible_date_time.epoch | int - file_stat_mtime.stat.mtime) > (archive_after_days * 24 * 60 * 60)
+  register: archive_result
+  # Mock rationale: `command` module operates on the local filesystem. `ansible_date_time.epoch` is a fact, but for testing, we control the `mtime` of test files to simulate age.
+
+- name: Add archived file to list
+  ansible.builtin.set_fact:
+    old_files_archived: "{{ old_files_archived + [current_file.path] }}"
+  when: archive_result.changed
+  # Mock rationale: Uses results from previous `command` task, which is deterministic.
