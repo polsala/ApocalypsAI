@@ -1,0 +1,22 @@
+Survival Cache Audit Report - {{ ansible_date_time.iso8601_basic_short }}
+
+{% for host in groups['survival_hosts'] %}
+Host: {{ host }} ({% if hostvars[host].ansible_default_ipv4 is defined %}{{ hostvars[host].ansible_default_ipv4.address }}{% else %}N/A{% endif %})
+--------------------------------------------------------------------------------
+{% if hostvars[host].audit_results is defined and hostvars[host].audit_results %}
+{% for result in hostvars[host].audit_results %}
+Item: {{ result.item.path }} ({{ result.item.description | default('No description') }})
+  Status: {% if result.status == 'PASS' %}PASS{% else %}FAIL{% endif %}
+  Details: {{ result.message }}
+  {% if result.diffs %}
+  Discrepancies:
+  {% for diff in result.diffs %}
+    - {{ diff }}
+  {% endfor %}
+  {% endif %}
+{% endfor %}
+{% else %}
+No audit results found for this host.
+{% endif %}
+--------------------------------------------------------------------------------
+{% endfor %}

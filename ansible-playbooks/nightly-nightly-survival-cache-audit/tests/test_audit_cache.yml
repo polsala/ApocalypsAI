@@ -1,0 +1,120 @@
+---
+- name: Test Survival Cache Auditor Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: true # Need facts for ansible_user_id, ansible_user_gid, ansible_date_time
+
+  vars:
+    test_dir: "/tmp/survival_cache_test"
+    expected_sha256_empty: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # SHA256 of an empty file
+    expected_sha256_content: "5d41402abc4b2a76b9719d911017c59212440e25283d472669e80a0100000000" # SHA256 of "test content"
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create expected essential_data.txt (correct)
+      ansible.builtin.copy:
+        content: ""
+        dest: "{{ test_dir }}/essential_data.txt"
+        mode: '0644'
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+
+    - name: Create expected secure_vault (correct)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/secure_vault"
+        state: directory
+        mode: '0700'
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+
+    - name: Create malformed_permissions.txt (wrong permissions)
+      ansible.builtin.copy:
+        content: "malformed content"
+        dest: "{{ test_dir }}/malformed_permissions.txt"
+        mode: '0600' # Expected 0644 in manifest
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+
+    - name: Create malformed_checksum.txt (wrong checksum)
+      ansible.builtin.copy:
+        content: "test content"
+        dest: "{{ test_dir }}/malformed_checksum.txt"
+        mode: '0644'
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid }}"
+
+    - name: Define test manifest
+      ansible.builtin.set_fact:
+        survival_cache_items:
+          - path: "{{ test_dir }}/essential_data.txt"
+            state: "file"
+            mode: "0644"
+            owner: "{{ ansible_user_id }}"
+            group: "{{ ansible_user_gid }}"
+            checksum: "sha256:{{ expected_sha256_empty }}"
+            description: "Critical survival data log"
+          - path: "{{ test_dir }}/secure_vault"
+            state: "directory"
+            mode: "0700"
+            owner: "{{ ansible_user_id }}"
+            group: "{{ ansible_user_gid }}"
+            description: "Secure vault for sensitive items"
+          - path: "{{ test_dir }}/missing_optional.txt"
+            state: "file"
+            optional: true
+            description: "An optional note that should be missing"
+          - path: "{{ test_dir }}/missing_required.txt"
+            state: "file"
+            description: "A required file that should be missing"
+          - path: "{{ test_dir }}/malformed_permissions.txt"
+            state: "file"
+            mode: "0644" # Expecting 0644, but created as 0600
+            owner: "{{ ansible_user_id }}"
+            group: "{{ ansible_user_gid }}"
+            description: "File with incorrect permissions"
+          - path: "{{ test_dir }}/malformed_checksum.txt"
+            state: "file"
+            mode: "0644"
+            owner: "{{ ansible_user_id }}"
+            group: "{{ ansible_user_gid }}"
+            checksum: "sha256:{{ expected_sha256_empty }}" # Expecting empty file checksum, but has content
+            description: "File with incorrect checksum"
+
+    - name: Run the audit playbook against localhost
+      ansible.builtin.include_tasks: ../src/audit_cache.yml
+      vars:
+        survival_hosts: "localhost" # Override inventory for test
+
+    - name: Assert audit results
+      ansible.builtin.assert:
+        that:
+          - "item.item.path == '{{ test_dir }}/essential_data.txt' and item.status == 'PASS'"
+          - "item.item.path == '{{ test_dir }}/secure_vault' and item.status == 'PASS'"
+          - "item.item.path == '{{ test_dir }}/missing_optional.txt' and item.status == 'PASS'"
+          - "item.item.path == '{{ test_dir }}/missing_required.txt' and item.status == 'FAIL'"
+          - "item.item.path == '{{ test_dir }}/malformed_permissions.txt' and item.status == 'FAIL'"
+          - "item.item.path == '{{ test_dir }}/malformed_checksum.txt' and item.status == 'FAIL'"
+        fail_msg: "Audit failed for item: {{ item.item.path }} with status {{ item.status }} and message {{ item.message }}"
+      loop: "{{ hostvars['localhost'].audit_results }}"
+      loop_control:
+        label: "Asserting {{ item.item.path }}"
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: ansible_check_mode is not defined # Don't clean up in check mode
+
+    - name: Clean up generated report
+      ansible.builtin.file:
+        path: "/tmp/survival_cache_audit_report_{{ ansible_date_time.iso8601_basic_short }}.txt"
+        state: absent
+      delegate_to: localhost
+      when: ansible_check_mode is not defined
+
+# Mock rationale: Ansible's `stat` module and file operations are inherently deterministic when operating on a controlled filesystem. By creating specific files/directories with known properties on `localhost` before running the main playbook, we can simulate various scenarios (missing files, wrong permissions, correct files) and assert the audit playbook's output. This avoids external dependencies and ensures repeatable tests.
