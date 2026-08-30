@@ -1,0 +1,29 @@
+{
+  "name": "nightly-chrono-calibrator",
+  "version": "1.0.0",
+  "description": "Calibrates your system's Chrono-Compass and reports temporal drift anomalies.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "time",
+    "synchronization",
+    "drift",
+    "node",
+    "utility",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "node-fetch": "^2.6.7",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
