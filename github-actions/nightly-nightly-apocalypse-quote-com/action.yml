@@ -1,0 +1,9 @@
+name: 'Nightly Apocalypse Quote Commenter'
+description: 'Posts a random apocalyptic quote on PRs'
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
