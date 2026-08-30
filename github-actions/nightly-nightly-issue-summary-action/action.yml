@@ -1,0 +1,30 @@
+name: "Issue Summary Action"
+description: "Generate a markdown summary of open issues grouped by label and post as PR comment"
+inputs:
+  github_token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Generate summary
+      run: |
+        bash "${{ github.action_path }}/src/generate_summary.sh" > ${{ github.workspace }}/issue_summary.md
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+    - name: Post comment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync(process.env.GITHUB_WORKSPACE + '/issue_summary.md', 'utf8');
+          const prNumber = context.payload.pull_request.number;
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: prNumber,
+            body: summary
+          });
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
