@@ -1,0 +1,15 @@
+- name: Verify rotate_keys.yml runs in check mode
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Run rotate_keys.yml in check mode
+      command: ansible-playbook -i inventory.ini src/rotate_keys.yml --check
+      register: result
+      changed_when: false
+
+    - name: Assert playbook succeeded
+      assert:
+        that:
+          - result.rc == 0
+        fail_msg: "rotate_keys.yml failed in check mode."
