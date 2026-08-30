@@ -1,0 +1,52 @@
+---
+- name: Analyze system logs for patterns
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log analysis script is present
+      copy:
+        dest: /tmp/log_analyzer.py
+        content: |
+          import sys
+          import re
+          import json
+
+          def analyze_logs(log_files, patterns):
+              results = {}
+              for log_file in log_files:
+                  results[log_file] = {}
+                  try:
+                      with open(log_file, 'r') as f:
+                          log_content = f.read()
+                          for pattern in patterns:
+                              matches = re.findall(pattern['regex'], log_content)
+                              results[log_file][pattern['name']] = len(matches)
+                  except FileNotFoundError:
+                      results[log_file]['error'] = 'File not found'
+                  except Exception as e:
+                      results[log_file]['error'] = str(e)
+              return results
+
+          if __name__ == "__main__":
+              log_files_input = json.loads(sys.argv[1])
+              patterns_input = json.loads(sys.argv[2])
+              analysis_results = analyze_logs(log_files_input, patterns_input)
+              print(json.dumps(analysis_results, indent=2))
+        mode: '0755'
+
+    - name: Run log analysis script
+      command: "python3 /tmp/log_analyzer.py '{{ log_files_to_analyze | tojson }}' '{{ patterns_to_find | tojson }}'"
+      register: log_analysis_output
+      changed_when: false # This task is for reporting, not changing state
+
+    - name: Display log analysis summary
+      debug:
+        msg: "Log Analysis Report for {{ inventory_hostname }}:\n{{ log_analysis_output.stdout | from_json | to_nice_json }}"
+
+    - name: Clean up temporary script
+      file:
+        path: /tmp/log_analyzer.py
+        state: absent
