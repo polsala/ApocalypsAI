@@ -1,0 +1,87 @@
+---
+- name: Test Nightly Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    test_base_dir: "{{ lookup('env', 'HOME') }}/.ansible_test_dust_bunnies"
+    test_target_dir: "{{ test_base_dir }}/temp_files"
+    cleanup_age_days: 1 # Set a short age for testing
+    cleanup_paths:
+      - "{{ test_target_dir }}"
+  tasks:
+    - name: Ensure test base directory exists
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure test target directory exists
+      ansible.builtin.file:
+        path: "{{ test_target_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create inventory for test run
+      ansible.builtin.copy:
+        content: |
+          [localhost]
+          localhost ansible_connection=local
+        dest: "{{ test_base_dir }}/inventory_test.ini"
+      # Mock rationale: Creates a minimal inventory file for the nested ansible-playbook
+      # command to ensure it can target 'localhost' within the test environment.
+
+    - name: Create old file (dust bunny)
+      ansible.builtin.copy:
+        content: "This is an old file."
+        dest: "{{ test_target_dir }}/old_dust_bunny.txt"
+      register: old_file_created
+
+    - name: Set mtime for old file
+      ansible.builtin.command: touch -d "2 days ago" "{{ test_target_dir }}/old_dust_bunny.txt"
+      changed_when: false
+      # Mock rationale: Manually setting the modification time of a file
+      # ensures that the 'find' module will deterministically identify it as 'old'
+      # based on the 'cleanup_age_days' variable, without relying on real-time
+      # system clock changes or external file system state.
+
+    - name: Create new file (not a dust bunny)
+      ansible.builtin.copy:
+        content: "This is a new file."
+        dest: "{{ test_target_dir }}/new_shiny_file.txt"
+      register: new_file_created
+
+    - name: Run the dust bunny sweeper in check mode
+      ansible.builtin.command: >
+        ansible-playbook -i "{{ test_base_dir }}/inventory_test.ini"
+        "{{ playbook_dir }}/../src/playbook.yml"
+        --check
+        -e "cleanup_age_days={{ cleanup_age_days }}"
+        -e "cleanup_paths={{ cleanup_paths | to_json }}"
+      args:
+        chdir: "{{ test_base_dir }}" # Run from base dir to find inventory
+      register: playbook_output
+      changed_when: false
+      # Mock rationale: Running the playbook with '--check' mode prevents actual file deletion,
+      # allowing us to assert on the *intended* actions. The temporary directory and
+      # controlled file modification times ensure the 'find' and 'file' modules
+      # behave predictably for the test.
+
+    - name: Assert old file would be removed
+      ansible.builtin.assert:
+        that:
+          - "'old_dust_bunny.txt' in playbook_output.stdout"
+          - "'changed=1' in playbook_output.stdout" # Indicates a change would occur
+          - "'new_shiny_file.txt' not in playbook_output.stdout"
+          - "'new_shiny_file.txt' not in playbook_output.stderr"
+        fail_msg: "Expected old_dust_bunny.txt to be marked for removal and new_shiny_file.txt to be ignored. Output: {{ playbook_output.stdout }}"
+      # Mock rationale: This assertion checks the captured output of the playbook run.
+      # Since the playbook was run in check mode against a controlled test environment,
+      # the output is deterministic and reflects the expected behavior of the utility.
+
+    - name: Clean up test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Ensures the test environment is cleaned up, leaving no
+      # residual files and making the test idempotent.
