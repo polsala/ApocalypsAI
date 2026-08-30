@@ -1,0 +1,1 @@
+use std::env;\nuse cryptic_map_generator::generate_map;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <seed>", args[0]);\n        std::process::exit(1);\n    }\n    let seed = &args[1];\n    let map = generate_map(seed);\n    println!("{}", map);\n}\n
