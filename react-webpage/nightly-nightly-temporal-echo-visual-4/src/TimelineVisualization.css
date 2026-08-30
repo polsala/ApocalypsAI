@@ -1,0 +1,102 @@
+.timeline-container {
+  position: relative;
+  width: 100%;
+  height: 150px; /* Fixed height for the timeline area */
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #444;
+  display: flex;
+  align-items: flex-start; /* Align items to the top */
+  justify-content: space-between; /* Distribute items */
+}
+
+.timeline-line {
+  position: absolute;
+  top: 50px; /* Position the line in the middle vertically */
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #61dafb;
+  z-index: 0;
+}
+
+.timeline-event {
+  position: absolute;
+  top: 40px; /* Position relative to the timeline-container */
+  transform: translateX(-50%); /* Center the dot on its 'left' position */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+  cursor: help;
+}
+
+.event-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #a0e0ff;
+  border-radius: 50%;
+  border: 2px solid #61dafb;
+  box-shadow: 0 0 5px rgba(97, 218, 251, 0.7);
+  margin-bottom: 5px;
+}
+
+.event-label {
+  background-color: #555;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.7em;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.event-term {
+  font-weight: bold;
+  display: block;
+}
+
+.event-offset {
+  font-size: 0.8em;
+  color: #ccc;
+}
+
+/* Styling for input and button */
+.input-section {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.input-section input {
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: 1px solid #61dafb;
+  background-color: #3a3f47;
+  color: white;
+  font-size: 1em;
+  flex-grow: 1;
+  max-width: 400px;
+}
+
+.input-section input::placeholder {
+  color: #bbb;
+}
+
+.input-section button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  background-color: #61dafb;
+  color: #282c34;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.input-section button:hover {
+  background-color: #a0e0ff;
+}
