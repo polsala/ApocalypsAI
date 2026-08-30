@@ -1,0 +1,149 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.App-header p {
+  font-style: italic;
+  color: #bbb;
+}
+
+.App-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.chrono-form {
+  background-color: #3a3f47;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.form-group input[type="date"],
+.form-group input[type="text"] {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #444;
+  color: #e0e0e0;
+  font-size: 1em;
+}
+
+.form-group input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 8px;
+  background: #555;
+  border-radius: 5px;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #61dafb;
+  cursor: pointer;
+}
+
+.form-group input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #61dafb;
+  cursor: pointer;
+}
+
+button[type="submit"] {
+  background-color: #61dafb;
+  color: #282c34;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-weight: bold;
+}
+
+button[type="submit"]:hover {
+  background-color: #4fa3d1;
+}
+
+.visualizer-container {
+  background-color: #3a3f47;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.visualizer-container h2 {
+  color: #61dafb;
+  margin-bottom: 20px;
+}
+
+.ripple-canvas {
+  border: 2px solid #61dafb;
+  background-color: #222;
+  border-radius: 50%; /* Make the canvas appear circular */
+}
+
+.event-summary {
+  margin-top: 20px;
+  font-size: 0.9em;
+  color: #aaa;
+}
