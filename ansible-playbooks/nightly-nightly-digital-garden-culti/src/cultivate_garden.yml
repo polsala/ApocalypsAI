@@ -1,0 +1,64 @@
+---
+- name: Cultivate Digital Garden
+  hosts: garden_hosts
+  gather_facts: yes
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure digital garden directory exists
+      ansible.builtin.file:
+        path: "{{ digital_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find existing plants
+      ansible.builtin.find:
+        paths: "{{ digital_garden_path }}"
+        patterns: "plant_*.txt"
+        file_type: file
+        sort: modification
+      register: existing_plants
+
+    - name: Prune oldest plants if exceeding max_garden_plants
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ existing_plants.files | reverse | slice(max_garden_plants) }}"
+      when: existing_plants.files | length > max_garden_plants
+      # Mock rationale: The 'file' module with 'state: absent' is idempotent and operates on the local filesystem
+      # when connection=local, making it deterministic and offline.
+
+    - name: Generate new plant content
+      ansible.builtin.set_fact:
+        current_timestamp: "{{ ansible_date_time.iso8601_micro }}"
+        whimsical_quote: >-
+          {{ [
+            "May your code compile on the first try!",
+            "The server hums a happy tune today.",
+            "Even in the void, a tiny pixel blooms.",
+            "Your digital garden is a testament to perseverance.",
+            "May your logs be clear and your uptime eternal.",
+            "A byte of beauty for your day."
+          ] | random }}
+
+    - name: Plant a new seed
+      ansible.builtin.template:
+        src: plant_seed.j2
+        dest: "{{ digital_garden_path }}/plant_{{ current_timestamp | replace(':', '-') | replace('.', '-') }}.txt"
+        mode: '0644'
+      # Mock rationale: The 'template' module operates on the local filesystem when connection=local.
+      # The content is generated from a local template and a set_fact variable (random quote).
+      # The timestamp ensures a unique filename for each run, making it deterministic in its creation, 
+      # and the random quote is chosen from a fixed list, making it deterministic within the test context.
+
+    - name: Find all plants again for reporting
+      ansible.builtin.find:
+        paths: "{{ digital_garden_path }}"
+        patterns: "plant_*.txt"
+        file_type: file
+      register: final_plants
+
+    - name: Report Digital Garden Status
+      ansible.builtin.debug:
+        msg: "Digital Garden Status: {{ final_plants.files | length }} plants are thriving at {{ digital_garden_path }}"
