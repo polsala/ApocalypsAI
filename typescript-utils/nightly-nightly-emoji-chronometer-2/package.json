@@ -1,0 +1,17 @@
+{
+  "name": "nightly-emoji-chronometer",
+  "version": "0.1.0",
+  "description": "CLI that prints the current time using digit emojis.",
+  "main": "src/main.ts",
+  "scripts": {
+    "test": "node -r ts-node/register tests/test_timeFormatter.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  },
+  "bin": {
+    "emoji-chronometer": "src/main.ts"
+  },
+  "type": "module"
+}
