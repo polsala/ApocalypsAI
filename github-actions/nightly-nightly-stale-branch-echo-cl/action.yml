@@ -1,0 +1,36 @@
+name: 'Nightly Stale Branch Echo Cleaner'
+description: 'Identifies and optionally cleans up stale branches, preventing "temporal echoes" from cluttering the repository.'
+inputs:
+  stale_days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: true
+    default: '30'
+  dry_run:
+    description: 'If true, only logs actions without performing them.'
+    required: false
+    default: 'true'
+  exclude_branches:
+    description: 'Comma-separated list of branch names to exclude from cleaning (e.g., main, develop, feature/*).'
+    required: false
+    default: 'main,develop'
+  action_type:
+    description: 'Action to perform on stale branches: "log" (default), "delete", "issue".'
+    required: false
+    default: 'log'
+  issue_labels:
+    description: 'Comma-separated labels to add to issues created for stale branches.'
+    required: false
+    default: 'stale,cleanup'
+  github_token:
+    description: 'GitHub token for API access. Usually secrets.GITHUB_TOKEN.'
+    required: true
+outputs:
+  stale_branches_found:
+    description: 'JSON array of stale branch names found.'
+    value: ${{ steps.cleaner.outputs.stale_branches_found }}
+  branches_processed:
+    description: 'Count of branches processed.'
+    value: ${{ steps.cleaner.outputs.branches_processed }}
+runs:
+  using: 'node20'
+  main: 'src/index.js'
