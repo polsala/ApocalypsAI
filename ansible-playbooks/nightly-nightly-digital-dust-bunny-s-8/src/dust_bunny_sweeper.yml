@@ -1,0 +1,53 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/config.yml
+
+  tasks:
+    - name: Ensure dust_bunny_sweeper_paths is a list
+      ansible.builtin.assert:
+        that:
+          - dust_bunny_sweeper_paths is defined
+          - dust_bunny_sweeper_paths is iterable
+        fail_msg: "dust_bunny_sweeper_paths must be a list of paths to scan."
+
+    - name: Find potential dust bunnies
+      ansible.builtin.find:
+        paths: "{{ dust_bunny_sweeper_paths }}"
+        age: "{{ dust_bunny_sweeper_age_days }}d"
+        size: "{{ dust_bunny_sweeper_min_size_mb }}M"
+        file_type: file
+        recurse: yes
+        hidden: yes
+        excludes: "{{ dust_bunny_sweeper_exclude_patterns }}"
+      register: found_dust_bunnies
+
+    - name: Report findings (Dry Run)
+      ansible.builtin.debug:
+        msg: |-
+          Dry Run: Found {{ found_dust_bunnies.files | length }} potential dust bunnies on {{ inventory_hostname }}:
+          {% for file in found_dust_bunnies.files %}
+          - {{ file.path }} ({{ (ansible_date_time.epoch | int - file.mtime) / (60*60*24) | int }} days old, {{ '%.2f' | format(file.size / (1024*1024)) }}MB)
+          {% endfor %}
+      when: dust_bunny_sweeper_dry_run | bool
+
+    - name: Remove dust bunnies (Actual Cleanup)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_dust_bunnies.files }}"
+      loop_control:
+        label: "Deleting {{ item.path }}"
+      when: not dust_bunny_sweeper_dry_run | bool
+
+    - name: Report cleanup summary
+      ansible.builtin.debug:
+        msg: |-
+          {% if dust_bunny_sweeper_dry_run | bool %}
+          Dry Run complete. No files were deleted. Review the findings above.
+          {% else %}
+          Cleanup complete. {{ found_dust_bunnies.files | length }} files were processed for deletion.
+          {% endif %}
+      when: found_dust_bunnies.files | length > 0
