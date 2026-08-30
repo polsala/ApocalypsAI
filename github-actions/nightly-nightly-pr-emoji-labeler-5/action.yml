@@ -1,0 +1,2 @@
+name: "PR Emoji Labeler"\ndescription: "Automatically adds an emoji label to PRs based on title keywords."\ninputs:\n  github-token:\n    description: "GITHUB_TOKEN with repo scope"
+    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"
