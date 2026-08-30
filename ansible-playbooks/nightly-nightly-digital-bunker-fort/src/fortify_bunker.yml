@@ -1,0 +1,78 @@
+---
+- name: Fortify Digital Bunker
+  hosts: all
+  become: yes
+  gather_facts: yes # We'll mock these in tests, but gather for real runs
+
+  vars:
+    bunker_motd_message: |
+      Welcome, Survivor!
+      Your Digital Bunker is fortified and ready.
+      Stay vigilant.
+    motd_dest_path: /etc/motd # Default path, overridden in tests
+    auto_upgrades_config_path: /etc/apt/apt.conf.d/20auto-upgrades # Default path, overridden in tests
+
+  tasks:
+    - name: Ensure apt cache is updated
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Update cache if older than 1 hour
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure all packages are upgraded
+      ansible.builtin.apt:
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+    - name: Install essential security tools (fail2ban, ufw)
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - fail2ban
+        - ufw
+      when: ansible_os_family == "Debian"
+
+    - name: Enable UFW and set default rules
+      community.general.ufw:
+        state: enabled
+        default_deny_incoming: yes
+        default_allow_outgoing: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Allow SSH (port 22) through UFW
+      community.general.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+      when: ansible_os_family == "Debian"
+
+    - name: Configure unattended-upgrades for automatic security updates
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure unattended-upgrades is configured to run automatically
+      ansible.builtin.lineinfile:
+        path: "{{ auto_upgrades_config_path }}"
+        regexp: '^APT::Periodic::Update-Package-Lists "1";'
+        line: 'APT::Periodic::Update-Package-Lists "1";'
+        create: yes
+        mode: '0644'
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure unattended-upgrades is enabled
+      ansible.builtin.lineinfile:
+        path: "{{ auto_upgrades_config_path }}"
+        regexp: '^APT::Periodic::Unattended-Upgrade "1";'
+        line: 'APT::Periodic::Unattended-Upgrade "1";'
+        create: yes
+        mode: '0644'
+      when: ansible_os_family == "Debian"
+
+    - name: Set the Digital Bunker MOTD
+      ansible.builtin.copy:
+        content: "{{ bunker_motd_message }}"
+        dest: "{{ motd_dest_path }}"
+        mode: '0644'
