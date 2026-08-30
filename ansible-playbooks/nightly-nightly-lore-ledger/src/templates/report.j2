@@ -1,0 +1,18 @@
+Lore Ledger Audit Report - {{ ansible_date_time.iso8601_basic_short }}
+
+{% if audit_results | length == 0 %}
+No markdown files found in {{ lore_ledger_path }}.
+{% else %}
+Total files scanned: {{ audit_results | length }}
+
+{% for result in audit_results %}
+File: {{ result.file_path }}
+  Status: {{ result.status }}
+  {% if result.missing_fields is defined and result.missing_fields | length > 0 %}
+  Missing Fields: {{ result.missing_fields | join(', ') }}
+  {% endif %}
+  {% if result.errors is defined and result.errors | length > 0 %}
+  Errors: {{ result.errors | join(', ') }}
+  {% endif %}
+{% endfor %}
+{% endif %}
