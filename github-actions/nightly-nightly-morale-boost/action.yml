@@ -1,0 +1,1 @@
+name: Nightly Morale Boost\ndescription: Generate a deterministic morale‑boosting message for a given date.\ninputs:\n  date:\n    description: 'ISO date (YYYY-MM-DD). Defaults to today.'\n    required: false\n    default: ''\noutputs:\n  morale:\n    description: 'Generated morale‑boosting message.'\nruns:\n  using: 'node12'\n  main: 'src/index.js'
