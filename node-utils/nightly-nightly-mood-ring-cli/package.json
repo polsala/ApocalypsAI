@@ -1,0 +1,26 @@
+{
+  "name": "nightly-mood-ring-cli",
+  "version": "1.0.0",
+  "description": "A whimsical command-line utility that interprets your current sentiment and displays it as a 'mood ring' color and description.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "mood",
+    "sentiment",
+    "whimsical",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI Integrator",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "sinon": "^17.0.1"
+  }
+}
