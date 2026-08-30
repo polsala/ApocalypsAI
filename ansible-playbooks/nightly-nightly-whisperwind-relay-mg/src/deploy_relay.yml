@@ -1,0 +1,59 @@
+---
+- name: Deploy Whisperwind Message Relay
+  hosts: whisper_hosts
+  become: yes # Requires sudo/root privileges for file system operations and cron
+  vars:
+    relay_base_dir: "/opt/whisperwind_relay"
+    whisper_script_path: "{{ relay_base_dir }}/whisper_relay.py"
+    whispers_data_path: "{{ relay_base_dir }}/whispers.txt"
+    whisper_log_file: "/var/log/whisperwind_relay.log"
+    cron_interval_minutes: "15" # How often the script runs (e.g., "*/15" for every 15 minutes)
+
+  tasks:
+    - name: Ensure relay base directory exists
+      ansible.builtin.file:
+        path: "{{ relay_base_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Copy whisper_relay.py script
+      ansible.builtin.copy:
+        src: whisper_relay.py
+        dest: "{{ whisper_script_path }}"
+        mode: '0755' # Make it executable
+        owner: root
+        group: root
+
+    - name: Copy whispers.txt data file
+      ansible.builtin.copy:
+        src: whispers.txt
+        dest: "{{ whispers_data_path }}"
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Ensure whisper log directory exists
+      ansible.builtin.file:
+        path: "{{ whisper_log_file | dirname }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Ensure whisper log file exists and has correct permissions
+      ansible.builtin.file:
+        path: "{{ whisper_log_file }}"
+        state: touch # Create if not exists
+        mode: '0640' # Read/write for owner, read for group (e.g., syslog group)
+        owner: root
+        group: adm # Common group for log access, adjust if needed
+
+    - name: Add cron job for Whisperwind Relay
+      ansible.builtin.cron:
+        name: "Whisperwind Message Relay"
+        minute: "*/{{ cron_interval_minutes }}"
+        job: "WHISPERS_FILE={{ whispers_data_path }} LOG_FILE={{ whisper_log_file }} {{ whisper_script_path }}"
+        user: root # Run as root, or a dedicated user if created
+        state: present
