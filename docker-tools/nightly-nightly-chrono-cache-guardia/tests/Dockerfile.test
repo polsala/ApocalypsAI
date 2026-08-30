@@ -1,0 +1,17 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install testing framework
+RUN pip install --no-cache-dir pytest
+
+# Copy application and test files
+COPY src/app.py .
+COPY tests/test_app.py .
+
+# Command to run tests
+CMD ["python", "-m", "unittest", "test_app.py"]
