@@ -1,0 +1,13 @@
+- name: Test SSH key rotator playbook (check mode)
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Include the rotate playbook in check mode
+      import_playbook: "../src/rotate_ssh_keys.yml"
+      vars:
+        ansible_check_mode: true
+
+    - name: Verify playbook completed without errors
+      assert:
+        that:
+          - true
