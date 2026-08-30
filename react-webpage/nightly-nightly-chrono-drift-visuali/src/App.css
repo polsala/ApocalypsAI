@@ -1,0 +1,94 @@
+.App {
+  text-align: center;
+  padding: 20px;
+  background-color: #0f0f1a; /* Slightly darker than body */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  width: 100%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  margin-bottom: 20px;
+}
+
+.map-container {
+  position: relative;
+  width: 800px; /* Fixed width for the map */
+  height: 600px; /* Fixed height for the map */
+  border: 2px solid #61dafb;
+  background-color: #333; /* Placeholder for map background */
+  overflow: hidden; /* Ensure anomalies stay within bounds */
+  margin-top: 20px;
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.7);
+}
+
+.anomaly-marker {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: rgba(255, 0, 0, 0.7); /* Red for anomalies */
+  border: 2px solid #ff0000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  animation: pulse 1.5s infinite alternate; /* Whimsical pulse effect */
+  transform: translate(-50%, -50%); /* Center the marker on its coordinates */
+}
+
+.anomaly-marker.severity-low {
+  background-color: rgba(0, 255, 0, 0.7);
+  border-color: #00ff00;
+}
+
+.anomaly-marker.severity-medium {
+  background-color: rgba(255, 255, 0, 0.7);
+  border-color: #ffff00;
+}
+
+.anomaly-marker.severity-high {
+  background-color: rgba(255, 0, 0, 0.7);
+  border-color: #ff0000;
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(0.9) translate(-50%, -50%);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.1) translate(-50%, -50%);
+    opacity: 1;
+  }
+}
+
+.anomaly-details {
+  background-color: #282c34;
+  border: 1px solid #61dafb;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.5);
+  width: 780px; /* Match map width */
+  text-align: left;
+}
+
+.anomaly-details h3 {
+  color: #61dafb;
+  margin-top: 0;
+}
+
+.anomaly-details p {
+  margin: 5px 0;
+}
