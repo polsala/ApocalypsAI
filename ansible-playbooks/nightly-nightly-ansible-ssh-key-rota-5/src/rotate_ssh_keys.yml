@@ -1,0 +1,28 @@
+---
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars:
+    ssh_key_types:
+      - rsa
+      - ecdsa
+      - ed25519
+  tasks:
+    - name: Backup existing SSH host keys
+      copy:
+        src: "/etc/ssh/ssh_host_{{ item }}_key"
+        dest: "/etc/ssh/ssh_host_{{ item }}_key.bak"
+        remote_src: true
+      loop: "{{ ssh_key_types }}"
+      ignore_errors: true
+
+    - name: Generate new SSH host keys
+      command: "ssh-keygen -t {{ item }} -f /etc/ssh/ssh_host_{{ item }}_key -N ''"
+      args:
+        creates: "/etc/ssh/ssh_host_{{ item }}_key"
+      loop: "{{ ssh_key_types }}"
+
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
