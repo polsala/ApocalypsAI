@@ -1,0 +1,124 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #bbb;
+}
+
+.App-main {
+  width: 100%;
+  max-width: 800px;
+  background-color: #3a3f47;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.input-section {
+  margin-bottom: 30px;
+}
+
+.input-phrase {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background-color: #2f333a;
+  color: #e0e0e0;
+  font-size: 1em;
+  resize: vertical;
+}
+
+.input-phrase::placeholder {
+  color: #888;
+}
+
+.generate-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 5px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.generate-button:hover {
+  background-color: #21a1f1;
+}
+
+.echo-results {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.echo-card {
+  background-color: #4a4f57;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.echo-card h3 {
+  color: #61dafb;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2em;
+}
+
+.echo-card p {
+  font-size: 0.95em;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+.no-echoes {
+  color: #888;
+  font-style: italic;
+}
+
+.App-footer {
+  margin-top: auto; /* Pushes footer to the bottom */
+  padding-top: 20px;
+  color: #888;
+  font-size: 0.9em;
+}
