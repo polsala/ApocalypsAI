@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApocalypsAI Container Garden Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>ApocalypsAI Container Garden Monitor</h1>
+        <p>Your containers, reimagined as a thriving (or wilting) digital garden.</p>
+    </header>
+    <main>
+        <div id="garden">
+            <p class="loading-message">Loading your container garden... 🌻</p>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 ApocalypsAI Nightly Integrator</p>
+    </footer>
+
+    <script>
+        async function fetchContainerData() {
+            try {
+                const response = await fetch('/api/containers');
+                const containers = await response.json();
+                const gardenDiv = document.getElementById('garden');
+                gardenDiv.innerHTML = ''; // Clear loading message
+
+                if (containers.length === 0) {
+                    gardenDiv.innerHTML = '<p class="empty-garden">No containers found. Your garden is a peaceful, empty field. 🌾</p>';
+                    return;
+                }
+
+                containers.forEach(container => {
+                    const plantDiv = document.createElement('div');
+                    plantDiv.className = 'plant-card';
+                    plantDiv.style.borderColor = container.mood_color; // Border color based on mood
+
+                    plantDiv.innerHTML = `
+                        <div class="plant-header">
+                            <span class="mood-emoji" style="color: ${container.mood_color};">${container.mood_emoji}</span>
+                            <h3 class="container-name">${container.name}</h3>
+                            <span class="status-emoji" style="color: ${container.status_color};">${container.status_emoji}</span>
+                        </div>
+                        <p><strong>ID:</strong> ${container.id}</p>
+                        <p><strong>Image:</strong> ${container.image}</p>
+                        <p><strong>Status:</strong> ${container.status}</p>
+                        <p><strong>Mood:</strong> ${container.mood}</p>
+                        ${container.ports.length > 0 ? `<p><strong>Ports:</strong> ${container.ports.join(', ')}</p>` : ''}
+                    `;
+                    gardenDiv.appendChild(plantDiv);
+                });
+            } catch (error) {
+                console.error('Failed to fetch container data:', error);
+                document.getElementById('garden').innerHTML = '<p class="error-message">Failed to load garden. Is Docker running and accessible? 🐛</p>';
+            }
+        }
+
+        // Fetch data initially
+        fetchContainerData();
+        // Refresh data every 10 seconds
+        setInterval(fetchContainerData, 10000);
+    </script>
+</body>
+</html>
