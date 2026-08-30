@@ -1,0 +1,35 @@
+{
+  "name": "nightly-temporal-snack-stash",
+  "version": "1.0.0",
+  "description": "A type-safe CLI tool to manage your temporal snack stash, track expiration dates, and suggest optimal consumption to avoid waste.",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "snacks",
+    "expiration",
+    "apocalypse",
+    "temporal"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "@types/uuid": "^9.0.8",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "uuid": "^9.0.1"
+  }
+}
