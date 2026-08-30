@@ -1,0 +1,1 @@
+# QR Code CLI\n\nGenerates a QR code for a given string and prints it as Unicode block characters in the terminal.\n\n## Build\n\n```sh\ncargo build --release\n```\n\n## Usage\n\n```sh\n./target/release/qr-cli "Hello, world!"\n```\n\nThe program will output the QR code using `██` for black modules and two spaces for white modules.\n

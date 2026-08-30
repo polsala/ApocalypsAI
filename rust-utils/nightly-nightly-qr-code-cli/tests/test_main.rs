@@ -1,0 +1,1 @@
+use qr_cli::render_qr;\n\n#[test]\nfn test_consistency() {\n    let a = render_qr("test");\n    let b = render_qr("test");\n    assert_eq!(a, b);\n}\n\n#[test]\nfn test_difference() {\n    let a = render_qr("test");\n    let b = render_qr("different");\n    assert_ne!(a, b);\n}\n
