@@ -1,0 +1,48 @@
+.App {
+  text-align: center;
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #1a1a2e; /* Dark blue/purple */
+  color: #e0e0e0; /* Light grey */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  color: #ff6b6b; /* Reddish accent */
+  text-shadow: 0 0 5px #ff6b6b, 0 0 10px #ff6b6b;
+}
+
+.App-header p {
+  color: #4ecdc4; /* Cyan accent */
+}
+
+.App-footer {
+  margin-top: auto; /* Pushes footer to the bottom */
+  padding-top: 20px;
+  font-size: 0.8em;
+  color: #888;
+}
+
+.App.error {
+  color: #ff6b6b;
+}
+
+main {
+  width: 90%;
+  max-width: 1200px;
+  background-color: #2e2e4a; /* Slightly lighter dark background */
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid #4ecdc4;
+}
