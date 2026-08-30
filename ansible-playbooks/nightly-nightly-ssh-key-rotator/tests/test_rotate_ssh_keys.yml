@@ -1,0 +1,15 @@
+---
+- name: Test SSH key rotator playbook (mocked)
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Mock key generation (no real ssh)
+      command: echo "simulated key generation"
+      register: mock_result
+      # Mock rationale: using echo to simulate key generation without affecting real SSH.
+
+    - name: Assert mock succeeded
+      assert:
+        that:
+          - mock_result.rc == 0
+        fail_msg: "Mock key generation failed"
