@@ -1,0 +1,16 @@
+name: 'Nightly Whimsical Morale Boost'
+description: 'Posts a whimsical, morale-boosting comment to new PRs or issues.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication'
+    required: true
+  message-type:
+    description: 'Type of morale message to post (e.g., "whimsical")'
+    required: false
+    default: 'whimsical'
+outputs:
+  comment-id:
+    description: 'The ID of the created comment'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
