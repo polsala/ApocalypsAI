@@ -1,0 +1,17 @@
+---
+- name: Verify playbook syntax
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run syntax check
+      command: ansible-playbook -i src/inventory.ini src/apt_upgrade.yml --syntax-check
+      args:
+        chdir: "{{ playbook_dir | dirname }}/.."
+      register: syntax_result
+      changed_when: false
+      failed_when: syntax_result.rc != 0
+
+    - name: Assert syntax succeeded
+      assert:
+        that:
+          - syntax_result.rc == 0
