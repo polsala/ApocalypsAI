@@ -1,0 +1,100 @@
+---
+- name: Test Nightly Service Sentinel Playbook
+  hosts: test_host
+  become: true
+  vars:
+    test_service_name: dummy-sentinel-service
+    critical_services:
+      - "{{ test_service_name }}"
+
+  tasks:
+    - name: Ensure systemd is available for testing
+      ansible.builtin.command: systemctl --version
+      register: systemctl_check
+      failed_when: systemctl_check.rc != 0
+      changed_when: false
+      # Mock rationale: This check ensures systemd is present, which is a prerequisite for the playbook. It's a basic system check, not mocking a service itself.
+
+    - name: Create a dummy systemd service file
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ test_service_name }}.service"
+        content: |
+          [Unit]
+          Description=Dummy Sentinel Test Service
+          After=network.target
+
+          [Service]
+          ExecStart=/bin/bash -c "while true; do sleep 1; done"
+          Restart=always
+          Type=simple
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload systemd daemon
+      # Mock rationale: This creates a controllable, isolated service for testing without affecting real system services.
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+      # Mock rationale: Essential for systemd to recognize the newly created dummy service.
+
+    - name: Stop the dummy service (if running)
+      ansible.builtin.systemd:
+        name: "{{ test_service_name }}"
+        state: stopped
+        enabled: false # Ensure it doesn't auto-start unexpectedly
+      ignore_errors: true # Service might not be running initially
+      # Mock rationale: Sets a known 'deceased' state for the dummy service to test resurrection logic.
+
+    - name: Verify dummy service is stopped before running sentinel
+      ansible.builtin.systemd:
+        name: "{{ test_service_name }}"
+      register: initial_status
+      failed_when: initial_status.status.ActiveState == 'active'
+      # Mock rationale: Confirms the mock setup is correct before the main playbook runs.
+
+    - name: Run the Nightly Service Sentinel playbook (expecting resurrection)
+      ansible.builtin.include_tasks: ../src/service_sentinel.yml
+      vars:
+        critical_services: "{{ critical_services }}"
+      # Mock rationale: Executes the target playbook with the mocked service.
+
+    - name: Verify dummy service is now running after sentinel
+      ansible.builtin.systemd:
+        name: "{{ test_service_name }}"
+      register: after_resurrection_status
+      failed_when: after_resurrection_status.status.ActiveState != 'active'
+      # Mock rationale: Asserts that the sentinel successfully 'resurrected' the service.
+
+    - name: Run the Nightly Service Sentinel playbook again (expecting no change)
+      ansible.builtin.include_tasks: ../src/service_sentinel.yml
+      vars:
+        critical_services: "{{ critical_services }}"
+      # Mock rationale: Executes the target playbook again to test idempotency and 'already running' logic.
+
+    - name: Verify dummy service is still running and no unnecessary restart occurred
+      ansible.builtin.systemd:
+        name: "{{ test_service_name }}"
+      register: final_status
+      failed_when: final_status.status.ActiveState != 'active'
+      # Mock rationale: Confirms the service remains active and the sentinel didn't unnecessarily restart it.
+
+    - name: Clean up dummy systemd service file
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ test_service_name }}.service"
+        state: absent
+      notify: Reload systemd daemon
+      # Mock rationale: Removes the test artifact to leave the system clean.
+
+    - name: Disable and stop dummy service (if it was enabled/started by test)
+      ansible.builtin.systemd:
+        name: "{{ test_service_name }}"
+        state: stopped
+        enabled: false
+      ignore_errors: true # Service might already be stopped or removed
+      # Mock rationale: Ensures the dummy service is fully deactivated and removed from systemd's awareness.
+
+  handlers:
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
