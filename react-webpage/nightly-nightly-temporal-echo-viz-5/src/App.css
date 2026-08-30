@@ -1,0 +1,65 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  padding: 20px;
+}
+
+.legend {
+  margin-top: 40px;
+  text-align: left;
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.legend h2 {
+  margin-top: 0;
+  color: #61dafb;
+}
+
+.legend ul {
+  list-style: none;
+  padding: 0;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-right: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.temporal-rift {
+  background-color: #ff00ff; /* Magenta */
+}
+
+.echo-chamber {
+  background-color: #ffff00; /* Yellow */
+}
+
+.time-warp {
+  background-color: #00ffff; /* Cyan */
+}
+
+.stable-zone {
+  background-color: #00ff00; /* Green */
+}
