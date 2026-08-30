@@ -1,0 +1,1 @@
+# Build stage\nFROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/ .\nRUN go build -o quote-roulette .\n\n# Run stage\nFROM alpine:3.19\nWORKDIR /app\nCOPY --from=builder /app/quote-roulette .\nEXPOSE 8080\nCMD ["./quote-roulette"]
