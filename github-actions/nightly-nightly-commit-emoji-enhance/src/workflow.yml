@@ -1,0 +1,30 @@
+name: Nightly Commit Emoji Enhancer
+on:
+  workflow_call:
+    inputs:
+      github-token:
+        required: true
+        type: string
+jobs:
+  add-emoji:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add random emoji to PR title
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ inputs.github-token }}
+          script: |
+            const emojis = ["✨","🚀","🔥","💡","🛠️","🎉","🤖","🧩","🌟","⚡"];
+            const random = emojis[Math.floor(Math.random() * emojis.length)];
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            const newTitle = `${random} ${pr.title}`;
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              title: newTitle
+            });
