@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket"\n  type        = string\n}\n\nvariable "expiration_days" {\n  description = "Days after which non‑current versions are deleted"\n  type        = number\n  default     = 365\n}\n\nvariable "aws_region" {\n  description = "AWS region for the bucket"\n  type        = string\n  default     = "us-east-1"\n}

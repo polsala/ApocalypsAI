@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n\n# Mock rationale: offline test using terraform validate only.\n\n# Initialize Terraform without a backend (local testing)\nterraform init -backend=false > /dev/null\n\n# Validate configuration\nterraform validate\n\n# If we reach this point, the test passes\necho "Terraform configuration is valid."
