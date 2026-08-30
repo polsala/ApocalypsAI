@@ -1,0 +1,99 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  connection: local
+  gather_facts: yes # Need facts for ansible_date_time
+  vars:
+    test_base_dir: "/tmp/ansible_test_dust_bunny_sweeper_{{ lookup('pipe', 'date +%s%N') }}"
+    mock_log_dir: "{{ test_base_dir }}/mock_logs"
+    mock_tmp_dir: "{{ test_base_dir }}/mock_tmp"
+    # Override playbook variables for testing, making files 'old' with a 1-day retention
+    log_retention_days: 1
+    tmp_retention_days: 1
+
+  tasks:
+    - name: Create temporary test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_base_dir }}"
+        - "{{ mock_log_dir }}"
+        - "{{ mock_tmp_dir }}"
+      # Mock rationale: Creates an isolated environment for the test run on the local filesystem.
+
+    - name: Create mock old log files
+      ansible.builtin.command: "touch -d '{{ ansible_date_time.date }} -{{ log_retention_days + 1 }} days' {{ mock_log_dir }}/old_log_{{ item }}.log"
+      loop: "{{ range(3) | list }}"
+      register: create_old_logs
+      changed_when: create_old_logs.rc == 0
+      # Mock rationale: Creates files with old timestamps relative to the current date, ensuring they are targeted for deletion.
+
+    - name: Create mock new log files
+      ansible.builtin.command: "touch {{ mock_log_dir }}/new_log_{{ item }}.log"
+      loop: "{{ range(2) | list }}"
+      register: create_new_logs
+      changed_when: create_new_logs.rc == 0
+      # Mock rationale: Creates files with recent timestamps, ensuring they are not targeted for deletion.
+
+    - name: Create mock old temporary files
+      ansible.builtin.command: "touch -d '{{ ansible_date_time.date }} -{{ tmp_retention_days + 1 }} days' {{ mock_tmp_dir }}/old_temp_{{ item }}.tmp"
+      loop: "{{ range(4) | list }}"
+      register: create_old_tmp
+      changed_when: create_old_tmp.rc == 0
+      # Mock rationale: Creates files with old timestamps relative to the current date.
+
+    - name: Create mock new temporary files
+      ansible.builtin.command: "touch {{ mock_tmp_dir }}/new_temp_{{ item }}.tmp"
+      loop: "{{ range(1) | list }}"
+      register: create_new_tmp
+      changed_when: create_new_tmp.rc == 0
+      # Mock rationale: Creates files with recent timestamps.
+
+    - name: Run the dust bunny sweeper playbook
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        log_paths:
+          - "{{ mock_log_dir }}"
+        tmp_paths:
+          - "{{ mock_tmp_dir }}"
+      # Mock rationale: Executes the main playbook against the isolated mock environment, overriding paths.
+
+    - name: Verify old log files are absent
+      ansible.builtin.stat:
+        path: "{{ mock_log_dir }}/old_log_{{ item }}.log"
+      loop: "{{ range(3) | list }}"
+      register: old_log_stats
+      failed_when: item.stat.exists is defined and item.stat.exists == true
+      # Mock rationale: Checks if the old files were successfully deleted by asserting their absence.
+
+    - name: Verify new log files are present
+      ansible.builtin.stat:
+        path: "{{ mock_log_dir }}/new_log_{{ item }}.log"
+      loop: "{{ range(2) | list }}"
+      register: new_log_stats
+      failed_when: item.stat.exists is defined and item.stat.exists == false
+      # Mock rationale: Checks if the new files were correctly left untouched by asserting their presence.
+
+    - name: Verify old temporary files are absent
+      ansible.builtin.stat:
+        path: "{{ mock_tmp_dir }}/old_temp_{{ item }}.tmp"
+      loop: "{{ range(4) | list }}"
+      register: old_tmp_stats
+      failed_when: item.stat.exists is defined and item.stat.exists == true
+      # Mock rationale: Checks if the old temporary files were successfully deleted.
+
+    - name: Verify new temporary files are present
+      ansible.builtin.stat:
+        path: "{{ mock_tmp_dir }}/new_temp_{{ item }}.tmp"
+      loop: "{{ range(1) | list }}"
+      register: new_tmp_stats
+      failed_when: item.stat.exists is defined and item.stat.exists == false
+      # Mock rationale: Checks if the new temporary files were correctly left untouched.
+
+    - name: Clean up temporary test directories
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      # Mock rationale: Ensures the test environment is fully removed after the test, maintaining a clean system.
