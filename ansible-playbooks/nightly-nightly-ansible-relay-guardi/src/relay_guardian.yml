@@ -1,0 +1,53 @@
+---
+- name: Ensure critical communication relays are operational
+  hosts: all
+  become: yes
+  vars:
+    critical_relay_services:
+      - radio_beacon
+      - data_uplink
+      - emergency_broadcast
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+      # Mock rationale: In tests, ansible_facts.services will be pre-populated by set_fact.
+
+    - name: Process critical relay services
+      ansible.builtin.block:
+        - name: Check status of {{ item }}
+          ansible.builtin.debug:
+            msg: "Service {{ item }} state: {{ ansible_facts.services['{{ item }}.service'].state | default('unknown') }}"
+          when: ansible_facts.services is defined and ('{{ item }}.service' in ansible_facts.services)
+          register: _check_status_debug_output
+
+        - name: Restart {{ item }} if not running
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: started
+            enabled: yes
+          register: _restart_result
+          when:
+            - ansible_facts.services is defined
+            - ('{{ item }}.service' in ansible_facts.services)
+            - ansible_facts.services['{{ item }}.service'].state != 'running'
+          # Mock rationale: In tests, this task will be skipped if the mocked service state is 'running'.
+          # When run with --check, it will report 'changed' if the 'when' condition is met.
+
+        - name: Report final status for {{ item }}
+          ansible.builtin.debug:
+            msg: "Relay service '{{ item }}' is now {{ ansible_facts.services['{{ item }}.service'].state | default('unknown') }}."
+          when: ansible_facts.services is defined and ('{{ item }}.service' in ansible_facts.services)
+          register: _report_final_status_debug_output
+
+        - name: Store results for {{ item }} for later assertion
+          ansible.builtin.set_fact:
+            relay_guardian_results: "{{ relay_guardian_results | default({}) | combine({item: {'restart_changed': _restart_result.changed | default(false), 'final_status_msg': _report_final_status_debug_output.msg | default('')}}) }}"
+          when: _restart_result is defined or _report_final_status_debug_output is defined
+      loop: "{{ critical_relay_services }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Summarize relay status
+      ansible.builtin.debug:
+        msg: "All critical relay services checked. Review 'relay_guardian_results' for details."
