@@ -1,0 +1,77 @@
+name: Nightly GitHub Action Debugger
+
+# This workflow provides a debugging environment for other GitHub Actions.
+# It can be triggered manually or called by other workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      startup_commands:
+        description: 'Shell commands to run on startup (e.g., `ls -la`, `curl ...`)
+'
+        required: false
+        type: string
+        default: |
+          echo "Welcome to the ApocalypsAI Debugger!"
+          echo "You have access to a rich set of tools."
+          echo "Use `docker ps` to see running containers, `kubectl get pods` if configured, etc."
+          echo "Type 'exit' to end the session."
+      docker_image:
+        description: 'Docker image to use for the debugging environment.'
+        required: false
+        type: string
+        default: 'ghcr.io/actions/actions-runner-controller/runner:latest'
+
+jobs:
+  debug_my_action:
+    runs-on: ubuntu-latest
+    permissions: read-all
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Debugging Environment
+        id: debug_env
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run Interactive Debug Shell
+        uses: docker/run@v3
+        with:
+          image: ${{ inputs.docker_image }}
+          run: |
+            # Install common debugging tools if not present in the base image
+            apt-get update && apt-get install -y --no-install-recommends \
+              curl \
+              jq \
+              git \
+              vim \
+              nano \
+              tree \
+              wget \
+              net-tools \
+              dnsutils \
+              iputils-ping \
+              tcpdump \
+              htop \
+              docker.io \
+              kubectl \
+              awscli \
+              google-cloud-sdk \
+              python3-pip \
+              && rm -rf /var/lib/apt/lists/*
+
+            # Execute startup commands if provided
+            if [ -n "${{ inputs.startup_commands }}" ]; then
+              echo "--- Running Startup Commands ---"
+              echo "${{ inputs.startup_commands }}"
+              eval "${{ inputs.startup_commands }}"
+              echo "--- Startup Commands Finished ---"
+            fi
+
+            # Start an interactive shell
+            echo "Starting interactive shell..."
+            exec /bin/bash
+
+      - name: Debugging session ended
+        if: always()
+        run: echo "Debugging session has concluded."
