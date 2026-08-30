@@ -1,0 +1,2 @@
+name: "Nightly Fortune Cookie"\ndescription: "Generate a whimsical fortune cookie message as an output"\nauthor: "ApocalypsAI"\ninputs:\n  seed:\n    description: "Optional integer seed to select a specific fortune"
+    required: false\n    default: "0"\noutputs:\n  fortune:\n    description: "The generated fortune message"\nruns:\n  using: "node12"\n  main: "src/index.js"
