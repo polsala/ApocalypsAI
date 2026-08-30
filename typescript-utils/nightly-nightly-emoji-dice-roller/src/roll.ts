@@ -1,0 +1,1 @@
+export function rollDice(sides: number, count: number): number[] {\n  const rolls: number[] = [];\n  for (let i = 0; i < count; i++) {\n    const roll = Math.floor(Math.random() * sides) + 1;\n    rolls.push(roll);\n  }\n  return rolls;\n}
