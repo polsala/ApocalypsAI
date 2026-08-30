@@ -1,0 +1,11 @@
+---
+# Configuration for the Digital Dust Bunny Sweeper
+dust_bunny_paths:
+  - "/tmp"
+  - "/var/log/old" # Example path, adjust as needed
+  - "/home/{{ ansible_user }}/.cache" # User-specific cache
+dust_bunny_age_days: 30 # Files older than this many days
+dust_bunny_min_size_kb: 0 # Minimum size in KB (e.g., 0 for any size, 1 for >1KB)
+dust_bunny_max_size_kb: 1024 # Maximum size in KB (e.g., 1024 for files up to 1MB)
+dust_bunny_action: "report" # Options: "report", "delete", "archive"
+dust_bunny_archive_dir: "/var/dust_bunny_archive" # Where to move files if action is "archive"
