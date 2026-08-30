@@ -1,0 +1,34 @@
+name: 'Stale Branch Scavenger'
+description: 'Identifies branches that have not been updated for a specified number of days.'
+inputs:
+  github-token:
+    description: 'GitHub token with `contents: read` and `pull_requests: read` permissions.'
+    required: true
+  days-stale:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  ignore-branches:
+    description: 'Comma-separated list of branch patterns (regex supported) to ignore, e.g., main,develop,release/.*'
+    required: false
+    default: 'main,master,develop'
+outputs:
+  stale-branches:
+    description: 'JSON array of stale branch names.'
+    value: ${{ steps.find_stale.outputs.stale_branches }}
+runs:
+  using: 'composite'
+  steps:
+    - id: find_stale
+      shell: bash
+      run: |
+        # Ensure the script is executable
+        chmod +x "${{ github.action_path }}/src/find_stale_branches.sh"
+        
+        # Run the script and capture its output
+        STALE_BRANCHES_JSON=$("${{ github.action_path }}/src/find_stale_branches.sh" \
+          "${{ inputs.github-token }}" \
+          "${{ inputs.days-stale }}" \
+          "${{ inputs.ignore-branches }}")
+        
+        echo "::set-output name=stale_branches::$STALE_BRANCHES_JSON"
