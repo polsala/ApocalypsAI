@@ -1,0 +1,1 @@
+name: "Nightly Morale Boost"\ndescription: "Generate a whimsical morale‑boosting message"\ninputs:\n  seed:\n    description: "Optional integer seed for deterministic selection"\n    required: false\n    default: \"\"\noutputs:\n  morale_message:\n    description: "The generated morale message"\nruns:\n  using: "node12"\n  main: "src/index.js"
