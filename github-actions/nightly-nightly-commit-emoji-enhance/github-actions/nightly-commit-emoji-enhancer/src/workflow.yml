@@ -1,0 +1,37 @@
+name: Commit Emoji Enhancer
+on:
+  workflow_call:
+    inputs:
+      emoji_list:
+        description: 'Comma-separated list of emojis to choose from'
+        required: false
+        default: '🚀,✨,🔥,💡,🎉,🤖,🛠️,📦,🔧,🧪'
+jobs:
+  enhance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Choose random emoji
+        id: emoji
+        run: |
+          import os, random, sys
+          emojis = os.getenv('INPUT_EMOJI_LIST').split(',')
+          chosen = random.choice([e.strip() for e in emojis if e.strip()])
+          print(f"::set-output name=emoji::{chosen}")
+        env:
+          INPUT_EMOJI_LIST: ${{ inputs.emoji_list }}
+      - name: Amend last commit with emoji
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit --amend -m "$(git log -1 --pretty=%B) ${{ steps.emoji.outputs.emoji }}"
+          git push --force-with-lease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
