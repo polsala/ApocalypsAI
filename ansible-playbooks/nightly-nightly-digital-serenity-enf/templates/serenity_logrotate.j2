@@ -1,0 +1,13 @@
+{{ logrotate_path_to_monitor }} {
+    daily
+    missingok
+    rotate {{ logrotate_rotate_count | default(7) }}
+    compress
+    delaycompress
+    notifempty
+    create {{ logrotate_create_mode | default('0640') }} {{ logrotate_create_owner | default('root') }} {{ logrotate_create_group | default('adm') }}
+    sharedscripts
+    postrotate
+        /usr/bin/systemctl reload rsyslog >/dev/null 2>&1 || true
+    endscript
+}
