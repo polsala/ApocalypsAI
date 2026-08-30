@@ -1,0 +1,50 @@
+---
+- name: Test Nightly Ansible Log Parser
+  hosts: test_servers
+  gather_facts: no
+  vars:
+    log_files: ['/tmp/test_syslog.log']
+    error_keywords: ['error', 'failed']
+    log_parsing_temp_dir: "/tmp/ansible_test_log_parsing_{{ ansible_date_time.epoch }}"
+
+  tasks:
+    - name: Create dummy log file with errors
+      copy:
+        dest: "{{ log_files[0] }}"
+        content: |
+          2023-10-27 10:00:00 localhost systemd[1]: Starting Some Service...
+          2023-10-27 10:01:00 localhost kernel: [    0.000000] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-030) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023
+          2023-10-27 10:02:00 localhost app: An error occurred during processing.
+          2023-10-27 10:03:00 localhost sshd[1234]: Failed password for invalid user test from 192.168.1.1 port 54321 ssh2
+          2023-10-27 10:04:00 localhost app: Another warning message.
+          2023-10-27 10:05:00 localhost sudo:   test : TTY=pts/0 ; PWD=/home/test ; USER=root ; COMMAND=/bin/ls
+          2023-10-27 10:06:00 localhost app: This is a normal log entry.
+          2023-10-27 10:07:00 localhost app: Critical error: system overload.
+          2023-10-27 10:08:00 localhost app: Another error happened.
+
+    - name: Run the log parser playbook
+      include_role:
+        name: ../src # Assuming the main playbook is in ../src
+      # Alternatively, if the main playbook is in the root of the repo:
+      # include_tasks: ../src/log_parser.yml
+      # Note: This is a simplified test. In a real scenario, you might use molecule.
+
+    - name: Assert that the summary report contains expected errors
+      assert:
+        that:
+          - "'1 error' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+          - "'1 failed' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+          - "'1 critical' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+          - "'2 An error occurred during processing.' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+          - "'1 Failed password for invalid user test' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+          - "'1 Critical error: system overload.' in (lookup('file', log_parsing_temp_dir + '/error_report.txt'))"
+
+    - name: Clean up dummy log file
+      file:
+        path: "{{ log_files[0] }}"
+        state: absent
+
+    - name: Clean up temporary directory (from the main playbook)
+      file:
+        path: "{{ log_parsing_temp_dir }}"
+        state: absent
