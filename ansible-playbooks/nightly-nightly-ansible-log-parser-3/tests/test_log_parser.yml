@@ -1,0 +1,44 @@
+---
+- name: Test log parser playbook
+  hosts: mock_servers
+  gather_facts: no
+  vars:
+    log_file_path: /tmp/mock_syslog.log
+    error_keywords: ['error', 'failed']
+    warning_keywords: ['warning', 'notice']
+
+  tasks:
+    - name: Create mock log file with errors and warnings
+      copy:
+        dest: "{{ log_file_path }}"
+        content: |
+          2023-10-27 10:00:01 localhost systemd[1]: Started Session 1 of user root.
+          2023-10-27 10:01:15 localhost kernel: [    0.123456] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-033) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023
+          2023-10-27 10:02:30 localhost app_service: An error occurred during processing.
+          2023-10-27 10:03:45 localhost another_service: This is a warning message.
+          2023-10-27 10:04:50 localhost kernel: [    1.234567] ACPI: Added _OSI(Linux)
+          2023-10-27 10:05:05 localhost db_service: Database connection failed.
+          2023-10-27 10:06:10 localhost web_server: A critical error has been logged.
+          2023-10-27 10:07:20 localhost systemd[1]: Stopping Session 1 of user root.
+          2023-10-27 10:08:30 localhost cron: A notice about a scheduled task.
+      mode: '0644'
+
+    - name: Include the main log parser playbook
+      include_tasks: ../src/log_parser.yml
+
+    - name: Assert error count is correct
+      assert:
+        that:
+          - total_error_count == 3
+        fail_msg: "Expected 3 errors, but found {{ total_error_count }}"
+
+    - name: Assert warning count is correct
+      assert:
+        that:
+          - total_warning_count == 3
+        fail_msg: "Expected 3 warnings, but found {{ total_warning_count }}"
+
+    - name: Clean up mock log file
+      file:
+        path: "{{ log_file_path }}"
+        state: absent

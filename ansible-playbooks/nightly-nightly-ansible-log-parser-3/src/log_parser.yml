@@ -1,0 +1,68 @@
+---
+- name: Parse and summarize system logs
+  hosts: all
+  become: yes
+  vars:
+    log_file_path: /var/log/syslog
+    error_keywords: ['error', 'failed', 'critical', 'exception', 'denied']
+    warning_keywords: ['warning', 'deprecated', 'notice', 'timeout', 'unreachable']
+    report_title: "Log Analysis Report for {{ inventory_hostname }}"
+
+  tasks:
+    - name: Ensure log file exists
+      stat:
+        path: "{{ log_file_path }}"
+      register: log_file_stat
+
+    - name: Fail if log file does not exist
+      fail:
+        msg: "Log file {{ log_file_path }} not found on {{ inventory_hostname }}"
+      when: not log_file_stat.stat.exists
+
+    - name: Read log file content
+      slurp:
+        src: "{{ log_file_path }}"
+      register: log_content
+      when: log_file_stat.stat.exists
+
+    - name: Decode log content
+      set_fact:
+        decoded_log: "{{ log_content.content | b64decode }}"
+      when: log_content.content is defined
+
+    - name: Initialize error and warning counts
+      set_fact:
+        error_count: 0
+        warning_count: 0
+      when: decoded_log is defined
+
+    - name: Count errors
+      set_fact:
+        error_count: "{{ (decoded_log.splitlines() | select('search', item) | list | length) }}"
+      loop: "{{ error_keywords }}"
+      when: decoded_log is defined
+      register: error_counts_loop
+      changed_when: false
+
+    - name: Sum error counts
+      set_fact:
+        total_error_count: "{{ error_counts_loop.results | map(attribute='ansible_facts.error_count') | sum }}"
+      when: decoded_log is defined
+
+    - name: Count warnings
+      set_fact:
+        warning_count: "{{ (decoded_log.splitlines() | select('search', item) | list | length) }}"
+      loop: "{{ warning_keywords }}"
+      when: decoded_log is defined
+      register: warning_counts_loop
+      changed_when: false
+
+    - name: Sum warning counts
+      set_fact:
+        total_warning_count: "{{ warning_counts_loop.results | map(attribute='ansible_facts.warning_count') | sum }}"
+      when: decoded_log is defined
+
+    - name: Display log analysis report
+      debug:
+        msg: "{{ report_title }}: Found {{ total_error_count }} errors and {{ total_warning_count }} warnings in {{ log_file_path }}."
+      when: decoded_log is defined
