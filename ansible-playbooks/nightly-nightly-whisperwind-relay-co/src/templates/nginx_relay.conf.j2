@@ -1,0 +1,9 @@
+server {
+    listen {{ relay_port }};
+    server_name {{ ansible_hostname }};
+
+    location / {
+        add_header Content-Type text/plain;
+        return 200 "{{ broadcast_message }}";
+    }
+}

@@ -1,0 +1,14 @@
+Whisperwind Relay Status Report for {{ ansible_hostname }} ({{ ansible_default_ipv4.address }})
+Generated: {{ ansible_date_time.iso8601_micro }}
+
+---
+Configuration:
+  Port: {{ relay_port }}
+  Message: "{{ broadcast_message }}"
+
+Service Status (nginx):
+  Status: {% if ansible_facts.services['nginx.service'] is defined and ansible_facts.services['nginx.service'].state == 'running' %}Running{% else %}Not Running{% endif %}
+  Enabled: {% if ansible_facts.services['nginx.service'] is defined and ansible_facts.services['nginx.service'].status == 'enabled' %}Yes{% else %}No{% endif %}
+
+---
+End of Report
