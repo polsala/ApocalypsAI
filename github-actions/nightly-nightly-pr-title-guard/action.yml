@@ -1,0 +1,32 @@
+name: "PR Title Guard"
+description: "Fail a workflow if the pull request title does not start with a required prefix."
+inputs:
+  prefix:
+    description: "Required prefix for the PR title (e.g., 'feat:')"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Validate PR title
+      shell: python
+      env:
+        GITHUB_EVENT_PATH: ${{ env.GITHUB_EVENT_PATH }}
+      run: |
+        import argparse, json, os, sys
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--prefix', required=True)
+        args = parser.parse_args()
+        event_path = os.getenv('GITHUB_EVENT_PATH')
+        if not event_path or not os.path.isfile(event_path):
+            print('::error::GITHUB_EVENT_PATH is not set or file does not exist')
+            sys.exit(1)
+        with open(event_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        title = data.get('pull_request', {}).get('title', '')
+        if not title.startswith(args.prefix):
+            print(f"::error::PR title does not start with required prefix '{args.prefix}'. Title: '{title}'")
+            sys.exit(1)
+        print('PR title validation passed.')
+        sys.exit(0)
+      args:
+        - "--prefix=${{ inputs.prefix }}"
