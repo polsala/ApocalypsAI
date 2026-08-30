@@ -1,0 +1,56 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+    color: #333;
+    overflow: hidden;
+}
+
+.zen-container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px 60px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 90%;
+}
+
+h1 {
+    color: #4a90e2;
+    margin-bottom: 20px;
+}
+
+.breathing-sphere {
+    width: 150px;
+    height: 150px;
+    background: linear-gradient(45deg, #6dd5ed, #2193b0);
+    border-radius: 50%;
+    margin: 30px auto;
+    animation: breathe 8s infinite ease-in-out;
+    box-shadow: 0 0 20px rgba(33, 147, 176, 0.5);
+}
+
+@keyframes breathe {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.8);
+        opacity: 0.7;
+    }
+}
+
+p {
+    font-size: 1.2em;
+    color: #555;
+}
