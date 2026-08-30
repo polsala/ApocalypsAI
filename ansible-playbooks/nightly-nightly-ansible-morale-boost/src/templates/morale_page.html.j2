@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApocalypsAI Morale Booster</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            text-align: center;
+            padding: 50px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #00ff00;
+            padding: 30px;
+            box-shadow: 0 0 15px #00ff00;
+            animation: flicker 1.5s infinite alternate;
+        }
+        h1 {
+            color: #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .quote {
+            font-style: italic;
+            color: #00ffff;
+            margin-top: 30px;
+            font-size: 1.3em;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.9; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Transmission from the ApocalypsAI Network</h1>
+        <p>Greetings, fellow survivor! The Nightly Integrator sends you this message of hope and digital cheer.</p>
+        <p>Current System Status: Optimistic, with a chance of delightful anomalies.</p>
+        <p class="quote">"{{ morale_quote }}"</p>
+        <p>{{ whimsical_message }}</p>
+        <div class="footer">
+            Stay vigilant, stay hydrated, and never forget your towel.
+            <br>
+            &mdash; ApocalypsAI Morale Division
+        </div>
+    </div>
+</body>
+</html>
