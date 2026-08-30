@@ -1,0 +1,27 @@
+name: 'Nightly Workflow Harmony Enforcer'
+description: 'Checks GitHub Actions workflows for common best practices like explicit permissions, updated checkout actions, and concurrency settings.'
+
+inputs:
+  workflow-file-glob:
+    description: 'Glob pattern for workflow files to check (e.g., .github/workflows/*.yml)'
+    required: false
+    default: '.github/workflows/*.yml'
+
+outputs:
+  harmony-report:
+    description: 'Path to the generated harmony report file.'
+    value: '${{ runner.temp }}/harmony_report.txt'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Harmony Checks
+      shell: bash
+      run: |
+        chmod +x ${{ github.action_path }}/src/check_workflow_harmony.sh
+        ${{ github.action_path }}/src/check_workflow_harmony.sh \
+          "${{ inputs.workflow-file-glob }}" \
+          "${{ runner.temp }}/harmony_report.txt"
