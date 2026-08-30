@@ -1,0 +1,37 @@
+.activity-feed ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #3a3f47;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #4a4f57;
+  font-size: 0.9em;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.timestamp {
+  color: #888;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.agent-name {
+  color: #61dafb;
+  font-weight: bold;
+}
+
+.action {
+  color: #f0db4f;
+}

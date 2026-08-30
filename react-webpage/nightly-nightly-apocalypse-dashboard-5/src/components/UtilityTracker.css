@@ -1,0 +1,45 @@
+.utility-tracker-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #3a3f47;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.utility-tracker-table th, .utility-tracker-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #4a4f57;
+}
+
+.utility-tracker-table th {
+  background-color: #282c34;
+  font-weight: bold;
+  color: #61dafb;
+}
+
+.utility-tracker-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.utility-tracker-table td {
+  font-size: 0.9em;
+}
+
+.status-success td:last-child {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.status-pending td:last-child {
+  color: #ff9800;
+}
+
+.status-failed td:last-child {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.status-in-progress td:last-child {
+  color: #2196f3;
+}

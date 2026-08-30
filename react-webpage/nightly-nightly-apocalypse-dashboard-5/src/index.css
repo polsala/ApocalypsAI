@@ -1,0 +1,42 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1e2126;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.dashboard-container {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 20px auto;
+}
+
+.dashboard-container section {
+  background-color: #282c34;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-container h2 {
+  margin-top: 0;
+  color: #61dafb;
+  font-size: 1.8em;
+  border-bottom: 2px solid #4a4f57;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+/* Add Orbitron font for header */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
