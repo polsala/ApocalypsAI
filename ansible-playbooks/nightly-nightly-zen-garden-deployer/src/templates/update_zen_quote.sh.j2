@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# This script updates the zen quote in the index.html file.
+# It expects the path to the index.html file as its first argument.
+
+INDEX_FILE="$1"
+
+# List of zen quotes
+ZEN_QUOTES=(
+    "The only way out is through."
+    "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment."
+    "Peace comes from within. Do not seek it without."
+    "The mind is everything. What you think you become."
+    "When you realize how perfect everything is, you will tilt your head back and laugh at the sky."
+    "To be beautiful means to be yourself. You don't need to be accepted by others. You need to accept yourself."
+    "The root of suffering is attachment."
+    "No matter how hard the past, you can always begin again."
+    "What you think, you become. What you feel, you attract. What you imagine, you create."
+    "The quieter you become, the more you can hear."
+    "Life is a dance. Mindfulness is witnessing that dance."
+    "The present moment is filled with joy and happiness. If you are attentive, you will see it."
+)
+
+# Pick a random quote
+RANDOM_QUOTE="${ZEN_QUOTES[$((RANDOM % ${#ZEN_QUOTES[@]}))]}"
+
+# Update the index.html file
+# Using sed to replace the content within the <p class="quote"> tag
+# This assumes the quote is always within this specific tag.
+# It's a simple approach for a whimsical utility.
+sed -i "s|<p class=\"quote\">.*</p>|<p class=\"quote\">\"${RANDOM_QUOTE}\"</p>|" "$INDEX_FILE"
+
+echo "Zen quote updated in $INDEX_FILE to: \"$RANDOM_QUOTE\""
