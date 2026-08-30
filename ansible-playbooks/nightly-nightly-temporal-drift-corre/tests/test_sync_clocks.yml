@@ -1,0 +1,100 @@
+---
+- name: Test Nightly Temporal Drift Corrector Playbook - Apt Path Simulation
+  hosts: test_hosts
+  become: true
+  vars:
+    ntp_servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+    force_sync: false
+
+  pre_tasks:
+    - name: Mock ansible_pkg_mgr for apt
+      ansible.builtin.set_fact:
+        ansible_pkg_mgr: apt
+        ansible_distribution: Debian
+      # Mock rationale: Explicitly setting ansible_pkg_mgr and ansible_distribution
+      # allows us to deterministically test the conditional logic of the main playbook
+      # for an 'apt'-based system, without relying on the actual localhost's package manager.
+
+  tasks:
+    - name: Run main playbook in check mode (apt path)
+      ansible.builtin.include_tasks: ../src/sync_clocks.yml
+      args:
+        apply:
+          check_mode: true
+      # Mock rationale: Running in check_mode against localhost with mocked facts
+      # verifies the playbook's syntax, variable resolution, and conditional logic
+      # for the apt path without making actual system changes.
+
+    - name: Test ntp.conf.j2 template rendering
+      ansible.builtin.template:
+        src: ../src/templates/ntp.conf.j2
+        dest: /tmp/ntp.conf.test
+        owner: root
+        group: root
+        mode: '0644'
+      check_mode: true
+      register: ntp_template_render
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Rendering the template to a temporary location in check_mode
+      # verifies that the Jinja2 syntax is correct and variables are resolvable,
+      # without actually modifying the system.
+
+    - name: Assert ntp.conf.j2 template rendering was successful
+      ansible.builtin.assert:
+        that:
+          - ntp_template_render is not failed
+          - ntp_template_render is not skipped
+        msg: "ntp.conf.j2 template failed to render."
+
+- name: Test Nightly Temporal Drift Corrector Playbook - Yum/Dnf Path Simulation
+  hosts: test_hosts
+  become: true
+  vars:
+    ntp_servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+    force_sync: false
+
+  pre_tasks:
+    - name: Mock ansible_pkg_mgr for yum
+      ansible.builtin.set_fact:
+        ansible_pkg_mgr: yum
+        ansible_distribution: CentOS
+      # Mock rationale: Explicitly setting ansible_pkg_mgr and ansible_distribution
+      # allows us to deterministically test the conditional logic of the main playbook
+      # for a 'yum/dnf'-based system, without relying on the actual localhost's package manager.
+
+  tasks:
+    - name: Run main playbook in check mode (yum/dnf path)
+      ansible.builtin.include_tasks: ../src/sync_clocks.yml
+      args:
+        apply:
+          check_mode: true
+      # Mock rationale: Running in check_mode against localhost with mocked facts
+      # verifies the playbook's syntax, variable resolution, and conditional logic
+      # for the yum/dnf path without making actual system changes.
+
+    - name: Test chrony.conf.j2 template rendering
+      ansible.builtin.template:
+        src: ../src/templates/chrony.conf.j2
+        dest: /tmp/chrony.conf.test
+        owner: root
+        group: root
+        mode: '0644'
+      check_mode: true
+      register: chrony_template_render
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Rendering the template to a temporary location in check_mode
+      # verifies that the Jinja2 syntax is correct and variables are resolvable,
+      # without actually modifying the system.
+
+    - name: Assert chrony.conf.j2 template rendering was successful
+      ansible.builtin.assert:
+        that:
+          - chrony_template_render is not failed
+          - chrony_template_render is not skipped
+        msg: "chrony.conf.j2 template failed to render."
