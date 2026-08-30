@@ -1,0 +1,93 @@
+---
+- name: Nightly Digital Dust Bunny Sweeper
+  hosts: all
+  become: yes
+  vars:
+    report_path: "/tmp/digital_cleanliness_report.txt"
+    log_cleanup_paths:
+      - "/var/log/*.gz"
+      - "/var/log/*.old"
+    tmp_cleanup_paths:
+      - "/tmp/*"
+      - "/var/tmp/*"
+    critical_services:
+      - "sshd"
+      - "nginx"
+    disk_check_paths:
+      - "/"
+      - "/var"
+  tasks:
+    - name: Gather system facts
+      ansible.builtin.setup
+
+    - name: Announce the sweep
+      ansible.builtin.debug:
+        msg: "Initiating Digital Dust Bunny Sweep on {{ ansible_hostname }}..."
+
+    - name: Clean up old log files (Digital Dust Bunnies - Logs)
+      ansible.builtin.find:
+        paths: "{{ item | dirname }}"
+        patterns: "{{ item | basename }}"
+        age: "7d"
+        recurse: yes
+      loop: "{{ log_cleanup_paths }}"
+      register: old_logs_to_delete
+
+    - name: Delete identified old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs_to_delete.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list }}"
+      when: old_logs_to_delete.results is defined and item.path is defined
+      register: log_cleanup_result
+
+    - name: Clean up temporary files (Digital Dust Bunnies - Temp)
+      ansible.builtin.find:
+        paths: "{{ item | dirname }}"
+        patterns: "{{ item | basename }}"
+        age: "1d"
+        recurse: yes
+      loop: "{{ tmp_cleanup_paths }}"
+      register: tmp_files_to_delete
+
+    - name: Delete identified temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ tmp_files_to_delete.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list }}"
+      when: tmp_files_to_delete.results is defined and item.path is defined
+      register: tmp_cleanup_result
+
+    - name: Check critical service status
+      ansible.builtin.service_facts
+
+    - name: Store service statuses
+      ansible.builtin.set_fact:
+        service_status_report: |
+          {% for service_name in critical_services %}
+          - {{ service_name }}: {{ 'Running' if ansible_facts.services[service_name + '.service'] is defined and ansible_facts.services[service_name + '.service'].state == 'running' else 'Stopped/Not Found' }}
+          {% endfor %}
+
+    - name: Check disk usage
+      ansible.builtin.command: "df -h {{ item }}"
+      loop: "{{ disk_check_paths }}"
+      register: disk_usage_raw
+      changed_when: false
+
+    - name: Store disk usage
+      ansible.builtin.set_fact:
+        disk_usage_report: |
+          {% for item in disk_usage_raw.results %}
+          {{ item.stdout_lines[1] if item.stdout_lines | length > 1 else item.stdout }}
+          {% endfor %}
+
+    - name: Generate Digital Cleanliness Report
+      ansible.builtin.template:
+        src: cleanliness_report.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+      register: report_generation_result
+
+    - name: Report completion
+      ansible.builtin.debug:
+        msg: "Digital Dust Bunny Sweep complete. Report generated at {{ report_path }}"
