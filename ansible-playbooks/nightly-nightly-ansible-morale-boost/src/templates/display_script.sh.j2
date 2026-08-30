@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Ensure the morale content directory exists
+MORALE_DIR="{{ morale_content_dir }}"
+MOTD_FILE="{{ motd_path }}"
+
+if [ ! -d "$MORALE_DIR" ]; then
+    echo "Morale directory not found: $MORALE_DIR" >> /var/log/apocalypsai_morale.log
+    exit 1
+fi
+
+# Pick a random content file
+CONTENT_FILES=("$MORALE_DIR"/quotes.txt "$MORALE_DIR"/affirmations.txt)
+RANDOM_FILE="${CONTENT_FILES[$RANDOM % ${#CONTENT_FILES[@]}]}"
+
+if [ ! -f "$RANDOM_FILE" ]; then
+    echo "Morale content file not found: $RANDOM_FILE" >> /var/log/apocalypsai_morale.log
+    exit 1
+fi
+
+# Get a random line from the chosen file
+RANDOM_LINE=$(shuf -n 1 "$RANDOM_FILE")
+
+# Append to MOTD (requires root or appropriate permissions)
+# For demonstration, we'll just echo it to a log file if MOTD is not writable
+if [ -w "$MOTD_FILE" ]; then
+    echo -e "\n--- ApocalypsAI Morale Booster ---\n$RANDOM_LINE\n----------------------------------\n" >> "$MOTD_FILE"
+else
+    echo "$(date): Morale Boost: $RANDOM_LINE" >> /var/log/apocalypsai_morale.log
+fi
