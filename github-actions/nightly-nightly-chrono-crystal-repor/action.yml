@@ -1,0 +1,15 @@
+name: 'Chrono-Crystal Status Report'
+description: 'Generates a whimsical Chrono-Crystal Status Report based on workflow outcome.'
+inputs:
+  status:
+    description: 'The overall status of the workflow (e.g., success, failure, cancelled).'
+    required: true
+  repo-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+outputs:
+  report-message:
+    description: 'The generated whimsical status report message.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
