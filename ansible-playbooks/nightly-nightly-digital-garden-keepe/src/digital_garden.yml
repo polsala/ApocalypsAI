@@ -1,0 +1,71 @@
+---
+- name: Cultivate and maintain the Digital Garden
+  hosts: garden_hosts
+  become: yes # May need root for /tmp or other paths
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure digital garden base path exists
+      ansible.builtin.file:
+        path: "{{ digital_garden_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure garden plots (sub-directories) exist
+      ansible.builtin.file:
+        path: "{{ digital_garden_base_path }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ digital_garden_plots }}"
+
+    - name: Plant new seeds and water existing ones in each plot
+      ansible.builtin.file:
+        path: "{{ digital_garden_base_path }}/{{ plot }}/{{ digital_garden_seed_prefix }}{{ '%02d' | format(seed_num) }}.txt"
+        state: touch # Creates if not exists, updates mtime if exists
+        mode: '0644'
+      loop: "{{ digital_garden_plots | product(range(1, digital_garden_seeds_per_plot + 1)) | list }}"
+      loop_control:
+        loop_var: outer_item
+      vars:
+        plot: "{{ outer_item[0] }}"
+        seed_num: "{{ outer_item[1] }}"
+
+    - name: Prune old seeds (files) in each plot
+      ansible.builtin.find:
+        paths: "{{ digital_garden_base_path }}/{{ item }}"
+        file_type: file
+        age: "{{ digital_garden_prune_after_days }}d"
+        patterns: "{{ digital_garden_seed_prefix }}*.txt"
+      register: old_seeds_to_prune
+      loop: "{{ digital_garden_plots }}"
+
+    - name: Remove old seeds
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_seeds_to_prune.results | json_query('[].files[]') }}"
+      when: item.path is defined
+
+    - name: Weed empty plots (sub-directories)
+      ansible.builtin.find:
+        paths: "{{ digital_garden_base_path }}"
+        file_type: directory
+        recurse: yes
+        patterns: "*" # Find all directories
+      register: all_plots
+
+    - name: Check if plots are empty
+      ansible.builtin.command: "find {{ item.path }} -maxdepth 0 -empty -type d"
+      register: empty_plot_check
+      loop: "{{ all_plots.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: item.path in (digital_garden_base_path + '/' + plot for plot in digital_garden_plots) # Only check our defined plots
+
+    - name: Remove empty plots
+      ansible.builtin.file:
+        path: "{{ item.item.path }}"
+        state: absent
+      loop: "{{ empty_plot_check.results }}"
+      when: item.stdout != "" and item.item.path != digital_garden_base_path # Only remove if 'find' found it empty and it's not the base path

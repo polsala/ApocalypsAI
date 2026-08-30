@@ -1,0 +1,135 @@
+---
+- name: Test Nightly Digital Garden Keeper
+  hosts: test_garden_hosts
+  become: yes
+  vars:
+    test_base_path: "/tmp/test_digital_garden_keeper_{{ lookup('pipe', 'date +%s') }}" # Unique path for each test run
+    digital_garden_base_path: "{{ test_base_path }}" # Override for the main playbook
+    digital_garden_plots:
+      - "test_flowers"
+      - "test_herbs"
+    digital_garden_seeds_per_plot: 2
+    digital_garden_seed_prefix: "test_seed_"
+    digital_garden_prune_after_days: 0 # Prune immediately for testing old files
+
+  pre_tasks:
+    - name: Clean up previous test run artifacts (if any)
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+  tasks:
+    - name: SETUP - Create initial garden structure for testing
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/{{ item.plot }}/{{ item.seed }}"
+        state: touch
+        mode: '0644'
+      loop:
+        - { plot: "test_flowers", seed: "test_seed_01.txt" }
+        - { plot: "test_flowers", seed: "test_seed_02.txt" }
+        - { plot: "test_herbs", seed: "test_seed_01.txt" }
+        - { plot: "test_herbs", seed: "test_seed_02.txt" }
+        - { plot: "test_herbs", seed: "old_test_seed_03.txt" } # An old seed to be pruned
+        - { plot: "empty_plot_to_weed", seed: "temp_file.txt" } # A plot that will become empty
+      delegate_to: localhost
+      # Mock rationale: Simulates an existing garden state before the main playbook runs.
+
+    - name: SETUP - Make one seed old for pruning test
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_base_path }}/test_herbs/old_test_seed_03.txt"
+      delegate_to: localhost
+      # Mock rationale: Simulates an old file to verify the pruning logic.
+
+    - name: SETUP - Remove temp file from empty_plot_to_weed to make it empty
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/empty_plot_to_weed/temp_file.txt"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Creates a directory that will be empty, to test the weeding logic.
+
+    - name: RUN - Execute the main digital garden playbook
+      ansible.builtin.include_tasks: ../src/digital_garden.yml
+      vars:
+        digital_garden_base_path: "{{ test_base_path }}"
+        digital_garden_plots: "{{ digital_garden_plots }}"
+        digital_garden_seeds_per_plot: "{{ digital_garden_seeds_per_plot }}"
+        digital_garden_seed_prefix: "{{ digital_garden_seed_prefix }}"
+        digital_garden_prune_after_days: "{{ digital_garden_prune_after_days }}"
+      # Mock rationale: Runs the actual utility against the mocked environment.
+
+    - name: VERIFY - Base path exists
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}"
+      register: base_path_stat
+      delegate_to: localhost
+      # Mock rationale: Verifies the playbook's effect on the file system.
+    - name: ASSERT - Base path exists
+      ansible.builtin.assert:
+        that:
+          - base_path_stat.stat.exists
+          - base_path_stat.stat.isdir
+        msg: "Digital garden base path {{ test_base_path }} does not exist or is not a directory."
+
+    - name: VERIFY - Garden plots exist and contain correct number of seeds
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/{{ plot }}"
+      register: plot_stat
+      delegate_to: localhost
+      loop: "{{ digital_garden_plots }}"
+      loop_control:
+        loop_var: plot
+    - name: ASSERT - Plots exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        msg: "Plot {{ item.item }} does not exist or is not a directory."
+      loop: "{{ plot_stat.results }}"
+
+    - name: VERIFY - Seeds are planted and watered (exist)
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/{{ plot }}/{{ digital_garden_seed_prefix }}{{ '%02d' | format(seed_num) }}.txt"
+      register: seed_stat
+      delegate_to: localhost
+      loop: "{{ digital_garden_plots | product(range(1, digital_garden_seeds_per_plot + 1)) | list }}"
+      loop_control:
+        loop_var: outer_item
+      vars:
+        plot: "{{ outer_item[0] }}"
+        seed_num: "{{ outer_item[1] }}"
+    - name: ASSERT - Seeds exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        msg: "Seed {{ item.item.0 }}/{{ digital_garden_seed_prefix }}{{ '%02d' | format(item.item.1) }}.txt does not exist."
+      loop: "{{ seed_stat.results }}"
+
+    - name: VERIFY - Old seed was pruned
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/test_herbs/old_test_seed_03.txt"
+      register: old_seed_stat
+      delegate_to: localhost
+    - name: ASSERT - Old seed is absent
+      ansible.builtin.assert:
+        that: not old_seed_stat.stat.exists
+        msg: "Old seed was not pruned."
+
+    - name: VERIFY - Empty plot was weeded
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/empty_plot_to_weed"
+      register: empty_plot_stat
+      delegate_to: localhost
+    - name: ASSERT - Empty plot is absent
+      ansible.builtin.assert:
+        that: not empty_plot_stat.stat.exists
+        msg: "Empty plot was not weeded."
+
+  post_tasks:
+    - name: Clean up test artifacts
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Cleans up the temporary test environment, ensuring no side effects.
