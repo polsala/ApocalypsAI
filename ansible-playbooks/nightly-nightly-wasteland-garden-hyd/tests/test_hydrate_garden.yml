@@ -1,0 +1,87 @@
+---
+- name: Test Wasteland Garden Hydration Playbook
+  hosts: localhost
+  gather_facts: no
+  become: yes # Tests cron and script deployment, which often require root
+
+  vars:
+    garden_script_path: "/usr/local/bin/wasteland_garden_waterer.sh"
+    garden_log_dir: "/tmp/wasteland_garden_logs"
+    cron_minute: "0"
+    cron_hour: "3"
+    cron_job_name: "Wasteland Garden Daily Hydration"
+
+  pre_tasks:
+    - name: Clean up previous test artifacts (script, cron, log dir)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ garden_script_path }}"
+        - "{{ garden_log_dir }}"
+      ignore_errors: yes # In case they don't exist
+      # Mock rationale: Ensures a clean slate before running the main playbook for testing.
+
+    - name: Remove cron job if it exists from previous test runs
+      ansible.builtin.cron:
+        name: "{{ cron_job_name }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Ensures a clean slate for cron job creation.
+
+  tasks:
+    - name: Run the main hydration playbook
+      ansible.builtin.include_tasks:
+        file: ../src/hydrate_garden.yml
+      vars:
+        hosts: localhost # Override hosts to run against localhost for testing
+      delegate_to: localhost # Mock rationale: Ensures the playbook runs against the local machine for testing purposes.
+
+    - name: Verify watering script exists and is executable
+      ansible.builtin.stat:
+        path: "{{ garden_script_path }}"
+      register: script_stat
+      failed_when: not script_stat.stat.exists or not script_stat.stat.executable
+
+    - name: Verify cron job is present
+      ansible.builtin.cron:
+        name: "{{ cron_job_name }}"
+        state: query
+      register: cron_query
+      failed_when: not cron_query.jobs | selectattr('name', 'equalto', cron_job_name) | list
+
+    - name: Manually execute the watering script for immediate log verification
+      ansible.builtin.command: "{{ garden_script_path }}"
+      register: script_output
+      changed_when: true # Always consider this changed for testing purposes
+      # Mock rationale: Directly executing the script allows us to verify its immediate effect (log creation)
+      # without waiting for the cron job to trigger.
+
+    - name: Verify hydration log directory exists
+      ansible.builtin.stat:
+        path: "{{ garden_log_dir }}"
+      register: log_dir_stat
+      failed_when: not log_dir_stat.stat.exists or not log_dir_stat.stat.isdir
+
+    - name: Verify a hydration log file was created (check for today's log)
+      ansible.builtin.find:
+        paths: "{{ garden_log_dir }}"
+        patterns: "hydration_log_*.log"
+        recurse: no
+      register: log_files
+      failed_when: log_files.files | length == 0
+
+  post_tasks:
+    - name: Clean up test artifacts after verification (script, cron, log dir)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ garden_script_path }}"
+        - "{{ garden_log_dir }}"
+      ignore_errors: yes
+
+    - name: Remove cron job created by test
+      ansible.builtin.cron:
+        name: "{{ cron_job_name }}"
+        state: absent
+      ignore_errors: yes
