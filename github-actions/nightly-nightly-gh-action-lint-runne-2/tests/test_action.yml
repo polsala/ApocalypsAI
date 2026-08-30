@@ -1,0 +1,59 @@
+name: Test Nightly GitHub Action Lint Runner
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test_lint_runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create a valid workflow file
+        run: |
+          mkdir -p .github/workflows
+          echo "name: Valid Workflow\n\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Run a command\n        run: echo 'Hello, world!'"
+          > .github/workflows/valid_workflow.yml
+
+      - name: Create an invalid workflow file (syntax error)
+        run: |
+          echo "name: Invalid Workflow\n  jobs:\n    build:\n      runs-on: ubuntu-latest\n      steps:\n        - uses: actions/checkout@v4\n        - name: Run a command\n          run: echo 'This is invalid YAML'"
+          > .github/workflows/invalid_syntax_workflow.yml
+
+      - name: Create an invalid workflow file (action-validator error)
+        run: |
+          echo "name: Another Invalid Workflow\n  on: push\n  jobs:\n    build:\n      runs-on: ubuntu-latest\n      steps:\n        - uses: actions/checkout@v4\n        - name: Use a deprecated action\n          uses: actions/setup-node@v1 # Deprecated version\n        - name: Run a command\n          run: echo 'This workflow has issues'"
+          > .github/workflows/invalid_validator_workflow.yml
+
+      - name: Run Nightly GitHub Action Lint Runner on valid file (should pass)
+        uses: polsala/ApocalypsAI/utils/github-actions/nightly-gh-action-lint-runner@main
+        with:
+          workflow_paths: '.github/workflows/valid_workflow.yml'
+        id: lint_valid
+
+      - name: Assert valid workflow passed
+        run: |
+          if [ "${{ steps.lint_valid.outcome }}" != "success" ]; then
+            echo "Error: Linting of valid workflow failed!"
+            exit 1
+          fi
+          echo "Valid workflow linting passed as expected."
+
+      - name: Run Nightly GitHub Action Lint Runner on invalid files (should fail)
+        uses: polsala/ApocalypsAI/utils/github-actions/nightly-gh-action-lint-runner@main
+        with:
+          workflow_paths: '.github/workflows'
+        id: lint_invalid
+        continue-on-error: true # We expect this to fail
+
+      - name: Assert invalid workflows failed
+        run: |
+          if [ "${{ steps.lint_invalid.outcome }}" == "success" ]; then
+            echo "Error: Linting of invalid workflows did not fail!"
+            exit 1
+          fi
+          echo "Invalid workflows failed linting as expected."
