@@ -1,0 +1,1 @@
+# syntax=docker/dockerfile:1\n\n# ---------- Builder stage ----------\nFROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/ .\nRUN go build -o quote-mixer .\n\n# ---------- Runtime stage ----------\nFROM alpine:latest\nWORKDIR /app\nCOPY --from=builder /app/quote-mixer .\nEXPOSE 8080\nENV QUOTE_SEED=0\nCMD ["./quote-mixer"]\n
