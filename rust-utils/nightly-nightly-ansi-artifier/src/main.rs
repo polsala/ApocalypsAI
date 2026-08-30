@@ -1,0 +1,1 @@
+use std::env;\nmod lib;\n\nfn print_usage() {\n    eprintln!("Usage: ansi-artifier <text>");\n}\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        print_usage();\n        std::process::exit(1);\n    }\n    let input = &args[1];\n    let colored = lib::rainbow(input);\n    println!("{}", colored);\n}\n
