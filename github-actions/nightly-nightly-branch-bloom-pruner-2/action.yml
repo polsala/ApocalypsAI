@@ -1,0 +1,24 @@
+name: 'Branch Bloom Pruner'
+description: 'Identifies and optionally prunes stale, unmerged branches.'
+inputs:
+  github-token:
+    description: 'GitHub token with repo scope (e.g., ${{ github.token }}).'
+    required: true
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  default-branch:
+    description: 'The default branch to check merges against (e.g., main, master).'
+    required: false
+    default: 'main'
+  dry-run:
+    description: 'If true, only report stale branches without deleting them.'
+    required: false
+    default: 'true'
+outputs:
+  pruned-branches:
+    description: 'JSON array of branches that were pruned (or would be in dry-run).'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
