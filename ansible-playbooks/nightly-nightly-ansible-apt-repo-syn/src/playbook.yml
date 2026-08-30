@@ -1,0 +1,48 @@
+- name: Synchronize apt packages across hosts
+  hosts: all
+  become: true
+  vars:
+    package_list: []
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Gather installed packages
+      command: dpkg-query -W -f='${Package}\n'
+      register: installed_packages
+      changed_when: false
+
+    - name: Set host package list fact
+      set_fact:
+        package_list: "{{ installed_packages.stdout_lines }}"
+
+    - name: Add host to package collector group with its package list
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: package_collectors
+        ansible_facts:
+          host_packages: "{{ package_list }}"
+
+    - name: Wait for all hosts to report packages
+      meta: flush_handlers
+
+- name: Compute union of packages and install missing ones
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather all host package lists
+      set_fact:
+        all_packages: "{{ groups['package_collectors'] | map('extract', hostvars, ['host_packages']) | list }}"
+
+    - name: Compute union of packages
+      set_fact:
+        union_packages: "{{ all_packages | flatten | unique }}"
+
+    - name: Install missing packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ union_packages }}"
+      when: item not in package_list
