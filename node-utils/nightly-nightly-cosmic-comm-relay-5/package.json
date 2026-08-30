@@ -1,0 +1,25 @@
+{
+  "name": "nightly-cosmic-comm-relay",
+  "version": "1.0.0",
+  "description": "A whimsical Node.js utility to encode and decode messages using a simulated cosmic radio frequency.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "encode": "node src/main.js encode",
+    "decode": "node src/main.js decode",
+    "test": "jest"
+  },
+  "keywords": [
+    "apocalypsai",
+    "nightly",
+    "utility",
+    "encoding",
+    "decoding",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
