@@ -1,0 +1,113 @@
+name: Test Nightly Issue Garden Tender
+on:
+  workflow_dispatch: # Allow manual triggering for testing
+  push: # Run on push to ensure tests pass
+    branches:
+      - main
+    paths:
+      - 'utils/nightly-issue-garden-tender/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup mock gh CLI
+        run: |
+          mkdir -p /tmp/mock-bin
+          cat << 'EOF' > /tmp/mock-bin/gh
+          #!/bin/bash
+          # Mock rationale: Simulate GitHub API responses for deterministic, offline testing.
+          # This mock captures gh api calls and returns predefined JSON based on the endpoint.
+
+          if [[ "$1" == "api" ]]; then
+            ENDPOINT="$2"
+            METHOD=""
+            DATA=""
+            for i in "${@:3}"; do
+              if [[ "$i" == -X* ]]; then METHOD="${i#-X}"; fi
+              if [[ "$i" == -f* ]]; then DATA="${i#-f}"; fi
+            done
+
+            echo "MOCK_GH_API_CALL: $ENDPOINT METHOD=$METHOD DATA=$DATA" >&2
+
+            if [[ "$ENDPOINT" == "repos/test-owner/test-repo/issues" && ( "$METHOD" == "" || "$METHOD" == "GET" ) ]]; then
+              # Mock issues list
+              echo '[
+                {"number": 101, "title": "Thirsty Issue 1", "updated_at": "2023-01-01T10:00:00Z", "state": "open", "labels": []},
+                {"number": 102, "title": "Fresh Issue 2", "updated_at": "2024-05-01T10:00:00Z", "state": "open", "labels": []},
+                {"number": 103, "title": "Ignored Label Issue", "updated_at": "2023-01-01T10:00:00Z", "state": "open", "labels": [{"name": "bug"}]},
+                {"number": 104, "title": "Already Watered Issue", "updated_at": "2023-01-01T10:00:00Z", "state": "open", "labels": [{"name": "garden-tender-watered"}]},
+                {"number": 105, "title": "Another Thirsty Issue", "updated_at": "2023-01-05T10:00:00Z", "state": "open", "labels": []}
+              ]'
+            elif [[ "$ENDPOINT" == "repos/test-owner/test-repo/issues/101/comments" && "$METHOD" == "POST" ]]; then
+              echo '{"id": 1, "body": "Mocked comment for 101"}'
+            elif [[ "$ENDPOINT" == "repos/test-owner/test-repo/issues/101/labels" && "$METHOD" == "POST" ]]; then
+              echo '{"id": 1, "name": "garden-tender-watered"}'
+            elif [[ "$ENDPOINT" == "repos/test-owner/test-repo/issues/105/comments" && "$METHOD" == "POST" ]]; then
+              echo '{"id": 2, "body": "Mocked comment for 105"}'
+            elif [[ "$ENDPOINT" == "repos/test-owner/test-repo/issues/105/labels" && "$METHOD" == "POST" ]]; then
+              echo '{"id": 2, "name": "garden-tender-watered"}'
+            else
+              echo "Error: Unmocked API call: $ENDPOINT METHOD=$METHOD DATA=$DATA" >&2
+              exit 1
+            fi
+          else
+            # For other gh commands, just pass through or error
+            echo "Error: Unmocked gh command: $@" >&2
+            exit 1
+          fi
+          EOF
+          chmod +x /tmp/mock-bin/gh
+          echo "/tmp/mock-bin" >> "$GITHUB_PATH"
+        env:
+          # Set a dummy GITHUB_TOKEN for the mock gh CLI to not complain
+          GITHUB_TOKEN: 'ghp_mocktoken'
+
+      - name: Run Nightly Issue Garden Tender (Dry Run)
+        id: dry_run_test
+        uses: ./
+        with:
+          github_token: 'ghp_mocktoken' # Dummy token for the action, handled by mock gh CLI
+          stale_days: '60' # Make sure 2023-01-01 and 2023-01-05 are stale relative to current date
+          labels_to_ignore: 'bug'
+          dry_run: 'true'
+        env:
+          GITHUB_REPOSITORY: 'test-owner/test-repo' # Override for testing
+
+      - name: Verify Dry Run Output
+        run: |
+          # Check if the dry run correctly identified the issues
+          # Expecting issue 101 and 105 to be identified as thirsty
+          grep -q "DRY RUN: Would have posted comment and added label to issue #101." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "DRY RUN: Would have posted comment and added label to issue #105." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          ! grep -q "DRY RUN: Would have posted comment and added label to issue #102." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          ! grep -q "DRY RUN: Would have posted comment and added label to issue #103." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          ! grep -q "DRY RUN: Would have posted comment and added label to issue #104." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+        env:
+          GITHUB_STEP_SUMMARY: /dev/stdout # Direct output to stdout for grep
+
+      - name: Run Nightly Issue Garden Tender (Actual Run - will hit mock)
+        id: actual_run_test
+        uses: ./
+        with:
+          github_token: 'ghp_mocktoken'
+          stale_days: '60'
+          labels_to_ignore: 'bug'
+          dry_run: 'false'
+        env:
+          GITHUB_REPOSITORY: 'test-owner/test-repo'
+
+      - name: Verify Actual Run Output
+        run: |
+          # Check if the actual run logged the actions
+          grep -q "Posting comment to issue #101..." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "Adding label 'garden-tender-watered' to issue #101..." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "Successfully watered issue #101." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "Posting comment to issue #105..." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "Adding label 'garden-tender-watered' to issue #105..." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+          grep -q "Successfully watered issue #105." "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+        env:
+          GITHUB_STEP_SUMMARY: /dev/stdout

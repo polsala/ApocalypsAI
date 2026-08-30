@@ -1,0 +1,40 @@
+name: 'Nightly Issue Garden Tender'
+description: 'Gently reminds contributors to "water" (comment on) stale issues.'
+inputs:
+  github_token:
+    description: 'GitHub token with `issues:write` permission.'
+    required: true
+  stale_days:
+    description: 'Number of days after which an issue is considered stale (no activity).'
+    required: false
+    default: '30'
+  watering_message:
+    description: 'The whimsical message to post on stale issues.'
+    required: false
+    default: 'This little issue plant looks a bit thirsty! 💧 Any kind gardener willing to give it some attention?'
+  labels_to_ignore:
+    description: 'Comma-separated list of labels to ignore (e.g., "bug,enhancement").'
+    required: false
+    default: ''
+  action_label:
+    description: 'The label to add to issues after they have been "watered" to prevent re-watering.'
+    required: false
+    default: 'garden-tender-watered'
+  dry_run:
+    description: 'If true, only log actions without posting comments.'
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Issue Garden Tender
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        STALE_DAYS: ${{ inputs.stale_days }}
+        WATERING_MESSAGE: ${{ inputs.watering_message }}
+        LABELS_TO_IGNORE: ${{ inputs.labels_to_ignore }}
+        ACTION_LABEL: ${{ inputs.action_label }}
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        ${{ github.action_path }}/src/main.sh
