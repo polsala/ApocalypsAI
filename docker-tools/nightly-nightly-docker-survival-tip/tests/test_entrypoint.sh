@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n# Deterministic test by setting TIP_INDEX\nexpected=\"Always keep a spare bottle of water in your hat.\"\noutput=$(TIP_INDEX=2 ./entrypoint.sh)\nif [ "$output" = "$expected" ]; then\n  echo "PASS"\n  exit 0\nelse\n  echo "FAIL: expected '$expected' got '$output'"\n  exit 1\nfi
