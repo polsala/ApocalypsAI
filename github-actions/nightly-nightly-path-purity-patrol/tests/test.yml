@@ -1,0 +1,82 @@
+name: 'Test Path Purity Patrol Action'
+
+on:
+  workflow_dispatch: # Allows manual triggering for testing
+
+jobs:
+  test_action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with compliant paths
+        id: compliant_test
+        uses: ./github-actions/nightly-path-purity-patrol # Mock rationale: Using local action path for testing the action itself.
+        with:
+          added_files: |
+            python-utils/nightly-new-script/README.md
+            python-utils/nightly-new-script/src/main.py
+            rust-utils/nightly-new-cli/Cargo.toml
+            .github/workflows/new_workflow.yml
+            README.md
+        run: |
+          echo "Is Pure: ${{ steps.compliant_test.outputs.is_pure }}"
+          echo "Violations: ${{ steps.compliant_test.outputs.violations }}"
+          if [[ "${{ steps.compliant_test.outputs.is_pure }}" != "true" ]]; then
+            echo "::error::Compliant test failed: Expected 'true' for is_pure, got '${{ steps.compliant_test.outputs.is_pure }}'"
+            exit 1
+          fi
+          if [[ -n "${{ steps.compliant_test.outputs.violations }}" ]]; then
+            echo "::error::Compliant test failed: Expected no violations, got '${{ steps.compliant_test.outputs.violations }}'"
+            exit 1
+          fi
+
+      - name: Test with non-compliant paths
+        id: non_compliant_test
+        uses: ./github-actions/nightly-path-purity-patrol # Mock rationale: Using local action path for testing the action itself.
+        with:
+          added_files: |
+            utils/nightly-legacy-util/README.md
+            utils/nightly-legacy-util/src/main.py
+            python-utils/nightly-good-script/src/main.py
+            .github/workflows/another_workflow.yml
+        run: |
+          echo "Is Pure: ${{ steps.non_compliant_test.outputs.is_pure }}"
+          echo "Violations: ${{ steps.non_compliant_test.outputs.violations }}"
+          if [[ "${{ steps.non_compliant_test.outputs.is_pure }}" != "false" ]]; then
+            echo "::error::Non-compliant test failed: Expected 'false' for is_pure, got '${{ steps.non_compliant_test.outputs.is_pure }}'"
+            exit 1
+          fi
+          EXPECTED_VIOLATIONS="utils/nightly-legacy-util/README.md\nutils/nightly-legacy-util/src/main.py\n"
+          # Compare outputs, ignoring trailing newlines for robustness
+          if [[ "$(echo -e "${{ steps.non_compliant_test.outputs.violations }}" | sed '/^$/d')" != "$(echo -e "$EXPECTED_VIOLATIONS" | sed '/^$/d')" ]]; then
+            echo "::error::Non-compliant test failed: Expected violations did not match actual."
+            echo "Expected:\n$EXPECTED_VIOLATIONS"
+            echo "Actual:\n${{ steps.non_compliant_test.outputs.violations }}"
+            exit 1
+          fi
+
+      - name: Test with mixed paths (some compliant, some not)
+        id: mixed_test
+        uses: ./github-actions/nightly-path-purity-patrol # Mock rationale: Using local action path for testing the action itself.
+        with:
+          added_files: |
+            python-utils/nightly-good-one/README.md
+            utils/nightly-bad-one/src/main.py
+            rust-utils/nightly-good-two/Cargo.toml
+            utils/nightly-bad-two/tests/test.rs
+        run: |
+          echo "Is Pure: ${{ steps.mixed_test.outputs.is_pure }}"
+          echo "Violations: ${{ steps.mixed_test.outputs.violations }}"
+          if [[ "${{ steps.mixed_test.outputs.is_pure }}" != "false" ]]; then
+            echo "::error::Mixed test failed: Expected 'false' for is_pure, got '${{ steps.mixed_test.outputs.is_pure }}'"
+            exit 1
+          fi
+          EXPECTED_VIOLATIONS="utils/nightly-bad-one/src/main.py\nutils/nightly-bad-two/tests/test.rs\n"
+          if [[ "$(echo -e "${{ steps.mixed_test.outputs.violations }}" | sed '/^$/d')" != "$(echo -e "$EXPECTED_VIOLATIONS" | sed '/^$/d')" ]]; then
+            echo "::error::Mixed test failed: Expected violations did not match actual."
+            echo "Expected:\n$EXPECTED_VIOLATIONS"
+            echo "Actual:\n${{ steps.mixed_test.outputs.violations }}"
+            exit 1
+          fi
