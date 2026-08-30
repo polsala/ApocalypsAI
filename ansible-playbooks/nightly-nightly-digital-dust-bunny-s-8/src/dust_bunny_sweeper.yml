@@ -1,0 +1,61 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  become: yes # Requires root privileges for cleaning system directories
+  gather_facts: yes
+
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Ensure cleanup paths exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ cleanup_paths }}"
+      ignore_errors: yes # Some paths might not exist, which is fine
+      # Mock rationale: This task ensures the target directories exist for the playbook to run without errors. 
+      # In a real scenario, these paths would likely exist. For testing, it ensures our mock environment is ready.
+
+    - name: Find old and large files (digital dust bunnies)
+      ansible.builtin.find:
+        paths: "{{ cleanup_paths }}"
+        age: "{{ age_threshold_days }}d"
+        size: "{{ size_threshold_mb }}M"
+        recurse: yes
+        file_type: file
+      register: dust_bunnies
+      # Mock rationale: The 'find' module operates on the local filesystem of the target host. 
+      # For testing, we create mock files in a temporary directory on localhost, making this deterministic.
+
+    - name: Remove identified dust bunnies
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ dust_bunnies.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: not ansible_check_mode # Only remove in actual run, not check mode
+      # Mock rationale: The 'file' module removes files. In tests, this will remove mock files. 
+      # 'when: not ansible_check_mode' ensures it's safe for dry runs and test assertions can check for its *intent*.
+
+    - name: Generate cleanup report
+      ansible.builtin.template:
+        src: ../templates/dust_bunny_report.j2
+        dest: "/tmp/dust_bunny_report_{{ ansible_hostname }}.txt"
+      delegate_to: localhost
+      run_once: true
+      vars:
+        total_found: "{{ dust_bunnies.files | length }}"
+        removed_files: "{{ dust_bunnies.files | map(attribute='path') | list if not ansible_check_mode else [] }}"
+        # In check mode, nothing is 'removed', so we report an empty list for removed_files
+      # Mock rationale: This generates a report based on the 'dust_bunnies' registered variable. 
+      # The content of this report is deterministic based on the 'find' results, which are controlled by mock files.
+
+    - name: Display cleanup report path
+      ansible.builtin.debug:
+        msg: "Digital Dust Bunny Report generated at /tmp/dust_bunny_report_{{ ansible_hostname }}.txt on localhost."
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Simple debug message, deterministic.
