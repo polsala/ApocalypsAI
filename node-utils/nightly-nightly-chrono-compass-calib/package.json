@@ -1,0 +1,27 @@
+{
+  "name": "nightly-chrono-compass-calibrator",
+  "version": "1.0.0",
+  "description": "A Node.js CLI utility to synchronize system time with a 'post-apocalyptic' NTP server, optionally introducing minor, whimsical temporal distortions for character.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "time",
+    "synchronization",
+    "apocalypse",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
