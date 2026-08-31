@@ -1,0 +1,55 @@
+---
+- name: Setup test digital garden environment
+  hosts: garden_hosts
+  gather_facts: no
+
+  vars:
+    test_garden_path: "/tmp/test_digital_garden"
+    test_compost_path: "/tmp/test_digital_garden_compost"
+    current_time: "{{ lookup('pipe', 'date +%s') | int }}"
+    # Mock rationale: Using 'lookup('pipe', 'date +%s')' to get current time.
+    # This is deterministic for the purpose of creating files with specific mtimes
+    # relative to a 'current' point in time. The actual 'stale_days' logic
+    # in the main playbook will then operate on these fixed mtimes.
+
+  tasks:
+    - name: Ensure test directories are clean
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_compost_path }}"
+
+    - name: Ensure test directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_compost_path }}"
+
+    - name: Create a recent markdown file (not stale)
+      ansible.builtin.copy:
+        content: "This is a recent note."
+        dest: "{{ test_garden_path }}/recent_note.md"
+        mode: '0644'
+      register: recent_file
+      # Mock rationale: Creating a file with current timestamp.
+      # Ansible's 'copy' module sets mtime to current time by default.
+
+    - name: Create a stale markdown file (older than 30 days)
+      ansible.builtin.copy:
+        content: "This is an old, stale note."
+        dest: "{{ test_garden_path }}/stale_note.md"
+        mode: '0644'
+      register: stale_file
+
+    - name: Set mtime for stale file to be older than 30 days
+      ansible.builtin.command:
+        cmd: touch -d "@{{ current_time - (31 * 24 * 60 * 60) }}" "{{ test_garden_path }}/stale_note.md"
+      changed_when: true
+      # Mock rationale: 'touch -d' is used to explicitly set a past modification time.
+      # This is crucial for deterministic testing of the 'age' filter in the main playbook.
+      # It ensures the file is definitively older than the 'stale_days' threshold (30 days).
