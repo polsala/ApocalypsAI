@@ -1,0 +1,16 @@
+---
+dust_bunny_target_paths:
+  - /tmp
+  - /var/log
+  - /etc/nginx/conf.d
+
+dust_bunny_file_patterns:
+  - "*.bak"
+  - "*~"
+  - "*.tmp"
+  - "*.old"
+  - "core.*"
+
+dust_bunny_age_threshold_days: 30
+
+dust_bunny_dry_run: true
