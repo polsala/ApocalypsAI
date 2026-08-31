@@ -1,0 +1,31 @@
+{
+  "name": "nightly-mood-wardrobe-oracle",
+  "version": "1.0.0",
+  "description": "Suggests outfit combinations based on a chosen mood or vibe, leveraging type-safe clothing definitions.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "cli": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "typescript",
+    "cli",
+    "utility",
+    "wardrobe",
+    "fashion",
+    "mood",
+    "outfit"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
