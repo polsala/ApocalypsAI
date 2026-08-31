@@ -1,0 +1,55 @@
+---
+- name: Ensure knowledge base directories and files exist
+  hosts: knowledge_hosts
+  connection: local # For local execution, adjust for remote hosts
+  gather_facts: yes # Needed for ansible_date_time
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure knowledge base root directory exists
+      ansible.builtin.file:
+        path: "{{ knowledge_base_root }}"
+        state: directory
+        mode: "{{ default_dir_mode }}"
+      become: no # Assuming user owns their knowledge garden
+
+    - name: Ensure specified directories exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: "{{ item.mode | default(default_dir_mode) }}"
+      loop: "{{ directories_to_ensure }}"
+      loop_control:
+        label: "{{ item.path }}"
+      become: no
+
+    - name: Seed specified files with content or template
+      ansible.builtin.block:
+        - name: Create file from template
+          ansible.builtin.template:
+            src: "templates/{{ item.template }}"
+            dest: "{{ item.path }}"
+            mode: "{{ item.mode | default(default_file_mode) }}"
+          when: item.template is defined
+          become: no
+
+        - name: Create file with explicit content
+          ansible.builtin.copy:
+            content: "{{ item.content }}"
+            dest: "{{ item.path }}"
+            mode: "{{ item.mode | default(default_file_mode) }}"
+          when: item.content is defined and item.template is not defined
+          become: no
+
+        - name: Create empty file if neither template nor content is defined
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: touch
+            mode: "{{ item.mode | default(default_file_mode) }}"
+          when: item.template is not defined and item.content is not defined
+          become: no
+      loop: "{{ files_to_seed }}"
+      loop_control:
+        label: "{{ item.path }}"
