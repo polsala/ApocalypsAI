@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Determine hour, allow override via FIXED_HOUR for testing\nif [[ -n "$FIXED_HOUR" ]]; then\n  hour=$FIXED_HOUR\nelse\n  hour=$(date +%H)\nfi\n\nif (( hour < 12 )); then\n  greeting="Good morning, brave coder! 🌅"\nelif (( hour < 18 )); then\n  greeting="Good afternoon, code explorer! 🌞"\nelse\n  greeting="Good evening, night owl! 🌙"\nfi\n\necho "$greeting"\n
