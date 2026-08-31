@@ -1,0 +1,52 @@
+---
+- name: Ensure digital garden Markdown files have front matter
+  hosts: garden_hosts
+  gather_facts: yes # Required for ansible_date_time fact
+
+  vars:
+    garden_path: "{{ playbook_dir }}/my_garden" # Default path, override as needed
+
+  tasks:
+    - name: Find Markdown files in {{ garden_path }}
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: markdown_files
+
+    - name: Process each Markdown file
+      ansible.builtin.block:
+        - name: Read file content: {{ item.path }}
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content_slurp
+
+        - name: Decode file content
+          ansible.builtin.set_fact:
+            file_content: "{{ file_content_slurp.content | b64decode }}"
+
+        - name: Check for existing front matter for {{ item.path }}
+          ansible.builtin.set_fact:
+            file_has_front_matter: "{{ file_content | regex_search('^---\n(.*?)\n---\n', multiline=True) is not none }}"
+
+        - name: Set facts for new front matter: {{ item.path }}
+          ansible.builtin.set_fact:
+            file_title: "{{ item.filename | regex_replace('\\.md$', '') | replace('_', ' ') | capitalize }}"
+            current_date: "{{ ansible_date_time.date }}"
+          when: not file_has_front_matter
+
+        - name: Add front matter to {{ item.path }}
+          ansible.builtin.copy:
+            content: |
+              ---
+              title: "{{ file_title }}"
+              date: "{{ current_date }}"
+              ---
+
+              {{ file_content }}
+            dest: "{{ item.path }}"
+            mode: '0644'
+          when: not file_has_front_matter
+      loop: "{{ markdown_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
