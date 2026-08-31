@@ -1,0 +1,20 @@
+name: "Nightly PR Labeler"
+description: "Automatically adds labels to PRs based on changed file paths."
+inputs:
+  github-token:
+    description: "GITHUB_TOKEN with repo scope"
+    required: true
+  label-mapping:
+    description: "JSON mapping of glob patterns to label names"
+    required: false
+    default: '{"docs/**":"documentation","tests/**":"tests","src/**":"code"}'
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler script
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        LABEL_MAPPING: ${{ inputs.label-mapping }}
+      run: |
+        "${{ github.action_path }}/src/labeler.sh"
