@@ -1,0 +1,1 @@
+#!/usr/bin/env node\nimport { generateQRCode } from "./qr";\n\nfunction main() {\n  const args = process.argv.slice(2);\n  const input = args.join(" ");\n  if (!input) {\n    console.error("Usage: nightly-qr-ascii-art <text>");\n    process.exit(1);\n  }\n  console.log(generateQRCode(input));\n}\nmain();
