@@ -1,0 +1,36 @@
+name: 'Branch Graveyard Keeper'
+description: 'Identifies and reports on stale branches in a repository.'
+inputs:
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  ignore-branches:
+    description: 'Comma-separated list of branch names (or regex patterns) to ignore.'
+    required: false
+    default: 'main,master,develop'
+outputs:
+  stale-branches-json:
+    description: 'JSON array of stale branch names found.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Graveyard Keeper Script
+      shell: bash
+      run: |
+        # Ensure git is available (it usually is in GitHub Actions runners)
+        if ! command -v git &> /dev/null; then
+            echo "git command not found. Please ensure git is installed."
+            exit 1
+        fi
+
+        # Pass inputs to the script
+        STALE_DAYS="${{ inputs.stale-days }}"
+        IGNORE_BRANCHES="${{ inputs.ignore-branches }}"
+
+        # Execute the core logic script
+        # The script will output JSON to stdout, which we capture
+        STALE_BRANCHES_OUTPUT=$(bash "${{ github.action_path }}/src/graveyard_keeper.sh" "$STALE_DAYS" "$IGNORE_BRANCHES")
+
+        # Set the output for the action
+        echo "stale-branches-json=$STALE_BRANCHES_OUTPUT" >> "$GITHUB_OUTPUT"
