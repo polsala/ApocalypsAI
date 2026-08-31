@@ -1,0 +1,27 @@
+- name: Test APT Mirror Sync Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    local_mirror_dir: "/tmp/apt-mirror-test"
+  tasks:
+    - name: Create dummy remote source
+      file:
+        path: "/tmp/mock_remote"
+        state: directory
+
+    - name: Set remote_mirror variable to dummy source
+      set_fact:
+        remote_mirror: "/tmp/mock_remote"
+
+    - name: Include the mirror sync playbook
+      import_playbook: ../src/playbook.yml
+
+    - name: Verify local directory was created
+      stat:
+        path: "{{ local_mirror_dir }}"
+      register: dir_stat
+
+    - name: Assert directory exists
+      assert:
+        that:
+          - dir_stat.stat.isdir
