@@ -1,0 +1,18 @@
+name: 'Nightly Whimsical Encouragement'
+description: 'Posts a whimsical, encouraging comment on new PRs/issues with a specific label.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls'
+    required: true
+  label-to-trigger:
+    description: 'The label that triggers the encouragement (e.g., "needs-cheering")'
+    required: true
+  messages:
+    description: 'JSON array of whimsical messages to choose from'
+    required: true
+outputs:
+  comment-id:
+    description: 'The ID of the created comment, if any.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
