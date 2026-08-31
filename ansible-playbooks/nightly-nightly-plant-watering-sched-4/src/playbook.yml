@@ -1,0 +1,20 @@
+---
+- name: Configure plant watering scheduler
+  hosts: all
+  become: true
+  vars:
+    plant_watering_plug_ip: "{{ plant_watering_plug_ip | default('192.168.1.100') }}"
+    plant_watering_time: "{{ plant_watering_time | default('07:00') }}"
+  tasks:
+    - name: Ensure curl is installed
+      ansible.builtin.package:
+        name: curl
+        state: present
+
+    - name: Create cron job for plant watering
+      ansible.builtin.cron:
+        name: "Plant watering via smart plug"
+        minute: "{{ plant_watering_time.split(':')[1] }}"
+        hour: "{{ plant_watering_time.split(':')[0] }}"
+        job: "curl -X POST http://{{ plant_watering_plug_ip }}/relay/0"
+        user: root
