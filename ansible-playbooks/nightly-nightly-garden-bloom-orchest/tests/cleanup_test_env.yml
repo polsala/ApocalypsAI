@@ -1,0 +1,20 @@
+---
+- name: Cleanup Test Digital Garden Environment
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_garden_path: "/tmp/test_garden_bloom"
+    test_report_path: "/tmp/test_garden_bloom_report.md"
+
+  tasks:
+    - name: Remove test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Clean up temporary test files created during setup.
+
+    - name: Remove generated report
+      ansible.builtin.file:
+        path: "{{ test_report_path }}"
+        state: absent
+      # Mock rationale: Clean up generated report file.
