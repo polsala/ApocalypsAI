@@ -1,0 +1,22 @@
+{
+  "name": "nightly-temporal-echo-purifier",
+  "version": "1.0.0",
+  "description": "Scans directories for old, forgotten files (temporal echoes) and suggests purification actions.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "apocalypsai",
+    "utility",
+    "file-management",
+    "cleanup",
+    "node-js"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
