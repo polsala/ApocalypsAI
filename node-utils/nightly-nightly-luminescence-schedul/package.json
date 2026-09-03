@@ -1,0 +1,26 @@
+{
+  "name": "nightly-luminescence-scheduler",
+  "version": "1.0.0",
+  "description": "A CLI tool to schedule and manage 'luminescent events' based on user-defined schedules or simulated twilight hours.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "mocha tests/test_scheduler.js"
+  },
+  "keywords": [
+    "cli",
+    "scheduler",
+    "luminescence",
+    "apocalypsai",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": "^10.x.x"
+  },
+  "bin": {
+    "nightly-luminescence-scheduler": "src/index.js"
+  }
+}
