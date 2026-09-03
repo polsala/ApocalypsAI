@@ -1,0 +1,1 @@
+name: "PR Emoji Labeler"\ndescription: "Add a random emoji label to PRs for fun"\ninputs:\n  github_token:\n    description: "GITHUB_TOKEN with repo scope"\n    required: true\n  emoji_labels:\n    description: "Comma‑separated list of emoji labels"\n    required: false\n    default: "🚀,✨,🔥,💡,🎉"\nruns:\n  using: "node12"\n  main: "src/index.js"\n
