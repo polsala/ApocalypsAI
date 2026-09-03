@@ -1,0 +1,12 @@
+---
+# Default variables for the Digital Dust Bunny Sweeper
+dust_bunny_age_days: 30 # Files older than this will be considered dust bunnies
+
+# List of directories to clean. Be cautious with these paths!
+# Ensure they are locations where temporary or cache files accumulate.
+paths_to_clean:
+  - /tmp
+  - /var/tmp
+  - /var/log/old_app_logs # Example: a specific application's old log directory
+  # - ~/.cache # Uncomment if you want to clean user caches (requires running as user or with specific become_user)
+  # - /var/cache/apt/archives # Use with caution, or consider 'apt clean' for apt-based systems
