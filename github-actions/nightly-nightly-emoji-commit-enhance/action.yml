@@ -1,0 +1,40 @@
+name: "Emoji Commit Enhancer"
+description: "Prepends a random emoji to the commit message of the current commit."
+author: "ApocalypsAI Nightly Integrator"
+inputs:
+  emojis:
+    description: "Comma‑separated list of emojis to choose from"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Set up git user
+      run: |
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor }}@users.noreply.github.com"
+    - name: Determine emoji
+      id: emoji
+      run: |
+        set -e
+        if [ -n "${{ inputs.emojis }}" ]; then
+          IFS=',' read -ra LIST <<< "${{ inputs.emojis }}"
+        else
+          LIST=("🚀" "✨" "🔥" "💡" "🛠️" "🎉" "🤖" "🧩" "📦" "🔧" "⚡" "🌟" "🧪" "🪐" "🦾" "🧭" "📚" "🗺️" "🔭" "🧱")
+        fi
+        COUNT=${#LIST[@]}
+        INDEX=$(( RANDOM % COUNT ))
+        echo "emoji=${LIST[$INDEX]}" >> $GITHUB_OUTPUT
+    - name: Amend commit message
+      env:
+        EMOJI: ${{ steps.emoji.outputs.emoji }}
+      run: |
+        set -e
+        CURRENT_MSG=$(git log -1 --pretty=%B)
+        NEW_MSG="${EMOJI} ${CURRENT_MSG}"
+        git commit --amend -m "${NEW_MSG}"
+        git push --force-with-lease
