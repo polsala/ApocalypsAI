@@ -1,0 +1,36 @@
+---
+- name: Rotate Apocalyptic Wisdom on MOTD
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/wisdom_messages.yml
+  tasks:
+    - name: Ensure wisdom_messages list is defined
+      ansible.builtin.assert:
+        that:
+          - wisdom_messages is defined
+          - wisdom_messages is type_of('list')
+          - wisdom_messages | length > 0
+        fail_msg: "wisdom_messages list is not defined or is empty."
+
+    - name: Select a random wisdom message
+      ansible.builtin.set_fact:
+        selected_wisdom: "{{ wisdom_messages | random }}"
+      run_once: true # Select once for all hosts in this run
+      delegate_to: localhost # Perform random selection on the control node
+
+    - name: Debug selected wisdom (for verification)
+      ansible.builtin.debug:
+        msg: "Selected wisdom for this run: {{ selected_wisdom }}"
+      when: ansible_check_mode is defined and ansible_check_mode
+
+    - name: Create /etc/motd with the selected wisdom
+      ansible.builtin.template:
+        src: motd.j2
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        motd_message: "{{ selected_wisdom }}"
+      register: motd_template_result # Register the result for testing
