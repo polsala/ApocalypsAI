@@ -1,0 +1,57 @@
+---
+- name: Test Nightly MOTD Morale Booster Playbook
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+
+  vars:
+    motd_wisdom_source_path: "{{ playbook_dir }}/mock_wisdom.txt"
+    motd_target_path: /tmp/test_motd # Use a temporary file for testing
+
+  tasks:
+    - name: Create mock wisdom source file
+      ansible.builtin.copy:
+        content: |
+          "The only constant in the digital wasteland is change. Embrace it, or be overwritten."
+          "And always, always backup your data."
+        dest: "{{ motd_wisdom_source_path }}"
+        mode: '0644'
+      # Mock rationale: This task creates a local file to simulate the external wisdom source.
+      # This ensures the test is self-contained and deterministic, not relying on external
+      # file system state or network requests.
+
+    - name: Run the main MOTD booster playbook
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/../src/motd_booster.yml"
+      vars:
+        motd_wisdom_source_path: "{{ motd_wisdom_source_path }}"
+        motd_target_path: "{{ motd_target_path }}"
+
+    - name: Verify MOTD content
+      ansible.builtin.command: cat "{{ motd_target_path }}"
+      register: motd_content_check
+      changed_when: false
+
+    - name: Assert wisdom message is present
+      ansible.builtin.assert:
+        that:
+          - "'The only constant in the digital wasteland is change. Embrace it, or be overwritten.' in motd_content_check.stdout"
+          - "'And always, always backup your data.' in motd_content_check.stdout"
+        msg: "MOTD does not contain the expected wisdom message."
+
+    - name: Assert timestamp is present
+      ansible.builtin.assert:
+        that:
+          - "'Last updated:' in motd_content_check.stdout"
+          - "'UTC' in motd_content_check.stdout"
+        msg: "MOTD does not contain a timestamp."
+
+    - name: Clean up mock MOTD file
+      ansible.builtin.file:
+        path: "{{ motd_target_path }}"
+        state: absent
+      when: motd_target_path != '/etc/motd' # Only clean up if it's a test path
+
+    - name: Clean up mock wisdom source file
+      ansible.builtin.file:
+        path: "{{ motd_wisdom_source_path }}"
+        state: absent
