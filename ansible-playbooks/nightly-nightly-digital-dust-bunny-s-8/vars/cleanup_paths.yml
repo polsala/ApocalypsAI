@@ -1,0 +1,9 @@
+# Define the paths to sweep for digital dust bunnies and their maximum allowed age.
+# Files older than 'age_days' in 'path' will be removed.
+cleanup_targets:
+  - path: "/tmp/old_temp_files"
+    age_days: 1
+  - path: "/var/log/app_archives"
+    age_days: 7
+  - path: "/home/{{ ansible_user }}/.cache/downloads"
+    age_days: 30
