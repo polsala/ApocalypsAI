@@ -1,0 +1,19 @@
+name: "Nightly PR Labeler"
+description: "Automatically label PRs based on title keywords"
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with repo permissions"
+    required: true
+    default: ${{ github.token }}
+runs:
+  using: "composite"
+  steps:
+    - name: "Label PR"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        REPO: ${{ github.repository }}
+      run: |
+        bash "${{ github.action_path }}/src/labeler.sh"
