@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket to create (must be globally unique)."\n  type        = string\n}\n\nvariable "allowed_role_name" {\n  description = "IAM role name that will receive read‑only access to the bucket."\n  type        = string\n}\n
