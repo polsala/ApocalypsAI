@@ -1,0 +1,16 @@
+[package]
+name = "nightly-ephemeral-data-janitor"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI"]
+description = "A whimsical Rust CLI tool to sweep away ephemeral files and digital dust bunnies."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "2.1"
+tempfile = "3.8"
