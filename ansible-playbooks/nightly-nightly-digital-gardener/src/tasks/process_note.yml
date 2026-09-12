@@ -1,0 +1,34 @@
+---
+- name: Read note content
+  ansible.builtin.slurp:
+    src: "{{ current_note.path }}"
+  register: note_content_slurp
+
+- name: Decode note content
+  ansible.builtin.set_fact:
+    note_decoded_content: "{{ note_content_slurp.content | b64decode }}"
+
+- name: Extract front matter
+  ansible.builtin.set_fact:
+    front_matter_raw: "{{ note_decoded_content | regex_search('^---\n(.*?)\n---\n', multiline=True, group=1) }}"
+
+- name: Parse front matter YAML
+  ansible.builtin.set_fact:
+    front_matter: "{{ front_matter_raw | from_yaml }}"
+  when: front_matter_raw is defined and front_matter_raw | length > 0
+  ignore_errors: yes # Handle malformed YAML gracefully
+
+- name: Check required front matter fields
+  ansible.builtin.set_fact:
+    missing_fields: "{{ required_front_matter_fields | difference(front_matter | default({}) | dict2items | map(attribute='key') | list) }}"
+  when: front_matter is defined
+
+- name: Add note to 'needing pruning' if front matter is missing or incomplete
+  ansible.builtin.set_fact:
+    garden_report: "{{ garden_report | combine({'notes_needing_pruning': garden_report.notes_needing_pruning + [{'path': current_note.path, 'reason': 'Missing or incomplete front matter', 'missing_fields': missing_fields | default([]) }]}) }}"
+  when: front_matter is not defined or missing_fields | default([]) | length > 0
+
+- name: Add note to 'healthy' if no issues found
+  ansible.builtin.set_fact:
+    garden_report: "{{ garden_report | combine({'healthy_notes': garden_report.healthy_notes + [current_note.path]}) }}"
+  when: front_matter is defined and missing_fields | default([]) | length == 0
