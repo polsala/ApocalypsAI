@@ -1,0 +1,44 @@
+---
+- name: Sweep Digital Dust Bunnies
+  hosts: all
+  become: yes # Requires root privileges for system-wide cleaning
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure cleanup directories exist (idempotent)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ paths_to_clean }}"
+      ignore_errors: yes # Some paths might not exist, which is fine
+
+    - name: Find and remove old files in specified paths
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ dust_bunny_age_days }}d"
+        recurse: yes
+        file_type: any
+      register: old_files_found
+      loop: "{{ paths_to_clean }}"
+      loop_control:
+        loop_var: item
+      when: paths_to_clean is defined and paths_to_clean | length > 0
+
+    - name: Delete identified old files and directories
+      ansible.builtin.file:
+        path: "{{ file_item.path }}"
+        state: absent
+      loop: "{{ old_files_found.results | map(attribute='files') | flatten }}"
+      loop_control:
+        loop_var: file_item
+      when: old_files_found.results is defined and old_files_found.results | length > 0
+      # Mock rationale: The 'find' module is idempotent and safe for dry runs.
+      # The 'file' module with state=absent will only delete if the file exists.
+      # For testing, we'll create a temporary file and assert its removal.
+
+    - name: Report cleanup summary
+      ansible.builtin.debug:
+        msg: "Cleaned {{ (old_files_found.results | map(attribute='files') | flatten) | length }} digital dust bunnies across specified paths."
+      when: old_files_found.results is defined and old_files_found.results | length > 0
