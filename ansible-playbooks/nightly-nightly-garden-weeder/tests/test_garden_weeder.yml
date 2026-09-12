@@ -1,0 +1,77 @@
+---
+- name: Test Nightly Digital Garden Weeder
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - community.general # Required for 'random_string' lookup
+
+  vars:
+    test_garden_path: "{{ lookup('ansible.builtin.env', 'HOME') }}/ansible_test_garden_{{ lookup('community.general.random_string', length=6, upper=false, special=false) }}"
+    # Mock rationale: Using a temporary directory with a random suffix ensures deterministic, isolated, and offline testing.
+    # It prevents interference with actual user files and allows for clean setup/teardown.
+
+  tasks:
+    - name: Create temporary test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Copy valid Markdown file
+      ansible.builtin.copy:
+        src: test_files/valid_note.md
+        dest: "{{ test_garden_path }}/valid_note.md"
+      delegate_to: localhost
+
+    - name: Copy invalid Markdown file (no front matter)
+      ansible.builtin.copy:
+        src: test_files/invalid_note_no_frontmatter.md
+        dest: "{{ test_garden_path }}/invalid_note_no_frontmatter.md"
+      delegate_to: localhost
+
+    - name: Copy invalid Markdown file (missing tag)
+      ansible.builtin.copy:
+        src: test_files/invalid_note_missing_tag.md
+        dest: "{{ test_garden_path }}/invalid_note_missing_tag.md"
+      delegate_to: localhost
+
+    - name: Run the garden weeder playbook against the test garden
+      ansible.builtin.include_tasks:
+        file: ../src/garden_weeder.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        # Mock rationale: Overriding garden_path to point to the temporary test directory.
+        # This ensures the main playbook operates on controlled test data.
+      register: weeder_output
+      delegate_to: localhost
+
+    - name: Assert valid file is reported as well-tended
+      ansible.builtin.assert:
+        that:
+          - "'Well-tended files (1):' in weeder_output.results[-1].msg"
+          - "'{{ test_garden_path }}/valid_note.md' in weeder_output.results[-1].msg"
+        fail_msg: "Valid file not reported as well-tended."
+      delegate_to: localhost
+
+    - name: Assert file with no front matter is reported as needing weeding
+      ansible.builtin.assert:
+        that:
+          - "'Files needing weeding (2):' in weeder_output.results[-1].msg"
+          - "'{{ test_garden_path }}/invalid_note_no_frontmatter.md (Missing front matter)' in weeder_output.results[-1].msg"
+        fail_msg: "File with no front matter not reported correctly."
+      delegate_to: localhost
+
+    - name: Assert file with missing tag is reported as needing weeding
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_garden_path }}/invalid_note_missing_tag.md (Missing keys: ['tags'])' in weeder_output.results[-1].msg"
+        fail_msg: "File with missing tag not reported correctly."
+      delegate_to: localhost
+
+    - name: Clean up temporary test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      delegate_to: localhost
