@@ -1,0 +1,48 @@
+---
+- name: Test Nightly Server Blessing Ritual
+  hosts: test_servers
+  gather_facts: no
+  vars:
+    test_blessing_content: "May your tests always pass and your code be clean."
+    test_output_path: "/tmp/ansible_blessing_test_motd" # Temporary file for testing
+
+  tasks:
+    - name: Clean up previous test blessing file
+      ansible.builtin.file:
+        path: "{{ test_output_path }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+
+    - name: Run the main blessing playbook with a deterministic blessing
+      ansible.builtin.include_playbook:
+        file: ../src/bless_server.yml
+      vars:
+        # Mock rationale: Overrides the random selection in the main playbook
+        # to ensure a known, deterministic blessing is used for testing.
+        chosen_blessing: "{{ test_blessing_content }}"
+        # Mock rationale: Redirects the output to a temporary file instead of
+        # a system MOTD file, preventing side effects and allowing easy cleanup.
+        blessing_output_path: "{{ test_output_path }}"
+      delegate_to: localhost # Ensures the included playbook runs on the local machine for offline testing
+
+    - name: Read the content of the blessed file
+      ansible.builtin.slurp:
+        src: "{{ test_output_path }}"
+      register: blessed_file_content
+      delegate_to: localhost
+
+    - name: Assert that the blessing file contains the expected content
+      ansible.builtin.assert:
+        that:
+          - blessed_file_content.content | b64decode | search(test_blessing_content)
+        fail_msg: "The blessed file does not contain the expected blessing."
+        success_msg: "The blessing file contains the expected content."
+      delegate_to: localhost
+
+    - name: Clean up test blessing file after assertion
+      ansible.builtin.file:
+        path: "{{ test_output_path }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
