@@ -1,0 +1,26 @@
+name: 'Nightly PR Affirmation Enforcer'
+description: 'Ensures pull request descriptions contain a whimsical affirmation or survival tip.'
+
+inputs:
+  pr-description:
+    description: 'The full body of the pull request.'
+    required: true
+  required-phrases:
+    description: 'Comma-separated list of phrases to look for. The action passes if any of these are found.'
+    required: false
+    default: 'Whimsical Affirmation:,Survival Tip:'
+
+outputs:
+  affirmation-found:
+    description: '"true" if any required phrase was found, "false" otherwise.'
+    value: ${{ steps.check.outputs.affirmation-found }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      run: ${{ github.action_path }}/src/check_affirmation.sh
+      shell: bash
+      env:
+        PR_DESCRIPTION: ${{ inputs.pr-description }}
+        REQUIRED_PHRASES: ${{ inputs.required-phrases }}
