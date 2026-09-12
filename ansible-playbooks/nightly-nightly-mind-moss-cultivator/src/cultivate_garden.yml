@@ -1,0 +1,91 @@
+---
+- name: Cultivate Digital Garden with Zola and Nginx
+  hosts: webservers
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure apt cache is updated (Debian-based systems)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      # Mock rationale: This task is conditional on ansible_os_family, which is mocked in tests.
+
+    - name: Install Nginx (Debian-based systems)
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+      when: ansible_os_family == 'Debian'
+      # Mock rationale: This task is conditional on ansible_os_family, which is mocked in tests.
+
+    - name: Create digital garden root directory
+      ansible.builtin.file:
+        path: "/var/www/{{ site_name }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Download Zola binary
+      ansible.builtin.get_url:
+        url: "{{ zola_url }}"
+        dest: "/tmp/zola-{{ zola_version }}.tar.gz"
+        checksum: "{{ zola_checksum }}"
+        mode: '0644'
+
+    - name: Unarchive Zola binary
+      ansible.builtin.unarchive:
+        src: "/tmp/zola-{{ zola_version }}.tar.gz"
+        dest: /tmp
+        remote_src: yes
+
+    - name: Move Zola binary to /usr/local/bin
+      ansible.builtin.copy:
+        src: /tmp/zola
+        dest: /usr/local/bin/zola
+        mode: '0755'
+        remote_src: yes
+
+    - name: Clean up Zola archive
+      ansible.builtin.file:
+        path: "/tmp/zola-{{ zola_version }}.tar.gz"
+        state: absent
+
+    - name: Initialize Zola site structure (if not exists)
+      ansible.builtin.command: "/usr/local/bin/zola init --force {{ site_name }}"
+      args:
+        chdir: "/var/www/"
+        creates: "/var/www/{{ site_name }}/config.toml"
+      # The --force is used to ensure it creates the basic structure even if the directory exists,
+      # but 'creates' ensures it only runs if config.toml doesn't exist.
+
+    - name: Copy Nginx configuration template
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: "{{ nginx_conf_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Nginx
+
+    - name: Enable Nginx site by creating symlink
+      ansible.builtin.file:
+        src: "{{ nginx_conf_path }}"
+        dest: "{{ nginx_site_enabled_path }}"
+        state: link
+      notify: Restart Nginx
+
+    - name: Remove default Nginx site (if exists)
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
