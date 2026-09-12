@@ -1,0 +1,129 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  gather_facts: false
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies_{{ lookup('pipe', 'date +%s%N') }}"
+    dust_bunny_target_paths:
+      - "{{ test_dir }}"
+    dust_bunny_file_patterns:
+      - "*.bak"
+      - "*~"
+      - "*.tmp"
+      - "*.old"
+      - "core.*"
+    dust_bunny_age_threshold_days: 0 # For testing, consider all matching files as old enough
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      # Mock rationale: Creates a temporary directory on localhost to simulate a target system's file structure.
+
+    - name: Create mock dust bunny files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ test_dir }}/{{ item.name }}"
+        force: true
+      loop:
+        - { name: "config.txt.bak", content: "old config backup" }
+        - { name: "report.log~", content: "vim swap file" }
+        - { name: "temp_data.tmp", content: "temporary data" }
+        - { name: "empty_file.txt", content: "" } # Empty file
+        - { name: "important_file.conf", content: "active configuration" } # Should not be touched
+        - { name: "another_old_file.old", content: "another old file" }
+        - { name: "core.dump.1234", content: "core dump content" }
+      delegate_to: localhost
+      # Mock rationale: Populates the temporary directory with files that the playbook should identify as dust bunnies,
+      # and one file that should be ignored, allowing for deterministic testing of the find/delete logic.
+
+    - name: Run playbook in dry-run mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_dry_run: true
+      register: dry_run_result
+      # Mock rationale: Executes the main playbook against the mock environment.
+      # The 'register' captures the output for assertions.
+
+    - name: Assert dry-run identified dust bunnies
+      ansible.builtin.assert:
+        that:
+          - "'Identified dust bunny: {{ test_dir }}/config.txt.bak' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "'Identified dust bunny: {{ test_dir }}/report.log~' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "'Identified dust bunny: {{ test_dir }}/temp_data.tmp' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "'Identified dust bunny: {{ test_dir }}/empty_file.txt' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "'Identified dust bunny: {{ test_dir }}/another_old_file.old' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "'Identified dust bunny: {{ test_dir }}/core.dump.1234' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+          - "not 'Identified dust bunny: {{ test_dir }}/important_file.conf' in dry_run_result.ansible_included_tasks[0].tasks[4].results | map(attribute='msg') | list"
+      # Mock rationale: Verifies that the debug messages from the dry-run correctly list the expected dust bunnies
+      # and exclude the important file. This confirms the find logic.
+
+    - name: Check files still exist after dry-run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/config.txt.bak"
+        - "{{ test_dir }}/report.log~"
+        - "{{ test_dir }}/temp_data.tmp"
+        - "{{ test_dir }}/empty_file.txt"
+        - "{{ test_dir }}/important_file.conf"
+        - "{{ test_dir }}/another_old_file.old"
+        - "{{ test_dir }}/core.dump.1234"
+      register: stat_result
+      delegate_to: localhost
+      # Mock rationale: Confirms that the dry-run did not actually delete any files.
+
+    - name: Assert files still exist
+      ansible.builtin.assert:
+        that: "item.stat.exists"
+      loop: "{{ stat_result.results }}"
+      # Mock rationale: Ensures all mock files are still present after the dry run.
+
+    - name: Run playbook in actual cleanup mode
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        dust_bunny_dry_run: false
+      register: cleanup_result
+      # Mock rationale: Executes the main playbook with deletion enabled.
+
+    - name: Check files after cleanup
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/config.txt.bak"
+        - "{{ test_dir }}/report.log~"
+        - "{{ test_dir }}/temp_data.tmp"
+        - "{{ test_dir }}/empty_file.txt"
+        - "{{ test_dir }}/another_old_file.old"
+        - "{{ test_dir }}/core.dump.1234"
+      register: cleaned_stat_result
+      delegate_to: localhost
+      # Mock rationale: Checks the status of the dust bunny files after the cleanup run.
+
+    - name: Assert dust bunny files are absent
+      ansible.builtin.assert:
+        that: "not item.stat.exists"
+      loop: "{{ cleaned_stat_result.results }}"
+      # Mock rationale: Verifies that all expected dust bunny files have been deleted.
+
+    - name: Assert important file still exists
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/important_file.conf"
+      register: important_file_stat
+      delegate_to: localhost
+      # Mock rationale: Confirms that the file not matching dust bunny patterns was not deleted.
+
+    - name: Assert important file was not deleted
+      ansible.builtin.assert:
+        that: "important_file_stat.stat.exists"
+      # Mock rationale: Ensures the non-dust-bunny file remains untouched.
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Removes the temporary test directory and all its contents, leaving no artifacts.
