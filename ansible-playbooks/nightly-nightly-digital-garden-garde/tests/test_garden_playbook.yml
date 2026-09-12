@@ -1,0 +1,98 @@
+---
+- name: Test Nightly Digital Garden Gardener
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_garden_path: "{{ playbook_dir }}/test_garden"
+    # Mock rationale: Defines a temporary path for testing, ensuring isolation from actual user data.
+
+  tasks:
+    - name: Clean up previous test run
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Ensures a clean slate for each test run by removing the temporary test directory.
+
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates the mock directory where garden files will reside during testing.
+
+    - name: Create mock markdown files
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/{{ item.name }}"
+        content: "{{ item.content }}"
+        mode: '0644'
+      loop:
+        - name: valid_note.md
+          content: |
+            ---
+            title: A Valid Note
+            date: 2023-10-27
+            tags: [garden, valid]
+            ---
+            This is a valid note.
+        - name: missing_title.md
+          content: |
+            ---
+            date: 2023-10-26
+            tags: [garden, incomplete]
+            ---
+            This note is missing a title.
+        - name: missing_date.md
+          content: |
+            ---
+            title: Another Note
+            tags: [garden, incomplete]
+            ---
+            This note is missing a date.
+        - name: no_front_matter.md
+          content: |
+            # A Note Without Front Matter
+            This note has no front matter at all.
+      # Mock rationale: Creates various mock markdown files to test different scenarios (valid, missing fields, no front matter).
+
+    - name: Run the main garden playbook
+      ansible.builtin.include_tasks: ../src/garden_playbook.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        # Mock rationale: Runs the main playbook against the mock garden path. The `include_tasks` ensures the main playbook's `set_fact` outputs are available.
+
+    - name: Verify garden report for missing keys
+      ansible.builtin.assert:
+        that:
+          - "item.file | basename == 'missing_title.md' and 'title' in item.missing_keys"
+          - "item.file | basename == 'missing_date.md' and 'date' in item.missing_keys"
+          - "item.file | basename == 'no_front_matter.md' and 'title' in item.missing_keys and 'date' in item.missing_keys"
+        fail_msg: "Expected missing keys not found for {{ item.file }}"
+      loop: "{{ hostvars['localhost'].garden_report }}"
+      loop_control:
+        label: "{{ item.file }}"
+      # Mock rationale: Asserts that the `garden_report` (collected by the main playbook) correctly identifies files with missing front matter.
+
+    - name: Verify _garden_index.md content (check for existence and basic content)
+      ansible.builtin.slurp:
+        src: "{{ test_garden_path }}/_garden_index.md"
+      register: index_file_content
+      # Mock rationale: Reads the content of the generated index file to verify its creation and content.
+
+    - name: Assert _garden_index.md contains expected entries
+      ansible.builtin.assert:
+        that:
+          - "'Digital Garden Index' in (index_file_content.content | b64decode)"
+          - "'[A Valid Note](valid_note.md)' in (index_file_content.content | b64decode)"
+          - "'[missing_title](missing_title.md)' in (index_file_content.content | b64decode)" # Default title from filename
+          - "'[Another Note](missing_date.md)' in (index_file_content.content | b64decode)"
+          - "'[A Note Without Front Matter](no_front_matter.md)' in (index_file_content.content | b64decode)" # Default title from filename
+        fail_msg: "_garden_index.md does not contain expected content."
+      # Mock rationale: Asserts that the generated index file contains references to all mock markdown files, using their actual titles or derived filenames.
+
+    - name: Clean up test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary test environment after the test run is complete.
