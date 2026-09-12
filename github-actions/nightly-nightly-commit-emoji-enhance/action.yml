@@ -1,0 +1,1 @@
+name: "Commit Emoji Enhancer"\ndescription: "Appends a random emoji to a commit message"\ninputs:\n  message:\n    description: "Original commit message"\n    required: true\noutputs:\n  enhanced_message:\n    description: "Message with emoji"\nruns:\n  using: "node12"\n  main: "src/index.js"\n
