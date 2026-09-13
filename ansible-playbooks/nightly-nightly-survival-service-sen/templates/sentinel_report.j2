@@ -1,0 +1,18 @@
+--- SENTINEL'S LOG ---
+Report for Host: {{ ansible_hostname }}
+Timestamp: {{ ansible_date_time.iso8601 }}
+Overall Status: {{ report.overall_status }}
+
+--- Critical Services ---
+{% for service in report.services %}
+- Service: {{ service.name }}
+  Status: {{ service.status }} (Running: {{ service.running }})
+{% endfor %}
+
+--- Critical Configuration Files ---
+{% for config in report.configs %}
+- File: {{ config.path }}
+  Present: {{ config.present }}
+{% endfor %}
+
+--- END OF LOG ---
