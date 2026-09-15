@@ -1,0 +1,17 @@
+name: "Emoji Commit Annotator"
+description: "Prepends a random emoji to a commit message."
+inputs:
+  commit_message:
+    description: "The original commit message."
+    required: true
+outputs:
+  annotated_message:
+    description: "Commit message with an emoji prefix."
+runs:
+  using: "composite"
+  steps:
+    - name: Annotate commit
+      run: bash ${{ github.action_path }}/annotate.sh "${{ inputs.commit_message }}"
+      shell: bash
+      env:
+        SEED: ${{ github.run_id }}
