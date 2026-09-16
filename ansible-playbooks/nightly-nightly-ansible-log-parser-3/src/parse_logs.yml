@@ -1,0 +1,51 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log file exists (for testing/mocking)
+      file:
+        path: "{{ log_file_path }}"
+        state: touch
+      when: ansible_env.CI == 'true' # Only create for CI/testing
+
+    - name: Read log file content
+      slurp:
+        src: "{{ log_file_path }}"
+      register: log_content
+      when: log_content is not failed
+
+    - name: Process log lines and count errors
+      set_fact:
+        parsed_logs: "{{ (log_content.content | b64decode).splitlines() | map('regex_search', '(?i)(' + error_keywords | join('|') + ')') | select('defined') | list }}"
+      when: log_content.content is defined
+
+    - name: Count occurrences of each error keyword
+      set_fact:
+        error_counts: "{{ parsed_logs | community.general.dict_merge(item) | default({}) }}"
+      loop:
+        - "{{ item | regex_replace('^(.*)$', '\1: 1') }}"
+      vars:
+        item: "{{ (log_content.content | b64decode).splitlines() | map('regex_search', '(?i)(' + error_keywords | join('|') + ')') | select('defined') | first }}"
+      when: item is defined
+      loop_control:
+        loop_var: item
+
+    - name: Generate summary report
+      template:
+        src: templates/log_summary.j2
+        dest: "/tmp/log_summary_{{ inventory_hostname }}.txt"
+      when: parsed_logs is defined and parsed_logs | length > 0
+
+    - name: Display summary report (if generated)
+      debug:
+        msg: "Log summary for {{ inventory_hostname }} generated at /tmp/log_summary_{{ inventory_hostname }}.txt"
+      when: parsed_logs is defined and parsed_logs | length > 0
+
+    - name: No significant errors found message
+      debug:
+        msg: "No significant errors found in {{ log_file_path }} on {{ inventory_hostname }}."
+      when: parsed_logs is not defined or parsed_logs | length == 0
