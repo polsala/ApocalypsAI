@@ -1,0 +1,29 @@
+{
+  "name": "nightly-mood-snack-suggester",
+  "version": "1.0.0",
+  "description": "Suggests a post-apocalyptic snack based on your current mood, complete with whimsical descriptions.",
+  "main": "src/index.js",
+  "bin": {
+    "mood-snack": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "apocalypse",
+    "snack",
+    "mood",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
