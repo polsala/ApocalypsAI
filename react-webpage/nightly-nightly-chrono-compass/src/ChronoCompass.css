@@ -1,0 +1,24 @@
+.chrono-compass-container {
+  margin-top: 30px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chrono-compass-container svg {
+  border: 1px solid #555;
+  border-radius: 50%;
+  background-color: #222;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+.compass-segment {
+  transition: stroke-dasharray 0.5s ease-out, stroke-dashoffset 0.5s ease-out;
+}
+
+.total-duration {
+  color: #bbb;
+  font-size: 1.1em;
+  margin-top: 15px;
+}
