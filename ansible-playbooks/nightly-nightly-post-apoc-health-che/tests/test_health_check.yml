@@ -1,0 +1,144 @@
+---
+- name: Test Post-Apocalyptic System Health Checks - Healthy Scenario
+  hosts: localhost
+  gather_facts: no # We are mocking facts
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Mock ansible_facts for a healthy system
+      ansible.builtin.set_fact:
+        ansible_facts:
+          services:
+            ssh.service: { state: 'running' }
+            firewalld.service: { state: 'running' }
+            docker.service: { state: 'running' }
+            ntp.service: { state: 'running' }
+            chronyd.service: { state: 'stopped' } # NTP is running, so chrony doesn't matter
+        data_vault_stat:
+          stat:
+            exists: true
+            pw_name: "{{ data_vault_owner }}"
+            gr_name: "{{ data_vault_group }}"
+            mode: "{{ data_vault_mode }}"
+      # Mock rationale: Simulating 'ansible_facts.services' and 'stat' module output
+      # to represent a system where all health checks should pass.
+
+    - name: Test Secure Comms Relay (SSH) - should pass
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['ssh.service'].state == 'running'
+        success_msg: "Mocked Secure Comms Relay (SSH) is active."
+        fail_msg: "Mocked Secure Comms Relay (SSH) is INACTIVE! (Expected active)"
+
+    - name: Test Perimeter Defense (firewalld) - should pass
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['firewalld.service'].state == 'running'
+        success_msg: "Mocked Perimeter Defense (firewalld) is active."
+        fail_msg: "Mocked Perimeter Defense (firewalld) is INACTIVE! (Expected active)"
+
+    - name: Test Resource Harvester (Docker) - should pass
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['docker.service'].state == 'running'
+        success_msg: "Mocked Resource Harvester (Docker) is active."
+        fail_msg: "Mocked Resource Harvester (Docker) is INACTIVE! (Expected active)"
+
+    - name: Test Temporal Drift Monitor (NTP) - should pass
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['ntp.service'].state == 'running'
+        success_msg: "Mocked Temporal Drift Monitor (NTP) is active."
+        fail_msg: "Mocked Temporal Drift Monitor (NTP) is INACTIVE! (Expected active)"
+
+    - name: Test Data Vault Integrity (existence and permissions) - should pass
+      ansible.builtin.assert:
+        that:
+          - data_vault_stat.stat.exists
+          - data_vault_stat.stat.pw_name == data_vault_owner
+          - data_vault_stat.stat.gr_name == data_vault_group
+          - data_vault_stat.stat.mode == data_vault_mode
+        success_msg: "Mocked Data Vault has correct existence, permissions, and ownership."
+        fail_msg: "Mocked Data Vault has INCORRECT existence, permissions, or ownership! (Expected correct)"
+
+- name: Test Post-Apocalyptic System Health Checks - Unhealthy Scenario (SSH inactive)
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Mock ansible_facts for an unhealthy system (SSH inactive)
+      ansible.builtin.set_fact:
+        ansible_facts:
+          services:
+            ssh.service: { state: 'stopped' } # This is the unhealthy part
+            firewalld.service: { state: 'running' }
+            docker.service: { state: 'running' }
+            ntp.service: { state: 'running' }
+            chronyd.service: { state: 'stopped' }
+        data_vault_stat:
+          stat:
+            exists: true
+            pw_name: "{{ data_vault_owner }}"
+            gr_name: "{{ data_vault_group }}"
+            mode: "{{ data_vault_mode }}"
+      # Mock rationale: Simulating 'ansible_facts.services' and 'stat' module output
+      # to represent a system where SSH is stopped, expecting a failure.
+
+    - name: Test Secure Comms Relay (SSH) - should fail
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['ssh.service'].state == 'running'
+        success_msg: "Mocked Secure Comms Relay (SSH) is active."
+        fail_msg: "Mocked Secure Comms Relay (SSH) is INACTIVE! (Expected inactive)"
+      register: ssh_check_result
+      ignore_errors: yes # We expect this to fail
+
+    - name: Verify SSH check failed as expected
+      ansible.builtin.assert:
+        that:
+          - ssh_check_result is failed
+          - "'Mocked Secure Comms Relay (SSH) is INACTIVE!' in ssh_check_result.msg"
+        success_msg: "SSH check correctly identified inactive service."
+        fail_msg: "SSH check did NOT fail as expected for inactive service."
+
+- name: Test Post-Apocalyptic System Health Checks - Unhealthy Scenario (Data Vault missing)
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Mock ansible_facts for an unhealthy system (Data Vault missing)
+      ansible.builtin.set_fact:
+        ansible_facts:
+          services:
+            ssh.service: { state: 'running' }
+            firewalld.service: { state: 'running' }
+            docker.service: { state: 'running' }
+            ntp.service: { state: 'running' }
+            chronyd.service: { state: 'stopped' }
+        data_vault_stat:
+          stat:
+            exists: false # This is the unhealthy part
+            pw_name: "{{ data_vault_owner }}"
+            gr_name: "{{ data_vault_group }}"
+            mode: "{{ data_vault_mode }}"
+      # Mock rationale: Simulating 'ansible_facts.services' and 'stat' module output
+      # to represent a system where the data vault is missing, expecting a failure.
+
+    - name: Test Data Vault Integrity (existence) - should fail
+      ansible.builtin.assert:
+        that:
+          - data_vault_stat.stat.exists
+        success_msg: "Mocked Data Vault exists."
+        fail_msg: "Mocked Data Vault does NOT exist! (Expected not existing)"
+      register: data_vault_check_result
+      ignore_errors: yes # We expect this to fail
+
+    - name: Verify Data Vault check failed as expected
+      ansible.builtin.assert:
+        that:
+          - data_vault_check_result is failed
+          - "'Mocked Data Vault does NOT exist!' in data_vault_check_result.msg"
+        success_msg: "Data Vault check correctly identified missing directory."
+        fail_msg: "Data Vault check did NOT fail as expected for missing directory."
