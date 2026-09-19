@@ -1,0 +1,33 @@
+- name: Test survival tip generator
+  hosts: localhost
+  gather_facts: false
+  vars:
+    expected_tip: "Always keep a spare can‑opener; you never know when canned beans become a delicacy."
+  tasks:
+    - name: Run the tip generator playbook
+      import_playbook: "../src/tip_generator.yml"
+
+    - name: Verify file exists
+      stat:
+        path: "./survival_tip.txt"
+      register: tip_file
+
+    - name: Assert file exists and is a regular file
+      assert:
+        that:
+          - tip_file.stat.exists
+          - tip_file.stat.isreg
+
+    - name: Read file content
+      slurp:
+        src: "./survival_tip.txt"
+      register: tip_content
+
+    - name: Decode content
+      set_fact:
+        tip_text: "{{ tip_content.content | b64decode | trim }}"
+
+    - name: Assert tip content matches expected
+      assert:
+        that:
+          - tip_text == expected_tip
