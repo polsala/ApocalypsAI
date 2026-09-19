@@ -1,0 +1,40 @@
+name: 'Chrono-Drift Detector'
+description: 'Detects files whose filesystem modification time is newer than their last commit time.'
+inputs:
+  path:
+    description: 'The path within the repository to check for drift.'
+    required: false
+    default: '.'
+outputs:
+  drift_detected:
+    description: 'True if any chronological drift was detected.'
+    value: ${{ steps.detect_script.outputs.drift_detected }}
+  drift_files:
+    description: 'Newline-separated list of files exhibiting chronological drift.'
+    value: ${{ steps.detect_script.outputs.drift_files }}
+runs:
+  using: "composite"
+  steps:
+    - name: Run Chrono-Drift Detection Script
+      id: detect_script
+      shell: bash
+      run: |
+        # Ensure git is available
+        if ! command -v git &> /dev/null; then
+            echo "Error: git command not found. Please ensure git is installed and in PATH."
+            exit 1
+        fi
+
+        # Ensure the script is executable
+        chmod +x "${{ github.action_path }}/src/detect_drift.sh"
+
+        # Run the detection script and capture its output
+        # The script will print "DRIFT_DETECTED=true/false" and "DRIFT_FILES=..."
+        # We need to parse these and set them as step outputs.
+        DRIFT_OUTPUT=$("${{ github.action_path }}/src/detect_drift.sh" "${{ inputs.path }}")
+        
+        DRIFT_DETECTED=$(echo "$DRIFT_OUTPUT" | grep "DRIFT_DETECTED=" | cut -d'=' -f2)
+        DRIFT_FILES=$(echo "$DRIFT_OUTPUT" | grep "DRIFT_FILES=" | cut -d'=' -f2-)
+
+        echo "drift_detected=$DRIFT_DETECTED" >> "$GITHUB_OUTPUT"
+        echo "drift_files=$DRIFT_FILES" >> "$GITHUB_OUTPUT"
