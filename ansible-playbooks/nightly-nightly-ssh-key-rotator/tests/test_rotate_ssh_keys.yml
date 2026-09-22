@@ -1,0 +1,22 @@
+- name: Test SSH key rotator playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Include the rotator playbook
+      import_playbook: ../../src/rotate_ssh_keys.yml
+
+    - name: Verify marker file exists
+      stat:
+        path: /tmp/ssh_key_rotator/rotated_at.txt
+      register: rot_file
+
+    - name: Assert file exists and is non‑empty
+      assert:
+        that:
+          - rot_file.stat.exists
+          - rot_file.stat.size > 0
+
+    - name: Clean up temporary directory
+      file:
+        path: /tmp/ssh_key_rotator
+        state: absent
