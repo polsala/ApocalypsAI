@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\nset -e\n\n# Initialize the module without a backend (offline)\nterraform init -backend=false > /dev/null\n\n# Validate the configuration syntax\nterraform validate > /dev/null\n\n# Run a plan‑only apply to ensure resources can be created locally\nterraform apply -auto-approve -input=false -refresh=false > /dev/null\n\necho "All Terraform tests passed."\n
