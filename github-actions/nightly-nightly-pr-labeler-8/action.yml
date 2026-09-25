@@ -1,0 +1,19 @@
+name: "PR Title Labeler"
+description: "Suggests labels for a pull request based on its title."
+inputs:
+  title:
+    description: "The pull request title"
+    required: true
+    default: ""
+outputs:
+  labels:
+    description: "Comma-separated list of suggested labels"
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler
+      shell: bash
+      env:
+        INPUT_TITLE: ${{ inputs.title }}
+      run: |
+        ./src/labeler.sh
