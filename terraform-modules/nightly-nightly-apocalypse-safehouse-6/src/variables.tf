@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket (must be globally unique)."\n  type        = string\n}\n\nvariable "tags" {\n  description = "Optional tags to apply to the bucket and IAM policy."\n  type        = map(string)\n  default     = {}\n}\n
