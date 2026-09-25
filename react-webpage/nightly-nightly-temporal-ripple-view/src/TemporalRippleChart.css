@@ -1,0 +1,63 @@
+.temporal-ripple-chart {
+  width: 90%;
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #3a3f47;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-container {
+  position: relative;
+  height: 150px; /* Space for ripples */
+  margin-top: 50px;
+  padding-top: 20px; /* Space above the line for ripples */
+  border-top: 2px solid #666;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #666;
+  z-index: 0;
+}
+
+.ripple {
+  position: absolute;
+  top: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6em;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  cursor: help;
+  transition: all 0.3s ease-out;
+  z-index: 1;
+}
+
+.ripple:hover {
+  transform: scale(1.2) translateX(-50%) translateY(-50%) !important;
+  box-shadow: 0 0 20px rgba(255,255,255,0.6);
+  z-index: 2;
+}
+
+.ripple-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%; /* Adjust based on ripple size */
+  display: block;
+}
+
+.temporal-ripple-chart h2 {
+  color: #61dafb;
+  margin-bottom: 30px;
+}
