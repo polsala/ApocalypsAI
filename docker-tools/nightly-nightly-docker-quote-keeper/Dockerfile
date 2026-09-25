@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install awk (busybox already provides it) and any needed utilities\nRUN apk add --no-cache awk\n\n# Copy source files\nCOPY src/ /app/\n\n# Ensure the entrypoint script is executable\nRUN chmod +x /app/entrypoint.sh\n\n# Set the working directory\nWORKDIR /app\n\n# Define the container's entrypoint\nENTRYPOINT ["/app/entrypoint.sh"]\n
