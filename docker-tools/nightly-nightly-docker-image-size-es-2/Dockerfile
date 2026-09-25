@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\n# Copy the estimator source code\nCOPY src/ ./src/\n\n# Ensure the script is executable (optional)\nRUN chmod +x src/estimate_size.py\n\nENTRYPOINT ["python", "src/estimate_size.py"]\n
