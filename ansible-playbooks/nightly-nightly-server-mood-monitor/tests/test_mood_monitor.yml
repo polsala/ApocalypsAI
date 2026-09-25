@@ -1,0 +1,109 @@
+---
+- name: Test server mood monitor playbook
+  hosts: test_hosts
+  gather_facts: no # We will mock facts
+
+  vars_files:
+    - ../vars/mood_thresholds.yml
+
+  tasks:
+    - name: Mock facts for happy_server
+      ansible.builtin.set_fact:
+        ansible_loadavg: [0.5, 0.3, 0.1] # Happy CPU
+        ansible_memfree_mb: 2048 # Happy Memory (2GB)
+        ansible_memtotal_mb: 4096
+        ansible_mounts:
+          - mount: /
+            size_total: 100000000000 # 100GB
+            size_available: 50000000000 # 50GB free (50%)
+          - mount: /boot
+            size_total: 1000000000 # 1GB
+            size_available: 800000000 # 800MB free (80%)
+        ansible_date_time: { "iso8601_micro": "2023-10-27T10:00:00.000000Z" }
+      when: inventory_hostname == 'happy_server'
+      # Mock rationale: Simulates a server with all metrics within happy thresholds.
+
+    - name: Mock facts for grumpy_cpu_server
+      ansible.builtin.set_fact:
+        ansible_loadavg: [3.0, 2.5, 2.0] # Grumpy CPU
+        ansible_memfree_mb: 2048 # Happy Memory
+        ansible_memtotal_mb: 4096
+        ansible_mounts:
+          - mount: /
+            size_total: 100000000000
+            size_available: 50000000000
+        ansible_date_time: { "iso8601_micro": "2023-10-27T10:00:00.000000Z" }
+      when: inventory_hostname == 'grumpy_cpu_server'
+      # Mock rationale: Simulates a server with high CPU load.
+
+    - name: Mock facts for sleepy_mem_server
+      ansible.builtin.set_fact:
+        ansible_loadavg: [0.5, 0.3, 0.1] # Happy CPU
+        ansible_memfree_mb: 500 # Sleepy Memory (500MB)
+        ansible_memtotal_mb: 4096
+        ansible_mounts:
+          - mount: /
+            size_total: 100000000000
+            size_available: 50000000000
+        ansible_date_time: { "iso8601_micro": "2023-10-27T10:00:00.000000Z" }
+      when: inventory_hostname == 'sleepy_mem_server'
+      # Mock rationale: Simulates a server with critically low free memory.
+
+    - name: Mock facts for sleepy_disk_server
+      ansible.builtin.set_fact:
+        ansible_loadavg: [0.5, 0.3, 0.1] # Happy CPU
+        ansible_memfree_mb: 2048 # Happy Memory
+        ansible_memtotal_mb: 4096
+        ansible_mounts:
+          - mount: /
+            size_total: 100000000000 # 100GB
+            size_available: 5000000000 # 5GB free (5%) - below 15% threshold
+          - mount: /var
+            size_total: 50000000000 # 50GB
+            size_available: 10000000000 # 10GB free (20%) - above threshold
+        ansible_date_time: { "iso8601_micro": "2023-10-27T10:00:00.000000Z" }
+      when: inventory_hostname == 'sleepy_disk_server'
+      # Mock rationale: Simulates a server with critically low disk space on a mount.
+
+    - name: Run the main mood monitor playbook tasks
+      ansible.builtin.include_tasks: ../src/mood_monitor.yml
+
+    - name: Assert happy_server mood and report
+      ansible.builtin.assert:
+        that:
+          - server_mood == "Happy"
+          - mood_details | length == 0
+          - "'Current Mood: Happy' in rendered_mood_report"
+          - "'All systems nominal.' in rendered_mood_report"
+        msg: "happy_server should be Happy with no details"
+      when: inventory_hostname == 'happy_server'
+
+    - name: Assert grumpy_cpu_server mood and report
+      ansible.builtin.assert:
+        that:
+          - server_mood == "Grumpy"
+          - "'CPU load (3.0) is above threshold (1.5)' in mood_details"
+          - "'Current Mood: Grumpy' in rendered_mood_report"
+          - "'CPU load (3.0) is above threshold (1.5)' in rendered_mood_report"
+        msg: "grumpy_cpu_server should be Grumpy due to CPU"
+      when: inventory_hostname == 'grumpy_cpu_server'
+
+    - name: Assert sleepy_mem_server mood and report
+      ansible.builtin.assert:
+        that:
+          - server_mood == "Sleepy"
+          - "'Free memory (500.0 MB) is below threshold (1024) MB' in mood_details"
+          - "'Current Mood: Sleepy' in rendered_mood_report"
+          - "'Free memory (500.0 MB) is below threshold (1024) MB' in rendered_mood_report"
+        msg: "sleepy_mem_server should be Sleepy due to memory"
+      when: inventory_hostname == 'sleepy_mem_server'
+
+    - name: Assert sleepy_disk_server mood and report
+      ansible.builtin.assert:
+        that:
+          - server_mood == "Sleepy"
+          - "'Disk / free space (5.0%) is below threshold (15)%' in mood_details"
+          - "'Current Mood: Sleepy' in rendered_mood_report"
+          - "'Disk / free space (5.0%) is below threshold (15)%' in rendered_mood_report"
+        msg: "sleepy_disk_server should be Sleepy due to disk space"
+      when: inventory_hostname == 'sleepy_disk_server'

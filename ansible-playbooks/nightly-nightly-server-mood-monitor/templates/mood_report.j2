@@ -1,0 +1,15 @@
+---
+Server Mood Report for {{ report_hostname }}
+--------------------------------------------------
+Current Mood: {{ report_mood }}
+
+{% if report_details %}
+Details:
+{% for detail in report_details %}
+  - {{ detail }}
+{% endfor %}
+{% else %}
+Details: All systems nominal.
+{% endif %}
+--------------------------------------------------
+Report generated at {{ ansible_date_time.iso8601_micro }}

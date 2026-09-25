@@ -1,0 +1,70 @@
+---
+- name: Monitor server mood
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - ../vars/mood_thresholds.yml
+
+  tasks:
+    - name: Set default mood to happy
+      ansible.builtin.set_fact:
+        server_mood: "Happy"
+        mood_details: []
+
+    - name: Check CPU load
+      ansible.builtin.set_fact:
+        cpu_load_1min: "{{ ansible_loadavg[0] | float }}"
+      when: ansible_loadavg is defined
+
+    - name: Mark as grumpy if CPU load is high
+      ansible.builtin.set_fact:
+        server_mood: "Grumpy"
+        mood_details: "{{ mood_details + ['CPU load (' + (cpu_load_1min | round(2) | string) + ') is above threshold (' + (cpu_load_threshold | string) + ')'] }}"
+      when:
+        - cpu_load_1min is defined
+        - cpu_load_1min > cpu_load_threshold | float
+
+    - name: Check memory usage
+      ansible.builtin.set_fact:
+        mem_free_mb: "{{ ansible_memfree_mb | float }}"
+      when: ansible_memfree_mb is defined
+
+    - name: Mark as sleepy if memory is low
+      ansible.builtin.set_fact:
+        server_mood: "Sleepy"
+        mood_details: "{{ mood_details + ['Free memory (' + (mem_free_mb | round(2) | string) + ' MB) is below threshold (' + (memory_free_threshold_mb | string) + ' MB)'] }}"
+      when:
+        - mem_free_mb is defined
+        - mem_free_mb < memory_free_threshold_mb | float
+
+    - name: Check disk usage for specified mounts
+      ansible.builtin.set_fact:
+        disk_checks: []
+
+    - name: Iterate over mounts and check disk space
+      ansible.builtin.set_fact:
+        disk_checks: "{{ disk_checks + [{ 'mount': item.mount, 'size_total': item.size_total, 'size_available': item.size_available, 'pcent_free': (item.size_available / item.size_total * 100) | round(2) }] }}"
+      loop: "{{ ansible_mounts }}"
+      loop_control:
+        label: "{{ item.mount }}"
+      when: item.size_total > 0 # Avoid division by zero for pseudo-filesystems
+
+    - name: Mark as sleepy if any disk is low
+      ansible.builtin.set_fact:
+        server_mood: "Sleepy"
+        mood_details: "{{ mood_details + ['Disk ' + item.mount + ' free space (' + (item.pcent_free | string) + '%) is below threshold (' + (disk_free_threshold_percent | string) + '%)'] }}"
+      loop: "{{ disk_checks }}"
+      when: item.pcent_free < disk_free_threshold_percent | float
+
+    - name: Render server mood report content
+      ansible.builtin.set_fact:
+        rendered_mood_report: |
+          {% include '../templates/mood_report.j2' %}
+      vars:
+        report_hostname: "{{ inventory_hostname }}"
+        report_mood: "{{ server_mood }}"
+        report_details: "{{ mood_details }}"
+
+    - name: Display server mood report
+      ansible.builtin.debug:
+        msg: "{{ rendered_mood_report }}"
