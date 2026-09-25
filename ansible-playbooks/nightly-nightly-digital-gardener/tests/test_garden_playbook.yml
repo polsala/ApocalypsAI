@@ -1,0 +1,97 @@
+---
+- name: Test Digital Gardener Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_garden_path: "/tmp/test_digital_garden_{{ lookup('pipe', 'date +%s') }}" # Unique path for each test run
+
+  tasks:
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create a healthy note
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/healthy_note.md"
+        content: |
+          ---
+          title: "My First Healthy Note"
+          tags: ["garden", "healthy"]
+          date: "2023-10-27"
+          ---
+          This is a healthy note.
+
+    - name: Create a note missing title
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/missing_title.md"
+        content: |
+          ---
+          tags: ["garden", "pruning"]
+          date: "2023-10-27"
+          ---
+          This note is missing a title.
+
+    - name: Create a note with malformed front matter
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/malformed_front_matter.md"
+        content: |
+          ---
+          title: "Malformed"
+          tags: ["bad"
+          date: "2023-10-27"
+          ---
+          This note has malformed YAML.
+
+    - name: Create a note with no front matter
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/no_front_matter.md"
+        content: |
+          This note has no front matter at all.
+
+    - name: Run the digital gardener playbook
+      ansible.builtin.include_playbook: ../src/garden_playbook.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+        required_front_matter_fields:
+          - title
+          - tags
+          - date
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ test_garden_path }}/garden_report.txt"
+      register: report_content_slurp
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_decoded_content: "{{ report_content_slurp.content | b64decode }}"
+
+    - name: Assert healthy note is in report
+      ansible.builtin.assert:
+        that: "'healthy_note.md' in report_decoded_content"
+        msg: "Healthy note not found in report"
+
+    - name: Assert missing title note is in 'needing pruning'
+      ansible.builtin.assert:
+        that: "'missing_title.md' in report_decoded_content and 'Missing Fields: title' in report_decoded_content"
+        msg: "Note missing title not correctly reported"
+
+    - name: Assert malformed front matter note is in 'needing pruning'
+      ansible.builtin.assert:
+        that: "'malformed_front_matter.md' in report_decoded_content and 'Missing or incomplete front matter' in report_decoded_content"
+        msg: "Note with malformed front matter not correctly reported"
+
+    - name: Assert no front matter note is in 'needing pruning'
+      ansible.builtin.assert:
+        that: "'no_front_matter.md' in report_decoded_content and 'Missing or incomplete front matter' in report_decoded_content"
+        msg: "Note with no front matter not correctly reported"
+
+    - name: Clean up test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      when: cleanup_test_garden | default(true) # Mock rationale: Allows keeping test artifacts for debugging by setting cleanup_test_garden=false during manual runs, but defaults to true for automated, deterministic cleanup.
