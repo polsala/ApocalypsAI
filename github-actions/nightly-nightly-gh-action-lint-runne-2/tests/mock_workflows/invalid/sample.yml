@@ -1,0 +1,14 @@
+name: 'Invalid Workflow Example'
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run a one-line script
+        run: echo Hello, world!
+      # Missing indentation for this step, which yamllint and actionlint should catch.
+    invalid_step_indentation:
+      run: echo This is intentionally malformed
