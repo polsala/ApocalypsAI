@@ -1,0 +1,1 @@
+const { parseDuration, formatDuration } = require('../src/index');\nconst assert = require('assert');\n\nassert.strictEqual(parseDuration('1d'), 86400000);\nassert.strictEqual(parseDuration('2h30m'), 9000000);\nassert.strictEqual(formatDuration(9000000), '2h30m');\nassert.strictEqual(formatDuration(parseDuration('1d2h3m4s5ms')), '1d2h3m4s5ms');\n\nconsole.log('All tests passed');
