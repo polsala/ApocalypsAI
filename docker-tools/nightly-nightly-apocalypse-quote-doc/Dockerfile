@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install bash for the script (alpine provides ash, but we use sh)\nRUN apk add --no-cache bash\n\n# Copy the quote script\nCOPY src/quote.sh /usr/local/bin/quote.sh\nRUN chmod +x /usr/local/bin/quote.sh\n\n# Set the entrypoint\nENTRYPOINT ["/usr/local/bin/quote.sh"]\n
