@@ -1,0 +1,103 @@
+---
+- name: Nightly Digital Garden Weeder
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  collections:
+    - community.general # Required for 'yaml' lookup
+
+  vars_files:
+    - ../vars/garden_config.yml
+
+  tasks:
+    - name: Ensure garden path exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+      delegate_to: localhost
+
+    - name: Find all Markdown files in the garden
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_found
+      delegate_to: localhost
+
+    - name: Initialize report variables
+      ansible.builtin.set_fact:
+        well_tended_files: []
+        weeding_needed_files: []
+      delegate_to: localhost
+
+    - name: Process each Markdown file
+      ansible.builtin.block:
+        - name: Read file content
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content_b64
+          delegate_to: localhost
+
+        - name: Decode file content
+          ansible.builtin.set_fact:
+            decoded_content: "{{ file_content_b64.content | b64decode }}"
+          delegate_to: localhost
+
+        - name: Extract front matter and validate
+          ansible.builtin.set_fact:
+            file_status: "{{ lookup('community.general.yaml', decoded_content, errors='ignore') | default({}) }}"
+            has_front_matter: "{{ decoded_content is regex('^---\n(.*?)\n---\n', multiline=True, ignorecase=False, search=True) }}"
+            missing_keys: []
+          delegate_to: localhost
+
+        - name: Check for missing front matter
+          ansible.builtin.set_fact:
+            file_status_message: "Missing front matter"
+          when: not has_front_matter
+          delegate_to: localhost
+
+        - name: Check for required keys if front matter exists
+          ansible.builtin.set_fact:
+            missing_keys: "{{ required_front_matter_keys | difference(file_status.keys() | list) }}"
+          when: has_front_matter and required_front_matter_keys is defined
+          delegate_to: localhost
+
+        - name: Set status message for missing keys
+          ansible.builtin.set_fact:
+            file_status_message: "Missing keys: {{ missing_keys }}"
+          when: has_front_matter and missing_keys | length > 0
+          delegate_to: localhost
+
+        - name: Add to well-tended or weeding-needed list
+          ansible.builtin.set_fact:
+            well_tended_files: "{{ well_tended_files + [item.path] }}"
+          when: has_front_matter and missing_keys | length == 0
+          delegate_to: localhost
+
+        - name: Add to weeding-needed list
+          ansible.builtin.set_fact:
+            weeding_needed_files: "{{ weeding_needed_files + [{ 'path': item.path, 'reason': file_status_message }] }}"
+          when: not (has_front_matter and missing_keys | length == 0)
+          delegate_to: localhost
+
+      loop: "{{ md_files_found.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Report: Files needing weeding
+      ansible.builtin.debug:
+        msg: |
+          --- Digital Garden Weeding Report ---
+
+          Well-tended files ({{ well_tended_files | length }}):
+          {% for file in well_tended_files %}
+            - {{ file }}
+          {% endfor %}
+
+          Files needing weeding ({{ weeding_needed_files | length }}):
+          {% for file in weeding_needed_files %}
+            - {{ file.path }} ({{ file.reason }})
+          {% endfor %}
+
+          Total files scanned: {{ md_files_found.files | length }}
+      delegate_to: localhost
