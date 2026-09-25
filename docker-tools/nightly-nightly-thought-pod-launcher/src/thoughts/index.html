@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Your Thought-Pod!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #282c34;
+            color: #abb2bf;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background-color: #3a404d;
+            padding: 40px 60px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            margin: 20px;
+        }
+        h1 {
+            color: #61afef;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        code {
+            background-color: #4b5263;
+            padding: 3px 7px;
+            border-radius: 5px;
+            font-family: 'Fira Code', monospace;
+            color: #e06c75;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #5c6370;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧐 Welcome to Your Thought-Pod! 🧐</h1>
+        <p>
+            This is your personal, ephemeral sanctuary for brilliant ideas, quick notes, and isolated prototyping.
+        </p>
+        <p>
+            Drop your <code>.html</code>, <code>.txt</code>, or <code>.md</code> files into the 
+            <code>src/thoughts/</code> directory and access them directly via your browser.
+        </p>
+        <p>
+            For example, if you create <code>src/thoughts/my-idea.html</code>, you can view it at 
+            <code>http://localhost:8080/my-idea.html</code>.
+        </p>
+        <div class="footer">
+            Happy thinking! May your ideas be ever-brilliant.
+        </div>
+    </div>
+</body>
+</html>

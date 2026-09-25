@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  thought-pod:
+    image: nginx:alpine
+    container_name: nightly-thought-pod
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src/thoughts:/usr/share/nginx/html:ro # Mount thoughts directory as read-only
+    networks:
+      - nightly-thought-pod-network
+    restart: unless-stopped
+
+networks:
+  nightly-thought-pod-network:
+    name: nightly-thought-pod-network
