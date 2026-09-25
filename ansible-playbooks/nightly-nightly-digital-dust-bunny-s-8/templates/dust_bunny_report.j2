@@ -1,0 +1,14 @@
+--- Digital Dust Bunny Report for {{ hostname }} ---
+
+{% if dust_bunnies | length > 0 %}
+Found {{ dust_bunnies | length }} dust bunnies older than {{ age_threshold }} days:
+
+{% for bunny in dust_bunnies %}
+- {{ bunny.path }} (Last modified: {{ bunny.mtime | ansible.builtin.to_datetime('%Y%m%d%H%M.%S', '%Y-%m-%d') }})
+{% endfor %}
+
+Consider sweeping these away!
+{% else %}
+No digital dust bunnies found. Your system is sparkling clean!
+{% endif %}
+---------------------------------------------------
