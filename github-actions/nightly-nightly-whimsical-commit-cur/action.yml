@@ -1,0 +1,26 @@
+name: 'Nightly Whimsical Commit Curator'
+description: 'Curates and summarizes recent whimsical commit messages for release notes or team morale.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (e.g., ${{ github.token }}).'
+    required: true
+  days-ago:
+    description: 'Number of days to look back for commits.'
+    required: false
+    default: '7'
+  keywords:
+    description: 'Comma-separated list of keywords to identify whimsical commits (e.g., "sparkle, magic, joy").'
+    required: false
+    default: ''
+  emoji-patterns:
+    description: 'Comma-separated list of regex patterns for emojis to identify whimsical commits (e.g., ":sparkles:,:tada:").'
+    required: false
+    default: ''
+outputs:
+  whimsical-commits:
+    description: 'JSON array of curated whimsical commit messages.'
+  whimsical-summary:
+    description: 'A formatted string summary of whimsical commits.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
