@@ -1,0 +1,31 @@
+{
+  "name": "nightly-resource-manifest-val",
+  "version": "1.0.0",
+  "description": "A type-safe CLI utility to define and validate apocalyptic resource manifests against predefined schemas, preventing inventory paradoxes.",
+  "main": "dist/index.js",
+  "bin": {
+    "nrmv": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "npm run build && node dist/cli.js"
+  },
+  "keywords": [
+    "typescript",
+    "cli",
+    "validation",
+    "schema",
+    "resources",
+    "apocalypse"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
