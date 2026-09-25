@@ -1,0 +1,9 @@
+critical_services:
+  - name: sshd
+  - name: systemd-journald
+  - name: cron
+
+critical_config_files:
+  - path: /etc/ssh/sshd_config
+  - path: /etc/fstab
+  - path: /etc/crontab
