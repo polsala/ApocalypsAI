@@ -1,0 +1,81 @@
+---
+- name: Test nightly-ansible-log-parser playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    log_directory: "/tmp/ansible_log_test"
+    report_output_path: "/tmp/log_summary_report.txt"
+    error_patterns:
+      - "ERROR"
+      - "WARN"
+      - "CRITICAL"
+      - "failed"
+      - "exception"
+
+  tasks:
+    - name: Set ansible_test_mode to true
+      set_fact:
+        ansible_test_mode: true
+
+    - name: Ensure test log directory exists
+      file:
+        path: "{{ log_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy log files for testing
+      copy:
+        dest: "{{ log_directory }}/{{ item.filename }}"
+        content: "{{ item.content }}"
+        mode: '0644'
+      loop:
+        - { filename: 'syslog', content: 'Oct 26 10:00:01 server1 kernel: [    0.000000] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-030) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023\n' }
+        - { filename: 'auth.log', content: 'Oct 26 10:05:15 server1 sshd[1234]: Accepted password for user from 192.168.1.10 port 54321 ssh2\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:10:20 server1 systemd[1]: Starting Some Service...\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:15:30 server1 systemd[1]: Some Service failed to start. ERROR: Service crashed.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:20:40 server1 systemd[1]: Another service is running fine.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:25:50 server1 systemd[1]: WARN: Disk space is getting low.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:30:00 server1 systemd[1]: CRITICAL: System shutdown initiated.\n' }
+
+    - name: Include the main playbook
+      include_tasks: ../parse_logs.yml
+
+    - name: Assert log analysis results for syslog
+      assert:
+        that:
+          - "log_analysis_results['syslog']['error_count'] == 3"
+        fail_msg: "Syslog error count is incorrect."
+        success_msg: "Syslog error count is correct."
+
+    - name: Assert log analysis results for auth.log
+      assert:
+        that:
+          - "log_analysis_results['auth.log']['error_count'] == 0"
+        fail_msg: "Auth.log error count is incorrect."
+        success_msg: "Auth.log error count is correct."
+
+    - name: Assert report file was created
+      stat:
+        path: "{{ report_output_path }}"
+      register: report_file_stat
+
+    - name: Assert report file contains expected content (partial check)
+      assert:
+        that:
+          - "report_file_stat.stat.exists == true"
+          - "'syslog: 3 potential errors/warnings found.' in lookup('file', report_output_path)"
+          - "'auth.log: 0 potential errors/warnings found.' in lookup('file', report_output_path)"
+        fail_msg: "Report file content is incorrect."
+        success_msg: "Report file content is correct."
+
+    - name: Clean up test log directory
+      file:
+        path: "{{ log_directory }}"
+        state: absent
+
+    - name: Clean up report file
+      file:
+        path: "{{ report_output_path }}"
+        state: absent
