@@ -1,0 +1,54 @@
+.App {
+  text-align: center;
+  background-color: #333;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 800px;
+  margin-top: 20px;
+}
+
+.App h1 {
+  color: #61dafb;
+  margin-bottom: 20px;
+}
+
+.task-list {
+  margin-top: 40px;
+  text-align: left;
+  border-top: 1px solid #444;
+  padding-top: 20px;
+}
+
+.task-list h2 {
+  color: #f0f0f0;
+  margin-bottom: 15px;
+}
+
+.task-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.task-list li {
+  background-color: #444;
+  margin-bottom: 8px;
+  padding: 10px 15px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-list li.charge-positive {
+  border-left: 5px solid #4CAF50; /* Green */
+}
+
+.task-list li.charge-neutral {
+  border-left: 5px solid #9E9E9E; /* Grey */
+}
+
+.task-list li.charge-negative {
+  border-left: 5px solid #F44336; /* Red */
+}
