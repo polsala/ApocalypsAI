@@ -1,0 +1,99 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34; /* Dark background for wasteland theme */
+  color: #e0e0e0; /* Light text color */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  color: #61dafb; /* React blue */
+  font-size: 2.5em;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #bbbbbb;
+}
+
+.App-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.mood-input {
+  width: 80%;
+  max-width: 600px;
+  padding: 15px;
+  border: 2px solid #61dafb;
+  border-radius: 8px;
+  background-color: #3a3f47;
+  color: #e0e0e0;
+  font-size: 1em;
+  resize: vertical;
+}
+
+.mood-input::placeholder {
+  color: #aaaaaa;
+}
+
+.analyze-button {
+  padding: 12px 25px;
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.analyze-button:hover {
+  background-color: #21a1f1;
+}
+
+.mood-ring-container {
+  width: 80%;
+  max-width: 600px;
+  min-height: 150px;
+  padding: 20px;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #ffffff; /* White text for contrast on colored background */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.5s ease;
+}
+
+.mood-name {
+  font-size: 2em;
+  margin-bottom: 10px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.mood-interpretation {
+  font-size: 1.2em;
+  line-height: 1.5;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
