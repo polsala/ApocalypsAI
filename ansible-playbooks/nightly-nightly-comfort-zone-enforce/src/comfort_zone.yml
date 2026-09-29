@@ -1,0 +1,32 @@
+- name: Ensure Digital Comfort Zone
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/comfort_files.yml
+
+  tasks:
+    - name: Determine final file path
+      set_fact:
+        final_path: "{{ comfort_zone_base_path + item.path }}"
+      loop: "{{ comfort_zone_files }}"
+      loop_control:
+        loop_var: item
+      register: processed_paths
+
+    - name: Ensure comfort directories exist
+      ansible.builtin.file:
+        path: "{{ item.ansible_facts.final_path | dirname }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ processed_paths.results }}"
+      loop_control:
+        label: "{{ item.ansible_facts.final_path | dirname }}"
+
+    - name: Ensure comfort files are present with correct content and permissions
+      ansible.builtin.copy:
+        dest: "{{ item.ansible_facts.final_path }}"
+        content: "{{ item.item.content }}"
+        mode: "{{ item.item.mode }}"
+      loop: "{{ processed_paths.results }}"
+      loop_control:
+        label: "{{ item.ansible_facts.final_path }}"
