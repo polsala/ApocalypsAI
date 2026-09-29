@@ -1,0 +1,18 @@
+Log Analysis Summary for {{ inventory_hostname }}
+===================================================
+
+Date: {{ ansible_date_time.iso8601 }}
+
+Log File: {{ log_file_path }}
+
+Detected Errors/Warnings:
+-------------------------
+{% if parsed_logs is defined and parsed_logs | length > 0 %}
+{% for keyword, count in error_counts.items() %}
+  - {{ keyword }}: {{ count }} occurrence(s)
+{% endfor %}
+{% else %}
+  No specific error keywords found.
+{% endif %}
+
+--- End of Report ---
