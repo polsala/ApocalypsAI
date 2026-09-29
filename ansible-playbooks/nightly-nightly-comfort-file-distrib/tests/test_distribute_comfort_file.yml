@@ -1,0 +1,137 @@
+---
+- name: Test Comfort File Distribution Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    test_comfort_dir: "/tmp/ansible_test_comfort_file"
+    test_comfort_file_name: "daily_comfort.txt"
+    test_comfort_file_path: "{{ test_comfort_dir }}/{{ test_comfort_file_name }}"
+    test_comfort_file_owner: "{{ ansible_user_id }}" # Use current user for local test
+    test_comfort_file_group: "{{ ansible_user_gid }}" # Use current group for local test
+    test_comfort_file_mode: "0644"
+
+  tasks:
+    - name: Clean up previous test run artifacts (if any)
+      ansible.builtin.file:
+        path: "{{ test_comfort_dir }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Ensures a clean slate for deterministic testing.
+
+    - name: Create temporary directory for testing
+      ansible.builtin.file:
+        path: "{{ test_comfort_dir }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ test_comfort_file_owner }}"
+        group: "{{ test_comfort_file_group }}"
+      # Mock rationale: Simulates the target directory on a remote host for local testing.
+
+    - name: Run the main playbook in check mode (expecting changes)
+      ansible.builtin.include_tasks: ../src/distribute_comfort_file.yml
+      vars:
+        comfort_file_path: "{{ test_comfort_dir }}"
+        comfort_file_name: "{{ test_comfort_file_name }}"
+        comfort_file_owner: "{{ test_comfort_file_owner }}"
+        comfort_file_group: "{{ test_comfort_file_group }}"
+        comfort_file_mode: "{{ test_comfort_file_mode }}"
+      check_mode: yes
+      register: check_mode_result
+      # Mock rationale: Tests if the playbook correctly identifies a need for change.
+
+    - name: Assert check mode reported changes
+      ansible.builtin.assert:
+        that:
+          - check_mode_result.changed
+        fail_msg: "Check mode should have reported changes when file is missing."
+      # Mock rationale: Verifies the playbook's idempotency detection.
+
+    - name: Run the main playbook to apply changes
+      ansible.builtin.include_tasks: ../src/distribute_comfort_file.yml
+      vars:
+        comfort_file_path: "{{ test_comfort_dir }}"
+        comfort_file_name: "{{ test_comfort_file_name }}"
+        comfort_file_owner: "{{ test_comfort_file_owner }}"
+        comfort_file_group: "{{ test_comfort_file_group }}"
+        comfort_file_mode: "{{ test_comfort_file_mode }}"
+      register: apply_result
+      # Mock rationale: Executes the playbook to create the file for subsequent verification.
+
+    - name: Assert apply mode reported changes
+      ansible.builtin.assert:
+        that:
+          - apply_result.changed
+        fail_msg: "Apply mode should have reported changes when file was created."
+      # Mock rationale: Verifies the playbook's execution.
+
+    - name: Verify comfort directory exists
+      ansible.builtin.stat:
+        path: "{{ test_comfort_dir }}"
+      register: dir_stat
+      # Mock rationale: Checks for the existence of the directory created by the playbook.
+
+    - name: Assert comfort directory exists and has correct permissions
+      ansible.builtin.assert:
+        that:
+          - dir_stat.stat.exists
+          - dir_stat.stat.isdir
+          - dir_stat.stat.mode == "0755"
+          - dir_stat.stat.pw_name == "{{ test_comfort_file_owner }}"
+          - dir_stat.stat.gr_name == "{{ test_comfort_file_group }}"
+        fail_msg: "Comfort directory does not exist or has incorrect permissions/ownership."
+      # Mock rationale: Verifies directory creation and attributes.
+
+    - name: Verify comfort file exists
+      ansible.builtin.stat:
+        path: "{{ test_comfort_file_path }}"
+      register: file_stat
+      # Mock rationale: Checks for the existence of the file created by the playbook.
+
+    - name: Assert comfort file exists and has correct permissions
+      ansible.builtin.assert:
+        that:
+          - file_stat.stat.exists
+          - file_stat.stat.isreg
+          - file_stat.stat.mode == "{{ test_comfort_file_mode }}"
+          - file_stat.stat.pw_name == "{{ test_comfort_file_owner }}"
+          - file_stat.stat.gr_name == "{{ test_comfort_file_group }}"
+        fail_msg: "Comfort file does not exist or has incorrect permissions/ownership."
+      # Mock rationale: Verifies file creation and attributes.
+
+    - name: Read comfort file content
+      ansible.builtin.slurp:
+        src: "{{ test_comfort_file_path }}"
+      register: file_content_b64
+      # Mock rationale: Reads the content of the created file for verification.
+
+    - name: Decode and assert comfort file content
+      ansible.builtin.assert:
+        that:
+          - (file_content_b64.content | b64decode).find("Hello, localhost!") != -1
+          - (file_content_b64.content | b64decode).find("Managed by: ApocalypsAI Nightly Integrator") != -1
+        fail_msg: "Comfort file content is incorrect or missing expected strings."
+      # Mock rationale: Verifies the dynamic content of the templated file.
+
+    - name: Run the main playbook again (expecting no changes - idempotency test)
+      ansible.builtin.include_tasks: ../src/distribute_comfort_file.yml
+      vars:
+        comfort_file_path: "{{ test_comfort_dir }}"
+        comfort_file_name: "{{ test_comfort_file_name }}"
+        comfort_file_owner: "{{ test_comfort_file_owner }}"
+        comfort_file_group: "{{ test_comfort_file_group }}"
+        comfort_file_mode: "{{ test_comfort_file_mode }}"
+      register: idempotent_result
+      # Mock rationale: Tests the playbook's idempotency by running it again on an already configured system.
+
+    - name: Assert no changes reported on second run (idempotency)
+      ansible.builtin.assert:
+        that:
+          - not idempotent_result.changed
+        fail_msg: "Playbook should be idempotent and report no changes on second run."
+      # Mock rationale: Verifies that running the playbook multiple times yields the same result without unnecessary changes.
+
+    - name: Clean up temporary directory
+      ansible.builtin.file:
+        path: "{{ test_comfort_dir }}"
+        state: absent
+      # Mock rationale: Cleans up test artifacts to ensure a clean environment after testing.
