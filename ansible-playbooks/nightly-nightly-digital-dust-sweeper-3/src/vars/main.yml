@@ -1,0 +1,18 @@
+---
+# List of paths to scan for old files and directories.
+# Be cautious when adding paths, especially system-critical ones.
+scan_paths:
+  - /tmp
+  - /var/log/old_app_logs
+  - /opt/stale_backups
+
+# Files and directories older than this threshold (in days) will be considered 'dust bunnies'.
+age_threshold_days: 90
+
+# If 'true', the playbook will only report findings and generate a report, without deleting anything.
+# Set to 'false' to actually delete the identified items.
+dry_run: true
+
+# The path on the CONTROL MACHINE where the generated report will be saved.
+# Uses ansible_hostname to create unique reports per host.
+report_path: "/tmp/dust_bunny_report_{{ ansible_hostname }}.txt"
