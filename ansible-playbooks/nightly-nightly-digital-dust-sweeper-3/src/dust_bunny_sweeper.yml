@@ -1,0 +1,86 @@
+---
+- name: Digital Dust Bunny Sweeper
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    scan_paths: []
+    age_threshold_days: 30
+    dry_run: true
+    report_path: "/tmp/dust_bunny_report_{{ ansible_hostname }}.txt"
+
+  pre_tasks:
+    - name: Load variables from vars/main.yml
+      ansible.builtin.include_vars:
+        file: main.yml
+        dir: vars
+
+  tasks:
+    - name: Display current configuration
+      ansible.builtin.debug:
+        msg: |
+          Scanning paths: {{ scan_paths | default([]) }}
+          Age threshold: {{ age_threshold_days }} days
+          Dry run mode: {{ dry_run }}
+
+    - name: Find old files and directories (digital dust bunnies)
+      ansible.builtin.command: >
+        find {{ item }} -mindepth 1 -maxdepth 1 -type f -o -type d -mtime +{{ age_threshold_days }} -print
+      loop: "{{ scan_paths | default([]) }}"
+      register: find_results
+      changed_when: false
+      failed_when: find_results.rc != 0 and 'No such file or directory' not in find_results.stderr
+      # Mock rationale: The 'find' command output is mocked in tests using set_fact.
+      # This task simulates the real command execution.
+
+    - name: Consolidate found items
+      ansible.builtin.set_fact:
+        dust_bunnies: |
+          {% set found_items = [] %}
+          {% for result in find_results.results %}
+            {% if result.stdout_lines %}
+              {% set found_items = found_items + result.stdout_lines %}
+            {% endif %}
+          {% endfor %}
+          {{ found_items | unique | sort }}
+
+    - name: Generate dust bunny report
+      ansible.builtin.template:
+        src: dust_bunny_report.j2
+        dest: "{{ report_path }}"
+      delegate_to: localhost
+      run_once: true
+      vars:
+        host_dust_bunnies: "{{ dust_bunnies | default([]) }}"
+        host_scan_paths: "{{ scan_paths | default([]) }}"
+        host_age_threshold_days: "{{ age_threshold_days }}"
+        host_dry_run: "{{ dry_run }}"
+      # Mock rationale: The template module is used to generate a report based on the 'dust_bunnies' fact.
+      # In tests, 'dust_bunnies' is mocked, allowing the report generation logic to be tested deterministically.
+
+    - name: Display found dust bunnies (if any)
+      ansible.builtin.debug:
+        msg: "Found {{ dust_bunnies | length }} digital dust bunnies: {{ dust_bunnies }}"
+      when: dust_bunnies | length > 0
+
+    - name: Clean up digital dust bunnies (dry run message)
+      ansible.builtin.debug:
+        msg: "DRY RUN: Would delete {{ item }}"
+      loop: "{{ dust_bunnies }}"
+      when: dry_run and dust_bunnies | length > 0
+
+    - name: Clean up digital dust bunnies (actual deletion)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ dust_bunnies }}"
+      when: not dry_run and dust_bunnies | length > 0
+      # Mock rationale: In tests, this task's 'when' condition is evaluated based on the mocked 'dry_run' variable.
+      # We assert that this task is skipped when dry_run is true, and would be executed otherwise.
+
+    - name: Report generation complete
+      ansible.builtin.debug:
+        msg: "Dust bunny report saved to {{ report_path }} on the control machine."
+      delegate_to: localhost
+      run_once: true
