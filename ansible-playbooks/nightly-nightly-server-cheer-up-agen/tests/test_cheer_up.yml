@@ -1,0 +1,50 @@
+- name: Test Nightly Server Cheer-Up Agent Playbook (Mocked)
+  hosts: mock_host
+  gather_facts: false
+  connection: local # Mock rationale: Using 'connection: local' to run tasks directly on the controller, simulating a target host's state for offline, deterministic testing against mocked variables.
+
+  vars:
+    cheer_up_enable_cowsay: true
+    cheer_up_enable_fortune: true
+    cheer_up_deploy_ascii_art: true
+
+  tasks:
+    - name: Assert cowsay is considered installed if enabled
+      ansible.builtin.assert:
+        that:
+          - not cheer_up_enable_cowsay or mock_cowsay_installed
+        fail_msg: "Mocked cowsay installation state mismatch."
+      when: cheer_up_enable_cowsay
+      # Mock rationale: Checks if the mock variable 'mock_cowsay_installed' is true when cowsay is enabled, simulating a successful installation.
+
+    - name: Assert fortune is considered installed if enabled
+      ansible.builtin.assert:
+        that:
+          - not cheer_up_enable_fortune or mock_fortune_installed
+        fail_msg: "Mocked fortune installation state mismatch."
+      when: cheer_up_enable_fortune
+      # Mock rationale: Checks if the mock variable 'mock_fortune_installed' is true when fortune is enabled, simulating a successful installation.
+
+    - name: Assert cheer-up script is considered to exist
+      ansible.builtin.assert:
+        that:
+          - mock_motd_script_exists
+        fail_msg: "Mocked cheer-up script existence state mismatch."
+      # Mock rationale: Checks if the mock variable 'mock_motd_script_exists' is true, simulating the script's creation.
+
+    - name: Assert cheer-up script content matches expected
+      ansible.builtin.assert:
+        that:
+          - mock_motd_script_content is search('fortune')
+          - mock_motd_script_content is search('cowsay')
+        fail_msg: "Mocked cheer-up script content mismatch."
+      when: cheer_up_enable_cowsay and cheer_up_enable_fortune
+      # Mock rationale: Checks if the mock variable 'mock_motd_script_content' contains the expected commands, simulating the script's correct content.
+
+    - name: Assert custom ASCII art file is considered to exist if enabled
+      ansible.builtin.assert:
+        that:
+          - not cheer_up_deploy_ascii_art or mock_ascii_art_file_exists
+        fail_msg: "Mocked ASCII art file existence state mismatch."
+      when: cheer_up_deploy_ascii_art
+      # Mock rationale: Checks if the mock variable 'mock_ascii_art_file_exists' is true when ASCII art deployment is enabled, simulating the file's creation.
