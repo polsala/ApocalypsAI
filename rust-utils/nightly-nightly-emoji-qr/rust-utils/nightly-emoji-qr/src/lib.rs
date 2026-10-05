@@ -1,0 +1,1 @@
+pub fn encode_to_emoji(text: &str) -> String {\n    use qrcode::QrCode;\n    let code = QrCode::new(text.as_bytes()).expect("Failed to generate QR code");\n    code.render::<char>()\n        .quiet_zone(false)\n        .dark('⬛')\n        .light('⬜')\n        .build()\n}\n

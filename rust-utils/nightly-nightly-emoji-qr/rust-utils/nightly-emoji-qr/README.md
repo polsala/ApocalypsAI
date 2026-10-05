@@ -1,0 +1,1 @@
+Nightly Emoji QR\n================\n\nConvert input text into a QR code rendered with emoji squares.\n\nBuild with:\ncargo build --release\n\nRun:\nnightly-emoji-qr "<text>"\n\nThe output consists of black square (⬛) for dark modules and white square (⬜) for light modules.\n
