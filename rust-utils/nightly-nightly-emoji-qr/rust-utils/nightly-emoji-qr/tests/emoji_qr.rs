@@ -1,0 +1,1 @@
+#[test]\nfn test_encode_contains_only_emojis_and_newlines() {\n    let output = nightly_emoji_qr::encode_to_emoji("test");\n    assert!(!output.is_empty());\n    for ch in output.chars() {\n        assert!(ch == '⬛' || ch == '⬜' || ch == '\n');\n    }\n}\n
