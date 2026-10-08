@@ -1,0 +1,20 @@
+name: 'Temporal Phrase Detector'
+description: 'Scans PR titles and commit messages for whimsical temporal paradoxes or time-traveling phrases.'
+inputs:
+  message:
+    description: 'The message to scan (e.g., PR title or commit message).'
+    required: true
+  fail-on-paradox:
+    description: 'Whether the action should fail if a paradox is detected.'
+    required: false
+    default: 'false'
+outputs:
+  paradox-detected:
+    description: 'Boolean indicating if a temporal paradox phrase was found.'
+    value: ${{ steps.detect.outputs.paradox-detected }}
+  detected-phrases:
+    description: 'Comma-separated list of detected temporal phrases.'
+    value: ${{ steps.detect.outputs.detected-phrases }}
+runs:
+  using: 'node20'
+  main: 'src/main.js'
