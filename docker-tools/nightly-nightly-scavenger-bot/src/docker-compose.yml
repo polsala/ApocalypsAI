@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  scavenger:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python scavenger_bot.py
+    restart: "no" # We want it to run once and exit for testing purposes
