@@ -1,0 +1,1 @@
+import json\nfrom src.app import app, QUOTES\n\ndef test_quote_endpoint():\n    client = app.test_client()\n    response = client.get("/quote")\n    assert response.status_code == 200\n    data = json.loads(response.data)\n    # Mock rationale: ensure the response contains a quote from our list\n    assert "quote" in data\n    assert data["quote"] in QUOTES
