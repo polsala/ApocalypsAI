@@ -1,0 +1,32 @@
+---
+- name: Distribute Whimsical Comfort File
+  hosts: all
+  become: yes # May need root to create directories or set permissions in some paths
+  vars:
+    comfort_file_path: "/opt/comfort"
+    comfort_file_name: "daily_comfort.txt"
+    comfort_file_owner: "root"
+    comfort_file_group: "root"
+    comfort_file_mode: "0644"
+
+  tasks:
+    - name: Ensure comfort directory exists
+      ansible.builtin.file:
+        path: "{{ comfort_file_path }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ comfort_file_owner }}"
+        group: "{{ comfort_file_group }}"
+
+    - name: Distribute the comfort file template
+      ansible.builtin.template:
+        src: templates/comfort_file.j2
+        dest: "{{ comfort_file_path }}/{{ comfort_file_name }}"
+        owner: "{{ comfort_file_owner }}"
+        group: "{{ comfort_file_group }}"
+        mode: "{{ comfort_file_mode }}"
+      register: comfort_file_status
+
+    - name: Report comfort file distribution status
+      ansible.builtin.debug:
+        msg: "Comfort file '{{ comfort_file_name }}' {{ 'updated' if comfort_file_status.changed else 'already present' }} at {{ comfort_file_path }}."
