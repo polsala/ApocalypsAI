@@ -1,0 +1,52 @@
+---
+- name: Rotate SSH keys on target hosts
+  hosts: all
+  become: true
+  vars:
+    key_path: "{{ key_path | default('~/.ssh/id_rsa_rotated') }}"
+    backup_dir: "{{ backup_dir | default('~/.ssh/backup') }}"
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Backup existing authorized_keys
+      copy:
+        src: "{{ ansible_env.HOME }}/.ssh/authorized_keys"
+        dest: "{{ backup_dir }}/authorized_keys_{{ timestamp }}"
+        remote_src: yes
+      ignore_errors: yes
+
+    - name: Generate new SSH key pair locally (if not present)
+      local_action:
+        module: command
+        cmd: ssh-keygen -t rsa -b 4096 -f {{ key_path }} -N ""
+      args:
+        creates: "{{ key_path }}"
+      register: keygen_result
+
+    - name: Read public key
+      local_action:
+        module: slurp
+        src: "{{ key_path }}.pub"
+      register: pubkey_content
+
+    - name: Set public key fact
+      set_fact:
+        new_pubkey: "{{ pubkey_content.content | b64decode }}"
+
+    - name: Add new public key to authorized_keys
+      authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ new_pubkey }}"
+
+    - name: Remove old private key from control machine (optional)
+      local_action:
+        module: file
+        path: "{{ key_path }}"
+        state: absent
+      when: remove_local_key | default(false)
