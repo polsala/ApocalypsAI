@@ -1,0 +1,66 @@
+name: 'ApocalypsAI Tone Checker'
+description: 'Verifies PR titles and descriptions for adherence to the ApocalypsAI project''s whimsical-yet-apocalyptic tone.'
+inputs:
+  pr-title:
+    description: 'The title of the pull request.'
+    required: true
+  pr-body:
+    description: 'The body of the pull request.'
+    required: true
+  whimsy-keywords:
+    description: 'Comma-separated list of keywords indicating whimsy.'
+    required: false
+    default: 'sparkle,giggle,fluffy,serendipitous,chuckle,delight,joyful,frolic,bubbly,gleeful'
+  doom-keywords:
+    description: 'Comma-separated list of keywords indicating doom.'
+    required: false
+    default: 'apocalypse,wasteland,temporal,void,anomaly,rift,despair,ruin,cataclysm,oblivion'
+  min-whimsy-count:
+    description: 'Minimum number of unique whimsical keywords required.'
+    required: false
+    default: '1'
+  min-doom-count:
+    description: 'Minimum number of unique doom keywords required.'
+    required: false
+    default: '1'
+outputs:
+  tone-status:
+    description: 'The result of the tone check (pass/fail).'
+    value: ${{ steps.check_tone.outputs.status }}
+  tone-message:
+    description: 'A message detailing the tone check result.'
+    value: ${{ steps.check_tone.outputs.message }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Tone Verification Script
+      id: check_tone
+      shell: bash
+      run: |
+        # Pass inputs to the script
+        # The script will output 'status:pass' or 'status:fail' and 'message:...'
+        # We capture these and set them as action outputs.
+        # Mock rationale: The script itself is designed to be testable in isolation.
+        # This action simply orchestrates its execution with GitHub context.
+        # The script does not interact with external services or GitHub API directly.
+        
+        SCRIPT_OUTPUT=$(bash ${{ github.action_path }}/src/verify_tone.sh \
+          "${{ inputs.pr-title }}" \
+          "${{ inputs.pr-body }}" \
+          "${{ inputs.whimsy-keywords }}" \
+          "${{ inputs.doom-keywords }}" \
+          "${{ inputs.min-whimsy-count }}" \
+          "${{ inputs.min-doom-count }}")
+        
+        echo "$SCRIPT_OUTPUT"
+        
+        STATUS=$(echo "$SCRIPT_OUTPUT" | grep "status:" | cut -d':' -f2- | xargs)
+        MESSAGE=$(echo "$SCRIPT_OUTPUT" | grep "message:" | cut -d':' -f2- | xargs)
+        
+        echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+        echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+        
+        if [ "$STATUS" = "fail" ]; then
+          echo "Tone check failed: $MESSAGE"
+          exit 1
+        fi
