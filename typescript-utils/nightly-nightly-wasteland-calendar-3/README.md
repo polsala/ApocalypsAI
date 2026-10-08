@@ -1,0 +1,1 @@
+# Wasteland Calendar Converter\n\nConvert Gregorian dates to the whimsical post‑apocalyptic Wasteland Calendar.\n\n## Installation\n\n```sh\nnpm install -g .\n```\n\n## Usage\n\n```sh\nnpx wasteland-calendar 2025-03-15\n# => Year 48, Scorch 15\n```\n\nIf no date is provided, the current date is used.\n\n## Development\n\nRun tests:\n\n```sh\nnpm test\n```
