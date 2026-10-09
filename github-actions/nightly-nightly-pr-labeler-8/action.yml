@@ -1,0 +1,9 @@
+name: "Nightly PR Labeler"
+description: "Automatically adds labels to PRs based on changed files"
+author: "ApocalypsAI"
+runs:
+  using: "node12"
+  main: "src/index.js"
+outputs:
+  labels:
+    description: "JSON array of labels determined by the action"
