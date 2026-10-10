@@ -1,0 +1,13 @@
+[package]
+name = "chronal-cache-cleaner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4"
+dirs = "5" # For getting home directory
+
+[dev-dependencies]
+tempfile = "0.3"
+filetime = "0.2" # For setting file modification times in tests
