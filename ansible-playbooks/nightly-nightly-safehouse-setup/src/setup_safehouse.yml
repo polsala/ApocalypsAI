@@ -1,0 +1,24 @@
+---
+- name: Safehouse directory setup
+  hosts: localhost
+  gather_facts: false
+  vars:
+    base_path: "{{ base_path | default('/tmp/safehouse') }}"
+    safehouse_dirs:
+      - food
+      - water
+      - tools
+      - medicine
+  tasks:
+    - name: Ensure base directory exists
+      file:
+        path: "{{ base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create safehouse subdirectories
+      file:
+        path: "{{ base_path }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ safehouse_dirs }}"

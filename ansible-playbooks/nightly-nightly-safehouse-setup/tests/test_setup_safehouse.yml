@@ -1,0 +1,27 @@
+---
+- name: Test safehouse setup
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_path: "/tmp/test_safehouse"
+  tasks:
+    - name: Run the safehouse setup playbook
+      include_tasks: ../src/setup_safehouse.yml
+      vars:
+        base_path: "{{ test_path }}"
+
+    - name: Verify subdirectories exist
+      stat:
+        path: "{{ test_path }}/{{ item }}"
+      loop:
+        - food
+        - water
+        - tools
+        - medicine
+      register: dir_stats
+
+    - name: Assert each directory was created
+      assert:
+        that:
+          - item.stat.isdir
+      loop: "{{ dir_stats.results }}"
