@@ -1,0 +1,16 @@
+name: 'Nightly PR Cosmic Blesser'
+description: 'Bestows a whimsical, cosmic blessing upon Pull Requests with a comment and optional status check.'
+inputs:
+  github-token:
+    description: 'GitHub token for authentication (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  set-status-check:
+    description: 'Set to true to add a passing status check named "Cosmic Blessing".'
+    required: false
+    default: 'true'
+outputs:
+  blessing-message:
+    description: 'The cosmic blessing message posted to the PR.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
