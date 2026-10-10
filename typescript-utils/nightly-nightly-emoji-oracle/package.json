@@ -1,0 +1,1 @@
+{\n  "name": "nightly-emoji-oracle",\n  "version": "1.0.0",\n  "description": "Whimsical emoji‑to‑text interpreter",\n  "main": "src/index.ts",\n  "bin": {\n    "emoji-oracle": "./src/index.ts"\n  },\n  "scripts": {\n    "test": "ts-node tests/index.test.ts"\n  },\n  "devDependencies": {\n    "ts-node": "^10.9.1",\n    "typescript": "^5.2.2"\n  }\n}
