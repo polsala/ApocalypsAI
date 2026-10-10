@@ -1,0 +1,9 @@
+name: PR Language Labeler
+description: Auto‑label PRs with language tags based on changed files
+inputs:
+  files:
+    description: Comma‑separated list of changed file paths
+    required: true
+runs:
+  using: node12
+  main: src/index.js
