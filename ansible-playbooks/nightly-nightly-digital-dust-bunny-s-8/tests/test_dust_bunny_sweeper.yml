@@ -1,0 +1,108 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_servers
+  gather_facts: no
+  vars:
+    test_base_path: "/tmp/ansible_test_dust_bunnies"
+    test_cleanup_paths:
+      - "{{ test_base_path }}/path1"
+      - "{{ test_base_path }}/path2"
+
+  tasks:
+    - name: Ensure test base path exists
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0777'
+      become: yes
+
+    - name: Clean up previous test runs
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      become: yes
+      ignore_errors: yes # In case it doesn't exist
+
+    - name: Re-create test base path
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0777'
+      become: yes
+
+    - name: Create test cleanup paths
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0777'
+      loop: "{{ test_cleanup_paths }}"
+      become: yes
+
+    - name: Create an old file in path1
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_cleanup_paths[0] }}/old_file.txt"
+      args:
+        creates: "{{ test_cleanup_paths[0] }}/old_file.txt"
+      become: yes
+      # Mock rationale: Simulates an old file that should be cleaned by setting its modification time to 2 days ago.
+
+    - name: Create a recent file in path1
+      ansible.builtin.command: "touch {{ test_cleanup_paths[0] }}/recent_file.txt"
+      args:
+        creates: "{{ test_cleanup_paths[0] }}/recent_file.txt"
+      become: yes
+      # Mock rationale: Simulates a recent file that should NOT be cleaned, as its modification time is current.
+
+    - name: Create an old file in path2
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_cleanup_paths[1] }}/another_old_file.log"
+      args:
+        creates: "{{ test_cleanup_paths[1] }}/another_old_file.log"
+      become: yes
+      # Mock rationale: Simulates another old file.
+
+    - name: Run the main dust bunny sweeper playbook with test variables
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      vars:
+        cleanup_paths: "{{ test_cleanup_paths }}"
+        cleanup_age_days: 1 # Files older than 1 day should be removed for this test
+
+    - name: Verify old_file.txt is absent
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_paths[0] }}/old_file.txt"
+      register: old_file_stat
+      become: yes
+
+    - name: Assert old_file.txt is gone
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "old_file.txt was not removed!"
+
+    - name: Verify recent_file.txt is present
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_paths[0] }}/recent_file.txt"
+      register: recent_file_stat
+      become: yes
+
+    - name: Assert recent_file.txt is still there
+      ansible.builtin.assert:
+        that:
+          - recent_file_stat.stat.exists
+        fail_msg: "recent_file.txt was unexpectedly removed!"
+
+    - name: Verify another_old_file.log is absent
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_paths[1] }}/another_old_file.log"
+      register: another_old_file_stat
+      become: yes
+
+    - name: Assert another_old_file.log is gone
+      ansible.builtin.assert:
+        that:
+          - not another_old_file_stat.stat.exists
+        fail_msg: "another_old_file.log was not removed!"
+
+    - name: Clean up test artifacts
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      become: yes
