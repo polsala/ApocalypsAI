@@ -1,0 +1,56 @@
+---
+- name: Parse and summarize system logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log directory exists (for temporary files)
+      file:
+        path: "{{ log_parsing_temp_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Fetch and parse log files
+      block:
+        - name: Fetch each log file
+          fetch:
+            src: "{{ item }}"
+            dest: "{{ log_parsing_temp_dir }}/"
+            flat: yes
+          loop: "{{ log_files }}"
+          register: fetched_logs
+
+        - name: Process fetched log files for errors
+          shell: |
+            for log_file in {{ log_parsing_temp_dir }}/*;
+            do
+              echo "--- Processing: $log_file ---" >> {{ log_parsing_temp_dir }}/error_report.txt;
+              grep -iE "{{ error_keywords | join('|') }}" "$log_file" >> {{ log_parsing_temp_dir }}/error_report.txt;
+              echo "" >> {{ log_parsing_temp_dir }}/error_report.txt;
+            done;
+            echo "--- Error Summary ---" >> {{ log_parsing_temp_dir }}/error_report.txt;
+            grep -iE "{{ error_keywords | join('|') }}" {{ log_parsing_temp_dir }}/error_report.txt | sort | uniq -c | sort -nr >> {{ log_parsing_temp_dir }}/error_report.txt;
+          args:
+            executable: /bin/bash
+          register: processed_logs
+
+        - name: Generate summary report
+          template:
+            src: templates/log_summary.j2
+            dest: "{{ log_parsing_temp_dir }}/final_summary.txt"
+
+        - name: Display summary report
+          debug:
+            msg: "{{ lookup('file', '{{ log_parsing_temp_dir }}/final_summary.txt') }}"
+
+      rescue:
+        - name: Log parsing failed
+          debug:
+            msg: "Error during log parsing. Check logs for details."
+
+    - name: Clean up temporary directory
+      file:
+        path: "{{ log_parsing_temp_dir }}"
+        state: absent
