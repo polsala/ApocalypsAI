@@ -1,0 +1,21 @@
+---
+- name: Set random apocalypse MOTD
+  hosts: all
+  become: true
+  vars:
+    # List of whimsical apocalypse quotes
+    apocalypse_quotes:
+      - "The end is nigh, but coffee is still brewing."
+      - "Welcome to the wasteland – may your logs be clean."
+      - "Apocalypse now? Just another day in the terminal."
+      - "Survive the night, enjoy the MOTD."
+      - "When the world ends, at least the prompt is friendly."
+  tasks:
+    - name: Choose a random quote
+      set_fact:
+        chosen_quote: "{{ apocalypse_quotes | random }}"
+    - name: Write MOTD file
+      copy:
+        dest: "{{ motd_path | default('/etc/motd') }}"
+        content: "{{ chosen_quote }}\\n"
+        mode: '0644'
