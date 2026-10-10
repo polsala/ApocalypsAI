@@ -1,0 +1,22 @@
+name: 'Emoji Stale Labeler'
+description: 'Adds a whimsical emoji label to stale issues and PRs (demo version).'
+inputs:
+  days:
+    description: 'Days of inactivity before labeling'
+    required: false
+    default: '30'
+  label:
+    description: 'Base label name'
+    required: false
+    default: 'stale'
+  emoji:
+    description: 'Emoji to prepend'
+    required: false
+    default: '🧟'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run labeler script
+      shell: bash
+      run: |
+        ./src/labeler.sh
