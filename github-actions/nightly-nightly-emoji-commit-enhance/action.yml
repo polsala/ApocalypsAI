@@ -1,0 +1,23 @@
+name: "Emoji Commit Enhancer"
+description: "Appends a time‑of‑day emoji to PR titles or any string."
+inputs:
+  date_override:
+    description: "ISO‑8601 timestamp to override the current date (for testing)."
+    required: false
+    default: ""
+outputs:
+  emoji:
+    description: "The emoji selected for the current time of day."
+    value: ${{ steps.add_emoji.outputs.emoji }}
+runs:
+  using: "composite"
+  steps:
+    - name: Add Emoji
+      id: add_emoji
+      shell: bash
+      env:
+        DATE_OVERRIDE: ${{ inputs.date_override }}
+      run: |
+        ./src/entrypoint.sh
+        # Capture the emoji printed by the script and expose it as an output
+        echo "::set-output name=emoji::$(cat /tmp/emoji_output)"
