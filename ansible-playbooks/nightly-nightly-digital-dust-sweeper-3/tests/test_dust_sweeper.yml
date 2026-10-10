@@ -1,0 +1,114 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies"
+    test_log_file: "{{ test_dir }}/old_log.log.gz"
+    test_tmp_file: "{{ test_dir }}/temp_file.tmp"
+    test_report_path: "{{ test_dir }}/test_cleanliness_report.txt"
+    critical_services: ["sshd"]
+    log_cleanup_paths: ["{{ test_log_file }}"]
+    tmp_cleanup_paths: ["{{ test_tmp_file }}"]
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy old log file content
+      ansible.builtin.copy:
+        content: "This is an old log file."
+        dest: "{{ test_log_file }}"
+        force: yes
+
+    - name: Set old timestamp for dummy log file
+      ansible.builtin.command: "touch -d '8 days ago' {{ test_log_file }}"
+      changed_when: true # Mock rationale: Simulates an old log file for the 'find' module's age filter.
+
+    - name: Create dummy temporary file content
+      ansible.builtin.copy:
+        content: "This is a temporary file."
+        dest: "{{ test_tmp_file }}"
+        force: yes
+
+    - name: Set old timestamp for dummy temporary file
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_tmp_file }}"
+      changed_when: true # Mock rationale: Simulates an old temporary file for the 'find' module's age filter.
+
+    - name: Mock rationale: Ensure sshd service is 'running' for test purposes
+      ansible.builtin.service:
+        name: sshd
+        state: started
+      ignore_errors: yes # Service might not be installed or already running, or not running as systemd service
+
+    - name: Run the Digital Dust Bunny Sweeper playbook
+      ansible.builtin.include_tasks:
+        file: ../src/dust_sweeper.yml
+      vars:
+        report_path: "{{ test_report_path }}"
+        log_cleanup_paths: "{{ log_cleanup_paths }}"
+        tmp_cleanup_paths: "{{ tmp_cleanup_paths }}"
+        critical_services: "{{ critical_services }}"
+
+    - name: Assert dummy old log file is removed
+      ansible.builtin.stat:
+        path: "{{ test_log_file }}"
+      register: log_file_stat
+
+    - name: Verify log file is absent
+      ansible.builtin.assert:
+        that:
+          - not log_file_stat.stat.exists
+        msg: "Test failed: Dummy old log file '{{ test_log_file }}' was not removed."
+
+    - name: Assert dummy temporary file is removed
+      ansible.builtin.stat:
+        path: "{{ test_tmp_file }}"
+      register: tmp_file_stat
+
+    - name: Verify temporary file is absent
+      ansible.builtin.assert:
+        that:
+          - not tmp_file_stat.stat.exists
+        msg: "Test failed: Dummy temporary file '{{ test_tmp_file }}' was not removed."
+
+    - name: Assert report file is created
+      ansible.builtin.stat:
+        path: "{{ test_report_path }}"
+      register: report_file_stat
+
+    - name: Verify report file exists
+      ansible.builtin.assert:
+        that:
+          - report_file_stat.stat.exists
+        msg: "Test failed: Cleanliness report '{{ test_report_path }}' was not created."
+
+    - name: Assert report content for cleanup success
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_b64.content | b64decode }}"
+
+    - name: Verify report indicates cleanup
+      ansible.builtin.assert:
+        that:
+          - "'Digital Dust Bunnies Swept: YES' in report_content"
+        msg: "Test failed: Report does not indicate successful cleanup."
+
+    - name: Verify report indicates service status
+      ansible.builtin.assert:
+        that:
+          - "'- sshd: Running' in report_content"
+        msg: "Test failed: Report does not correctly reflect sshd service status."
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
