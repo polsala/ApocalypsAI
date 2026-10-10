@@ -1,0 +1,38 @@
+---
+- name: ApocalypsAI Nightly Resource Scavenger
+  hosts: all
+  gather_facts: true
+  vars_files:
+    - ../vars/scavenger_config.yml
+
+  tasks:
+    - name: Ensure scavenger paths exist (for testing/safety)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ scavenger_paths }}"
+      # Mock rationale: In a real scenario, these paths would already exist.
+      # For testing, we ensure they exist to prevent 'file not found' errors
+      # when creating test files or running 'find'.
+
+    - name: Find large or old files
+      ansible.builtin.find:
+        paths: "{{ scavenger_paths }}"
+        size: "{{ scavenger_min_file_size_mb * 1024 * 1024 }}b"
+        age: "{{ scavenger_max_file_age_days }}d"
+        age_stamp: mtime
+        recurse: true
+      register: large_files
+
+    - name: Get top-level directory sizes for scanned paths
+      ansible.builtin.command: "du -sh {{ item }}"
+      loop: "{{ scavenger_paths }}"
+      register: top_level_dir_sizes
+      changed_when: false # This command only reports, doesn't change state
+
+    - name: Generate resource scavenger report
+      ansible.builtin.template:
+        src: ../templates/scavenger_report.j2
+        dest: "{{ scavenger_report_path }}"
+        mode: '0644'

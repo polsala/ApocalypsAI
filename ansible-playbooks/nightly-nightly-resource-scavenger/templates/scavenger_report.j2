@@ -1,0 +1,23 @@
+ApocalypsAI Nightly Resource Scavenger Report for {{ ansible_hostname }} ({{ ansible_date_time.iso8601_micro }})
+
+Discovered Digital Relics (Files > {{ scavenger_min_file_size_mb }}MB or older than {{ scavenger_max_file_age_days }} days):
+{% if large_files.files | length > 0 %}
+{% for file in large_files.files %}
+- Path: {{ file.path }}
+  Size: {{ (file.size / (1024*1024)) | round(2) }} MB
+  Modification Time: {{ file.mtime | ansible.builtin.to_datetime | ansible.builtin.strftime('%Y-%m-%d %H:%M:%S') }}
+{% endfor %}
+{% else %}
+No significant digital relics found. All clear!
+{% endif %}
+
+Top-Level Directory Sizes in Scanned Paths:
+{% for path_info in top_level_dir_sizes.results %}
+{% if path_info.stdout_lines | length > 0 %}
+- Path: {{ path_info.item }}
+  Size: {{ path_info.stdout_lines[0].split('\t')[0] }}
+{% endif %}
+{% endfor %}
+
+---
+End of Report. Stay vigilant, survivor.
