@@ -1,0 +1,9 @@
+name: "Issue Fortune Cookie"
+description: "Posts a whimsical fortune‑cookie comment on newly opened issues."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
