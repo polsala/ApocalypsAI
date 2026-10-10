@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/go.mod src/go.sum ./\nRUN go mod download\nCOPY src/*.go ./\nRUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags=\"-s -w\" -o quote-mixer .\n\nFROM alpine:3.19\nWORKDIR /root/\nCOPY --from=builder /app/quote-mixer .\nEXPOSE 8080\nENV PORT=8080\nCMD [\"./quote-mixer\"]\n
