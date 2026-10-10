@@ -1,0 +1,84 @@
+---
+- name: Test Nightly Package Gardener Logic
+  hosts: test_host
+  gather_facts: no # We will mock facts
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Mock scenario 1: Essential packages missing, whimsical packages present
+      ansible.builtin.set_fact:
+        ansible_facts:
+          packages:
+            curl: { version: '7.68.0', source: 'apt' }
+            htop: { version: '3.0.5', source: 'apt' }
+            cowsay: { version: '3.03+dfsg2', source: 'apt' }
+            sl: { version: '5.02', source: 'apt' }
+            # git and wget are missing
+      # Mock rationale: Simulates a system where some essential packages are missing
+      # and some whimsical packages are installed, allowing the playbook's logic
+      # to be tested for both installation and removal.
+
+    - name: Identify packages to install (scenario 1)
+      ansible.builtin.set_fact:
+        packages_to_install: "{{ essential_packages | difference(ansible_facts.packages.keys() | list) }}"
+
+    - name: Identify packages to remove (scenario 1)
+      ansible.builtin.set_fact:
+        packages_to_remove: "{{ whimsical_packages | intersect(ansible_facts.packages.keys() | list) }}"
+
+    - name: Assert packages to install (scenario 1)
+      ansible.builtin.assert:
+        that:
+          - packages_to_install is defined
+          - "'git' in packages_to_install"
+          - "'wget' in packages_to_install"
+          - packages_to_install | length == 2
+          - packages_to_install | sort == ['git', 'wget'] | sort # Ensure order doesn't matter
+        fail_msg: "Scenario 1: Expected ['git', 'wget'] to be identified for installation, got {{ packages_to_install }}"
+      # Mock rationale: Verifies that the playbook correctly identifies missing essential packages.
+
+    - name: Assert packages to remove (scenario 1)
+      ansible.builtin.assert:
+        that:
+          - packages_to_remove is defined
+          - "'cowsay' in packages_to_remove"
+          - "'sl' in packages_to_remove"
+          - packages_to_remove | length == 2
+          - packages_to_remove | sort == ['cowsay', 'sl'] | sort
+        fail_msg: "Scenario 1: Expected ['cowsay', 'sl'] to be identified for removal, got {{ packages_to_remove }}"
+      # Mock rationale: Verifies that the playbook correctly identifies installed whimsical packages for removal.
+
+    - name: Mock scenario 2: All essential packages present, no whimsical packages
+      ansible.builtin.set_fact:
+        ansible_facts:
+          packages:
+            curl: { version: '7.68.0', source: 'apt' }
+            wget: { version: '1.20.3', source: 'apt' }
+            git: { version: '2.25.1', source: 'apt' }
+            htop: { version: '3.0.5', source: 'apt' }
+      # Mock rationale: Simulates a system in a desired state (all essential, no whimsical)
+      # to test idempotency and correct identification of no changes.
+
+    - name: Identify packages to install (scenario 2)
+      ansible.builtin.set_fact:
+        packages_to_install: "{{ essential_packages | difference(ansible_facts.packages.keys() | list) }}"
+
+    - name: Identify packages to remove (scenario 2)
+      ansible.builtin.set_fact:
+        packages_to_remove: "{{ whimsical_packages | intersect(ansible_facts.packages.keys() | list) }}"
+
+    - name: Assert no packages to install (scenario 2)
+      ansible.builtin.assert:
+        that:
+          - packages_to_install is defined
+          - packages_to_install | length == 0
+        fail_msg: "Scenario 2: Expected no packages to install, got {{ packages_to_install }}"
+      # Mock rationale: Verifies that no essential packages are identified for installation when all are present.
+
+    - name: Assert no packages to remove (scenario 2)
+      ansible.builtin.assert:
+        that:
+          - packages_to_remove is defined
+          - packages_to_remove | length == 0
+        fail_msg: "Scenario 2: Expected no packages to remove, got {{ packages_to_remove }}"
+      # Mock rationale: Verifies that no whimsical packages are identified for removal when none are present.
