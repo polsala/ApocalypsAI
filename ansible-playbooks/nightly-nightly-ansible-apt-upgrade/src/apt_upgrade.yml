@@ -1,0 +1,28 @@
+---
+- name: Apt Upgrade Scheduler
+  hosts: all
+  become: true
+  vars:
+    notification_email: "{{ notification_email | default('root@localhost') }}"
+    apocalypse_quote: "{{ apocalypse_quote | default('The world ends, but your packages stay updated!') }}"
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+
+    - name: Send whimsical notification
+      mail:
+        host: localhost
+        port: 25
+        to: "{{ notification_email }}"
+        subject: "🧟‍♂️ Apt Upgrade Complete"
+        body: |
+          {{ apocalypse_quote }}
+
+          - ApocalypsAI Nightly Integrator
