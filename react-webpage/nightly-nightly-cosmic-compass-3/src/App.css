@@ -1,0 +1,81 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  margin-bottom: 30px;
+}
+
+.cosmic-visualization {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px dashed #61dafb;
+  margin-bottom: 20px;
+}
+
+.nebula {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.7;
+  filter: blur(10px);
+}
+
+.star-field {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: twinkle 2s infinite alternate;
+}
+
+@keyframes twinkle {
+  from { transform: scale(0.8); opacity: 0.6; }
+  to { transform: scale(1.2); opacity: 1; }
+}
+
+.planet-orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dotted rgba(255, 255, 255, 0.3);
+  animation: orbit 10s linear infinite;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.planet {
+  position: absolute;
+  top: -10px; /* Adjust to center the planet on the orbit line */
+  left: -10px; /* Adjust to center the planet on the orbit line */
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+.alignment-message {
+  margin-top: 20px;
+  font-style: italic;
+  color: #61dafb;
+}
