@@ -1,0 +1,105 @@
+---
+- name: Cultivate Digital Garden
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure garden directory exists
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Ensures the target directory for garden files exists for testing purposes.
+
+    - name: Find all markdown files in the garden
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_found
+      # Mock rationale: Simulates finding markdown files in a pre-defined mock directory.
+
+    - name: Initialize garden report and index entries
+      ansible.builtin.set_fact:
+        garden_report: []
+        index_entries: []
+      # Mock rationale: Initializes variables for collecting report data and index entries.
+
+    - name: Process each markdown file
+      ansible.builtin.block:
+        - name: Read file content
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content_b64
+          # Mock rationale: Simulates reading the content of a mock markdown file.
+
+        - name: Decode content and extract front matter block
+          ansible.builtin.set_fact:
+            decoded_content_lines: "{{ file_content_b64.content | b64decode | split('\n') }}"
+            front_matter_block: |
+              {% set lines = decoded_content_lines %}
+              {% set in_front_matter = false %}
+              {% set fm_lines = [] %}
+              {% for line in lines %}
+                {% if line == '---' %}
+                  {% if not in_front_matter %}
+                    {% set in_front_matter = true %}
+                  {% else %} {# Found second '---', end of front matter #}
+                    {% break %}
+                  {% endif %}
+                {% elif in_front_matter %}
+                  {% set fm_lines = fm_lines + [line] %}
+                {% endif %}
+              {% endfor %}
+              {{ fm_lines | join('\n') }}
+          # Mock rationale: Decodes base64 content and extracts the YAML front matter block using Jinja2 logic.
+
+        - name: Parse YAML front matter
+          ansible.builtin.set_fact:
+            front_matter: "{{ front_matter_block | from_yaml(default={}) }}"
+          # Mock rationale: Parses the extracted YAML block into an Ansible dictionary. `from_yaml` is a standard filter.
+
+        - name: Check for required front matter keys
+          ansible.builtin.set_fact:
+            missing_keys: "{{ required_front_matter_keys | difference(front_matter.keys() | list) }}"
+          # Mock rationale: Compares expected keys with parsed front matter keys.
+
+        - name: Add to garden report if issues found
+          ansible.builtin.set_fact:
+            garden_report: "{{ garden_report + [{ 'file': item.path, 'missing_keys': missing_keys }] }}"
+          when: missing_keys | length > 0
+          # Mock rationale: Collects information about files with missing front matter for the final report.
+
+        - name: Add to index entries
+          ansible.builtin.set_fact:
+            index_entries: "{{ index_entries + [{ 'path': item.path, 'title': front_matter.title | default(item.path | basename | splitext | first) }] }}"
+          # Mock rationale: Collects file paths and their titles (using filename as fallback) for the index generation.
+      loop: "{{ md_files_found.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Generate _garden_index.md
+      ansible.builtin.template:
+        src: templates/garden_index.j2
+        dest: "{{ garden_path }}/_garden_index.md"
+        mode: '0644'
+      # Mock rationale: Simulates creating or updating the index file based on a template and collected data.
+
+    - name: Display Garden Report
+      ansible.builtin.debug:
+        msg: |
+          Digital Garden Cultivation Report:
+          {% if garden_report | length > 0 %}
+          The following files need attention:
+          {% for entry in garden_report %}
+          - File: {{ entry.file }}
+            Missing Front Matter Keys: {{ entry.missing_keys | join(', ') }}
+          {% endfor %}
+          {% else %}
+          All markdown files have the required front matter.
+          {% endif %}
+      # Mock rationale: Displays the final report, useful for both actual runs and test verification.
