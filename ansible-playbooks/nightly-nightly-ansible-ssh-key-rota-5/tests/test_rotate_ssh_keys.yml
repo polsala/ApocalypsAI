@@ -1,0 +1,45 @@
+---
+- name: Test SSH key rotation playbook (mock)
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ssh_key_type: rsa
+    ssh_key_bits: 2048
+    backup_dir: /tmp/ssh_key_backup
+  tasks:
+    - name: Ensure backup dir is clean
+      file:
+        path: "{{ backup_dir }}"
+        state: absent
+
+    - name: Create dummy existing key file
+      copy:
+        dest: "/etc/ssh/ssh_host_{{ ssh_key_type }}_key"
+        content: "OLD_KEY"
+        mode: '0600'
+      become: true
+
+    - name: Run the rotation playbook
+      import_playbook: ../src/rotate_ssh_keys.yml
+
+    - name: Verify new key file exists
+      stat:
+        path: "/etc/ssh/ssh_host_{{ ssh_key_type }}_key"
+      register: new_key
+
+    - name: Assert new key was created
+      assert:
+        that:
+          - new_key.stat.exists
+          - new_key.stat.size > 0
+
+    - name: Verify backup file exists
+      stat:
+        path: "{{ backup_dir }}/ssh_host_{{ ssh_key_type }}_key.bak"
+      register: backup_key
+
+    - name: Assert backup was created
+      assert:
+        that:
+          - backup_key.stat.exists
+# Mock rationale: This test runs on localhost and uses dummy files; in a real environment it would affect actual hosts.
