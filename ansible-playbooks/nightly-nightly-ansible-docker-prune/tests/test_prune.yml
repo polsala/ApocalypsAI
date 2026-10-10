@@ -1,0 +1,15 @@
+- name: Test Docker prune skip logic
+  hosts: localhost
+  gather_facts: false
+  vars:
+    docker_prune_enabled: false   # Force skip for test
+  tasks:
+    - name: Include the main prune playbook
+      import_playbook: ../src/prune.yml
+
+    - name: Verify that pruning was skipped
+      assert:
+        that:
+          - prune_skipped | bool
+        fail_msg: "Prune was expected to be skipped but it was not."
+        success_msg: "Prune skip logic works as expected."
