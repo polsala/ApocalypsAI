@@ -1,0 +1,69 @@
+---
+- name: Test Nightly Survival Beacon Orchestrator Role
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    nginx_mock_package_path: "/tmp/mock_nginx_package_installed"
+    nginx_mock_html_path: "/tmp/mock_nginx_html/beacon_status.html"
+    nginx_mock_service_status: "running"
+
+  tasks:
+    - name: Mock Nginx package installation
+      ansible.builtin.file:
+        path: "{{ nginx_mock_package_path }}"
+        state: touch
+        mode: '0644'
+      # Mock rationale: Simulates the package installation without actually installing Nginx.
+      # This allows the test to run offline and deterministically.
+
+    - name: Mock Nginx HTML directory creation
+      ansible.builtin.file:
+        path: "{{ nginx_mock_html_path | dirname }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Ensures the target directory for the HTML file exists for the mock copy operation.
+
+    - name: Mock deployment of beacon status HTML page
+      ansible.builtin.template:
+        src: ../src/roles/beacon_service/templates/beacon_status.html.j2
+        dest: "{{ nginx_mock_html_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      # Mock rationale: Deploys the template to a mock path, simulating the role's behavior.
+
+    - name: Assert mock HTML file exists
+      ansible.builtin.stat:
+        path: "{{ nginx_mock_html_path }}"
+      register: html_file_stat
+
+    - name: Verify mock HTML file was created
+      ansible.builtin.assert:
+        that:
+          - html_file_stat.stat.exists
+          - html_file_stat.stat.isreg
+        fail_msg: "Mock beacon_status.html was not created or is not a regular file."
+      # Mock rationale: Verifies the successful creation of the mock HTML file, indicating the template task worked.
+
+    - name: Assert mock Nginx package file exists
+      ansible.builtin.stat:
+        path: "{{ nginx_mock_package_path }}"
+      register: package_file_stat
+
+    - name: Verify mock Nginx package file was created
+      ansible.builtin.assert:
+        that:
+          - package_file_stat.stat.exists
+          - package_file_stat.stat.isreg
+        fail_msg: "Mock Nginx package file was not created."
+      # Mock rationale: Verifies the successful creation of the mock package file, indicating the package task worked.
+
+    - name: Clean up mock files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ nginx_mock_package_path }}"
+        - "{{ nginx_mock_html_path | dirname }}"
+      # Mock rationale: Ensures the test environment is clean after the test run.

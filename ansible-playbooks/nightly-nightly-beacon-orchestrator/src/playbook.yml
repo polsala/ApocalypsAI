@@ -1,0 +1,14 @@
+---
+- name: Orchestrate Survival Beacons
+  hosts: beacons
+  become: yes
+  roles:
+    - beacon_service
+
+- name: Report Beacon Status (Optional)
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Display a message indicating successful beacon deployment
+      ansible.builtin.debug:
+        msg: "Survival Beacon orchestration complete. Check your beacon hosts for operational status."

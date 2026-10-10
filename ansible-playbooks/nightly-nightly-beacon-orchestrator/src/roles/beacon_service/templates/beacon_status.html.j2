@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Beacon Status</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background-color: #1a1a1a; color: #00ff00; text-align: center; padding-top: 50px; }
+        .container { border: 2px solid #00ff00; padding: 20px; display: inline-block; }
+        h1 { color: #00ff00; }
+        p { margin: 10px 0; }
+        .status { font-size: 1.5em; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>APOCALYPSAI BEACON STATUS</h1>
+        <p class="status">STATUS: OPERATIONAL</p>
+        <p>Host: {{ ansible_hostname | default('UNKNOWN_HOST') }}</p>
+        <p>IP Address: {{ ansible_default_ipv4.address | default('UNKNOWN_IP') }}</p>
+        <p>Last Updated: {{ ansible_date_time.iso8601_micro | default('UNKNOWN_TIME') }}</p>
+        <p>MESSAGE: Signal strong. Keep hope alive.</p>
+    </div>
+</body>
+</html>
