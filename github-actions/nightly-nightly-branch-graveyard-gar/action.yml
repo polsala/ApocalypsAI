@@ -1,0 +1,41 @@
+name: 'Branch Graveyard Gardener'
+description: 'Identifies and reports stale branches in your repository, suggesting cleanup.'
+inputs:
+  stale-days:
+    description: 'Number of days after which a branch is considered stale.'
+    required: false
+    default: '90'
+  ignore-branches:
+    description: 'Comma-separated list of branch names (or patterns) to ignore (e.g., main,develop,release-*).'
+    required: false
+    default: 'main,master,develop'
+outputs:
+  stale-branches:
+    description: 'A JSON array of stale branch names found.'
+    value: ${{ steps.pruner.outputs.stale-branches }}
+  stale-branches-count:
+    description: 'The number of stale branches found.'
+    value: ${{ steps.pruner.outputs.stale-branches-count }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for accurate commit dates
+
+    - name: Install jq (if not present)
+      shell: bash
+      run: |
+        if ! command -v jq &> /dev/null; then
+            echo "jq not found, installing..."
+            sudo apt-get update && sudo apt-get install -y jq
+        fi
+
+    - name: Run Branch Pruner
+      id: pruner
+      shell: bash
+      run: |
+        bash ${{ github.action_path }}/src/branch_pruner.sh \
+          "${{ inputs.stale-days }}" \
+          "${{ inputs.ignore-branches }}"
