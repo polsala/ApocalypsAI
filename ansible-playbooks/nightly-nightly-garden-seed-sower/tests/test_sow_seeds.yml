@@ -1,0 +1,114 @@
+---
+- name: Test Nightly Digital Garden Seed Sower - New Seed Creation
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    garden_path: "/tmp/test_garden_new_seed"
+    current_date: "2023-10-27" # Mock rationale: Fixes date for deterministic testing.
+    filename_prefix: "daily-seed"
+    date_format: "%Y-%m-%d"
+
+  tasks:
+    - name: Clean up previous test run directory (if any)
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Directory might not exist on first run.
+
+    - name: Run the main playbook to sow a new seed
+      ansible.builtin.include_tasks: ../src/sow_seeds.yml
+      vars:
+        garden_path: "{{ garden_path }}"
+        current_date: "{{ current_date }}"
+        filename_prefix: "{{ filename_prefix }}"
+        date_format: "{{ date_format }}"
+      register: new_seed_run_result
+
+    - name: Assert that the new seed file was created
+      ansible.builtin.stat:
+        path: "{{ garden_path }}/{{ filename_prefix }}-{{ current_date }}.md"
+      register: new_seed_stat
+
+    - name: Verify file exists and is a regular file
+      ansible.builtin.assert:
+        that:
+          - new_seed_stat.stat.exists
+          - new_seed_stat.stat.isreg
+          - new_seed_run_result.changed # Expect changed when creating a new file
+        fail_msg: "New seed file was not created or playbook did not report change: {{ garden_path }}/{{ filename_prefix }}-{{ current_date }}.md"
+
+    - name: Verify file content (basic check)
+      ansible.builtin.slurp:
+        src: "{{ garden_path }}/{{ filename_prefix }}-{{ current_date }}.md"
+      register: file_content
+
+    - name: Assert content contains expected date and title
+      ansible.builtin.assert:
+        that:
+          - "'Daily Thought Seed - 2023-10-27' in (file_content.content | b64decode)"
+          - "'date: 2023-10-27' in (file_content.content | b64decode)"
+        fail_msg: "Content of new seed file is incorrect or missing expected date."
+
+    - name: Clean up after test
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: absent
+
+- name: Test Nightly Digital Garden Seed Sower - Existing Seed (Idempotency)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    garden_path: "/tmp/test_garden_existing_seed"
+    current_date: "2023-10-28" # Mock rationale: Fixes date for deterministic testing.
+    filename_prefix: "daily-seed"
+    date_format: "%Y-%m-%d"
+
+  tasks:
+    - name: Clean up previous test run directory (if any)
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Directory might not exist on first run.
+
+    - name: Create mock existing seed file directory
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create the existing file for idempotency test
+      ansible.builtin.copy:
+        content: |
+          ---
+          title: Existing Daily Seed - 2023-10-28
+          date: 2023-10-28
+          tags: [daily, thoughts, garden]
+          status: mature
+          ---
+          # This is an existing seed.
+        dest: "{{ garden_path }}/{{ filename_prefix }}-{{ current_date }}.md"
+        mode: '0644'
+
+    - name: Run the main playbook when seed already exists
+      ansible.builtin.include_tasks: ../src/sow_seeds.yml
+      vars:
+        garden_path: "{{ garden_path }}"
+        current_date: "{{ current_date }}"
+        filename_prefix: "{{ filename_prefix }}"
+        date_format: "{{ date_format }}"
+      register: existing_seed_run_result
+
+    - name: Assert that no changes were made (idempotency)
+      ansible.builtin.assert:
+        that:
+          - not existing_seed_run_result.changed # Expect no change when file already exists
+        fail_msg: "Playbook reported changes when seed already existed, violating idempotency."
+
+    - name: Clean up after test
+      ansible.builtin.file:
+        path: "{{ garden_path }}"
+        state: absent
