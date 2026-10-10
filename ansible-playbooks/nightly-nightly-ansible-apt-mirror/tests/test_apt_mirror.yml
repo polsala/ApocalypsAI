@@ -1,0 +1,28 @@
+---
+- name: Test nightly-ansible-apt-mirror playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    apt_mirror_source: "http://archive.ubuntu.com/ubuntu"
+    apt_mirror_distribution: "focal"
+    apt_mirror_target_dir: "/tmp/apt-mirror-test"
+  tasks:
+    - name: Include the apt_mirror playbook in check mode
+      import_playbook: ../src/apt_mirror.yml
+      vars:
+        apt_mirror_source: "{{ apt_mirror_source }}"
+        apt_mirror_distribution: "{{ apt_mirror_distribution }}"
+        apt_mirror_target_dir: "{{ apt_mirror_target_dir }}"
+      check_mode: true
+
+    - name: Verify that the configuration file would be created
+      stat:
+        path: /etc/apt/mirror.list
+      register: mirror_cfg
+
+    - name: Assert that mirror.list would exist after a real run
+      assert:
+        that:
+          - mirror_cfg.stat.exists
+        fail_msg: "mirror.list was not created in check mode (syntax error?)"

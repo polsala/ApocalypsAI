@@ -1,0 +1,43 @@
+---
+- name: Mirror APT repository
+  hosts: all
+  become: true
+  vars:
+    apt_mirror_source: "{{ apt_mirror_source | default('http://archive.ubuntu.com/ubuntu') }}"
+    apt_mirror_distribution: "{{ apt_mirror_distribution | default('focal') }}"
+    apt_mirror_components: "{{ apt_mirror_components | default(['main', 'restricted', 'universe', 'multiverse']) }}"
+    apt_mirror_target_dir: "{{ apt_mirror_target_dir | default('/var/spool/apt-mirror') }}"
+  tasks:
+    - name: Ensure apt-mirror package is installed
+      apt:
+        name: apt-mirror
+        state: present
+        update_cache: true
+
+    - name: Ensure target directory exists
+      file:
+        path: "{{ apt_mirror_target_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Generate mirror.list configuration
+      copy:
+        dest: /etc/apt/mirror.list
+        content: |
+          set base_path    {{ apt_mirror_target_dir }}
+          set defaultarch  amd64
+          set nthreads     20
+          set _tilde 0
+
+          deb {{ apt_mirror_source }} {{ apt_mirror_distribution }} {{ apt_mirror_components | join(' ') }}
+          deb-src {{ apt_mirror_source }} {{ apt_mirror_distribution }} {{ apt_mirror_components | join(' ') }}
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Run apt-mirror
+
+  handlers:
+    - name: Run apt-mirror
+      command: apt-mirror
+      args:
+        creates: "{{ apt_mirror_target_dir }}/var/lib/apt/mirrors/{{ apt_mirror_source | regex_replace('https?://', '') }}/{{ apt_mirror_distribution }}/Release"
