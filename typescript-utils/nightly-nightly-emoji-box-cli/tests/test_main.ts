@@ -1,0 +1,1 @@
+import { generateEmojiBox } from "../src/index";\nimport * as assert from "assert";\n\nfunction run() {\n  const result = generateEmojiBox("Hi");\n  const expected = [\n    "🟦🟦🟦🟦🟦🟦",\n    "🟦 Hi 🟦",\n    "🟦🟦🟦🟦🟦🟦"\n  ].join("\n");\n  assert.strictEqual(result, expected);\n  console.log("All tests passed");\n}\n\nrun();
