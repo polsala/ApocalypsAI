@@ -1,0 +1,82 @@
+name: 'Commit Mood Ring'
+description: 'Adds a whimsical emoji reaction to a PR based on the latest commit message.'
+inputs:
+  commit-message:
+    description: 'The commit message to analyze. Defaults to a generic message if not provided.'
+    required: false
+  github-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+outputs:
+  reaction-emoji:
+    description: 'The emoji reaction chosen.'
+    value: ${{ steps.determine_mood.outputs.emoji }}
+runs:
+  using: 'composite'
+  steps:
+    - id: get_commit_message_input
+      shell: bash
+      run: |
+        # Prioritize the explicit input commit-message
+        if [[ -n "${{ inputs.commit-message }}" ]]; then
+          echo "COMMIT_MESSAGE=${{ inputs.commit-message }}" >> $GITHUB_OUTPUT
+        else
+          # Fallback for when commit-message input is not provided
+          # Mock rationale: In a real PR context, this would ideally fetch the actual latest commit message.
+          # For testing and simplicity, if the input is empty, we use a generic message.
+          echo "COMMIT_MESSAGE='Default commit message for analysis'" >> $GITHUB_OUTPUT
+        fi
+
+    - id: determine_mood
+      shell: bash
+      env:
+        COMMIT_MSG: ${{ steps.get_commit_message_input.outputs.COMMIT_MESSAGE }}
+      run: |
+        EMOJI="🤖" # Default emoji
+        MSG_LOWER=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]')
+        MSG_LENGTH=${#COMMIT_MSG}
+
+        if [[ "$MSG_LOWER" == *"breaking"* || "$MSG_LOWER" == *"major"* ]]; then
+          EMOJI="🚨"
+        elif [[ "$MSG_LOWER" == *"fix"* || "$MSG_LOWER" == *"bug"* || "$MSG_LOWER" == *"error"* ]]; then
+          EMOJI="🩹"
+        elif [[ "$MSG_LOWER" == *"feat"* || "$MSG_LOWER" == *"add"* || "$MSG_LOWER" == *"new"* ]]; then
+          EMOJI="🚀"
+        elif [[ "$MSG_LOWER" == *"refactor"* || "$MSG_LOWER" == *"clean"* ]]; then
+          EMOJI="🧹"
+        elif [[ "$MSG_LOWER" == *"docs"* || "$MSG_LOWER" == *"doc"* ]]; then
+          EMOJI="📚"
+        elif (( MSG_LENGTH < 10 )); then
+          EMOJI="🐛"
+        elif (( MSG_LENGTH > 50 )); then
+          EMOJI="📜"
+        else # Covers messages 10-50 chars without specific keywords
+          EMOJI="✨"
+        fi
+        echo "emoji=$EMOJI" >> $GITHUB_OUTPUT
+        echo "Chosen emoji: $EMOJI"
+
+    - name: Add reaction to PR
+      # This step only runs if the workflow is triggered by a pull_request event
+      # and a pull request number is available.
+      if: github.event_name == 'pull_request' && github.event.pull_request.number
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const pull_request_number = context.payload.pull_request.number;
+          const reaction_emoji = '${{ steps.determine_mood.outputs.emoji }}';
+          console.log(`Attempting to add reaction '${reaction_emoji}' to PR #${pull_request_number}`);
+          try {
+            await github.rest.reactions.createForPullRequest({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pull_request_number,
+              content: reaction_emoji
+            });
+            console.log('Reaction added successfully.');
+          } catch (error) {
+            // This typically happens if the reaction already exists or due to permissions.
+            // For a whimsical utility, we can log and continue.
+            console.warn(`Failed to add reaction (might already exist or permissions issue): ${error.message}`);
+          }
