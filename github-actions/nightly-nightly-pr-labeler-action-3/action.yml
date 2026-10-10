@@ -1,0 +1,17 @@
+name: "PR Title Labeler"
+description: "Automatically adds labels to a PR based on title keywords."
+inputs:
+  label-mapping:
+    description: "JSON mapping of keyword to label"
+    required: false
+    default: '{"bug":"bug","feature":"enhancement","docs":"documentation"}'
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler
+      shell: bash
+      env:
+        INPUT_LABEL_MAPPING: ${{ inputs.label-mapping }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+      run: |
+        bash ${{ github.action_path }}/src/labeler.sh
