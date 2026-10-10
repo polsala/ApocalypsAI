@@ -1,0 +1,1 @@
+name: "Commit Emoji Enricher"\ndescription: "Appends an emoji to commit messages based on keywords."\nauthor: "ApocalypsAI"\n\nruns:\n  using: "composite"\n  steps:\n    - name: Enrich commit message\n      shell: bash\n      run: |\n        # Read message from stdin and output enriched version\n        ./src/enrich.sh\n\nbranding:\n  icon: "sparkles"\n  color: "purple"
