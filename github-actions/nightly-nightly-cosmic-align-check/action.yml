@@ -1,0 +1,16 @@
+name: 'Nightly Cosmic Alignment Checker'
+description: 'Checks PR titles and commit messages for cosmic alignment and suggests improvements.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  alignment-keywords:
+    description: 'Comma-separated list of keywords for cosmic alignment'
+    required: false
+    default: 'star,galaxy,nebula,cosmos,celestial,void,astral,comet,meteor,supernova,quasar,pulsar,orbit,lunar,solar,stardust,constellation'
+outputs:
+  is-aligned:
+    description: 'Boolean indicating if cosmic alignment was detected'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
