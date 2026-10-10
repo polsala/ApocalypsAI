@@ -1,0 +1,19 @@
+{
+  "name": "nightly-qr-code-creator",
+  "version": "0.1.0",
+  "bin": {
+    "qr-code": "./src/index.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  }
+}
