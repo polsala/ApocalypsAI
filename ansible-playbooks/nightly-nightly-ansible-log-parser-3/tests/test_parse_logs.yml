@@ -1,0 +1,57 @@
+# Mock rationale: This test uses Ansible's built-in capabilities to mock the execution of the playbook without actually running it against real hosts or log files. It verifies the structure and variable usage.
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_files: ['/var/log/syslog', '/var/log/auth.log']
+    log_patterns:
+      "ERROR messages": "ERROR"
+      "Failed logins": "Failed password for"
+      "Critical events": "CRITICAL"
+    report_output_path: "/tmp/ansible_log_analysis_report.txt"
+
+  tasks:
+    - name: Assert log_files variable is defined correctly
+      assert:
+        that:
+          - "log_files is defined"
+          - "log_files == ['/var/log/syslog', '/var/log/auth.log']"
+
+    - name: Assert log_patterns variable is defined correctly
+      assert:
+        that:
+          - "log_patterns is defined"
+          - "log_patterns['ERROR messages'] == 'ERROR'"
+          - "log_patterns['Failed logins'] == 'Failed password for'"
+          - "log_patterns['Critical events'] == 'CRITICAL'"
+
+    - name: Assert report_output_path variable is defined correctly
+      assert:
+        that:
+          - "report_output_path is defined"
+          - "report_output_path == '/tmp/ansible_log_analysis_report.txt'"
+
+    - name: Check if local_action for directory creation is present
+      assert:
+        that:
+          - "'local_action: file path={{ report_output_path | dirname }} state=directory' in playbook_content"
+      vars:
+        playbook_content: "{{ lookup('file', 'src/parse_logs.yml') }}"
+
+    - name: Check if loop over log files and patterns is present
+      assert:
+        that:
+          - "'with_nested:\n    - \"{{ log_files }}\"\n    - \"{{ log_patterns | dict2items }}\"' in playbook_content"
+      vars:
+        playbook_content: "{{ lookup('file', 'src/parse_logs.yml') }}"
+
+    - name: Check if grep command is used within the loop
+      assert:
+        that:
+          - "'command: grep -E "{{ item.pattern.regex }}" {{ item.log_file }}"' in playbook_content"
+      loop: "{{ [ {'log_file': '/var/log/syslog', 'pattern': {'name': 'ERROR messages', 'regex': 'ERROR'} } ] }}"
+      vars:
+        playbook_content: "{{ lookup('file', 'src/parse_logs.yml') }}"
