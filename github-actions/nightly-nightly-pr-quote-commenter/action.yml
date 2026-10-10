@@ -1,0 +1,52 @@
+name: "PR Quote Commenter"
+description: "Posts a whimsical quote as a comment on newly opened pull requests."
+branding:
+  icon: "message-square"
+  color: "purple"
+inputs: {}
+outputs: {}
+runs:
+  using: "composite"
+  steps:
+    - name: Select a random quote
+      id: select-quote
+      run: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Load quotes (one per line) from the bundled file
+        mapfile -t quotes < "${{ github.action_path }}/src/quotes.txt"
+        count=${#quotes[@]}
+        # Ensure we have at least one quote
+        if [[ $count -eq 0 ]]; then
+          echo "::error::No quotes found in src/quotes.txt"
+          exit 1
+        fi
+        # Pick a random index
+        idx=$((RANDOM % count))
+        chosen="${quotes[$idx]}"
+        # Escape double quotes for JSON payload later
+        escaped=$(printf "%s" "$chosen" | sed 's/"/\\"/g')
+        echo "quote=$escaped" >> $GITHUB_OUTPUT
+    - name: Post comment to PR
+      env:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+        COMMENT: ${{ steps.select-quote.outputs.quote }}
+      run: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+          echo "::error::GITHUB_TOKEN is not set"
+          exit 1
+        fi
+        if [[ -z "${PR_NUMBER:-}" ]]; then
+          echo "::error::PR_NUMBER is not available (not a pull_request event?)"
+          exit 1
+        fi
+        # Use curl to post the comment via GitHub REST API
+        curl -s -X POST \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" \
+          -d "{\"body\": \"$COMMENT\"}"
