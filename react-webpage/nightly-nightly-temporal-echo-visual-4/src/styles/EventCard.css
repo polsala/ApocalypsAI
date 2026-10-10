@@ -1,0 +1,53 @@
+.event-card {
+  background-color: #3a3a5a;
+  border: 1px solid #5a5a7a;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.event-card:hover {
+  background-color: #4a4a6a;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.event-timestamp {
+  flex-basis: 30%;
+  text-align: left;
+  color: #99ffcc;
+}
+
+.event-type {
+  flex-basis: 60%;
+  text-align: center;
+  color: #e0e0e0;
+}
+
+.expand-toggle {
+  flex-basis: 10%;
+  text-align: right;
+  color: #00ffcc;
+}
+
+.event-details {
+  background-color: #2a2a4a;
+  border-top: 1px solid #5a5a7a;
+  padding: 15px;
+  margin: 0;
+  text-align: left;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.9em;
+  color: #c0c0c0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
