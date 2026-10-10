@@ -1,0 +1,9 @@
+- name: Test SSH key rotation playbook (check mode)
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Include rotation playbook in check mode
+      import_playbook: ../src/rotate_ssh_keys.yml
+      vars:
+        ssh_key_path: "/tmp/test_nightly_ssh_key"
+      tags: check
