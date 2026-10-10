@@ -1,0 +1,9 @@
+#!/bin/bash
+FORTUNE_CMD=$(command -v fortune)
+COWSAY_CMD=$(command -v cowsay)
+
+if [ -n "$FORTUNE_CMD" ] && [ -n "$COWSAY_CMD" ]; then
+  "$FORTUNE_CMD" | "$COWSAY_CMD"
+else
+  echo "Serenity tools (fortune or cowsay) not found. Please ensure they are installed and in PATH." >&2
+fi
