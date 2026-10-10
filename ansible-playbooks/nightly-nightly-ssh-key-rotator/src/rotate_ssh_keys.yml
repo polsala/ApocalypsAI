@@ -1,0 +1,39 @@
+---
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars:
+    ssh_key_type: rsa
+    ssh_key_bits: 4096
+  tasks:
+    - name: Remove existing host keys
+      file:
+        path: "/etc/ssh/ssh_host_{{ item }}_key"
+        state: absent
+      loop:
+        - rsa
+        - ecdsa
+        - ed25519
+
+    - name: Generate new SSH host keys
+      command: >
+        ssh-keygen -t {{ ssh_key_type }} -b {{ ssh_key_bits }}
+        -f /etc/ssh/ssh_host_{{ ssh_key_type }}_key -N ''
+      args:
+        creates: "/etc/ssh/ssh_host_{{ ssh_key_type }}_key"
+
+    - name: Restart SSH service
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Fetch new public host key
+      command: ssh-keyscan -H {{ inventory_hostname }}
+      register: host_key
+
+    - name: Ensure known_hosts has updated key
+      known_hosts:
+        name: "{{ inventory_hostname }}"
+        key: "{{ host_key.stdout }}"
+        path: "~/.ssh/known_hosts"
+        state: present
