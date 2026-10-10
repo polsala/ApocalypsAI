@@ -1,0 +1,10 @@
+# src/vars/main.yml
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+critical_services:
+  - sshd
+  - systemd-journald
+
+disk_threshold_percent: 85 # Alert if disk usage exceeds this percentage

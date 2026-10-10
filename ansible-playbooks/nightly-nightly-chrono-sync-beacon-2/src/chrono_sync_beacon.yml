@@ -1,0 +1,94 @@
+---
+- name: Nightly Chrono-Sync Beacon - Temporal Alignment and Stability Check
+  hosts: chronos_servers
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure NTP/Chrony is installed and configured
+      block:
+        - name: Detect OS family
+          ansible.builtin.setup:
+            filter: ansible_os_family
+          delegate_to: localhost
+          run_once: true
+          changed_when: false
+
+        - name: Install NTP (Debian/Ubuntu)
+          ansible.builtin.apt:
+            name: ntp
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Install Chrony (RedHat/CentOS)
+          ansible.builtin.yum:
+            name: chrony
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Configure NTP servers (Debian/Ubuntu)
+          ansible.builtin.lineinfile:
+            path: /etc/ntp.conf
+            regexp: '^server '
+            line: "server {{ item }} iburst"
+            state: present
+            create: yes
+          loop: "{{ ntp_servers }}"
+          notify: Restart ntp service
+          when: ansible_os_family == "Debian"
+
+        - name: Configure Chrony servers (RedHat/CentOS)
+          ansible.builtin.lineinfile:
+            path: /etc/chrony.conf
+            regexp: '^server '
+            line: "server {{ item }} iburst"
+            state: present
+            create: yes
+          loop: "{{ ntp_servers }}"
+          notify: Restart chronyd service
+          when: ansible_os_family == "RedHat"
+
+        - name: Ensure NTP service is running and enabled (Debian/Ubuntu)
+          ansible.builtin.service:
+            name: ntp
+            state: started
+            enabled: yes
+          when: ansible_os_family == "Debian"
+
+        - name: Ensure Chronyd service is running and enabled (RedHat/CentOS)
+          ansible.builtin.service:
+            name: chronyd
+            state: started
+            enabled: yes
+          when: ansible_os_family == "RedHat"
+
+    - name: Verify critical service health
+      ansible.builtin.service_facts:
+      register: service_status_facts
+
+    - name: Fail if critical service is NOT running
+      ansible.builtin.fail:
+        msg: "ALERT: Service '{{ item }}' is NOT running!"
+      loop: "{{ critical_services }}"
+      when: service_status_facts.ansible_facts.services[item] is not defined or
+            not service_status_facts.ansible_facts.services[item].state == 'running'
+
+    - name: Monitor spatial integrity (disk space)
+      ansible.builtin.fail:
+        msg: "ALERT: Disk usage on {{ item.mount }} is at {{ item.size_available_percent }}% (threshold: {{ disk_threshold_percent }}%)"
+      loop: "{{ ansible_mounts }}"
+      when: item.size_available_percent is defined and item.size_available_percent | int > disk_threshold_percent | int
+
+  handlers:
+    - name: Restart ntp service
+      ansible.builtin.service:
+        name: ntp
+        state: restarted
+      when: ansible_os_family == "Debian"
+
+    - name: Restart chronyd service
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+      when: ansible_os_family == "RedHat"

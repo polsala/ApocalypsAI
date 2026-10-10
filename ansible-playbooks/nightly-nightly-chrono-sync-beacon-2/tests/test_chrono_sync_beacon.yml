@@ -1,0 +1,134 @@
+---
+- name: Test Nightly Chrono-Sync Beacon
+  hosts: localhost
+  gather_facts: no # We will mock facts
+
+  vars_files:
+    - ../src/vars/main.yml # Load default variables
+
+  tasks:
+    - name: Mock facts for a healthy Debian system
+      ansible.builtin.set_fact:
+        ansible_os_family: "Debian"
+        ansible_mounts:
+          - mount: /
+            size_available_percent: 50 # Well below threshold
+          - mount: /boot
+            size_available_percent: 30
+        ansible_facts:
+          services:
+            sshd:
+              state: running
+            systemd-journald:
+              state: running
+      # Mock rationale: Simulates a healthy Debian system to test the playbook's non-alerting behavior.
+
+    - name: Run chrono_sync_beacon in check mode for healthy system
+      ansible.builtin.include_tasks: ../src/chrono_sync_beacon.yml
+      args:
+        apply:
+          check_mode: yes
+      register: healthy_run_result
+      ignore_errors: true # Allow playbook to continue even if sub-playbook fails
+
+    - name: Assert no failures for healthy system
+      ansible.builtin.assert:
+        that:
+          - not healthy_run_result.failed
+        fail_msg: "Healthy system test failed: Playbook unexpectedly failed."
+        success_msg: "Healthy system test passed: No failures triggered."
+      # Mock rationale: Verifies that the playbook does not fail when system facts indicate a healthy state.
+
+    - name: Mock facts for a Debian system with a stopped service
+      ansible.builtin.set_fact:
+        ansible_os_family: "Debian"
+        ansible_mounts:
+          - mount: /
+            size_available_percent: 50
+        ansible_facts:
+          services:
+            sshd:
+              state: stopped # Mock sshd as stopped
+            systemd-journald:
+              state: running
+      # Mock rationale: Simulates a Debian system with a critical service (sshd) stopped to test service health alerting.
+
+    - name: Run chrono_sync_beacon in check mode for stopped service
+      ansible.builtin.include_tasks: ../src/chrono_sync_beacon.yml
+      args:
+        apply:
+          check_mode: yes
+      register: stopped_service_run_result
+      ignore_errors: true # Allow playbook to continue even if sub-playbook fails
+
+    - name: Assert failure for stopped service
+      ansible.builtin.assert:
+        that:
+          - stopped_service_run_result.failed
+          - "'ALERT: Service \'sshd\' is NOT running!' in stopped_service_run_result.stderr" # Fail module output goes to stderr
+        fail_msg: "Stopped service test failed: Expected service alert not found or playbook did not fail."
+        success_msg: "Stopped service test passed: Service alert triggered and playbook failed as expected."
+      # Mock rationale: Verifies that the playbook correctly identifies and fails on a stopped critical service.
+
+    - name: Mock facts for a Debian system with high disk usage
+      ansible.builtin.set_fact:
+        ansible_os_family: "Debian"
+        ansible_mounts:
+          - mount: /
+            size_available_percent: 90 # Mock high disk usage
+          - mount: /boot
+            size_available_percent: 30
+        ansible_facts:
+          services:
+            sshd:
+              state: running
+            systemd-journald:
+              state: running
+      # Mock rationale: Simulates a Debian system with high disk usage to test disk space alerting.
+
+    - name: Run chrono_sync_beacon in check mode for high disk usage
+      ansible.builtin.include_tasks: ../src/chrono_sync_beacon.yml
+      args:
+        apply:
+          check_mode: yes
+      register: high_disk_run_result
+      ignore_errors: true # Allow playbook to continue even if sub-playbook fails
+
+    - name: Assert failure for high disk usage
+      ansible.builtin.assert:
+        that:
+          - high_disk_run_result.failed
+          - "'ALERT: Disk usage on / is at 90% (threshold: 85%)' in high_disk_run_result.stderr"
+        fail_msg: "High disk usage test failed: Expected disk alert not found or playbook did not fail."
+        success_msg: "High disk usage test passed: Disk alert triggered and playbook failed as expected."
+      # Mock rationale: Verifies that the playbook correctly identifies and fails on high disk space utilization.
+
+    - name: Mock facts for a healthy RedHat system
+      ansible.builtin.set_fact:
+        ansible_os_family: "RedHat"
+        ansible_mounts:
+          - mount: /
+            size_available_percent: 40
+        ansible_facts:
+          services:
+            sshd:
+              state: running
+            chronyd:
+              state: running
+      # Mock rationale: Simulates a healthy RedHat system to test OS-specific logic.
+
+    - name: Run chrono_sync_beacon in check mode for healthy RedHat system
+      ansible.builtin.include_tasks: ../src/chrono_sync_beacon.yml
+      args:
+        apply:
+          check_mode: yes
+      register: healthy_redhat_run_result
+      ignore_errors: true # Allow playbook to continue even if sub-playbook fails
+
+    - name: Assert no failures for healthy RedHat system
+      ansible.builtin.assert:
+        that:
+          - not healthy_redhat_run_result.failed
+        fail_msg: "Healthy RedHat system test failed: Playbook unexpectedly failed for RedHat."
+        success_msg: "Healthy RedHat system test passed: No failures triggered for RedHat."
+      # Mock rationale: Verifies that the playbook correctly handles RedHat-specific service names (chronyd) and does not fail when healthy.
