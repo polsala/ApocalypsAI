@@ -1,0 +1,3 @@
+#!/usr/bin/env node\n\n/**\n * Generate a string representing the full 256‑color ANSI palette.\n * Each cell shows the background colour and its numeric code, padded to three characters.\n */\nexport function generatePalette(): string {\n  const rows: string[] = [];\n  for (let i = 0; i < 16; i++) {\n    const cols: string[] = [];\n    for (let j = 0; j < 16; j++) {\n      const code = i * 16 + j;\n      // Background colour escape sequence\n      const cell = `\x1b[48;5;${code}m ${code.toString().padStart(3, ' ')} \x1b[0m`;
+      cols.push(cell);\n    }\n    rows.push(cols.join(''));
+  }\n  return rows.join('\n');\n}\n\n// If the script is executed directly, print the palette\nif (require.main === module) {\n  console.log(generatePalette());\n}\n
