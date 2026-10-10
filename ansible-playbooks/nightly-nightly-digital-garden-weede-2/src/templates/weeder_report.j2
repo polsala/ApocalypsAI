@@ -1,0 +1,49 @@
+Digital Garden Weeder Report - {{ ansible_date_time.iso8601 }}
+
+Garden Path: {{ garden_path }}
+Quarantine Path: {{ quarantine_path }}
+Stale Threshold: {{ stale_threshold_days }} days
+Perform Quarantine: {{ perform_quarantine }}
+
+---
+Total Markdown Files Found: {{ processed_files | length }}
+
+---
+Stale Files (Modified over {{ stale_threshold_days }} days ago):
+{% if stale_files %}
+{% for file in stale_files %}
+- {{ file.path }} (Last Modified: {{ file.mtime | ansible.builtin.strftime('%Y-%m-%d %H:%M:%S') }})
+{% endfor %}
+{% else %}
+No stale files found.
+{% endif %}
+
+---
+Unlinked Files (Not referenced by other notes):
+{% if unlinked_files %}
+{% for file in unlinked_files %}
+- {{ file.path }}
+{% endfor %}
+{% else %}
+No unlinked files found.
+{% endif %}
+
+---
+Quarantine Candidates (Stale AND Unlinked):
+{% if quarantine_files %}
+{% for file in quarantine_files %}
+- {{ file.path }}
+{% endfor %}
+{% else %}
+No files identified for quarantine.
+{% endif %}
+
+---
+Action Taken:
+{% if perform_quarantine and quarantine_files %}
+{{ quarantine_files | length }} files moved to {{ quarantine_path }}.
+{% elif perform_quarantine and not quarantine_files %}
+Quarantine enabled, but no files met the criteria.
+{% else %}
+Quarantine is disabled. No files were moved.
+{% endif %}
