@@ -1,0 +1,11 @@
+---
+# Define your digital pet's characteristics here
+pet_name: "LogGobbler" # A whimsical name for your process
+pet_service_name: "loggobbler" # The actual systemd service name
+pet_working_dir: "/opt/loggobbler" # Directory where the pet lives/works
+pet_config_path: "/etc/loggobbler/config.ini" # Path to the pet's configuration file
+pet_log_dir: "/var/log/loggobbler" # Directory for the pet's log files
+pet_log_retention_days: 7 # How many days to keep old log files before cleanup
+pet_command: "/usr/bin/loggobbler --config {{ pet_config_path }}" # The command to start the pet
+pet_user: "loggobbler_user" # User to run the service as
+pet_group: "loggobbler_group" # Group to run the service as

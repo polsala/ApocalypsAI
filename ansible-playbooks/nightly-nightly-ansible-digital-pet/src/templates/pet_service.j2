@@ -1,0 +1,14 @@
+[Unit]
+Description=Manages the {{ pet_name }} digital pet
+After=network.target
+
+[Service]
+User={{ pet_user }}
+Group={{ pet_group }}
+WorkingDirectory={{ pet_working_dir }}
+ExecStart={{ pet_command }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

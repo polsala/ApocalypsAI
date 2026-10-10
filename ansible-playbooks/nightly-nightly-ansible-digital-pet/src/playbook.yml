@@ -1,0 +1,89 @@
+---
+- name: Ensure Digital Pet is Happy and Healthy
+  hosts: all
+  become: true # Requires sudo/root for service management and file operations in system directories
+  vars_files:
+    - vars/pet_config.yml
+
+  tasks:
+    - name: Ensure Digital Pet's home directory exists
+      ansible.builtin.file:
+        path: "{{ pet_working_dir }}"
+        state: directory
+        owner: "{{ pet_user }}"
+        group: "{{ pet_group }}"
+        mode: '0755'
+      tags: [ 'setup' ]
+
+    - name: Deploy Digital Pet's configuration file
+      ansible.builtin.template:
+        src: templates/pet_config_file.j2
+        dest: "{{ pet_config_path }}"
+        owner: "{{ pet_user }}"
+        group: "{{ pet_group }}"
+        mode: '0644'
+      notify: Restart Digital Pet
+      tags: [ 'config' ]
+
+    - name: Deploy Digital Pet's systemd service file
+      ansible.builtin.template:
+        src: templates/pet_service.j2
+        dest: "/etc/systemd/system/{{ pet_service_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd and Restart Digital Pet
+      tags: [ 'service' ]
+
+    - name: Ensure Digital Pet service is enabled and running
+      ansible.builtin.service:
+        name: "{{ pet_service_name }}"
+        state: started
+        enabled: true
+      tags: [ 'service' ]
+
+    - name: Gather Digital Pet service status
+      ansible.builtin.systemd_service: # Use systemd_service module for detailed status
+        name: "{{ pet_service_name }}"
+      register: pet_service_status
+      ignore_errors: true # In case service doesn't exist yet or fails to start
+      changed_when: false # This task only gathers info
+      tags: [ 'report' ]
+
+    - name: Clean Digital Pet's litter box (old log files)
+      ansible.builtin.find:
+        paths: "{{ pet_log_dir }}"
+        age: "{{ pet_log_retention_days }}d"
+        file_type: file
+      register: old_logs
+      tags: [ 'cleanup' ]
+
+    - name: Remove old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"
+      when: old_logs.files | length > 0
+      tags: [ 'cleanup' ]
+
+    - name: Report Digital Pet's current mood
+      ansible.builtin.debug:
+        msg: "The Digital Pet '{{ pet_name }}' is {{ 'purring happily' if (pet_service_status.status is defined and pet_service_status.status.ActiveState == 'active') else 'feeling a bit grumpy' }}!"
+      when: pet_service_status.status is defined
+      changed_when: false # This task doesn't change anything
+      tags: [ 'report' ]
+
+  handlers:
+    - name: Restart Digital Pet
+      ansible.builtin.service:
+        name: "{{ pet_service_name }}"
+        state: restarted
+      listen: "Restart Digital Pet"
+
+    - name: Reload systemd and Restart Digital Pet
+      ansible.builtin.systemd:
+        daemon_reload: true
+      ansible.builtin.service:
+        name: "{{ pet_service_name }}"
+        state: restarted
+      listen: "Reload systemd and Restart Digital Pet"

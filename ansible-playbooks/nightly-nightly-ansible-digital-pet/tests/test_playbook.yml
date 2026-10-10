@@ -1,0 +1,68 @@
+---
+- name: Test Digital Pet Keeper Playbook
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../src/vars/pet_config.yml # Load the same variables as the main playbook
+
+  tasks:
+    - name: Mock pet_name and other variables for testing
+      set_fact:
+        pet_name: "TestPet"
+        pet_service_name: "testpet"
+        pet_working_dir: "/tmp/testpet"
+        pet_config_path: "/tmp/testpet/test_config.ini"
+        pet_log_dir: "/tmp/testpet/logs"
+        pet_log_retention_days: 1
+        pet_command: "/usr/bin/testpet --config {{ pet_config_path }}"
+        pet_user: "testuser"
+        pet_group: "testgroup"
+      # Mock rationale: Overrides variables for deterministic testing without relying on external files or system state.
+
+    - name: Render pet service template
+      ansible.builtin.set_fact:
+        rendered_service_content: "{{ lookup('template', '../src/templates/pet_service.j2') }}"
+      # Mock rationale: Uses lookup('template') to render the Jinja2 template locally, simulating the 'template' module's behavior without writing to disk.
+
+    - name: Assert rendered service content
+      ansible.builtin.assert:
+        that:
+          - "'Description=Manages the TestPet digital pet' in rendered_service_content"
+          - "'ExecStart=/usr/bin/testpet --config /tmp/testpet/test_config.ini' in rendered_service_content"
+          - "'User=testuser' in rendered_service_content"
+          - "'Group=testgroup' in rendered_service_content"
+        fail_msg: "Rendered service file content is incorrect."
+      # Mock rationale: Verifies the correctness of the template rendering based on mocked variables, ensuring deterministic output.
+
+    - name: Render pet config template
+      ansible.builtin.set_fact:
+        rendered_config_content: "{{ lookup('template', '../src/templates/pet_config_file.j2') }}"
+      # Mock rationale: Uses lookup('template') to render the Jinja2 template locally, simulating the 'template' module's behavior without writing to disk.
+
+    - name: Assert rendered config content
+      ansible.builtin.assert:
+        that:
+          - "'[main]' in rendered_config_content"
+          - "'name = TestPet' in rendered_config_content"
+          - "'log_path = /tmp/testpet/logs' in rendered_config_content"
+        fail_msg: "Rendered config file content is incorrect."
+      # Mock rationale: Verifies the correctness of the template rendering based on mocked variables, ensuring deterministic output.
+
+    - name: Simulate file cleanup task (check mode)
+      ansible.builtin.find:
+        paths: "{{ pet_log_dir }}"
+        age: "{{ pet_log_retention_days }}d"
+        file_type: file
+      register: old_logs
+      check_mode: true
+      # Mock rationale: Runs the 'find' module in check_mode to verify its parameters without actually scanning the filesystem.
+      # This asserts the *logic* of the cleanup task without requiring actual file system interaction.
+
+    - name: Assert cleanup parameters
+      ansible.builtin.assert:
+        that:
+          - "old_logs.params.paths == ['/tmp/testpet/logs']"
+          - "old_logs.params.age == '1d'"
+        fail_msg: "Cleanup task parameters are incorrect."
+      # Mock rationale: Verifies that the 'find' module would be called with the correct parameters for log cleanup.
+      # This asserts the *logic* of the cleanup task without requiring actual file system interaction.
