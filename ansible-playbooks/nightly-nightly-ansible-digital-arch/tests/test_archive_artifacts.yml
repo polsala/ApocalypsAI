@@ -1,0 +1,71 @@
+---
+- name: Test Digital Archivist Playbook
+  hosts: localhost
+  gather_facts: no
+  connection: local # Mock rationale: Forces playbook to run locally, simulating remote operations on the local filesystem.
+
+  vars:
+    test_base_dir: "{{ lookup('env', 'HOME') }}/ansible_test_archive"
+    archive_base_dir: "{{ test_base_dir }}/archive"
+    source_paths:
+      - "{{ test_base_dir }}/sources/app_logs"
+      - "{{ test_base_dir }}/sources/config_files"
+    # Override current_timestamp for deterministic timestamping in tests
+    current_timestamp: "_20231027103000" # Mock rationale: Overrides the dynamic date lookup with a fixed value for deterministic file naming.
+
+  tasks:
+    - name: Clean up previous test run artifacts
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Allows cleanup to proceed even if directory doesn't exist.
+
+    - name: Create test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create source directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ source_paths }}"
+
+    - name: Create dummy source files
+      ansible.builtin.copy:
+        content: "This is a test log entry for {{ item.file }}"
+        dest: "{{ item.path }}/{{ item.file }}"
+        mode: '0644'
+      loop:
+        - { path: "{{ test_base_dir }}/sources/app_logs", file: "app.log" }
+        - { path: "{{ test_base_dir }}/sources/app_logs", file: "error.log" }
+        - { path: "{{ test_base_dir }}/sources/config_files", file: "server.conf" }
+        - { path: "{{ test_base_dir }}/sources/config_files", file: "database.yml" }
+
+    - name: Include the main playbook to run archiving
+      ansible.builtin.include_tasks:
+        file: ../src/archive_artifacts.yml
+      vars:
+        archive_base_dir: "{{ archive_base_dir }}"
+        source_paths: "{{ source_paths }}"
+        current_timestamp: "{{ current_timestamp }}" # Pass the mocked timestamp
+
+    - name: Verify archived files exist with timestamp
+      ansible.builtin.stat:
+        path: "{{ archive_base_dir }}/{{ item.expected_name }}"
+      register: stat_result
+      loop:
+        - { expected_name: "app_20231027103000.log" }
+        - { expected_name: "error_20231027103000.log" }
+        - { expected_name: "server_20231027103000.conf" }
+        - { expected_name: "database_20231027103000.yml" }
+      loop_control:
+        label: "{{ item.expected_name }}"
+      failed_when: not stat_result.results[loop_index].stat.exists
+
+    - name: Clean up test artifacts
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
