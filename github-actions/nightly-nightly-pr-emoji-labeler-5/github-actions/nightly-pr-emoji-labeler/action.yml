@@ -1,0 +1,21 @@
+name: PR Emoji Labeler
+description: Adds an emoji label based on PR title keywords.
+inputs:
+  token:
+    description: GITHUB_TOKEN
+    required: true
+  keyword_emoji_map:
+    description: JSON string mapping keywords to emojis.
+    required: false
+    default: '{"fix":"🔧","feat":"✨","docs":"📚","refactor":"♻️"}'
+runs:
+  using: "composite"
+  steps:
+    - name: Determine Emoji
+      id: emoji
+      run: |
+        bash "${{ github.action_path }}/src/main.sh"
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        KEYWORD_EMOJI_MAP: ${{ inputs.keyword_emoji_map }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
