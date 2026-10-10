@@ -1,0 +1,38 @@
+name: Nightly GitHub Action Lint Checker
+
+# This workflow is designed to be a reusable component for checking
+# the quality and correctness of other GitHub Actions workflow files.
+# It's a whimsical yet practical tool for maintaining sanity in automation.
+
+on: # This workflow can be triggered manually or via a cron job
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+  schedule:
+    # Run daily at 3:00 AM UTC to catch issues early
+    - cron: '0 3 * * *'
+
+jobs:
+  lint_workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install PyYAML yamale
+
+      - name: Lint GitHub Workflows
+        # This step uses a simple Python script to perform the linting.
+        # It checks for valid YAML syntax and some common anti-patterns.
+        run: python src/lint_workflows.py --workflow-path ${{ github.event.inputs.workflow_path || '.github/workflows/' }}
+
+      - name: Report findings (if any)
+        # This step is a placeholder. In a real scenario, you might want to
+        # create an issue or comment on a PR if linting fails.
+        # For this example, we rely on the Python script exiting with a non-zero
+        # status code to fail the job.
+        run: echo "Linting complete. Check job logs for any reported issues."
