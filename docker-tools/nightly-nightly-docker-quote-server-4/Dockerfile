@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY src/ ./src/\n\nENV FLASK_APP=src/app.py\nENV FLASK_RUN_HOST=0.0.0.0\nENV FLASK_RUN_PORT=8080\n\nEXPOSE 8080\n\nCMD ["flask", "run"]
