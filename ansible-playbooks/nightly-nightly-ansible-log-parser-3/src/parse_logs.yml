@@ -1,0 +1,58 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes)
+      file:
+        path: "{{ log_file_path }}"
+        state: touch
+        mode: '0644'
+      when: ansible_env.USER == 'root' # Only run as root for file creation
+
+    - name: Read log file content
+      slurp:
+        src: "{{ log_file_path }}"
+      register: log_content
+      when: ansible_env.USER == 'root' # Only run as root to read system logs
+
+    - name: Set log content fact
+      set_fact:
+        log_data: "{{ log_content.content | b64decode }}"
+      when: log_content.content is defined
+
+    - name: Initialize log summary fact
+      set_fact:
+        log_summary: {}
+      when: log_data is defined
+
+    - name: Process each line of the log
+      loop: "{{ log_data.splitlines() }}"
+      when: log_data is defined
+      block:
+        - name: Check for error keywords
+          set_fact:
+            is_error: "{{ item | regex_search(error_keywords | join('|'), ignorecase=True) }}"
+
+        - name: Group similar log entries
+          set_fact:
+            group_key: "{{ item | regex_search(group_by_regex, ignorecase=True) | default(item) }}"
+          when: is_error
+
+        - name: Update log summary
+          set_fact:
+            log_summary: "{{ log_summary | combine({ group_key: { 'count': (log_summary[group_key].count | default(0)) + 1, 'sample': item } }, recursive=True) }}"
+          when: is_error
+
+    - name: Display log summary report
+      debug:
+        msg: "Log Summary for {{ inventory_hostname }}:\n{{ log_summary | to_nice_json }}"
+      when: log_summary is defined and log_summary | length > 0
+
+    - name: Display message if no errors found
+      debug:
+        msg: "No significant errors found in {{ log_file_path }} on {{ inventory_hostname }}."
+      when: log_summary is defined and log_summary | length == 0
