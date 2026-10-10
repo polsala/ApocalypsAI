@@ -1,0 +1,21 @@
+---
+- name: Ghost Buster – exorcise orphaned "nobody" processes
+  hosts: all
+  become: true
+  vars:
+    ghost_user: "nobody"
+  tasks:
+    - name: Find ghost processes owned by {{ ghost_user }}
+      command: ps -eo pid,user,comm | awk '$2=="{{ ghost_user }}" {print $1}'
+      register: ghost_pids
+      changed_when: false
+
+    - name: Kill ghost processes
+      when: ghost_pids.stdout != ""
+      shell: kill -9 {{ item }}
+      loop: "{{ ghost_pids.stdout_lines }}"
+      ignore_errors: true
+
+    - name: Celebrate the exorcism
+      debug:
+        msg: "👻 Ghosts exorcised! All clear on {{ inventory_hostname }}."
