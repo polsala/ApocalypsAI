@@ -1,0 +1,47 @@
+name: "Nightly Apocalypse Quote Poster"
+description: "Posts a random apocalypse‑themed quote to an issue."
+
+inputs:
+  github_token:
+    description: "GitHub token with repo scope"
+    required: true
+  issue_number:
+    description: "Issue number to comment on"
+    required: true
+  quotes:
+    description: "Optional multiline list of quotes"
+    required: false
+    default: |
+      "The only thing we have to fear is fear itself."
+      "When the world ends, make sure you have a good story."
+      "Even in the wasteland, coffee is essential."
+      "Survival is 10% skill and 90% sarcasm."
+      "Hope is the last thing you find in a bunker."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Select random quote
+      id: pick
+      run: |
+        set -e
+        if [ -n "${{ inputs.quotes }}" ]; then
+          mapfile -t arr <<< "${{ inputs.quotes }}"
+        else
+          mapfile -t arr <<'EOF'
+"The only thing we have to fear is fear itself."
+"When the world ends, make sure you have a good story."
+"Even in the wasteland, coffee is essential."
+"Survival is 10% skill and 90% sarcasm."
+"Hope is the last thing you find in a bunker."
+EOF
+        fi
+        idx=$(( RANDOM % ${#arr[@]} ))
+        echo "quote=${arr[$idx]}" >> $GITHUB_OUTPUT
+    - name: Post comment
+      run: |
+        curl -s -X POST \
+          -H "Authorization: token ${{ inputs.github_token }}" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/issues/${{ inputs.issue_number }}/comments \
+          -d "{\"body\": \"${{ steps.pick.outputs.quote }}\"}"
