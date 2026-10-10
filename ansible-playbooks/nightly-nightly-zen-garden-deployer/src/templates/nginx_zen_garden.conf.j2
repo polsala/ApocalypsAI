@@ -1,0 +1,16 @@
+server {
+    listen 80;
+    server_name {{ ansible_fqdn | default(ansible_hostname) }}; # Use FQDN or hostname
+
+    root {{ zen_garden_path }};
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+    }
+}

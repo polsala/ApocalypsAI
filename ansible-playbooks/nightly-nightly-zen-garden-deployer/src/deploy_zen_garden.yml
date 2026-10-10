@@ -1,0 +1,74 @@
+---
+- name: Deploy Digital Zen Garden
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure Nginx is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian" # Only for Debian-based systems
+
+    - name: Ensure Nginx is started and enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Create zen garden directory
+      ansible.builtin.file:
+        path: "{{ zen_garden_path }}"
+        state: directory
+        mode: '0755'
+        owner: www-data
+        group: www-data
+
+    - name: Deploy Nginx configuration for zen garden
+      ansible.builtin.template:
+        src: templates/nginx_zen_garden.conf.j2
+        dest: "{{ nginx_conf_path }}/zen_garden.conf"
+        mode: '0644'
+      notify: Reload Nginx
+
+    - name: Remove default Nginx site if it exists
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload Nginx
+
+    - name: Deploy initial index.html with a random zen quote
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: "{{ zen_garden_path }}/index.html"
+        mode: '0644'
+        owner: www-data
+        group: www-data
+      vars:
+        current_zen_quote: "{{ zen_quotes | random }}"
+
+    - name: Deploy zen quote update script
+      ansible.builtin.template:
+        src: templates/update_zen_quote.sh.j2
+        dest: /usr/local/bin/update_zen_quote.sh
+        mode: '0755'
+
+    - name: Schedule cron job for zen quote updates
+      ansible.builtin.cron:
+        name: "Update Digital Zen Garden quote"
+        minute: "0" # Every hour
+        hour: "*"
+        day: "*"
+        month: "*"
+        weekday: "*"
+        job: "/usr/local/bin/update_zen_quote.sh {{ zen_garden_path }}/index.html"
+        user: root # Script needs to write to www-data owned file, so run as root or ensure permissions
+
+  handlers:
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
