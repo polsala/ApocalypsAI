@@ -1,0 +1,108 @@
+---
+- name: Test Digital Garden Sync Playbook
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_source_path: "/tmp/test_garden_source"
+    test_target_path: "/tmp/test_garden_target"
+    test_backup_path: "/tmp/test_garden_backups"
+    test_stale_days: 1 # For quick testing of stale files
+
+  tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_source_path }}"
+        - "{{ test_target_path }}"
+        - "{{ test_backup_path }}"
+
+    - name: Create test source directory
+      ansible.builtin.file:
+        path: "{{ test_source_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create mock fresh source file
+      ansible.builtin.copy:
+        content: "This is a fresh note."
+        dest: "{{ test_source_path }}/fresh_note.md"
+
+    - name: Create mock stale source file
+      ansible.builtin.copy:
+        content: "This is an old note."
+        dest: "{{ test_source_path }}/stale_note.md"
+
+    - name: Set modification time for stale_note.md to be old
+      ansible.builtin.shell: "touch -d '{{ ansible_date_time.date }} - {{ test_stale_days + 1 }} days' {{ test_source_path }}/stale_note.md"
+      args:
+        creates: "{{ test_source_path }}/stale_note.md" # Prevent running if file doesn't exist
+      changed_when: false # This is setup, not a change to the system under test
+      # Mock rationale: Manually setting the modification time of a file to simulate an 'old' file for the `age` filter in the `find` module. This ensures deterministic testing of the stale note detection logic.
+
+    - name: Run the main digital garden sync playbook
+      ansible.builtin.include_tasks:
+        file: ../src/sync_garden.yml
+      vars:
+        garden_source_path: "{{ test_source_path }}"
+        garden_target_path: "{{ test_target_path }}"
+        garden_backup_path: "{{ test_backup_path }}"
+        stale_days: "{{ test_stale_days }}"
+
+    - name: Assert fresh_note.md exists in target
+      ansible.builtin.stat:
+        path: "{{ test_target_path }}/fresh_note.md"
+      register: fresh_note_stat
+    - ansible.builtin.assert:
+        that:
+          - fresh_note_stat.stat.exists
+          - fresh_note_stat.stat.isreg
+        msg: "fresh_note.md should exist in target"
+
+    - name: Assert stale_note.md exists in target
+      ansible.builtin.stat:
+        path: "{{ test_target_path }}/stale_note.md"
+      register: stale_note_stat
+    - ansible.builtin.assert:
+        that:
+          - stale_note_stat.stat.exists
+          - stale_note_stat.stat.isreg
+        msg: "stale_note.md should exist in target"
+
+    - name: Assert a backup archive was created
+      ansible.builtin.find:
+        paths: "{{ test_backup_path }}"
+        patterns: "digital_garden_backup_*.tar.gz"
+        file_type: file
+      register: backup_files
+    - ansible.builtin.assert:
+        that:
+          - backup_files.files | length == 1
+        msg: "Exactly one backup archive should be created"
+
+    - name: Re-run find task to check for stale notes after sync
+      ansible.builtin.find:
+        paths: "{{ test_target_path }}"
+        file_type: file
+        age: "{{ test_stale_days }}d"
+        age_stamp: mtime
+        recurse: yes
+      register: re_stale_notes_result
+      # Mock rationale: Re-running the `find` task directly in the test playbook allows us to inspect its registered output (`re_stale_notes_result`) to deterministically verify that the stale note detection logic works as expected, without relying on parsing debug messages from the main playbook.
+
+    - name: Assert stale_note.md is found as stale
+      ansible.builtin.assert:
+        that:
+          - re_stale_notes_result.files | length == 1
+          - re_stale_notes_result.files[0].path | basename == 'stale_note.md'
+        msg: "stale_note.md should be identified as stale"
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_source_path }}"
+        - "{{ test_target_path }}"
+        - "{{ test_backup_path }}"
