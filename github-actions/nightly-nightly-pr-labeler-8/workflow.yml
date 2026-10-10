@@ -1,0 +1,62 @@
+name: PR Labeler
+on:
+  workflow_call:
+    inputs:
+      label_map:
+        description: 'JSON mapping of glob patterns to labels'
+        required: true
+        type: string
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Determine changed files
+        id: changed
+        run: |
+          echo "::group::Git diff"
+          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > changed_files.txt
+          cat changed_files.txt
+          echo "::endgroup::"
+          echo "files=$(cat changed_files.txt | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+      - name: Compute labels
+        id: labels
+        run: |
+          echo "Parsing label map..."
+          echo '${{ inputs.label_map }}' > map.json
+          LABELS=()
+          for pattern in $(jq -r 'keys[]' map.json); do
+            label=$(jq -r ".[\"$pattern\"]" map.json)
+            if grep -E "${pattern}" <<< "$(cat changed_files.txt)" > /dev/null; then
+              LABELS+=("$label")
+            fi
+          done
+          # Remove duplicates
+          UNIQUE_LABELS=$(printf "%s\n" "${LABELS[@]}" | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "labels=$UNIQUE_LABELS" >> $GITHUB_OUTPUT
+      - name: Add labels via GitHub API
+        if: steps.labels.outputs.labels != '[]'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          LABELS=$(echo '${{ steps.labels.outputs.labels }}' | jq -r '.[]')
+          for lbl in $LABELS; do
+            echo "Adding label $lbl to PR #$PR_NUMBER"
+            curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels \
+              -d "{\"labels\":[\"$lbl\"]}"
+          done
