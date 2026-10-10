@@ -1,0 +1,28 @@
+name: 'Nightly Commit Chronometer'
+description: 'Detects temporal stasis in your branch by checking the age of the last commit.'
+inputs:
+  max-stasis-days:
+    description: 'Maximum number of days a commit can be "stale" before triggering a warning or failure.'
+    required: true
+    default: '7'
+  fail-on-stasis:
+    description: 'If true, the action will fail the workflow if stasis is detected. Otherwise, it will only warn.'
+    required: false
+    default: 'false'
+outputs:
+  stasis-detected:
+    description: 'True if temporal stasis was detected, false otherwise.'
+    value: ${{ steps.check.outputs.stasis-detected }}
+  commit-age-days:
+    description: 'The age of the last commit in days.'
+    value: ${{ steps.check.outputs.commit-age-days }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      shell: bash
+      run: |
+        # Pass inputs to the script
+        "${{ github.action_path }}"/src/check_stasis.sh \
+          "${{ inputs.max-stasis-days }}" \
+          "${{ inputs.fail-on-stasis }}"
