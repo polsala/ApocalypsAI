@@ -1,0 +1,1 @@
+pub fn generate_qr(data: &str) -> String {\n    use qrcode::QrCode;\n    use qrcode::render::unicode;\n    let code = QrCode::new(data).expect("Failed to create QR code");\n    code.render::<unicode::Dense1x2>()\n        .quiet_zone(false)\n        .build()\n}\n

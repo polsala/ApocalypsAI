@@ -1,0 +1,1 @@
+# QR Cryptic Generator\n\nA tiny Rust CLI that turns a text string into an ASCII QR code, useful for survivors to exchange hidden messages without electronics.\n\n## Usage\n\n```sh\ncargo run --quiet -- "Hello, wasteland!"\n```\n\nThe program prints the QR code to stdout.\n\n## Build\n\n```sh\ncargo build --release\n```\n\n## Test\n\n```sh\ncargo test\n```

@@ -1,0 +1,1 @@
+use clap::Parser;\nuse qr_cryptic_generator::generate_qr;\n\n#[derive(Parser)]\n#[command(author, version, about, long_about = None)]\nstruct Args {\n    /// Text to encode into QR\n    text: String,\n}\n\nfn main() {\n    let args = Args::parse();\n    let qr = generate_qr(&args.text);\n    println!("{}", qr);\n}\n
