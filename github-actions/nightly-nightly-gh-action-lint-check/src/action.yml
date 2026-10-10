@@ -1,0 +1,27 @@
+name: 'YAML Linter & Validator'
+author: 'ApocalypsAI'
+description: 'Lints and validates YAML files in a repository.'
+inputs:
+  schema_path:
+    description: 'Path to a JSON schema file for validation.'
+    required: false
+    default: ''
+  yamllint_config:
+    description: 'Path to a custom .yamllint configuration file.'
+    required: false
+    default: ''
+  include_globs:
+    description: 'Glob pattern to include specific files (e.g., "**/*.yml").'
+    required: false
+    default: "**/*.yml"
+  exclude_globs:
+    description: 'Glob pattern to exclude specific files (e.g., "**/vendor/**").'
+    required: false
+    default: ''
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  entrypoint: '/entrypoint.sh'
+branding:
+  icon: 'check-circle'
+  color: 'blue'
