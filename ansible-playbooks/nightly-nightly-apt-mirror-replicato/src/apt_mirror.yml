@@ -1,0 +1,30 @@
+- hosts: all
+  become: true
+  vars:
+    repo_url: "{{ repo_url | default('http://archive.ubuntu.com/ubuntu') }}"
+    mirror_dir: "{{ mirror_dir | default('/opt/apt-mirror') }}"
+    apt_mirror_cmd: "{{ apt_mirror_cmd | default('apt-mirror') }}"
+  tasks:
+    - name: Ensure mirror directory exists
+      file:
+        path: "{{ mirror_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create apt-mirror configuration
+      copy:
+        dest: /etc/apt/mirror.list
+        content: |
+          set base_path    {{ mirror_dir }}
+          set defaultarch  amd64
+          set nthreads     20
+          set _tilde 0
+          deb {{ repo_url }} {{ ansible_distribution_release }} main restricted universe multiverse
+          deb {{ repo_url }} {{ ansible_distribution_release }}-updates main restricted universe multiverse
+          deb {{ repo_url }} {{ ansible_distribution_release }}-security main restricted universe multiverse
+        mode: '0644'
+
+    - name: Run apt-mirror (or mock command)
+      command: "{{ apt_mirror_cmd }}"
+      args:
+        chdir: "{{ mirror_dir }}"
