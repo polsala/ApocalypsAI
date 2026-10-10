@@ -1,0 +1,1 @@
+pub fn color_line(code: u8) -> String {\n    format!("{}: \\x1b[38;5;{}m█\\x1b[0m", code, code)\n}\n\npub fn generate_palette(range: std::ops::Range<u8>) -> String {\n    range.map(|c| color_line(c)).collect::<Vec<_>>().join("\\n")\n}\n
