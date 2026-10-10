@@ -1,0 +1,32 @@
+{
+  "name": "nightly-temporal-anomaly-prioritizer",
+  "version": "1.0.0",
+  "description": "A type-safe CLI tool to categorize and prioritize temporal anomalies.",
+  "main": "dist/index.js",
+  "bin": {
+    "nightly-tap": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "apocalypsai",
+    "temporal",
+    "anomaly",
+    "prioritizer",
+    "cli",
+    "typescript"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
