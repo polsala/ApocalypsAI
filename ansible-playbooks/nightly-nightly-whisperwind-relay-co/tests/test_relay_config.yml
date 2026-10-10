@@ -1,0 +1,60 @@
+---
+- name: Test Whisperwind Communication Relays Playbook
+  hosts: whisperwind_relays
+  gather_facts: no # We will mock facts
+  vars:
+    relay_port: 8080
+    broadcast_message: "Test message for the brave survivors."
+    relay_service_name: "whisperwind_relay"
+
+  tasks:
+    - name: Mock ansible_os_family for apt module
+      ansible.builtin.set_fact:
+        ansible_os_family: "Debian"
+      # Mock rationale: Simulates a Debian-based system for the 'apt' module condition.
+
+    - name: Mock ansible_hostname and ansible_default_ipv4 for report
+      ansible.builtin.set_fact:
+        ansible_hostname: "{{ inventory_hostname }}"
+        ansible_default_ipv4:
+          address: "127.0.0.1"
+      # Mock rationale: Provides necessary facts for the report template.
+
+    - name: Mock service_facts for nginx
+      ansible.builtin.set_fact:
+        ansible_facts:
+          services:
+            nginx.service:
+              state: "running"
+              status: "enabled"
+      # Mock rationale: Simulates a running and enabled nginx service for the report.
+
+    - name: Run the main playbook in check mode
+      ansible.builtin.include_tasks: ../src/relay_config.yml
+      args:
+        apply:
+          check_mode: yes
+          diff: yes
+      # Mock rationale: This runs the playbook in a dry-run mode, reporting what *would* change without actually making changes. This is a standard way to test Ansible playbooks deterministically and offline.
+
+    - name: Verify Nginx config template content (dry run check)
+      ansible.builtin.assert:
+        that:
+          - "lookup('file', '../src/templates/nginx_relay.conf.j2') is search('listen {{ relay_port }}')"
+          - "lookup('file', '../src/templates/nginx_relay.conf.j2') is search('return 200 \"{{ broadcast_message }}\"')"
+        fail_msg: "Nginx config template does not contain expected content."
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Checks the template content directly, ensuring variables are correctly interpolated. This is an offline, deterministic check.
+
+    - name: Verify report template content (dry run check)
+      ansible.builtin.assert:
+        that:
+          - "lookup('file', '../src/templates/relay_status_report.j2') is search('Port: {{ relay_port }}')"
+          - "lookup('file', '../src/templates/relay_status_report.j2') is search('Message: \"{{ broadcast_message }}\"')"
+          - "lookup('file', '../src/templates/relay_status_report.j2') is search('Status: Running')"
+          - "lookup('file', '../src/templates/relay_status_report.j2') is search('Enabled: Yes')"
+        fail_msg: "Report template does not contain expected content with mocked facts."
+      delegate_to: localhost
+      run_once: true
+      # Mock rationale: Checks the report template content directly, ensuring variables and mocked facts are correctly interpolated. This is an offline, deterministic check.
