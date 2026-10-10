@@ -1,0 +1,1 @@
+output "shelter_id" {\n  description = "Synthetic shelter identifier"\n  value       = "shelter-${replace(var.shelter_name, \" \", \"-\")}"\n}\n\noutput "energy_production_estimate" {\n  description = "Estimated daily energy production in kWh"\n  value       = var.solar_capacity_kw * 4\n}
