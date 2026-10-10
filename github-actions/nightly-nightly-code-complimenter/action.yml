@@ -1,0 +1,30 @@
+name: "Nightly Code Complimenter"
+description: "Posts a whimsical, encouraging compliment on new or updated pull requests."
+inputs:
+  github_token:
+    description: 'GitHub token with permissions to post comments (e.g., ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  pr_number:
+    description: 'The pull request number (e.g., ${{ github.event.pull_request.number }})'
+    required: true
+  repo_full_name:
+    description: 'The full name of the repository (e.g., octocat/hello-world)'
+    required: true
+  compliment_type:
+    description: 'Type of compliment (e.g., general, refactor, new-feature). Currently only "general" is supported.'
+    required: false
+    default: 'general'
+runs:
+  using: "composite"
+  steps:
+    - name: Run Complimenter Script
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        REPO_FULL_NAME: ${{ inputs.repo_full_name }}
+        COMPLIMENT_TYPE: ${{ inputs.compliment_type }}
+      run: |
+        # Ensure the script is executable
+        chmod +x ${{ github.action_path }}/src/complimenter.sh
+        ${{ github.action_path }}/src/complimenter.sh
