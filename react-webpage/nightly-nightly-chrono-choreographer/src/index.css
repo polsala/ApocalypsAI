@@ -1,0 +1,155 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: #e0e0e0;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.app-container {
+  background-color: #3a3f47;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+h1 {
+  color: #61dafb;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #bbbbbb;
+  margin-bottom: 20px;
+}
+
+.task-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.task-form input[type="text"],
+.task-form input[type="number"] {
+  padding: 10px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background-color: #444;
+  color: #e0e0e0;
+  flex-grow: 1;
+  min-width: 150px;
+}
+
+.task-form button {
+  padding: 10px 20px;
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.task-form button:hover {
+  background-color: #21a1f1;
+}
+
+.task-list-container {
+  margin-bottom: 30px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.task-item {
+  background-color: #444;
+  border: 1px solid #555;
+  border-radius: 5px;
+  margin-bottom: 8px;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1em;
+}
+
+.task-controls button {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 5px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.task-controls button:hover:not(:disabled) {
+  background-color: #555;
+}
+
+.task-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.choreography-display h2 {
+  margin-bottom: 15px;
+}
+
+.dance-floor {
+  display: flex;
+  width: 100%;
+  height: 80px;
+  background-color: #555;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 15px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.dance-move {
+  background-color: #61dafb;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #282c34;
+  font-weight: bold;
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-right: 1px solid #282c34;
+  box-sizing: border-box;
+  transition: width 0.3s ease;
+}
+
+.dance-move:last-child {
+  border-right: none;
+}
+
+.dance-move-label {
+  padding: 0 5px;
+}
+
+.total-duration {
+  margin-top: 20px;
+  font-style: italic;
+  color: #999;
+}
