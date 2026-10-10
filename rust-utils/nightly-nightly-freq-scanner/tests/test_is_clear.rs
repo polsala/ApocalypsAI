@@ -1,0 +1,1 @@
+use nightly_freq_scanner::is_clear_frequency;\n\n#[test]\nfn test_integration_known() {\n    assert!(is_clear_frequency(0.0));\n    assert!(!is_clear_frequency(2.0));\n    assert!(is_clear_frequency(3.0));\n}\n
