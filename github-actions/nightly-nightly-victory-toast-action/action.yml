@@ -1,0 +1,21 @@
+name: 'Nightly Victory Toast'
+description: 'Posts a whimsical victory toast message upon successful workflow completion.'
+inputs:
+  message:
+    description: 'Custom victory message. If empty, a random whimsical message is used.'
+    required: false
+  github-token:
+    description: 'GitHub token for posting comments (e.g., ${{ github.token }}).' # Needs issues:write permission
+    required: true
+  target-pr-number:
+    description: 'The PR number to comment on. Overrides automatic PR detection.'
+    required: false
+  target-issue-number:
+    description: 'The Issue number to comment on. Overrides automatic PR/PR number detection.'
+    required: false
+outputs:
+  comment-url:
+    description: 'The URL of the created comment (if applicable).'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
