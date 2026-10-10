@@ -1,0 +1,36 @@
+{
+  "name": "nightly-chrono-cleaner",
+  "version": "1.0.0",
+  "description": "A TypeScript CLI tool to detect and report 'temporal echoes' (stale, unused, or deprecated files) in your project, helping maintain a tidy timeline.",
+  "main": "dist/index.js",
+  "bin": {
+    "nightly-chrono-cleaner": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "utility",
+    "code-hygiene",
+    "stale-files",
+    "deprecated"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
