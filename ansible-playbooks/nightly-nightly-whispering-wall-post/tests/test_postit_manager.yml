@@ -1,0 +1,61 @@
+---
+- name: Test Whispering Wall Post-it Manager
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    test_target_file: "/tmp/test_whispering_wall_message.txt"
+    # Mock rationale: Provide a fixed date for deterministic message selection.
+    # This ensures the 'selected_message' in the main playbook is predictable for testing.
+    ansible_date_time:
+      date: "2023-10-27"
+    # Mock rationale: Hardcode messages for assertion, as they are loaded from vars/messages.yml
+    # in the main playbook, but we need them explicitly here for the assert task to be self-contained.
+    whispering_wall_messages:
+      - "Remember, even in the void, your Wi-Fi signal is strong. Probably."
+      - "Today's forecast: 100% chance of existential dread, with scattered hope."
+      - "Don't forget to hydrate! The future is thirsty work."
+      - "Your courage is a beacon in the temporal storm. Keep shining!"
+      - "Warning: May contain traces of optimism. Consume responsibly."
+      - "The void stares back, but you've got snacks. You're winning."
+      - "Error 404: Sanity not found. Proceed anyway."
+      - "Is it just me, or is reality glitching today?"
+      - "Stay weird, stay wild, stay alive."
+
+  tasks:
+    - name: Ensure target directory exists for test
+      ansible.builtin.file:
+        path: "{{ test_target_file | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Remove previous test file if it exists
+      ansible.builtin.file:
+        path: "{{ test_target_file }}"
+        state: absent
+
+    - name: Include the main playbook for execution
+      ansible.builtin.include_tasks:
+        file: ../src/postit_manager.yml
+      vars:
+        target_file: "{{ test_target_file }}" # Override target_file for testing
+
+    - name: Read the content of the target file
+      ansible.builtin.slurp:
+        src: "{{ test_target_file }}"
+      register: file_content
+
+    - name: Decode file content
+      ansible.builtin.set_fact:
+        decoded_content: "{{ file_content['content'] | b64decode | trim }}"
+
+    - name: Assert the content is one of the expected messages
+      ansible.builtin.assert:
+        that:
+          - decoded_content in whispering_wall_messages
+        fail_msg: "The content '{{ decoded_content }}' is not one of the expected messages."
+
+    - name: Clean up test file
+      ansible.builtin.file:
+        path: "{{ test_target_file }}"
+        state: absent
