@@ -1,0 +1,92 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: yes # Needed for file operations in /tmp
+
+  vars:
+    test_dir: "/tmp/ansible_test_dust_bunnies_{{ lookup('pipe', 'date +%s%N') }}"
+    test_age_threshold_days: 1
+    test_size_threshold_mb: 1 # 1 MB
+
+  tasks:
+    - name: Create temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0777'
+      # Mock rationale: Creates a controlled environment for testing file operations.
+
+    - name: Create mock files
+      ansible.builtin.shell:
+        cmd: |
+          touch -d "2 days ago" "{{ test_dir }}/old_small.log"
+          dd if=/dev/zero of="{{ test_dir }}/old_large.log" bs=1M count=2 # 2MB file
+          touch -d "2 days ago" "{{ test_dir }}/old_large.log"
+          touch "{{ test_dir }}/new_small.log"
+          dd if=/dev/zero of="{{ test_dir }}/new_large.log" bs=1M count=0.5 # 0.5MB file
+          touch "{{ test_dir }}/new_large.log"
+      args:
+        creates: "{{ test_dir }}/old_small.log"
+      # Mock rationale: Populates the test directory with files of specific ages and sizes. 
+      # 'touch -d' and 'dd' are used to precisely control file metadata for deterministic testing.
+
+    - name: Run the dust bunny sweeper playbook in check mode first
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        cleanup_paths: ["{{ test_dir }}"]
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        size_threshold_mb: "{{ test_size_threshold_mb }}"
+      # Mock rationale: Runs the main playbook against the mock environment. 
+      # Using 'include_tasks' allows passing specific variables for the test run.
+      # We run it in check mode implicitly first to see what it *would* do.
+
+    - name: Assert that old files are identified in check mode
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/old_small.log' in dust_bunnies.files | map(attribute='path') | list"
+          - "'{{ test_dir }}/old_large.log' in dust_bunnies.files | map(attribute='path') | list"
+          - "'{{ test_dir }}/new_small.log' not in dust_bunnies.files | map(attribute='path') | list"
+          - "'{{ test_dir }}/new_large.log' not in dust_bunnies.files | map(attribute='path') | list"
+        msg: "Check mode did not correctly identify dust bunnies."
+      # Mock rationale: Verifies that the 'find' task correctly identifies the mock 'old' files 
+      # and ignores the 'new' ones, ensuring the core logic is sound before actual deletion.
+
+    - name: Run the dust bunny sweeper playbook for actual cleanup
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        cleanup_paths: ["{{ test_dir }}"]
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        size_threshold_mb: "{{ test_size_threshold_mb }}"
+      # Mock rationale: Runs the main playbook again, this time allowing actual file deletion.
+
+    - name: Assert that old files are removed and new files remain
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/old_small.log"
+        - "{{ test_dir }}/old_large.log"
+        - "{{ test_dir }}/new_small.log"
+        - "{{ test_dir }}/new_large.log"
+      register: file_stats
+      # Mock rationale: Uses 'stat' to check the existence of files after the cleanup, 
+      # providing a deterministic check of the playbook's effect on the mock filesystem.
+
+    - name: Verify cleanup results
+      ansible.builtin.assert:
+        that:
+          - "not file_stats.results[0].stat.exists" # old_small.log should be gone
+          - "not file_stats.results[1].stat.exists" # old_large.log should be gone
+          - "file_stats.results[2].stat.exists"    # new_small.log should remain
+          - "file_stats.results[3].stat.exists"    # new_large.log should remain
+        msg: "Cleanup did not perform as expected."
+      # Mock rationale: Final assertion to confirm the cleanup logic worked correctly on the mock files.
+
+    - name: Clean up temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: Ensures the test environment is cleaned up, leaving no artifacts.

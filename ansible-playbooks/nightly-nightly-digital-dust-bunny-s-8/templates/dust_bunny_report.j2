@@ -1,0 +1,28 @@
+Digital Dust Bunny Report for {{ ansible_hostname }}
+Generated on: {{ ansible_date_time.iso8601_micro }}
+
+Cleanup Paths: {{ cleanup_paths | join(', ') }}
+Age Threshold: {{ age_threshold_days }} days
+Size Threshold: {{ size_threshold_mb }} MB
+
+--- Findings ---
+Total potential dust bunnies found: {{ total_found }}
+
+{% if total_found > 0 %}
+Identified files:
+{% for file in dust_bunnies.files %}
+- {{ file.path }} (Age: {{ ((ansible_date_time.epoch | int - file.mtime) / (60*60*24)) | round(1) }} days, Size: {{ (file.size / (1024*1024)) | round(2) }} MB)
+{% endfor %}
+{% else %}
+No digital dust bunnies found! Your system is sparkling clean.
+{% endif %}
+
+--- Action Taken ---
+{% if not ansible_check_mode %}
+Removed {{ removed_files | length }} files:
+{% for file in removed_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+(Dry Run Mode: No files were actually removed.)
+{% endif %}

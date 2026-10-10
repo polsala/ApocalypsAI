@@ -1,0 +1,11 @@
+---
+# Directories to scan for old and large files
+cleanup_paths:
+  - /tmp
+  - /var/log
+
+# Files older than this many days will be considered 'dust bunnies'
+age_threshold_days: 30
+
+# Files larger than this many megabytes will be considered 'dust bunnies'
+size_threshold_mb: 100
