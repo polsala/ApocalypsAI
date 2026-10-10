@@ -1,0 +1,1 @@
+use assert_cmd::Command;\nuse predicates::prelude::*;\n\n#[test]\nfn runs_and_outputs_quote() {\n    let mut cmd = Command::cargo_bin("apocalypse-quote").unwrap();\n    cmd.assert()\n        .success()\n        .stdout(predicate::str::contains("> "));\n}\n
