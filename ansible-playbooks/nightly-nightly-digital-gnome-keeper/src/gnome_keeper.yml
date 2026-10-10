@@ -1,0 +1,43 @@
+---
+- name: Deploy and maintain the Digital Garden Gnome
+  hosts: garden_servers
+  become: yes # Requires root privileges for /opt and cron
+  vars:
+    gnome_base_dir: "/opt/digital_garden"
+    gnome_name: "gnome_buddy.txt"
+    gnome_owner: "root"
+    gnome_group: "root"
+    gnome_dir_mode: "0755"
+    gnome_file_mode: "0644"
+    enable_gnome_cron: true
+    gnome_cron_log_file: "/var/log/gnome_greetings.log"
+
+  tasks:
+    - name: Ensure gnome base directory exists
+      ansible.builtin.file:
+        path: "{{ gnome_base_dir }}/gnome"
+        state: directory
+        owner: "{{ gnome_owner }}"
+        group: "{{ gnome_group }}"
+        mode: "{{ gnome_dir_mode }}"
+
+    - name: Copy the digital gnome file
+      ansible.builtin.copy:
+        src: files/gnome.txt
+        dest: "{{ gnome_base_dir }}/gnome/{{ gnome_name }}"
+        owner: "{{ gnome_owner }}"
+        group: "{{ gnome_group }}"
+        mode: "{{ gnome_file_mode }}"
+
+    - name: Configure daily gnome greeting cron job
+      ansible.builtin.cron:
+        name: "digital garden gnome greeting"
+        minute: "0"
+        hour: "8"
+        day: "*"
+        month: "*"
+        weekday: "*"
+        job: "cat {{ gnome_base_dir }}/gnome/{{ gnome_name }} >> {{ gnome_cron_log_file }} 2>&1"
+        user: "{{ gnome_owner }}" # Run cron as the gnome owner
+        state: "{{ 'present' if enable_gnome_cron else 'absent' }}"
+      when: enable_gnome_cron is defined and enable_gnome_cron | bool

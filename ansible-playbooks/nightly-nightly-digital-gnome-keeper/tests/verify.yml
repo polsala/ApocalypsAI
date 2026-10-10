@@ -1,0 +1,75 @@
+---
+- name: Verify Digital Garden Gnome Keeper Playbook state
+  hosts: garden_servers
+  become: yes
+  vars:
+    gnome_base_dir: "/opt/digital_garden"
+    gnome_name: "gnome_buddy.txt"
+    gnome_owner: "root"
+    gnome_group: "root"
+    gnome_dir_mode: "0755"
+    gnome_file_mode: "0644"
+    gnome_cron_log_file: "/var/log/gnome_greetings.log"
+    # Mock rationale: These variables are set to match the defaults in the main playbook
+    # to ensure deterministic testing of the expected state.
+
+  tasks:
+    - name: Verify gnome directory exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ gnome_base_dir }}/gnome"
+      register: gnome_dir_stat
+      # Mock rationale: Using ansible.builtin.stat to check local filesystem state.
+      # This is deterministic as it checks the state created by the playbook.
+
+    - name: Assert gnome directory properties
+      ansible.builtin.assert:
+        that:
+          - gnome_dir_stat.stat.exists is true
+          - gnome_dir_stat.stat.isdir is true
+          - gnome_dir_stat.stat.mode == "{{ gnome_dir_mode }}"
+          - gnome_dir_stat.stat.pw_name == "{{ gnome_owner }}"
+          - gnome_dir_stat.stat.gr_name == "{{ gnome_group }}"
+        msg: "Gnome directory {{ gnome_base_dir }}/gnome does not exist or has incorrect properties."
+
+    - name: Verify gnome file exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ gnome_base_dir }}/gnome/{{ gnome_name }}"
+      register: gnome_file_stat
+      # Mock rationale: Using ansible.builtin.stat to check local filesystem state.
+      # This is deterministic as it checks the state created by the playbook.
+
+    - name: Assert gnome file properties
+      ansible.builtin.assert:
+        that:
+          - gnome_file_stat.stat.exists is true
+          - gnome_file_stat.stat.isreg is true
+          - gnome_file_stat.stat.mode == "{{ gnome_file_mode }}"
+          - gnome_file_stat.stat.pw_name == "{{ gnome_owner }}"
+          - gnome_file_stat.stat.gr_name == "{{ gnome_group }}"
+        msg: "Gnome file {{ gnome_base_dir }}/gnome/{{ gnome_name }} does not exist or has incorrect properties."
+
+    - name: Verify gnome file content (simple check)
+      ansible.builtin.slurp:
+        src: "{{ gnome_base_dir }}/gnome/{{ gnome_name }}"
+      register: gnome_content
+      # Mock rationale: Using ansible.builtin.slurp to read local file content.
+      # This is deterministic as it checks the content copied by the playbook.
+
+    - name: Assert gnome file content contains expected string
+      ansible.builtin.assert:
+        that:
+          - "'Hello, friend!' in (gnome_content['content'] | b64decode)"
+        msg: "Gnome file content does not contain expected greeting."
+
+    - name: Verify cron job is present
+      ansible.builtin.command: "crontab -l"
+      register: crontab_output
+      changed_when: false # This command does not change system state
+      # Mock rationale: Using ansible.builtin.command to check local cron table.
+      # This is deterministic as it checks the state created by the playbook.
+
+    - name: Assert cron job entry exists
+      ansible.builtin.assert:
+        that:
+          - "'cat {{ gnome_base_dir }}/gnome/{{ gnome_name }} >> {{ gnome_cron_log_file }} 2>&1' in crontab_output.stdout"
+        msg: "Gnome cron job not found in crontab."
