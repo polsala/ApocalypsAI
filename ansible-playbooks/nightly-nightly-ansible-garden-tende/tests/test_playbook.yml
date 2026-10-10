@@ -1,0 +1,133 @@
+---
+- name: Test Survival Garden Tender Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no # We'll set specific facts for deterministic testing
+  vars:
+    test_garden_base_path: "/tmp/ansible_test_garden"
+    test_garden_plot_name: "test_plot_alpha"
+    test_garden_owner_username: "test_gardener"
+    test_garden_owner_uid: 9001
+    test_garden_owner_gid: 9001
+    # Mock rationale: Simulate a Debian system for package installation tests without needing a real OS.
+    ansible_os_family: "Debian"
+    # Mock rationale: Fix date/time for deterministic harvest report filenames, ensuring test consistency.
+    ansible_date_time:
+      iso8601_basic: "20240101T120000"
+      iso8601_micro: "2024-01-01T12:00:00.000000Z"
+
+  pre_tasks:
+    - name: Ensure test base path is clean before test
+      ansible.builtin.file:
+        path: "{{ test_garden_base_path }}"
+        state: absent
+      become: yes # Needed for /tmp cleanup
+
+  roles:
+    - role: ../roles/garden_plot # Relative path to the role under test
+      vars:
+        garden_base_path: "{{ test_garden_base_path }}"
+        garden_plot_name: "{{ test_garden_plot_name }}"
+        garden_owner_username: "{{ test_garden_owner_username }}"
+        garden_owner_uid: "{{ test_garden_owner_uid }}"
+        garden_owner_gid: "{{ test_garden_owner_gid }}"
+      become: yes # Needed for user/group/file creation
+
+  post_tasks:
+    - name: Verify essential tools would be installed (check_mode)
+      ansible.builtin.apt:
+        name:
+          - jq
+          - curl
+          - git
+        state: present
+        update_cache: yes
+      check_mode: yes
+      register: apt_check
+      when: ansible_os_family == "Debian"
+      # Mock rationale: In check_mode, apt module reports changed if packages are not present.
+      # We assert it would change, assuming a clean test environment where packages might be missing.
+      assert:
+        that:
+          - apt_check.changed is defined
+          - apt_check.changed == true
+
+    - name: Verify garden owner group exists and is idempotent
+      ansible.builtin.group:
+        name: "{{ test_garden_owner_username }}"
+        gid: "{{ test_garden_owner_gid }}"
+        state: present
+      check_mode: yes
+      register: group_check
+      become: yes
+      assert:
+        that:
+          - group_check.changed is defined
+          - group_check.changed == false # Should be idempotent on a second run (check_mode)
+
+    - name: Verify garden owner user exists and is idempotent
+      ansible.builtin.user:
+        name: "{{ test_garden_owner_username }}"
+        uid: "{{ test_garden_owner_uid }}"
+        group: "{{ test_garden_owner_username }}"
+        shell: /bin/bash
+        home: "/home/{{ test_garden_owner_username }}"
+        state: present
+      check_mode: yes
+      register: user_check
+      become: yes
+      assert:
+        that:
+          - user_check.changed is defined
+          - user_check.changed == false # Should be idempotent on a second run (check_mode)
+
+    - name: Verify specific garden plot directory exists and is idempotent
+      ansible.builtin.file:
+        path: "{{ test_garden_base_path }}/{{ test_garden_plot_name }}"
+        state: directory
+        owner: "{{ test_garden_owner_username }}"
+        group: "{{ test_garden_owner_username }}"
+        mode: '0770'
+      check_mode: yes
+      register: dir_check
+      become: yes
+      assert:
+        that:
+          - dir_check.changed is defined
+          - dir_check.changed == false # Should be idempotent on a second run (check_mode)
+
+    - name: Verify watering task always reports changed
+      ansible.builtin.file:
+        path: "{{ test_garden_base_path }}/{{ test_garden_plot_name }}/watered_today.log"
+        state: touch
+        owner: "{{ test_garden_owner_username }}"
+        group: "{{ test_garden_owner_username }}"
+        mode: '0660'
+      check_mode: yes
+      register: water_check
+      become: yes
+      assert:
+        that:
+          - water_check.changed is defined
+          - water_check.changed == true # Designed to always report changed for whimsical effect
+
+    - name: Verify harvesting task always reports changed
+      ansible.builtin.file:
+        path: "{{ test_garden_base_path }}/{{ test_garden_plot_name }}/harvest_report_{{ ansible_date_time.iso8601_basic }}.log"
+        state: touch
+        owner: "{{ test_garden_owner_username }}"
+        group: "{{ test_garden_owner_username }}"
+        mode: '0660'
+      check_mode: yes
+      register: harvest_check
+      become: yes
+      assert:
+        that:
+          - harvest_check.changed is defined
+          - harvest_check.changed == true # Designed to always report changed for whimsical effect
+
+    - name: Clean up test base path
+      ansible.builtin.file:
+        path: "{{ test_garden_base_path }}"
+        state: absent
+      become: yes
