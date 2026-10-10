@@ -1,0 +1,1 @@
+FROM alpine:3.18\n\n# Install Bash (Alpine ships with ash by default)\nRUN apk add --no-cache bash\n\n# Copy the greeter script into the image\nCOPY src/greeter.sh /usr/local/bin/greeter.sh\n\n# Ensure the script is executable\nRUN chmod +x /usr/local/bin/greeter.sh\n\n# Set the entrypoint to the greeter script\nENTRYPOINT [\"/usr/local/bin/greeter.sh\"]
