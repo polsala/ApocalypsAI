@@ -1,0 +1,1 @@
+#!/usr/bin/env sh\nset -e\nFILE="/tips.txt"\nif [ -z "$TIP_INDEX" ]; then\n  # random tip using awk\n  line=$(awk 'BEGIN{srand()} {a[NR]=$0} END{print a[int(rand()*NR)+1]}' "$FILE")\nelse\n  line=$(sed -n "$((TIP_INDEX+1))p" "$FILE")\nfi\necho "$line"
