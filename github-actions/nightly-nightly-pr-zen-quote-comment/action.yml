@@ -1,0 +1,18 @@
+name: "PR Zen Quote Commenter"
+description: "Posts a random zen quote as a comment on a pull request."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: "Post zen quote"
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_API_URL: ${{ env.GITHUB_API_URL || 'https://api.github.com' }}
+      run: |
+        ./src/post_zen.sh
