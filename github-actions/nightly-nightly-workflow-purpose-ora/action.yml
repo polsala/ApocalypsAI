@@ -1,0 +1,17 @@
+name: 'Workflow Purpose Oracle'
+description: 'Ensures all GitHub Actions workflows have a documented purpose, trigger, criticality, and a whimsical survival tip.'
+inputs:
+  workflow_dir:
+    description: 'The directory containing GitHub Actions workflow files.'
+    required: false
+    default: '.github/workflows'
+outputs:
+  status:
+    description: 'The overall status of the check (success or failure).'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Workflow Purpose Check
+      shell: bash
+      run: |
+        "${{ github.action_path }}/src/check_workflow_purpose.sh" "${{ inputs.workflow_dir }}"

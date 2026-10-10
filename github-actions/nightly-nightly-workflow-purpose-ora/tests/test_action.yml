@@ -1,0 +1,102 @@
+name: Test Workflow Purpose Oracle
+on: [push, workflow_dispatch]
+
+jobs:
+  test_valid_workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create valid workflow file
+        run: |
+          mkdir -p tests/workflows
+          cat <<EOF > tests/workflows/valid_workflow.yml
+          # --- Workflow Oracle Entry ---
+          # Purpose: This workflow builds the project.
+          # Trigger: on: push
+          # Criticality: High
+          # Survival Tip: Always have a backup plan for your builds!
+          # --- End Workflow Oracle Entry ---
+          name: Valid Workflow
+          on: push
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "Building..."
+          EOF
+      - name: Run action on valid workflow
+        id: check_valid
+        uses: ./github-actions/nightly-workflow-purpose-oracle
+        with:
+          workflow_dir: tests/workflows
+      - name: Assert success for valid workflow
+        if: steps.check_valid.outcome != 'success'
+        run: |
+          echo "::error::Expected success for valid workflow, but got ${{ steps.check_valid.outcome }}"
+          exit 1
+        # Mock rationale: This test creates a temporary valid workflow file to simulate a real scenario.
+        # It's deterministic because the content is fixed and the action's logic is purely based on string matching.
+
+  test_missing_block:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create workflow missing block
+        run: |
+          mkdir -p tests/workflows
+          cat <<EOF > tests/workflows/invalid_workflow_missing_block.yml
+          name: Invalid Workflow Missing Block
+          on: push
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "Building..."
+          EOF
+      - name: Run action on missing block workflow
+        id: check_missing
+        uses: ./github-actions/nightly-workflow-purpose-oracle
+        with:
+          workflow_dir: tests/workflows
+      - name: Assert failure for missing block
+        if: steps.check_missing.outcome != 'failure'
+        run: |
+          echo "::error::Expected failure for missing block workflow, but got ${{ steps.check_missing.outcome }}"
+          exit 1
+        # Mock rationale: This test creates a temporary invalid workflow file missing the required documentation block.
+        # It's deterministic as the content is fixed and the action's logic correctly identifies the absence.
+
+  test_empty_field:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create workflow with empty field
+        run: |
+          mkdir -p tests/workflows
+          cat <<EOF > tests/workflows/invalid_workflow_empty_field.yml
+          # --- Workflow Oracle Entry ---
+          # Purpose: This workflow builds the project.
+          # Trigger:
+          # Criticality: High
+          # Survival Tip: Always have a backup plan for your builds!
+          # --- End Workflow Oracle Entry ---
+          name: Invalid Workflow Empty Field
+          on: push
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "Building..."
+          EOF
+      - name: Run action on empty field workflow
+        id: check_empty
+        uses: ./github-actions/nightly-workflow-purpose-oracle
+        with:
+          workflow_dir: tests/workflows
+      - name: Assert failure for empty field
+        if: steps.check_empty.outcome != 'failure'
+        run: |
+          echo "::error::Expected failure for empty field workflow, but got ${{ steps.check_empty.outcome }}"
+          exit 1
+        # Mock rationale: This test creates a temporary invalid workflow file with an empty 'Trigger' field.
+        # It's deterministic as the content is fixed and the action's logic correctly identifies the empty field.
