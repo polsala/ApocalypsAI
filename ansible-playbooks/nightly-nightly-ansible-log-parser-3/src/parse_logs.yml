@@ -1,0 +1,57 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars:
+    log_file_path: "/var/log/syslog"
+    error_keywords: ["error", "failed", "warning", "critical", "denied", "exception"]
+    report_title: "Log Analysis Report"
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes if not present)
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: touch
+      when: ansible_env.TEST_MODE == 'true'
+
+    - name: Read log file content
+      ansible.builtin.slurp:
+        src: "{{ log_file_path }}"
+      register: log_content_raw
+      ignore_errors: yes
+
+    - name: Decode log content
+      ansible.builtin.set_fact:
+        log_content: "{{ log_content_raw.content | b64decode }}"
+      when: log_content_raw.content is defined
+
+    - name: Initialize error counts fact
+      ansible.builtin.set_fact:
+        error_counts: {}
+      when: log_content is defined
+
+    - name: Iterate through lines and count errors
+      ansible.builtin.set_fact:
+        error_counts: "{{ error_counts | combine({item: (error_counts[item] | default(0)) + 1}) }}"
+      loop: "{{ log_content.splitlines() | select("search", item) | list }}"
+      loop_control:
+        loop_var: "line"
+      when: log_content is defined
+      vars:
+        item: "{{ keyword }}"
+      with_items: "{{ error_keywords }}"
+
+    - name: Sort errors by count (descending)
+      ansible.builtin.set_fact:
+        sorted_errors: "{{ error_counts | dict2items | sort(attribute='value', reverse=True) }}"
+      when: error_counts is defined
+
+    - name: Display log analysis summary
+      ansible.builtin.debug:
+        msg: "{{ report_title }}:\n{{ (sorted_errors | map(attribute='key') | join('\n') ) if sorted_errors is defined and sorted_errors | length > 0 else 'No significant errors found.' }}"
+      when: log_content is defined
+
+    - name: Report if log file was not accessible
+      ansible.builtin.debug:
+        msg: "Error: Could not access log file at {{ log_file_path }}. Please check permissions or path."
+      when: log_content_raw.failed

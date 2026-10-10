@@ -1,0 +1,54 @@
+---
+- name: Test Log Parser Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_file_path: "/tmp/test_syslog.log"
+    error_keywords: ["error", "failed", "warning"]
+    report_title: "Log Analysis Report"
+
+  tasks:
+    - name: Create a mock log file
+      ansible.builtin.copy:
+        content: |
+          Oct 10 10:00:01 server1 kernel: Some informational message.
+          Oct 10 10:01:05 server1 systemd[1]: Starting Some Service...
+          Oct 10 10:02:10 server1 app[123]: An error occurred during processing.
+          Oct 10 10:03:15 server1 systemd[1]: Some Service failed to start.
+          Oct 10 10:04:20 server1 app[123]: Another warning message.
+          Oct 10 10:05:25 server1 kernel: Another informational message.
+          Oct 10 10:06:30 server1 app[123]: Yet another error.
+        dest: "{{ log_file_path }}"
+      register: mock_log_file
+
+    - name: Set test mode environment variable
+      ansible.builtin.set_fact:
+        ansible_env: { TEST_MODE: "true" }
+
+    - name: Include the main playbook with overridden vars
+      ansible.builtin.include_tasks:
+        file: ../src/parse_logs.yml
+      vars:
+        log_file_path: "{{ log_file_path }}"
+        error_keywords: "{{ error_keywords }}"
+        report_title: "{{ report_title }}"
+
+    - name: Assert that the correct errors are reported
+      ansible.builtin.assert:
+        that:
+          - "'Log Analysis Report:' in ansible_facts.debug_output"
+          - "'error' in ansible_facts.debug_output"
+          - "'failed' in ansible_facts.debug_output"
+          - "'warning' in ansible_facts.debug_output"
+          - "'error' appears 2 times in ansible_facts.debug_output"
+          - "'failed' appears 1 time in ansible_facts.debug_output"
+          - "'warning' appears 1 time in ansible_facts.debug_output"
+        fail_msg: "Log analysis output is not as expected."
+        success_msg: "Log analysis output is as expected."
+
+    - name: Clean up mock log file
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: absent
