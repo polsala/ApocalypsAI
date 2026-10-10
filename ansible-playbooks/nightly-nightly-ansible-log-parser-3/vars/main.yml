@@ -1,0 +1,21 @@
+log_file: "/var/log/syslog"
+
+error_patterns:
+  - ".*error:.*"
+  - ".*failed to.*"
+  - ".*critical.*"
+
+warning_patterns:
+  - ".*warning:.*"
+  - ".*deprecated.*"
+  - ".*notice:.*"
+
+dummy_log_content: |
+  This is a normal log line.
+  An error occurred during processing.
+  Something failed to complete successfully.
+  A critical issue was detected.
+  This is another normal log line.
+  A warning about a deprecated feature.
+  A notice about system status.
+  Another error: unexpected input.

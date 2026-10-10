@@ -1,0 +1,55 @@
+---
+- name: Parse System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes)
+      ansible.builtin.file:
+        path: "{{ log_file }}"
+        state: touch
+        mode: '0644'
+      when: ansible_env.USER == 'root' # Only run as root for file creation
+
+    - name: Create dummy log content (for testing purposes)
+      ansible.builtin.copy:
+        content: "{{ dummy_log_content }}"
+        dest: "{{ log_file }}"
+        mode: '0644'
+      when: ansible_env.USER == 'root' # Only run as root for file creation
+
+    - name: Read log file content
+      ansible.builtin.command: "cat {{ log_file }}"
+      register: log_content_raw
+      changed_when: false
+
+    - name: Extract error lines
+      ansible.builtin.set_fact:
+        error_lines: "{{ (log_content_raw.stdout_lines | select('match', item) | list) }}"
+      loop: "{{ error_patterns }}"
+      register: error_matches
+
+    - name: Extract warning lines
+      ansible.builtin.set_fact:
+        warning_lines: "{{ (log_content_raw.stdout_lines | select('match', item) | list) }}"
+      loop: "{{ warning_patterns }}"
+      register: warning_matches
+
+    - name: Aggregate unique error lines
+      ansible.builtin.set_fact:
+        unique_error_lines: "{{ (error_matches.results | map(attribute='stdout') | flatten | unique | list) }}"
+
+    - name: Aggregate unique warning lines
+      ansible.builtin.set_fact:
+        unique_warning_lines: "{{ (warning_matches.results | map(attribute='stdout') | flatten | unique | list) }}"
+
+    - name: Generate summary report
+      ansible.builtin.template:
+        src: templates/log_summary.j2
+        dest: "/tmp/log_summary_{{ inventory_hostname }}.txt"
+
+    - name: Display summary report path
+      ansible.builtin.debug:
+        msg: "Log summary report generated at /tmp/log_summary_{{ inventory_hostname }}.txt on {{ inventory_hostname }}"
