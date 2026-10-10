@@ -1,0 +1,1 @@
+# Build stage\nFROM golang:1.22-alpine AS builder\nWORKDIR /app\n\n# Copy go.mod and source files\nCOPY src/go.mod ./\nCOPY src/*.go ./\n\n# Build the binary\nRUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o quote-server .\n\n# Run stage\nFROM alpine:3.18\nWORKDIR /app\nCOPY --from=builder /app/quote-server .\nEXPOSE 8080\nENTRYPOINT ["./quote-server"]\n
