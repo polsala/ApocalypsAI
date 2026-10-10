@@ -1,0 +1,1 @@
+const facts = [\n  "Honey never spoils.",\n  "Bananas are berries.",\n  "Octopuses have three hearts."\n];\n\nfunction getFact() {\n  const idx = Math.floor(Math.random() * facts.length);\n  return facts[idx];\n}\n\nmodule.exports = { getFact };
