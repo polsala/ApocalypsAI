@@ -1,0 +1,29 @@
+{
+  "name": "nightly-digital-dust-sweeper",
+  "version": "1.0.0",
+  "description": "Scans directories for ancient, unused files (digital dust bunnies) and suggests them for archival or deletion.",
+  "main": "src/index.js",
+  "bin": {
+    "dust-sweeper": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "cleanup",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "sinon": "^17.0.1"
+  }
+}
