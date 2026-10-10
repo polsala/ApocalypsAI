@@ -1,0 +1,107 @@
+---
+- name: Nightly Digital Dust-Bunny Sweeper
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/cleanup_targets.yml
+  vars:
+    report_dir: "{{ playbook_dir }}/reports"
+    report_file: "{{ report_dir }}/dust_report_{{ ansible_date_time.iso8601 | replace(':', '-') }}.txt"
+
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+    - name: Initialize cleanup results
+      ansible.builtin.set_fact:
+        cleanup_results: []
+        apt_autoremove_needed: false
+
+    - name: Vacuuming the temporary file carpets
+      ansible.builtin.find:
+        paths: "{{ item.path }}"
+        age: "{{ item.age }}"
+        patterns: "{{ item.patterns | default(['*']) }}"
+        file_type: file
+      loop: "{{ cleanup_paths | selectattr('path', 'in', ['/tmp', '/var/tmp']) | list }}"
+      register: temp_files_to_clean
+
+    - name: Sweeping away old temporary files
+      ansible.builtin.file:
+        path: "{{ found_file.path }}"
+        state: absent
+      loop: "{{ temp_files_to_clean.results | map(attribute='files') | flatten }}"
+      loop_control:
+        loop_var: found_file
+      when: temp_files_to_clean.results is defined and found_file.path is defined
+      register: temp_cleanup_status
+
+    - name: Record temporary file cleanup results
+      ansible.builtin.set_fact:
+        cleanup_results: "{{ cleanup_results + [{'path': item.item.path, 'age': item.item.age, 'cleaned_count': item.files | length}] }}"
+      loop: "{{ temp_files_to_clean.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Combing through old log lint
+      ansible.builtin.find:
+        paths: "{{ item.path }}"
+        age: "{{ item.age }}"
+        patterns: "{{ item.patterns | default(['*.gz', '*.log.[0-9]', '*.old']) }}"
+        file_type: file
+      loop: "{{ cleanup_paths | selectattr('path', '==', '/var/log') | list }}"
+      register: log_files_to_clean
+
+    - name: Disposing of ancient log scrolls
+      ansible.builtin.file:
+        path: "{{ found_file.path }}"
+        state: absent
+      loop: "{{ log_files_to_clean.results | map(attribute='files') | flatten }}"
+      loop_control:
+        loop_var: found_file
+      when: log_files_to_clean.results is defined and found_file.path is defined
+      register: log_cleanup_status
+
+    - name: Record log file cleanup results
+      ansible.builtin.set_fact:
+        cleanup_results: "{{ cleanup_results + [{'path': item.item.path, 'age': item.item.age, 'cleaned_count': item.files | length}] }}"
+      loop: "{{ log_files_to_clean.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Checking for orphaned packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoremove: no
+        autoclean: no
+        update_cache: yes
+        dry_run: yes
+      register: apt_check_result
+      when: ansible_os_family == "Debian"
+
+    - name: Set fact if apt autoremove is needed
+      ansible.builtin.set_fact:
+        apt_autoremove_needed: true
+      when:
+        - ansible_os_family == "Debian"
+        - apt_check_result.stdout is defined
+        - "'The following packages will be REMOVED' in apt_check_result.stdout"
+
+    - name: Autoremove orphaned packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoremove: yes
+      when:
+        - ansible_os_family == "Debian"
+        - apt_autoremove_needed
+      register: apt_autoremove_result
+
+    - name: Generate the Digital Dust-Bunny Sweeper Report
+      ansible.builtin.template:
+        src: dust_report.j2
+        dest: "{{ report_file }}"
+      delegate_to: localhost
+      run_once: true

@@ -1,0 +1,15 @@
+---
+# Define paths and criteria for digital dust cleanup
+cleanup_paths:
+  - path: /tmp
+    age: 7d # Files older than 7 days
+    patterns: ["*"] # All files
+  - path: /var/tmp
+    age: 30d # Files older than 30 days
+    patterns: ["*"] # All files
+  - path: /var/log
+    age: 30d # Logs older than 30 days
+    patterns:
+      - "*.gz"
+      - "*.log.[0-9]"
+      - "*.old"
