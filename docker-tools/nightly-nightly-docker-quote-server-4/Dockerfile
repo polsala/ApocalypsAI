@@ -1,0 +1,1 @@
+# Build stage\nFROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY go.mod .\nCOPY src/ ./src/\nRUN go build -o /quote-server ./src/main.go\n\n# Runtime stage\nFROM alpine:latest\nCOPY --from=builder /quote-server /quote-server\nEXPOSE 8080\nENTRYPOINT ["/quote-server"]
