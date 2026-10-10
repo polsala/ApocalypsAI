@@ -1,0 +1,117 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  margin-bottom: 20px;
+}
+
+.compass-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  border: 5px solid #61dafb;
+  background-color: #3a3f47;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  box-shadow: 0 0 20px rgba(97, 218, 251, 0.5);
+}
+
+.compass-rose {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.compass-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3em;
+  color: #61dafb;
+  z-index: 2;
+}
+
+.celestial-body {
+  position: absolute;
+  font-size: 1.8em;
+  z-index: 1;
+  transition: all 0.5s ease-out;
+}
+
+.cardinal-points {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.cardinal-points .north {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cardinal-points .east {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.cardinal-points .south {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cardinal-points .west {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.advice-section {
+  margin-top: 30px;
+  max-width: 600px;
+  padding: 20px;
+  background-color: #3a3f47;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.advice-text {
+  font-style: italic;
+  color: #a0a0a0;
+  margin-bottom: 20px;
+}
+
+.drift-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.drift-button:hover {
+  background-color: #21a1f1;
+}
