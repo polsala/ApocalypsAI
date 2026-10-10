@@ -1,0 +1,76 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: #f0f0f0;
+}
+
+#root {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1, h2, h3 {
+  color: #61dafb;
+}
+
+button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #21a1f1;
+}
+
+input[type="text"],
+input[type="datetime-local"],
+input[type="number"],
+select,
+textarea {
+  width: calc(100% - 22px);
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #3a3f47;
+  color: #f0f0f0;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.anomaly-list {
+  list-style: none;
+  padding: 0;
+}
+
+.anomaly-item {
+  background-color: #3a3f47;
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 5px solid #61dafb;
+}
+
+.anomaly-item p {
+  margin: 5px 0;
+}
+
+.anomaly-item strong {
+  color: #98c379;
+}
