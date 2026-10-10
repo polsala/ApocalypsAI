@@ -1,0 +1,32 @@
+---
+- name: Ensure Wasteland Garden Plots are Hydrated
+  hosts: garden_plots
+  become: yes # May need root for cron or specific paths
+
+  vars:
+    garden_script_path: "/usr/local/bin/wasteland_garden_waterer.sh"
+    garden_log_dir: "/tmp/wasteland_garden_logs"
+    cron_minute: "0"
+    cron_hour: "3" # 3 AM daily hydration
+
+  tasks:
+    - name: Ensure log directory exists
+      ansible.builtin.file:
+        path: "{{ garden_log_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy the watering script
+      ansible.builtin.copy:
+        src: watering_script.sh
+        dest: "{{ garden_script_path }}"
+        mode: '0755'
+
+    - name: Ensure daily hydration cron job is present
+      ansible.builtin.cron:
+        name: "Wasteland Garden Daily Hydration"
+        minute: "{{ cron_minute }}"
+        hour: "{{ cron_hour }}"
+        job: "{{ garden_script_path }}"
+        user: root # Or a specific user if not become: yes
+        state: present
