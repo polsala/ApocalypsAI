@@ -1,0 +1,9 @@
+name: Issue Zen Quote Commenter
+description: Posts a random zen quote on newly opened issues.
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+runs:
+  using: 'node12'
+  main: 'src/index.js'
