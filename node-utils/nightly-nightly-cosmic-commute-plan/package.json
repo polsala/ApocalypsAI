@@ -1,0 +1,27 @@
+{
+  "name": "nightly-cosmic-commute-plan",
+  "version": "1.0.0",
+  "description": "A whimsical CLI utility to plan cosmic commutes.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha tests/**/*.test.js",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "utility",
+    "cosmic",
+    "commute",
+    "pathfinding",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^10.0.0"
+  }
+}
