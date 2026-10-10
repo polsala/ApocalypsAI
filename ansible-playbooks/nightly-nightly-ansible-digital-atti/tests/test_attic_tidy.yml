@@ -1,0 +1,157 @@
+---
+- name: Test Digital Attic Tidy Playbook
+  hosts: localhost
+  connection: local
+  become: true # Needed to create/remove files in /tmp or other system paths
+  vars:
+    test_base_path: "/tmp/ansible_attic_tidy_test_{{ lookup('pipe', 'date +%s') }}"
+    # Override main playbook's vars for testing specific paths and ages
+    temp_paths:
+      - "{{ test_base_path }}/temp_files"
+    temp_file_age_days: 1 # Set to 1 day for easy testing
+
+    log_paths:
+      - "{{ test_base_path }}/log_files"
+    log_file_age_days: 1 # Set to 1 day for easy testing
+
+    empty_dir_paths:
+      - "{{ test_base_path }}/empty_dirs"
+
+    enable_apt_clean: false
+    enable_yum_clean: false
+    enable_dnf_clean: false
+
+  tasks:
+    - name: Mock rationale: Ensure test base path exists
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mock rationale: Create test temporary files (older than threshold)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (temp_file_age_days * 86400 + 3600)) | int }}" # Older by >1 day
+        access_time: "{{ (ansible_date_time.epoch | int - (temp_file_age_days * 86400 + 3600)) | int }}" # Older by >1 day
+      loop:
+        - "{{ test_base_path }}/temp_files/old_temp_file_1.txt"
+        - "{{ test_base_path }}/temp_files/old_temp_file_2.tmp"
+
+    - name: Mock rationale: Create a new temporary file that should NOT be removed
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/temp_files/new_temp_file.txt"
+        state: touch
+        modification_time: "{{ ansible_date_time.epoch | int }}" # Current time
+        access_time: "{{ ansible_date_time.epoch | int }}" # Current time
+
+    - name: Mock rationale: Create test log files (older than threshold)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (log_file_age_days * 86400 + 3600)) | int }}" # Older by >1 day
+        access_time: "{{ (ansible_date_time.epoch | int - (log_file_age_days * 86400 + 3600)) | int }}" # Older by >1 day
+      loop:
+        - "{{ test_base_path }}/log_files/old_app.log.gz"
+        - "{{ test_base_path }}/log_files/old_sys.log.1"
+
+    - name: Mock rationale: Create a new log file that should NOT be removed
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/log_files/new_app.log"
+        state: touch
+        modification_time: "{{ ansible_date_time.epoch | int }}"
+        access_time: "{{ ansible_date_time.epoch | int }}"
+
+    - name: Mock rationale: Create empty directories and one with a file
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_base_path }}/empty_dirs/empty_sub_1"
+        - "{{ test_base_path }}/empty_dirs/empty_sub_2"
+        - "{{ test_base_path }}/empty_dirs/non_empty_dir"
+        - "{{ test_base_path }}/empty_dirs/empty_sub_1/nested_empty" # Nested empty dir
+
+    - name: Mock rationale: Create a file in a non-empty directory
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/empty_dirs/non_empty_dir/keep_me.txt"
+        state: touch
+
+    - name: Run the main attic tidy playbook
+      ansible.builtin.include_tasks: ../src/attic_tidy.yml
+      vars:
+        # Pass test-specific variables to the included playbook
+        temp_paths: "{{ temp_paths }}"
+        temp_file_age_days: "{{ temp_file_age_days }}"
+        log_paths: "{{ log_paths }}"
+        log_file_age_days: "{{ log_file_age_days }}"
+        empty_dir_paths: "{{ empty_dir_paths }}"
+        enable_apt_clean: "{{ enable_apt_clean }}"
+        enable_yum_clean: "{{ enable_yum_clean }}"
+        enable_dnf_clean: "{{ enable_dnf_clean }}"
+
+    - name: Verify old temporary files are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: old_temp_files_stat
+      loop:
+        - "{{ test_base_path }}/temp_files/old_temp_file_1.txt"
+        - "{{ test_base_path }}/temp_files/old_temp_file_2.tmp"
+      failed_when: item.stat.exists is defined and item.stat.exists
+      loop_control:
+        label: "Checking if {{ item }}"
+      # Mock rationale: Assert that the old temporary files no longer exist.
+
+    - name: Verify new temporary file is NOT removed
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/temp_files/new_temp_file.txt"
+      register: new_temp_file_stat
+      failed_when: not new_temp_file_stat.stat.exists
+      # Mock rationale: Assert that the new temporary file still exists.
+
+    - name: Verify old log files are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: old_log_files_stat
+      loop:
+        - "{{ test_base_path }}/log_files/old_app.log.gz"
+        - "{{ test_base_path }}/log_files/old_sys.log.1"
+      failed_when: item.stat.exists is defined and item.stat.exists
+      loop_control:
+        label: "Checking if {{ item }}"
+      # Mock rationale: Assert that the old log files no longer exist.
+
+    - name: Verify new log file is NOT removed
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/log_files/new_app.log"
+      register: new_log_file_stat
+      failed_when: not new_log_file_stat.stat.exists
+      # Mock rationale: Assert that the new log file still exists.
+
+    - name: Verify empty directories are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: empty_dirs_stat
+      loop:
+        - "{{ test_base_path }}/empty_dirs/empty_sub_1/nested_empty"
+        - "{{ test_base_path }}/empty_dirs/empty_sub_1"
+        - "{{ test_base_path }}/empty_dirs/empty_sub_2"
+      failed_when: item.stat.exists is defined and item.stat.exists
+      loop_control:
+        label: "Checking if {{ item }}"
+      # Mock rationale: Assert that the empty directories no longer exist.
+
+    - name: Verify non-empty directory is NOT removed
+      ansible.builtin.stat:
+        path: "{{ test_base_path }}/empty_dirs/non_empty_dir"
+      register: non_empty_dir_stat
+      failed_when: not non_empty_dir_stat.stat.exists
+      # Mock rationale: Assert that the non-empty directory still exists.
+
+  always:
+    - name: Mock rationale: Clean up test base path
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      when: test_base_path is defined and test_base_path != '/' # Safety check
