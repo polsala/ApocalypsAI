@@ -1,0 +1,25 @@
+{
+  "name": "nightly-dependency-dragon-tamer",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool to tame your project's outdated dependencies by checking npm for the latest versions.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --experimental-vm-modules node_modules/mocha/bin/mocha 'tests/**/*.test.js'"
+  },
+  "keywords": [
+    "cli",
+    "dependencies",
+    "npm",
+    "outdated",
+    "utility",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^10.3.0",
+    "sinon": "^17.0.1"
+  }
+}
