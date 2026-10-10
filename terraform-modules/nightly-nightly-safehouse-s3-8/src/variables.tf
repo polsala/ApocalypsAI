@@ -1,0 +1,1 @@
+variable "name_prefix" {\n  description = "Optional prefix for bucket name"\n  type        = string\n  default     = ""\n}\n\nvariable "tags" {\n  description = "Tags to apply to bucket"\n  type        = map(string)\n  default     = {}\n}
