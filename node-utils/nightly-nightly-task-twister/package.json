@@ -1,0 +1,25 @@
+{
+  "name": "nightly-task-twister",
+  "version": "1.0.0",
+  "description": "A whimsical Node.js CLI tool that randomly assigns you a small, productive coding task to tackle.",
+  "main": "src/index.js",
+  "bin": {
+    "task-twister": "src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "task",
+    "whimsical",
+    "productivity",
+    "node"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "sinon": "^17.0.1"
+  }
+}
