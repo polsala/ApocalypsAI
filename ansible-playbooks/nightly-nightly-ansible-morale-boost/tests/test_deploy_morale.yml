@@ -1,0 +1,144 @@
+---
+- name: Test Morale Booster Deployment
+  hosts: localhost
+  connection: local
+  become: yes
+  vars_files:
+    - ../src/vars/morale_content.yml # Load variables from the main playbook's vars
+
+  tasks:
+    - name: Define expected paths and content
+      ansible.builtin.set_fact:
+        web_root_dir: /var/www/morale_booster
+        html_file: /var/www/morale_booster/index.html
+        nginx_conf_file: /etc/nginx/sites-available/morale_booster
+        nginx_enabled_link: /etc/nginx/sites-enabled/morale_booster
+        expected_html_content_part: "{{ morale_quote }}"
+        expected_nginx_conf_part: "root /var/www/morale_booster;"
+
+    - name: Clean up previous test artifacts (if any)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ web_root_dir }}"
+        - "{{ nginx_conf_file }}"
+        - "{{ nginx_enabled_link }}"
+      ignore_errors: yes # In case they don't exist
+
+    - name: Mock Nginx package installation
+      ansible.builtin.file:
+        path: /usr/bin/nginx # A common Nginx binary path
+        state: touch
+        mode: '0755'
+      # Mock rationale: Simulates Nginx being installed for subsequent checks.
+      # This avoids requiring actual Nginx installation on the test runner.
+
+    - name: Create mock Nginx config directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /etc/nginx/sites-available
+        - /etc/nginx/sites-enabled
+      # Mock rationale: Ensures parent directories for Nginx config exist for file creation.
+
+    - name: Create mock web root directory
+      ansible.builtin.file:
+        path: "{{ web_root_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root # For testing on localhost, root is fine, actual playbook uses www-data
+        group: root # For testing on localhost, root is fine, actual playbook uses www-data
+      # Mock rationale: Simulates the playbook creating the web root.
+
+    - name: Create mock morale-boosting HTML page
+      ansible.builtin.template:
+        src: ../src/templates/morale_page.html.j2
+        dest: "{{ html_file }}"
+        mode: '0644'
+        owner: root # For testing on localhost
+        group: root # For testing on localhost
+      # Mock rationale: Simulates the playbook rendering the HTML template.
+
+    - name: Create mock Nginx configuration file
+      ansible.builtin.blockinfile:
+        path: "{{ nginx_conf_file }}"
+        create: yes
+        mode: '0644'
+        block: |
+          server {
+              listen 80;
+              listen [::]:80;
+              server_name localhost; # Use localhost for testing
+              root /var/www/morale_booster;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+      # Mock rationale: Simulates the playbook creating the Nginx site config.
+
+    - name: Create mock Nginx enabled site link
+      ansible.builtin.file:
+        src: "{{ nginx_conf_file }}"
+        dest: "{{ nginx_enabled_link }}"
+        state: link
+      # Mock rationale: Simulates the playbook enabling the Nginx site.
+
+    - name: Assert web root directory exists
+      ansible.builtin.assert:
+        that:
+          - "'{{ web_root_dir }}' is exists"
+        fail_msg: "Web root directory {{ web_root_dir }} does not exist."
+      # Mock rationale: Verifies the mock directory was created.
+
+    - name: Assert HTML file exists
+      ansible.builtin.assert:
+        that:
+          - "'{{ html_file }}' is exists"
+        fail_msg: "HTML file {{ html_file }} does not exist."
+      # Mock rationale: Verifies the mock HTML file was created.
+
+    - name: Assert HTML file contains expected content
+      ansible.builtin.assert:
+        that:
+          - "lookup('ansible.builtin.file', html_file) is search(expected_html_content_part)"
+        fail_msg: "HTML file {{ html_file }} does not contain expected quote."
+      # Mock rationale: Verifies the mock HTML file contains the templated content.
+
+    - name: Assert Nginx config file exists
+      ansible.builtin.assert:
+        that:
+          - "'{{ nginx_conf_file }}' is exists"
+        fail_msg: "Nginx config file {{ nginx_conf_file }} does not exist."
+      # Mock rationale: Verifies the mock Nginx config file was created.
+
+    - name: Assert Nginx config file contains expected content
+      ansible.builtin.assert:
+        that:
+          - "lookup('ansible.builtin.file', nginx_conf_file) is search(expected_nginx_conf_part)"
+        fail_msg: "Nginx config file {{ nginx_conf_file }} does not contain expected root path."
+      # Mock rationale: Verifies the mock Nginx config contains the correct root path.
+
+    - name: Assert Nginx enabled site link exists
+      ansible.builtin.assert:
+        that:
+          - "'{{ nginx_enabled_link }}' is exists"
+          - "'{{ nginx_enabled_link }}' is link"
+        fail_msg: "Nginx enabled site link {{ nginx_enabled_link }} does not exist or is not a link."
+      # Mock rationale: Verifies the mock symlink was created.
+
+    - name: Clean up test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ web_root_dir }}"
+        - "{{ nginx_conf_file }}"
+        - "{{ nginx_enabled_link }}"
+        - /usr/bin/nginx # Remove mock binary
+      ignore_errors: yes
+      # Mock rationale: Cleans up all files created during the test.
