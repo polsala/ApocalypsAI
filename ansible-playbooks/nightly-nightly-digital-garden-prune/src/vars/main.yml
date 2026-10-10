@@ -1,0 +1,14 @@
+# src/vars/main.yml
+
+# Path to your digital garden (e.g., a notes directory, blog content folder)
+garden_path: "/tmp/my_digital_garden_default"
+
+# Age in days. Files/directories older than this will be considered for pruning.
+prune_age_days: 30
+
+# Path to the archive directory where old items will be moved.
+archive_path: "/tmp/my_digital_garden_archive_default"
+
+# Set to 'true' for a dry run (no changes made, only reports what would be pruned).
+# Set to 'false' to enable actual archiving/deletion.
+dry_run: true
