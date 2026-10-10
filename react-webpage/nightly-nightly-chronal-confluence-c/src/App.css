@@ -1,0 +1,79 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+  margin-bottom: 5px;
+}
+
+.App-header p {
+  font-size: 16px;
+  color: #bbb;
+}
+
+.input-section {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 10px;
+}
+
+.input-section input {
+  padding: 10px 15px;
+  font-size: 16px;
+  border: 1px solid #61dafb;
+  border-radius: 5px;
+  background-color: #3a3f47;
+  color: white;
+  width: 300px;
+}
+
+.input-section input::placeholder {
+  color: #aaa;
+}
+
+.input-section button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.input-section button:hover {
+  background-color: #4fa3d1;
+}
+
+.graph-container {
+  border: 2px solid #61dafb;
+  border-radius: 10px;
+  background-color: #f0f0f0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin-top: 20px;
+}
+
+.graph-container svg {
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.graph-container text {
+  fill: #333;
+  font-weight: bold;
+}
