@@ -1,0 +1,78 @@
+---
+- name: Tame Resource Goblins
+  hosts: all
+  become: true # Requires root for some checks and cleanup
+  vars_files:
+    - vars/main.yml
+  vars:
+    # Default commands, can be overridden for testing purposes
+    df_command: "df -h"
+    find_command: "find / -type f -size +{{ large_file_threshold_mb }}M -print0 | xargs -0 du -h | sort -rh | head -n 10"
+    free_command: "free -h"
+    top_command: "top -bn1 | grep 'Cpu(s)'"
+
+  tasks:
+    - name: Gather system facts
+      ansible.builtin.setup:
+
+    - name: Check Disk Usage
+      ansible.builtin.shell: "{{ df_command }}"
+      register: disk_usage_output
+      changed_when: false
+
+    - name: Report Disk Usage
+      ansible.builtin.debug:
+        msg: |
+          --- Disk Usage Report ---
+          {{ disk_usage_output.stdout }}
+
+    - name: Find Large Files
+      ansible.builtin.shell: "{{ find_command }}"
+      register: large_files_output
+      changed_when: false
+
+    - name: Report Large Files ( >{{ large_file_threshold_mb }}MB)
+      ansible.builtin.debug:
+        msg: |
+          --- Large Files Report ( >{{ large_file_threshold_mb }}MB) ---
+          {{ large_files_output.stdout }}
+      when: large_files_output.stdout | length > 0
+
+    - name: Check Memory Usage
+      ansible.builtin.shell: "{{ free_command }}"
+      register: memory_usage_output
+      changed_when: false
+
+    - name: Report Memory Usage
+      ansible.builtin.debug:
+        msg: |
+          --- Memory Usage Report ---
+          {{ memory_usage_output.stdout }}
+
+    - name: Check CPU Usage
+      ansible.builtin.shell: "{{ top_command }}"
+      register: cpu_usage_output
+      changed_when: false
+
+    - name: Report CPU Usage
+      ansible.builtin.debug:
+        msg: |
+          --- CPU Usage Report ---
+          {{ cpu_usage_output.stdout }}
+
+    - name: Perform System Cleanup (Optional)
+      when: cleanup_enabled
+      block:
+        - name: Clean apt cache
+          ansible.builtin.apt:
+            autoclean: true
+            autoremove: true
+          when: ansible_os_family == "Debian"
+
+        - name: Vacuum journalctl logs
+          ansible.builtin.command: "journalctl --vacuum-size={{ log_cleanup_size_mb }}M"
+          changed_when: true # This command changes things
+
+        - name: Report cleanup actions
+          ansible.builtin.debug:
+            msg: "Cleanup actions performed: apt cache cleaned, journalctl logs vacuumed to {{ log_cleanup_size_mb }}M."

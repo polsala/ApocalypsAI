@@ -1,0 +1,88 @@
+---
+- name: Test Resource Goblin Tamer Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    cleanup_enabled: false # Ensure cleanup is off for deterministic tests
+    large_file_threshold_mb: 1 # Lower threshold for easier testing of large file detection
+    log_cleanup_size_mb: 1 # Lower threshold for easier testing of log cleanup (though disabled)
+
+  tasks:
+    - name: Mock df -h output
+      ansible.builtin.set_fact:
+        mock_df_output: |
+          Filesystem      Size  Used Avail Use% Mounted on
+          /dev/sda1        20G   18G  1.0G  95% /
+          tmpfs           3.9G     0  3.9G   0% /dev/shm
+      # Mock rationale: Simulates disk usage for testing reporting logic without actual disk interaction.
+
+    - name: Mock find large files output
+      ansible.builtin.set_fact:
+        mock_find_output: |
+          150M /var/log/big_log_file.log
+          120M /opt/another_big_file.data
+      # Mock rationale: Simulates finding large files for testing reporting logic.
+
+    - name: Mock free -h output
+      ansible.builtin.set_fact:
+        mock_free_output: |
+          total        used        free      shared  buff/cache   available
+          Mem:           7.8G        6.5G        500M        100M        800M        1.0G
+          Swap:          2.0G        1.5G        500M
+      # Mock rationale: Simulates memory usage for testing reporting logic.
+
+    - name: Mock top -bn1 output
+      ansible.builtin.set_fact:
+        mock_top_output: |
+          %Cpu(s): 85.0 us, 10.0 sy,  0.0 ni,  5.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+      # Mock rationale: Simulates CPU usage for testing reporting logic.
+
+    - name: Run the main playbook with mocked commands
+      ansible.builtin.include_tasks:
+        file: ../src/tame_goblins.yml
+      vars:
+        # Override command modules in the main playbook to use mocked outputs
+        df_command: "echo '{{ mock_df_output }}'"
+        find_command: "echo '{{ mock_find_output }}'"
+        free_command: "echo '{{ mock_free_output }}'"
+        top_command: "echo '{{ mock_top_output }}'"
+      register: playbook_output
+      # Mock rationale: This is the core mocking strategy. Instead of running actual system commands,
+      # we pass variables that the main playbook will use as command outputs. This ensures tests are
+      # deterministic and do not interact with the actual system state.
+
+    - name: Assert disk usage report contains expected data
+      ansible.builtin.assert:
+        that:
+          - "'--- Disk Usage Report ---' in playbook_output.msg"
+          - "'95% /' in playbook_output.msg"
+      # Mock rationale: Checks if the playbook correctly processed and reported the mocked disk usage.
+
+    - name: Assert large files report contains expected data
+      ansible.builtin.assert:
+        that:
+          - "'--- Large Files Report (>1MB) ---' in playbook_output.msg"
+          - "'150M /var/log/big_log_file.log' in playbook_output.msg"
+          - "'120M /opt/another_big_file.data' in playbook_output.msg"
+      # Mock rationale: Checks if the playbook correctly processed and reported the mocked large files.
+
+    - name: Assert memory usage report contains expected data
+      ansible.builtin.assert:
+        that:
+          - "'--- Memory Usage Report ---' in playbook_output.msg"
+          - "'Mem:           7.8G        6.5G' in playbook_output.msg"
+      # Mock rationale: Checks if the playbook correctly processed and reported the mocked memory usage.
+
+    - name: Assert CPU usage report contains expected data
+      ansible.builtin.assert:
+        that:
+          - "'--- CPU Usage Report ---' in playbook_output.msg"
+          - "'%Cpu(s): 85.0 us' in playbook_output.msg"
+      # Mock rationale: Checks if the playbook correctly processed and reported the mocked CPU usage.
+
+    - name: Assert cleanup tasks were skipped (as cleanup_enabled is false)
+      ansible.builtin.assert:
+        that:
+          - "'Perform System Cleanup (Optional)' not in playbook_output.msg"
+      # Mock rationale: Verifies that conditional cleanup tasks are correctly skipped when `cleanup_enabled` is false.

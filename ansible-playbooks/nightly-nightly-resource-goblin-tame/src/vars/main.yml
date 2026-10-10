@@ -1,0 +1,5 @@
+---
+# Resource Goblin Tamer Configuration
+cleanup_enabled: false # Set to true to enable cleanup tasks (apt autoclean, journalctl vacuum)
+large_file_threshold_mb: 100 # Files larger than this will be reported (in MB)
+log_cleanup_size_mb: 50 # Max size for journalctl vacuum (in MB)
