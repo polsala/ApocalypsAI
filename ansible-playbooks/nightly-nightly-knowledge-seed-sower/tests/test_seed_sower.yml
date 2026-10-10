@@ -1,0 +1,133 @@
+---
+- name: Test Nightly Knowledge Seed Sower Playbook
+  hosts: knowledge_hosts
+  connection: local
+  gather_facts: yes # Needed for ansible_date_time in templates/vars
+
+  vars:
+    test_root: "/tmp/ansible_test_garden"
+    # Mock rationale: Override knowledge_base_root to a temporary test directory
+    # to ensure tests are isolated and don't affect user's actual files.
+    knowledge_base_root: "{{ test_root }}"
+    # Mock rationale: Provide a fixed date and time for deterministic template rendering
+    # as ansible_date_time varies.
+    ansible_date_time:
+      date: "2023-10-27"
+      time: "10:30:00"
+
+  tasks:
+    - name: Clean up previous test run (pre-test setup)
+      ansible.builtin.file:
+        path: "{{ test_root }}"
+        state: absent
+      become: no
+      tags: always
+
+    - name: Run main playbook in check mode (first pass)
+      ansible.builtin.include_tasks: "../src/seed_sower.yml"
+      args:
+        apply:
+          check_mode: yes
+      register: check_mode_result_first_pass
+      # Mock rationale: Running in check_mode prevents actual file system changes,
+      # making the test deterministic and offline in terms of side effects.
+
+    - name: Assert that changes would be made on first pass
+      ansible.builtin.assert:
+        that:
+          - check_mode_result_first_pass.changed
+        fail_msg: "Playbook should report changes on first run in check mode."
+      # Mock rationale: Verifies the playbook correctly identifies the need for changes.
+
+    - name: Run main playbook in check mode (second pass for idempotency)
+      ansible.builtin.include_tasks: "../src/seed_sower.yml"
+      args:
+        apply:
+          check_mode: yes
+      register: check_mode_result_second_pass
+      # Mock rationale: Running in check_mode prevents actual file system changes.
+
+    - name: Assert that no changes would be made on second pass (idempotency)
+      ansible.builtin.assert:
+        that:
+          - not check_mode_result_second_pass.changed
+        fail_msg: "Playbook should be idempotent and report no changes on second run in check mode."
+      # Mock rationale: Verifies idempotency without actual file system changes.
+
+    - name: Run main playbook in normal mode (to create files for content check)
+      ansible.builtin.include_tasks: "../src/seed_sower.yml"
+      # Mock rationale: Temporarily run in normal mode to create files in the test_root
+      # for content verification. This is still isolated to the test_root and cleaned up.
+
+    - name: Verify daily note template content (mocked rendering)
+      ansible.builtin.set_fact:
+        expected_daily_note_content: |
+          ---
+          date: 2023-10-27
+          time: 10:30:00
+          tags: [daily, journal]
+          ---
+
+          # Daily Note - 2023-10-27
+
+          ## What did I accomplish today?
+
+          -
+
+          ## What am I planning for tomorrow?
+
+          -
+
+          ## Thoughts and Reflections
+
+          -
+      # Mock rationale: Manually define the expected rendered content based on the
+      # mocked ansible_date_time to ensure deterministic comparison.
+
+    - name: Read generated daily note content
+      ansible.builtin.slurp:
+        src: "{{ test_root }}/daily_notes/2023-10-27.md"
+      register: daily_note_slurp_result
+      # Mock rationale: Reads the content from the temporary test directory.
+
+    - name: Assert daily note content matches expected
+      ansible.builtin.assert:
+        that:
+          - (daily_note_slurp_result.content | b64decode) == expected_daily_note_content
+        fail_msg: "Daily note content does not match expected template output."
+      # Mock rationale: Compares the actual content with the deterministically
+      # mocked expected content.
+
+    - name: Verify explicit content file
+      ansible.builtin.slurp:
+        src: "{{ test_root }}/project_templates/new_project_readme.md"
+      register: readme_slurp_result
+      # Mock rationale: Reads content from the temporary test directory.
+
+    - name: Assert explicit content file matches expected
+      ansible.builtin.assert:
+        that:
+          - (readme_slurp_result.content | b64decode) == "# New Project Readme\n\n## Overview\n\n## Setup\n"
+        fail_msg: "Project README content does not match expected explicit content."
+      # Mock rationale: Compares actual content with deterministically defined content.
+
+    - name: Verify empty file exists
+      ansible.builtin.stat:
+        path: "{{ test_root }}/empty_seed.txt"
+      register: empty_file_stat
+      # Mock rationale: Checks for existence in the temporary test directory.
+
+    - name: Assert empty file exists and is empty
+      ansible.builtin.assert:
+        that:
+          - empty_file_stat.stat.exists
+          - empty_file_stat.stat.size == 0
+        fail_msg: "Empty seed file does not exist or is not empty."
+      # Mock rationale: Verifies existence and size in the temporary test directory.
+
+    - name: Clean up after test run (post-test teardown)
+      ansible.builtin.file:
+        path: "{{ test_root }}"
+        state: absent
+      become: no
+      tags: always
