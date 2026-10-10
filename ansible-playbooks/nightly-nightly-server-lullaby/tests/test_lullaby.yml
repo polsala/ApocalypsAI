@@ -1,0 +1,42 @@
+---
+- name: Test Nightly Server Lullaby Playbook (Syntax and Check Mode)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../src/vars/lullaby_config.yml
+  tasks:
+    - name: Ensure Ansible is installed for local testing
+      ansible.builtin.package:
+        name: ansible
+        state: present
+      delegate_to: localhost
+      become: yes
+      when: ansible_connection == 'local' # Only run if testing locally
+
+    - name: Run the main playbook in check mode to verify syntax and task execution flow
+      ansible.builtin.command: >
+        ansible-playbook ../src/lullaby.yml -i ../src/inventory.ini --syntax-check --check --diff
+      register: check_output
+      changed_when: false # This command itself doesn't change the system
+
+    - name: Assert playbook ran without errors in check mode
+      ansible.builtin.assert:
+        that:
+          - check_output.rc == 0
+          - "'PLAY RECAP' in check_output.stdout"
+          - "'unreachable=0' in check_output.stdout"
+          - "'failed=0' in check_output.stdout"
+        fail_msg: "Playbook failed during check mode run or reported errors."
+
+    - name: Mock rationale: Verify MOTD content variable is correctly defined
+      ansible.builtin.assert:
+        that:
+          - motd_content is defined
+          - motd_content | length > 50 # Arbitrary length check
+          - "'dreaming of efficient processes' in motd_content"
+        fail_msg: "MOTD content variable is not defined or does not contain expected whimsical phrase."
+      # Mock rationale: This checks the variable that *would* be used to set the MOTD,
+      # ensuring the template logic is sound without actually writing to /etc/motd.
+      # A full functional test would involve running the playbook and then checking
+      # the /etc/motd file on the target system.
