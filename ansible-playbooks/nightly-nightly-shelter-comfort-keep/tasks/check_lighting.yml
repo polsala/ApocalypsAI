@@ -1,0 +1,20 @@
+---
+- name: Simulate checking Glow-Moss Luminescence Array brightness
+  ansible.builtin.set_fact:
+    glow_moss_brightness: "{{ lookup('ansible.builtin.env', 'MOCK_MOSS_BRIGHTNESS') | default(90) | int }}"
+  # Mock rationale: In a real scenario, this would involve reading a light sensor.
+  # For testing, we mock the brightness value.
+
+- name: Report Glow-Moss Luminescence Array status
+  ansible.builtin.debug:
+    msg: "Glow-Moss Luminescence Array brightness: {{ glow_moss_brightness }} units"
+
+- name: Set fact if Glow-Moss Luminescence Array is dim
+  ansible.builtin.set_fact:
+    lighting_issue_detected: true
+  when: glow_moss_brightness < glow_moss_brightness_threshold
+
+- name: Suggest nurturing Glow-Moss Luminescence Array if dim
+  ansible.builtin.debug:
+    msg: "ACTION REQUIRED: Glow-Moss Luminescence Array is dim! Current brightness: {{ glow_moss_brightness }} units (Threshold: {{ glow_moss_brightness_threshold }} units). Consider adding more nutrients."
+  when: glow_moss_brightness < glow_moss_brightness_threshold

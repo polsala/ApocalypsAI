@@ -1,0 +1,20 @@
+---
+- name: Simulate checking Solar Shimmer Panels cleanliness
+  ansible.builtin.set_fact:
+    solar_panel_cleanliness: "{{ lookup('ansible.builtin.env', 'MOCK_SOLAR_CLEANLINESS') | default(1.0) | float }}"
+  # Mock rationale: In a real scenario, this would involve running a command
+  # to check sensor data or image analysis. For testing, we mock the cleanliness value.
+
+- name: Report Solar Shimmer Panels status
+  ansible.builtin.debug:
+    msg: "Solar Shimmer Panels cleanliness: {{ (solar_panel_cleanliness * 100) | round(2) }}%"
+
+- name: Set fact if Solar Shimmer Panels need cleaning
+  ansible.builtin.set_fact:
+    power_issue_detected: true
+  when: solar_panel_cleanliness < solar_panel_clean_threshold
+
+- name: Suggest cleaning Solar Shimmer Panels if needed
+  ansible.builtin.debug:
+    msg: "ACTION REQUIRED: Solar Shimmer Panels need cleaning! Current cleanliness: {{ (solar_panel_cleanliness * 100) | round(2) }}% (Threshold: {{ (solar_panel_clean_threshold * 100) | round(2) }}%)"
+  when: solar_panel_cleanliness < solar_panel_clean_threshold

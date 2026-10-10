@@ -1,0 +1,20 @@
+---
+- name: Simulate checking Whisper-Wind Chimes tangle level
+  ansible.builtin.set_fact:
+    chimes_tangle_level: "{{ lookup('ansible.builtin.env', 'MOCK_CHIMES_TANGLE') | default(0.05) | float }}"
+  # Mock rationale: In a real scenario, this might involve a visual inspection system
+  # or sensor. For testing, we mock the tangle level.
+
+- name: Report Whisper-Wind Chimes status
+  ansible.builtin.debug:
+    msg: "Whisper-Wind Chimes tangle level: {{ (chimes_tangle_level * 100) | round(2) }}%"
+
+- name: Set fact if Whisper-Wind Chimes are tangled
+  ansible.builtin.set_fact:
+    security_issue_detected: true
+  when: chimes_tangle_level > chimes_tangle_tolerance
+
+- name: Suggest untangling Whisper-Wind Chimes if needed
+  ansible.builtin.debug:
+    msg: "ACTION REQUIRED: Whisper-Wind Chimes are tangled! Current tangle: {{ (chimes_tangle_level * 100) | round(2) }}% (Tolerance: {{ (chimes_tangle_tolerance * 100) | round(2) }}%). Untangle them for optimal perimeter alerts."
+  when: chimes_tangle_level > chimes_tangle_tolerance
