@@ -1,0 +1,11 @@
+---
+test_services_to_monitor:
+  - sshd
+  - systemd-journald
+  - nginx # Add a service that will be 'stopped' in mock
+
+test_log_path: "/tmp/ansible_test_logs"
+test_log_paths_to_tidy:
+  - "{{ test_log_path }}"
+
+test_log_retention_days: 7
