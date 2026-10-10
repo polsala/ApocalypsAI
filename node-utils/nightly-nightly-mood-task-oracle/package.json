@@ -1,0 +1,27 @@
+{
+  "name": "nightly-mood-task-oracle",
+  "version": "1.0.0",
+  "description": "Suggests a whimsical task based on your current mood or a random selection, to combat decision fatigue.",
+  "main": "src/index.js",
+  "bin": {
+    "mood-oracle": "src/index.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "utility",
+    "whimsical",
+    "task",
+    "mood",
+    "productivity"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
