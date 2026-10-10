@@ -1,0 +1,19 @@
+- name: Deploy hopeful quote
+  hosts: all
+  gather_facts: false
+  vars:
+    dest_dir: "{{ dest_dir | default('/tmp/quotes') }}"
+    dest_file: "{{ dest_file | default('quote.txt') }}"
+    quote: "{{ quote | default('Even in the wasteland, hope blooms.') }}"
+  tasks:
+    - name: Ensure destination directory exists
+      file:
+        path: "{{ dest_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Write quote to file
+      copy:
+        dest: "{{ dest_dir }}/{{ dest_file }}"
+        content: "{{ quote }}"
+        mode: '0644'
