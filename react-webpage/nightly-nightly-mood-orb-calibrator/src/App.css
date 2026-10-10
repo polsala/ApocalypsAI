@@ -1,0 +1,101 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: white;
+}
+
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.App-header {
+  background-color: #20232a;
+  padding: 20px;
+  border-bottom: 1px solid #61dafb;
+}
+
+.App-header h1 {
+  margin: 0;
+  color: #61dafb;
+}
+
+.App-main {
+  flex-grow: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-input {
+  width: 80%;
+  max-width: 600px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #61dafb;
+  background-color: #3a3f47;
+  color: white;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.text-input::placeholder {
+  color: #aaa;
+}
+
+.calibrate-button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-bottom: 30px;
+}
+
+.calibrate-button:hover {
+  background-color: #21a1f1;
+}
+
+.mood-display h2 {
+  color: #61dafb;
+  margin-bottom: 15px;
+}
+
+.mood-orb {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  border: 5px solid #61dafb;
+  box-shadow: 0 0 20px rgba(97, 218, 251, 0.5);
+  transition: background-color 0.5s ease;
+}
+
+.mood-emoji {
+  filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+}
+
+.App-footer {
+  padding: 15px;
+  background-color: #20232a;
+  border-top: 1px solid #61dafb;
+  margin-top: auto;
+  font-size: 0.8rem;
+  color: #aaa;
+}
