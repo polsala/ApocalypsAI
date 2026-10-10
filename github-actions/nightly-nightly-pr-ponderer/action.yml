@@ -1,0 +1,21 @@
+name: 'PR Ponderer'
+description: 'Adds a whimsical, thought-provoking question to Pull Requests.'
+inputs:
+  github-token:
+    description: 'GitHub token for commenting.'
+    required: true
+  questions-file:
+    description: 'Path to a custom file containing questions (one per line).'
+    required: false
+    default: '.github/pr_ponderer_questions.txt'
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        QUESTIONS_FILE: ${{ inputs.questions-file }}
+      run: |
+        # Ensure the script is executable and run it
+        chmod +x ${{ github.action_path }}/src/ponder.sh
+        ${{ github.action_path }}/src/ponder.sh
