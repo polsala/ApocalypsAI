@@ -1,0 +1,14 @@
+- name: Syntax check test for nightly-ansible-apt-mirror-setup
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run syntax check on the playbook
+      command: ansible-playbook -i {{ playbook_dir }}/../src/setup_mirror.yml --syntax-check
+      register: result
+      changed_when: false
+
+    - name: Assert syntax check passed
+      assert:
+        that:
+          - result.rc == 0
+        fail_msg: "Syntax check failed for setup_mirror.yml"

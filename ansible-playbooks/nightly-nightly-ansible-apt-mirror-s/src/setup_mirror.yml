@@ -1,0 +1,37 @@
+- name: Setup local apt-mirror
+  hosts: all
+  become: true
+  vars:
+    mirror_root: /var/spool/apt-mirror
+    mirror_list: /etc/apt/mirror.list
+  tasks:
+    - name: Install apt-mirror package
+      apt:
+        name: apt-mirror
+        state: present
+        update_cache: yes
+
+    - name: Ensure mirror root directory exists
+      file:
+        path: "{{ mirror_root }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy mirror.list configuration
+      copy:
+        dest: "{{ mirror_list }}"
+        content: |
+          set base_path    {{ mirror_root }}
+          set defaultarch  amd64
+          set nthreads     20
+          set _tilde 0
+
+          deb http://deb.debian.org/debian buster main contrib non-free
+          deb http://deb.debian.org/debian buster-updates main contrib non-free
+          deb http://security.debian.org/debian-security buster/updates main contrib non-free
+        mode: '0644'
+
+    - name: Run apt-mirror to fetch packages
+      command: apt-mirror
+      args:
+        creates: "{{ mirror_root }}/var"
