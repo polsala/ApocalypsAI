@@ -1,0 +1,52 @@
+---
+- name: Test morale quote dispenser
+  hosts: all
+  become: true
+  vars:
+    # Use temporary paths to avoid requiring privileged writes
+    morale_path: "/tmp/morale_of_the_day.txt"
+    script_path: "/tmp/morale.sh"
+    quotes:
+      - "Keep calm and hoard supplies."
+      - "Every day is a new scavenger hunt."
+      - "Radiation today, hope tomorrow."
+      - "When in doubt, barter."
+  tasks:
+    - name: Run the main playbook with overridden paths
+      import_playbook: "../src/morale_dispenser.yml"
+
+    - name: Verify the morale file exists
+      stat:
+        path: "{{ morale_path }}"
+      register: morale_file
+
+    - name: Assert morale file was created
+      assert:
+        that:
+          - morale_file.stat.exists
+          - morale_file.stat.isreg
+
+    - name: Read the morale file content
+      slurp:
+        src: "{{ morale_path }}"
+      register: morale_content
+
+    - name: Decode content to string
+      set_fact:
+        morale_text: "{{ morale_content.content | b64decode | trim }}"
+
+    - name: Ensure the content is one of the expected quotes
+      assert:
+        that:
+          - "{{ morale_text }} in quotes"
+
+    - name: Verify the login script exists and is executable
+      stat:
+        path: "{{ script_path }}"
+      register: script_file
+
+    - name: Assert script file was created correctly
+      assert:
+        that:
+          - script_file.stat.exists
+          - script_file.stat.mode == '0755'
