@@ -1,0 +1,97 @@
+---
+- name: Recalibrate Signal Beacons
+  hosts: beacons
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure beacon configuration directory exists
+      ansible.builtin.file:
+        path: "{{ beacon_config_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure beacon config file exists with default frequency
+      ansible.builtin.lineinfile:
+        path: "{{ beacon_config_path }}"
+        regexp: "^{{ beacon_frequency_key }}="
+        line: "{{ beacon_frequency_key }}={{ beacon_default_frequency }}"
+        create: yes
+        mode: '0644'
+      register: config_file_status
+
+    - name: Ensure beacon service script exists (mock for testing)
+      ansible.builtin.copy:
+        dest: "/usr/local/bin/{{ beacon_signal_service_name }}"
+        content: |
+          #!/bin/bash
+          echo "Beacon service running..."
+          exit 0
+        mode: '0755'
+      # Mock rationale: This task creates a dummy service script for testing purposes.
+      # In a real scenario, this service would be installed via a package manager or another playbook.
+      # For offline, deterministic testing, we need to ensure the service script exists for systemd to manage.
+      when: ansible_connection == 'local'
+
+    - name: Ensure beacon systemd service unit exists (mock for testing)
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ beacon_signal_service_name }}.service"
+        content: |
+          [Unit]
+          Description=ApocalypsAI Signal Beacon Service
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/{{ beacon_signal_service_name }}
+          Restart=always
+          User=root
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      # Mock rationale: This task creates a dummy systemd service unit file for testing purposes.
+      # In a real scenario, this service unit would be installed via a package manager or another playbook.
+      # For offline, deterministic testing, we need to ensure the service unit exists for systemd to manage.
+      when: ansible_connection == 'local'
+      notify: Reload systemd
+
+    - name: Ensure beacon signal service is running and enabled
+      ansible.builtin.systemd:
+        name: "{{ beacon_signal_service_name }}"
+        state: started
+        enabled: yes
+      register: service_status
+
+    - name: Ensure power crystal directory exists
+      ansible.builtin.file:
+        path: "{{ beacon_power_crystal_dir }}"
+        state: directory
+        mode: '0700'
+      register: power_crystal_dir_status
+
+    - name: Ensure beacon log directory exists
+      ansible.builtin.file:
+        path: "{{ beacon_log_file | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Rotate log crystals (simple log file rotation)
+      ansible.builtin.copy:
+        src: "{{ beacon_log_file }}"
+        dest: "{{ beacon_log_file }}.old"
+        remote_src: yes
+        force: yes
+      args:
+        creates: "{{ beacon_log_file }}" # Only copy if source exists
+      when: ansible.builtin.stat(path=beacon_log_file).stat.exists
+      register: log_rotation_status
+      # Mock rationale: This simulates a log rotation. In a real scenario, logrotate would be used.
+      # For deterministic testing, we simply copy the log file to a .old version if it exists.
+      # The 'creates' argument ensures it doesn't fail if the log file doesn't exist initially.
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      when: ansible_connection == 'local' # Only reload systemd on local test environment
