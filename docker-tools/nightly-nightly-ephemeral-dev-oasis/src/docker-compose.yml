@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  oasis-shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nightly-oasis-shell
+    volumes:
+      - ./work:/app/work # Mount a local 'work' directory into the container
+    tty: true # Allocate a pseudo-TTY
+    stdin_open: true # Keep stdin open even if not attached
+    # Optional: Expose ports if your dev environment needs them
+    # ports:
+    #   - "8080:8080"
