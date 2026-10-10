@@ -1,0 +1,56 @@
+---
+- name: Read markdown file content
+  ansible.builtin.slurp:
+    src: "{{ current_file.path }}"
+  register: file_content_b64
+
+- name: Decode file content
+  ansible.builtin.set_fact:
+    file_content: "{{ file_content_b64.content | b64decode }}"
+
+- name: Check for YAML front matter
+  ansible.builtin.set_fact:
+    has_front_matter: "{{ file_content is search('^---\n.*\n---\n', escape_backslashes=False, multiline=True) }}"
+
+- name: Extract front matter if present
+  ansible.builtin.set_fact:
+    front_matter: |
+      {% if has_front_matter %}
+      {{ file_content | regex_search('^---\n(.*?)\n---\n', '\\1', multiline=True) | first | default('') }}
+      {% else %}
+      {}
+      {% endif %}
+
+- name: Parse front matter YAML
+  ansible.builtin.set_fact:
+    parsed_front_matter: "{{ front_matter | from_yaml(default={}) }}"
+  when: has_front_matter and front_matter | length > 0
+  ignore_errors: true # In case of malformed YAML, default to empty dict
+
+- name: Determine missing keys
+  ansible.builtin.set_fact:
+    missing_keys: |
+      {% set found_keys = parsed_front_matter.keys() | list %}
+      {% set missing = [] %}
+      {% for key in required_front_matter_keys %}
+        {% if key not in found_keys %}
+          {% set _ = missing.append(key) %}
+        {% endif %}
+      {% endfor %}
+      {{ missing }}
+  when: has_front_matter and parsed_front_matter is defined
+
+- name: Add to compliant or non-compliant list
+  ansible.builtin.set_fact:
+    compliant_files: "{{ compliant_files + [current_file.path] }}"
+  when: has_front_matter and missing_keys | length == 0
+
+- name: Add to non-compliant list (missing front matter)
+  ansible.builtin.set_fact:
+    non_compliant_files: "{{ non_compliant_files + [{'file': current_file.path, 'reason': 'Missing front matter'}] }}"
+  when: not has_front_matter
+
+- name: Add to non-compliant list (missing keys)
+  ansible.builtin.set_fact:
+    non_compliant_files: "{{ non_compliant_files + [{'file': current_file.path, 'reason': 'Missing keys: ' + (missing_keys | join(', '))}] }}"
+  when: has_front_matter and missing_keys | length > 0
