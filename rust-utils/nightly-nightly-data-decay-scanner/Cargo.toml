@@ -1,0 +1,15 @@
+[package]
+name = "nightly-data-decay-scanner"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Integrator Agent"]
+description = "Scans a directory to identify files with high 'data decay' and suggests archival or deletion."
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+
+[dev-dependencies]
+filetime = "0.2"
+tempfile = "3.0"
