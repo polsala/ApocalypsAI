@@ -1,0 +1,188 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.App {
+  background-color: #16213e;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+}
+
+h1, h2, h3 {
+  color: #e94560;
+}
+
+.anomaly-form {
+  background-color: #0f3460;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.anomaly-form div {
+  margin-bottom: 15px;
+}
+
+.anomaly-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #bae8e8;
+}
+
+.anomaly-form input[type="datetime-local"],
+.anomaly-form input[type="text"],
+.anomaly-form input[type="number"] {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: 1px solid #533483;
+  border-radius: 5px;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  font-size: 1em;
+}
+
+.anomaly-form button {
+  background-color: #e94560;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+}
+
+.anomaly-form button:hover {
+  background-color: #ba2d46;
+}
+
+.timeline-container {
+  margin-top: 40px;
+  position: relative;
+  padding-bottom: 50px; /* Space for details */
+}
+
+.timeline-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #533483;
+  border-radius: 4px;
+  position: relative;
+  margin-top: 30px;
+}
+
+.anomaly-point {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #bae8e8;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(186, 232, 232, 0.7);
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.anomaly-point:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 15px rgba(186, 232, 232, 1);
+}
+
+.anomaly-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #e94560;
+  z-index: 2; /* Ensure marker is above echo */
+}
+
+.anomaly-echo {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #bae8e8;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+/* Severity based colors/effects */
+.anomaly-point.severity-1 .anomaly-marker { background-color: #4CAF50; } /* Green */
+.anomaly-point.severity-2 .anomaly-marker { background-color: #8BC34A; } /* Light Green */
+.anomaly-point.severity-3 .anomaly-marker { background-color: #FFEB3B; } /* Yellow */
+.anomaly-point.severity-4 .anomaly-marker { background-color: #FF9800; } /* Orange */
+.anomaly-point.severity-5 .anomaly-marker { background-color: #F44336; } /* Red */
+
+.anomaly-point.severity-1 .anomaly-echo { background-color: #4CAF50; }
+.anomaly-point.severity-2 .anomaly-echo { background-color: #8BC34A; }
+.anomaly-point.severity-3 .anomaly-echo { background-color: #FFEB3B; }
+.anomaly-point.severity-4 .anomaly-echo { background-color: #FF9800; }
+.anomaly-point.severity-5 .anomaly-echo { background-color: #F44336; }
+
+
+.anomaly-details {
+  background-color: #0f3460;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 30px;
+  text-align: left;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.anomaly-details h3 {
+  color: #bae8e8;
+  margin-top: 0;
+}
+
+.anomaly-details p {
+  margin-bottom: 10px;
+}
+
+.anomaly-details button {
+  background-color: #e94560;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.anomaly-details button:hover {
+  background-color: #ba2d46;
+}
+
+@keyframes echoPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
