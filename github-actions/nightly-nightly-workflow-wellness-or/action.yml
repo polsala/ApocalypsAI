@@ -1,0 +1,16 @@
+name: 'Nightly Workflow Wellness Oracle'
+description: 'Analyzes recent workflow runs and generates a whimsical wellness report.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication.'
+    required: true
+  days-to-check:
+    description: 'Number of past days to consider for workflow runs.'
+    required: false
+    default: '7'
+outputs:
+  wellness-report:
+    description: 'A whimsical report summarizing the health of recent workflows.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
