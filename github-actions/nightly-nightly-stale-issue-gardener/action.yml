@@ -1,0 +1,42 @@
+name: 'Stale Issue Gardener'
+description: 'Automatically identifies and manages stale GitHub issues by labeling, commenting, and optionally closing them to keep the issue garden tidy.'
+inputs:
+  repo-token:
+    description: 'Token for the GitHub API. Usually GITHUB_TOKEN.'
+    required: true
+  stale-issue-label:
+    description: 'Label to apply to stale issues.'
+    required: false
+    default: 'stale'
+  days-before-stale:
+    description: 'Number of days of inactivity before an issue is marked stale.'
+    required: false
+    default: '30'
+  days-before-close:
+    description: 'Number of days after being marked stale (total inactivity) before an issue is closed.'
+    required: false
+    default: '7'
+  stale-issue-message:
+    description: 'Message to post when an issue is marked stale.'
+    required: false
+    default: |
+      This issue has been automatically marked as stale because it has not had
+      recent activity. It will be closed if no further activity occurs.
+      Thank you for your contributions.
+  close-issue-message:
+    description: 'Message to post when an issue is closed.'
+    required: false
+    default: |
+      This issue was closed because it has been inactive for a long time.
+      Feel free to reopen it if you still encounter this problem.
+  exempt-labels:
+    description: 'Comma-separated list of labels that exempt an issue from being marked stale.'
+    required: false
+    default: 'bug,enhancement,pinned,security'
+  only-labels:
+    description: 'Comma-separated list of labels. Only issues with one of these labels will be considered.'
+    required: false
+    default: ''
+runs:
+  using: 'node16'
+  main: 'src/main.js'
