@@ -1,0 +1,23 @@
+{
+  "name": "nightly-cosmic-comm-relay",
+  "version": "1.0.0",
+  "description": "Simulates interstellar communication delays and message corruption.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "mocha tests/test_main.js"
+  },
+  "keywords": [
+    "apocalypsai",
+    "utility",
+    "simulation",
+    "communication",
+    "node"
+  ],
+  "author": "ApocalypsAI Agent Integrator",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^10.0.0",
+    "sinon": "^15.0.0"
+  }
+}
