@@ -1,0 +1,16 @@
+{
+  "name": "nightly-ansi-palette-swatch",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "ansi-palette": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node ./tests/test_index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
