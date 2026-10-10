@@ -1,0 +1,30 @@
+name: "Nightly PR Whimsical Compliment"
+description: "Posts a random whimsical compliment as a comment on a pull request"
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+    default: "${{ github.token }}"
+outputs:
+  compliment:
+    description: "The compliment that was posted"
+    value: ${{ steps.compliment.outputs.compliment }}
+runs:
+  using: "composite"
+  steps:
+    - name: Run compliment script
+      id: compliment
+      shell: python
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_OUTPUT: ${{ runner.temp }}/github_output.txt
+      run: |
+        import os, sys, json, pathlib
+        script_path = pathlib.Path(__file__).parent / "src" / "compliment.py"
+        exec(script_path.read_text())
+    - name: Set output
+      run: |
+        cat ${{ runner.temp }}/github_output.txt >> $GITHUB_OUTPUT
+      shell: bash
