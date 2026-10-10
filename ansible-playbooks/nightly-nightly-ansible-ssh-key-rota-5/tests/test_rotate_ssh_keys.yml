@@ -1,0 +1,45 @@
+- name: Test SSH key rotator playbook
+  hosts: localhost
+  become: false
+  vars:
+    ssh_key_dir: "./test_ssh"
+  pre_tasks:
+    - name: Create test SSH directory
+      ansible.builtin.file:
+        path: "{{ ssh_key_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Create dummy old host key
+      ansible.builtin.copy:
+        dest: "{{ ssh_key_dir }}/ssh_host_rsa_key"
+        content: "OLD_KEY"
+        mode: '0600'
+
+  tasks:
+    - name: Include rotate playbook
+      ansible.builtin.import_playbook: ../src/rotate_ssh_keys.yml
+
+  post_tasks:
+    - name: Verify new key file exists
+      ansible.builtin.stat:
+        path: "{{ ssh_key_dir }}/ssh_host_rsa_key"
+      register: new_key
+
+    - name: Assert new key was generated
+      ansible.builtin.assert:
+        that:
+          - new_key.stat.exists
+          - new_key.stat.size > 0
+
+    - name: Verify backup directory created
+      ansible.builtin.find:
+        paths: "{{ ssh_key_dir }}"
+        patterns: "backup_*"
+        file_type: directory
+      register: backup_dirs
+
+    - name: Assert backup exists
+      ansible.builtin.assert:
+        that:
+          - backup_dirs.matched == 1
