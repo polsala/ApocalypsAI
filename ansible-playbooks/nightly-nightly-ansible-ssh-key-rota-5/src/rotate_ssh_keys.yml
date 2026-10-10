@@ -1,0 +1,31 @@
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ssh_key_path: /etc/ssh/ssh_host_ecdsa_key
+    backup_dir: /etc/ssh/backup_keys
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Backup existing SSH host key (if present)
+      copy:
+        src: "{{ ssh_key_path }}"
+        dest: "{{ backup_dir }}/ssh_host_ecdsa_key_{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: true
+      when: "{{ lookup('file', ssh_key_path, errors='ignore') != '' }}"
+
+    - name: Generate new SSH host key (ECDSA)
+      command: ssh-keygen -t ecdsa -f "{{ ssh_key_path }}" -N ""
+      args:
+        creates: "{{ ssh_key_path }}"
+
+    - name: Restart SSH service (Linux)
+      service:
+        name: ssh
+        state: restarted
+      when: ansible_facts['os_family'] != "Darwin"
