@@ -1,0 +1,132 @@
+---
+- name: Test Temporal Echo Node Stabilizer Playbook
+  hosts: localhost
+  connection: local
+  become: yes # For simulating system-level changes
+  vars_files:
+    - ../src/vars/main.yml # Load variables from the main playbook's vars
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: /tmp/ansible_test_echo_node
+        state: directory
+        mode: '0755'
+
+    - name: Mock temporal-echo-service systemd unit file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Mock Temporal Echo Service
+          [Service]
+          ExecStart=/bin/true
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/{{ echo_service_name }}.service"
+        mode: '0644'
+      # Mock rationale: Creates a dummy service definition so 'service' module
+      # calls don't fail on a non-existent service during local testing.
+      # This allows testing the *logic* of the service task (started, enabled)
+      # without needing a real, complex service.
+
+    - name: Reload systemd daemon to pick up mock service
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      # Mock rationale: Ensures the systemd service module can find the mock service.
+
+    - name: Create mock config directory
+      ansible.builtin.file:
+        path: "{{ echo_config_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create mock log directory
+      ansible.builtin.file:
+        path: "{{ echo_log_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Test 1: Initial Check Mode - Run playbook in check_mode (changes expected initially)
+      ansible.builtin.include_tasks: ../src/stabilize_nodes.yml
+      args:
+        apply:
+          check_mode: yes
+      register: result_check_mode_initial
+      # Mock rationale: This runs the main playbook in check_mode.
+      # We expect it to report 'changed' because the mock service and config
+      # are being set up for the first time in this test run.
+
+    - name: Assert that initial check_mode run reports changes (as it's a fresh setup)
+      ansible.builtin.assert:
+        that:
+          - result_check_mode_initial is changed
+        fail_msg: "Initial check_mode run should report changes for a fresh setup."
+      # Mock rationale: On a clean test environment, the service and config tasks
+      # *will* report changes in check_mode because they don't exist or aren't configured.
+
+    - name: Test 2: Full Run - Apply configuration
+      ansible.builtin.include_tasks: ../src/stabilize_nodes.yml
+      register: result_full_run
+      # Mock rationale: This runs the main playbook in normal mode, applying all changes.
+
+    - name: Assert that full run reports changes (as it's a fresh setup)
+      ansible.builtin.assert:
+        that:
+          - result_full_run is changed
+        fail_msg: "Full run should report changes for a fresh setup."
+      # Mock rationale: Confirms the playbook actually attempts to make changes.
+
+    - name: Test 3: Idempotency Check - Run playbook again in check_mode (no changes expected after full run)
+      ansible.builtin.include_tasks: ../src/stabilize_nodes.yml
+      args:
+        apply:
+          check_mode: yes
+      register: result_check_mode_idempotent
+      # Mock rationale: After a full run, the system should be in the desired state.
+      # Running again in check_mode should report 'changed=0'.
+
+    - name: Assert idempotency (no changes reported after full run)
+      ansible.builtin.assert:
+        that:
+          - not result_check_mode_idempotent is changed
+        fail_msg: "Playbook is not idempotent: changes reported on second check_mode run."
+      # Mock rationale: This is the core idempotency test.
+
+    - name: Test 4: Configuration Drift - Introduce a config drift
+      ansible.builtin.copy:
+        content: |
+          # Temporal Echo Service Configuration
+          [Service]
+          Frequency=10
+          PowerLevel=drifted
+          LogFile=/var/log/old_log.log
+        dest: "{{ echo_config_path }}"
+        mode: '0644'
+      # Mock rationale: Simulates a manual change to the config file.
+
+    - name: Test 5: Configuration Drift - Run playbook in check_mode (changes expected due to drift)
+      ansible.builtin.include_tasks: ../src/stabilize_nodes.yml
+      args:
+        apply:
+          check_mode: yes
+      register: result_check_mode_drift
+      # Mock rationale: Running in check_mode after drift should detect the difference.
+
+    - name: Assert changes detected due to drift
+      ansible.builtin.assert:
+        that:
+          - result_check_mode_drift is changed
+        fail_msg: "Playbook did not detect configuration drift."
+      # Mock rationale: Verifies the playbook correctly identifies out-of-sync configurations.
+
+    - name: Clean up mock files and directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/ansible_test_echo_node
+        - "/etc/systemd/system/{{ echo_service_name }}.service"
+        - "{{ echo_config_path | dirname }}"
+        - "/etc/logrotate.d/{{ echo_service_name }}"
+      ignore_errors: yes
+      # Mock rationale: Cleans up the test environment to ensure subsequent test runs are clean.

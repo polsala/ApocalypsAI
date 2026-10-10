@@ -1,0 +1,6 @@
+---
+echo_service_name: temporal-echo-service
+echo_config_path: /etc/temporal-echo/echo_service.conf
+echo_log_path: /var/log/temporal-echo/service.log
+echo_stabilization_frequency: 60 # seconds
+echo_power_level: "standard" # or "boosted", "minimal"

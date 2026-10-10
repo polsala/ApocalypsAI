@@ -1,0 +1,46 @@
+---
+- name: Stabilize Temporal Echo Nodes
+  hosts: echo_nodes
+  become: yes # Required for service management and config file writes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure temporal-echo-service is running and enabled
+      ansible.builtin.service:
+        name: "{{ echo_service_name }}"
+        state: started
+        enabled: yes
+      # Mock rationale: In a real scenario, this would interact with systemd.
+      # For testing, we rely on Ansible's idempotency for the 'service' module
+      # and the ability to run in check_mode to verify task logic.
+
+    - name: Deploy temporal-echo-service configuration
+      ansible.builtin.template:
+        src: templates/echo_service.conf.j2
+        dest: "{{ echo_config_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart temporal-echo-service
+      # Mock rationale: This task is inherently idempotent. For testing,
+      # we can verify its 'changed' status by pre-populating a different
+      # config and running in check_mode.
+
+    - name: Ensure logrotate configuration for temporal-echo-service
+      ansible.builtin.template:
+        src: templates/logrotate_echo_service.conf.j2
+        dest: "/etc/logrotate.d/{{ echo_service_name }}"
+        owner: root
+        group: root
+        mode: '0644'
+      # Mock rationale: This task is also inherently idempotent.
+      # Testing verifies the template content and deployment path.
+
+  handlers:
+    - name: Restart temporal-echo-service
+      ansible.builtin.service:
+        name: "{{ echo_service_name }}"
+        state: restarted
+      # Mock rationale: Handlers are triggered by 'notify'. Testing ensures
+      # the handler is correctly defined and would be called.
