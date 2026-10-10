@@ -1,0 +1,9 @@
+name: "PR Emoji Labeler"
+description: "Outputs an emoji based on PR title sentiment."
+inputs:
+  title:
+    description: "Pull request title"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
