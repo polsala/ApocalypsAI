@@ -1,0 +1,62 @@
+---
+- name: Identify and clean up digital dust bunnies
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Create target directories if they don't exist (for local testing safety)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ dust_bunny_target_paths }}"
+      delegate_to: localhost
+      when: ansible_connection == 'local' # Only for local testing, remote 'find' handles non-existent paths
+
+    - name: Find old backup/temporary files
+      ansible.builtin.find:
+        paths: "{{ dust_bunny_target_paths }}"
+        patterns: "{{ dust_bunny_file_patterns | join(',') }}"
+        age: "{{ dust_bunny_age_threshold_days }}d"
+        recurse: true
+        file_type: file
+      register: old_temp_files
+      ignore_errors: true # In case a path doesn't exist or permissions issue
+
+    - name: Find empty files
+      ansible.builtin.find:
+        paths: "{{ dust_bunny_target_paths }}"
+        size: "0"
+        recurse: true
+        file_type: file
+      register: empty_files
+      ignore_errors: true
+
+    - name: Combine all dust bunnies
+      ansible.builtin.set_fact:
+        all_dust_bunnies: "{{ old_temp_files.files | map(attribute='path') | list + empty_files.files | map(attribute='path') | list }}"
+
+    - name: Report identified dust bunnies (Dry Run)
+      ansible.builtin.debug:
+        msg: "Identified dust bunny: {{ item }}"
+      loop: "{{ all_dust_bunnies }}"
+      when: dust_bunny_dry_run | bool
+
+    - name: Report identified dust bunnies (Actual Run - will be deleted)
+      ansible.builtin.debug:
+        msg: "Deleting dust bunny: {{ item }}"
+      loop: "{{ all_dust_bunnies }}"
+      when: not dust_bunny_dry_run | bool
+
+    - name: Delete identified dust bunnies
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ all_dust_bunnies }}"
+      when: not dust_bunny_dry_run | bool
+      # Mock rationale: In a real scenario, this would delete files on the target host.
+      # For testing, we ensure the test playbook creates mock files in a temporary
+      # location, and this task will delete them from that temporary location.
+      # The 'when' condition ensures it only runs when dry_run is false.
