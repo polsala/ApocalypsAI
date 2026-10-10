@@ -1,0 +1,30 @@
+name: 'Nightly Header Harmonizer'
+description: 'Ensures all repository files have a consistent, ApocalypsAI-themed header.'
+inputs:
+  header-content:
+    description: 'The multi-line content of the header to enforce (without comment markers).'
+    required: true
+  file-patterns:
+    description: 'Comma-separated glob patterns for files to check (e.g., "*.py,*.sh,src/**/*.js").'
+    required: true
+  fix-mode:
+    description: 'If "true", the action will attempt to prepend missing headers. Default is "false".'
+    required: false
+    default: 'false'
+outputs:
+  non_compliant_files:
+    description: 'A multi-line string of files that were found to be non-compliant.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Header Harmonizer Script
+      shell: bash
+      env:
+        HEADER_CONTENT: ${{ inputs.header-content }}
+        FILE_PATTERNS: ${{ inputs.file-patterns }}
+        FIX_MODE: ${{ inputs.fix-mode }}
+      run: |
+        # Ensure the script is executable
+        chmod +x ${{ github.action_path }}/src/harmonize.sh
+        # Run the script, passing inputs as arguments
+        ${{ github.action_path }}/src/harmonize.sh "$HEADER_CONTENT" "$FILE_PATTERNS" "$FIX_MODE"
