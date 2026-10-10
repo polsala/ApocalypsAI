@@ -1,0 +1,1 @@
+output "bucket_id" {\n  description = "ID of the created S3 bucket"\n  value       = aws_s3_bucket.safehouse.id\n}\n\noutput "readonly_policy_arn" {\n  description = "ARN of the read‑only IAM policy"\n  value       = aws_iam_policy.safehouse_readonly.arn\n}\n
