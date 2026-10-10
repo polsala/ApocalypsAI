@@ -1,0 +1,35 @@
+{
+  "name": "nightly-chrono-chime-decipherer",
+  "version": "1.0.0",
+  "description": "Deciphers cryptic time-based inputs into whimsical prophecies and actionable (or amusing) advice.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/cli.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "apocalypsai",
+    "utility",
+    "typescript",
+    "cli",
+    "whimsical",
+    "prophecy",
+    "advice"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.14.1",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}
