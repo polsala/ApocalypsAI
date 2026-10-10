@@ -1,0 +1,12 @@
+name: 'Nightly PR Praise Action'
+description: 'Adds a whimsical, encouraging comment to merged Pull Requests, celebrating the contribution.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication.'
+    required: true
+  praise-messages:
+    description: 'Multiline string of custom praise messages. Each line is a separate message.'
+    required: false
+runs:
+  using: 'node20'
+  main: 'src/main.js'
