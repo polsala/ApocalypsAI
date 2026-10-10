@@ -1,0 +1,25 @@
+{
+  "name": "nightly-pocket-portal-pinger",
+  "version": "1.0.0",
+  "description": "Pings a list of 'pocket portals' (URLs or local files) to check their 'dimensional stability' and reports their status.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "node",
+    "portal",
+    "ping",
+    "status",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
