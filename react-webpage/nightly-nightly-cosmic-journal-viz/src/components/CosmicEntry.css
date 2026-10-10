@@ -1,0 +1,76 @@
+.cosmic-entry {
+  background-color: #3a3a6e;
+  border: 1px solid #4a4a7e;
+  border-radius: 10px;
+  padding: 20px;
+  width: 100%;
+  max-width: 350px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cosmic-entry:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 0.9em;
+  color: #a0a0a0;
+}
+
+.entry-origin {
+  font-weight: bold;
+  color: #00ffff;
+}
+
+.entry-timestamp {
+  font-style: italic;
+}
+
+.entry-content {
+  text-align: left;
+  margin-bottom: 20px;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.entry-content p {
+  margin: 0;
+}
+
+.entry-footer {
+  font-size: 0.85em;
+  color: #a0a0a0;
+  text-align: right;
+}
+
+.entry-theme {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+/* Thematic Styling */
+.theme-nebula {
+  border-left: 5px solid #ff69b4; /* Hot Pink */
+}
+
+.theme-stellar {
+  border-left: 5px solid #ffd700; /* Gold */
+}
+
+.theme-void {
+  border-left: 5px solid #8a2be2; /* Blue Violet */
+}
+
+.theme-default {
+  border-left: 5px solid #4682b4; /* Steel Blue */
+}

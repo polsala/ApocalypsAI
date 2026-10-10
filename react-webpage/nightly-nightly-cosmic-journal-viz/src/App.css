@@ -1,0 +1,62 @@
+.App {
+  text-align: center;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Arial', sans-serif;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #2a2a4e;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  color: #00bfff;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #a0a0a0;
+}
+
+.search-bar {
+  padding: 10px;
+  margin-top: 15px;
+  width: 60%;
+  max-width: 400px;
+  border: 1px solid #4a4a7e;
+  border-radius: 5px;
+  background-color: #2a2a4e;
+  color: #e0e0e0;
+  font-size: 1em;
+}
+
+.search-bar::placeholder {
+  color: #a0a0a0;
+}
+
+.App-main {
+  padding: 20px 0;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  justify-items: center;
+}
+
+.App-footer {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #2a2a4e;
+  border-radius: 8px;
+  font-size: 0.9em;
+  color: #a0a0a0;
+}
