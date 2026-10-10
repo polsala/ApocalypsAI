@@ -1,0 +1,17 @@
+name: "PR Title Linter"
+description: "Validate pull request titles against a configurable regex pattern."
+author: "ApocalypsAI Nightly Integrator"
+inputs:
+  pattern:
+    description: "Regular expression that the PR title must match (ECMAScript syntax)."
+    required: false
+    default: ".*"
+runs:
+  using: "composite"
+  steps:
+    - name: "Run title lint script"
+      shell: bash
+      env:
+        INPUT_PATTERN: ${{ inputs.pattern }}
+      run: |
+        bash "${{ github.action_path }}/src/lint.sh"
