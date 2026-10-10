@@ -1,0 +1,74 @@
+name: 'Nightly PR Pep Talk'
+description: 'Gently nudges inactive Pull Requests with an encouraging message.'
+inputs:
+  pr-number:
+    description: 'The number of the Pull Request to check.'
+    required: true
+  repo-token:
+    description: 'GitHub token with write access to PRs.'
+    required: true
+  inactivity-days:
+    description: 'Number of days after which a PR is considered inactive.'
+    required: false
+    default: '7'
+  comment-prefix:
+    description: 'Prefix for the pep talk comment.'
+    required: false
+    default: 'ApocalypsAI Integrator whispers:'
+outputs:
+  commented:
+    description: 'True if a comment was added, false otherwise.'
+    value: ${{ steps.pep-talk.outputs.commented }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Install gh CLI (if not already present)
+      shell: bash
+      run: |
+        if ! command -v gh &> /dev/null
+        then
+            echo "gh CLI not found, installing..."
+            sudo apt-get update
+            sudo apt-get install -y gh
+        fi
+
+    - name: Get PR last updated date
+      id: get-pr-date
+      shell: bash
+      run: |
+        PR_INFO=$(gh pr view ${{ inputs.pr-number }} --json updatedAt --jq '.updatedAt')
+        echo "pr_updated_at=$PR_INFO" >> $GITHUB_OUTPUT
+      env:
+        GH_TOKEN: ${{ inputs.repo-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+
+    - name: Generate Pep Talk
+      id: pep-talk
+      shell: bash
+      run: |
+        CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Mock rationale: For testing, the script itself is tested with fixed dates.
+        # In the action, we use the real current date.
+        OUTPUT=$(bash "${{ github.action_path }}/src/pep_talk_generator.sh" \
+          "${{ steps.get-pr-date.outputs.pr_updated_at }}" \
+          "${{ inputs.inactivity-days }}" \
+          "${{ inputs.comment-prefix }}" \
+          "$CURRENT_DATE")
+        
+        SHOULD_COMMENT=$(echo "$OUTPUT" | grep "should_comment=" | cut -d'=' -f2)
+        COMMENT_BODY=$(echo "$OUTPUT" | grep "comment_body=" | cut -d'=' -f2-)
+        
+        echo "should_comment=$SHOULD_COMMENT" >> $GITHUB_OUTPUT
+        echo "comment_body=$COMMENT_BODY" >> $GITHUB_OUTPUT
+        echo "commented=$SHOULD_COMMENT" >> $GITHUB_OUTPUT
+
+    - name: Add comment to PR
+      if: steps.pep-talk.outputs.should_comment == 'true'
+      shell: bash
+      run: |
+        echo "Adding pep talk to PR #${{ inputs.pr-number }}"
+        gh pr comment ${{ inputs.pr-number }} --body "${{ steps.pep-talk.outputs.comment_body }}"
+      env:
+        GH_TOKEN: ${{ inputs.repo-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
