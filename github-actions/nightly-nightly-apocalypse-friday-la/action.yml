@@ -1,0 +1,18 @@
+name: "Nightly Apocalypse Friday Labeler"
+description: "Automatically adds a 'post-apocalypse' label to issues opened on Fridays."
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with issues:write permission"
+    required: true
+  label-name:
+    description: "Label to apply on Fridays"
+    required: false
+    default: "post-apocalypse"
+runs:
+  using: "docker"
+  image: "alpine:3.18"
+  entrypoint: "/entrypoint.sh"
+  env:
+    GITHUB_TOKEN: "${{ inputs.github-token }}"
+    LABEL_NAME: "${{ inputs.label-name }}"
