@@ -1,0 +1,22 @@
+---
+- name: Define directories to check for disk clutter
+  ansible.builtin.set_fact:
+    disk_check_dirs: ['/var/log', '/tmp', '/opt', '/home']
+
+- name: Get disk usage for specified directories
+  ansible.builtin.command: "du -sh {{ item }}"
+  loop: "{{ disk_check_dirs }}"
+  register: disk_usage_results
+  changed_when: false
+  failed_when: false # Allow command to fail gracefully if directory doesn't exist
+
+- name: Process disk usage results
+  ansible.builtin.set_fact:
+    serenity_disk_clutter_status: |
+      {% set report = [] %}
+      {% for item in disk_usage_results.results %}
+        {% if item.rc == 0 %}
+          {% set _ = report.append(item.stdout) %}
+        {% endif %}
+      {% endfor %}
+      {{ report | join('\n') }}

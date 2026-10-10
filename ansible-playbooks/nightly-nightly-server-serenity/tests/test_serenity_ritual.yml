@@ -1,0 +1,149 @@
+---
+- name: Test Nightly Server Serenity Ritual
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    serenity_report_path: "/tmp/test_serenity_report_{{ ansible_play_batch | first }}.txt"
+    tmp_file_age_days: 7
+    clean_old_tmp_files: false
+
+  tasks:
+    - name: Mock ansible_date_time for deterministic report generation
+      ansible.builtin.set_fact:
+        ansible_date_time:
+          iso8601_micro: "2023-10-27T08:00:00.000000Z"
+          date: "2023-10-27"
+          time: "08:00:00"
+
+    - name: Test Case 1: All clear, high serenity
+      block:
+        - name: Mock NTP sync status (active and synchronized)
+          ansible.builtin.set_fact:
+            serenity_ntp_sync_status: "Synchronized with NTP server."
+
+        - name: Mock no old temporary files found
+          ansible.builtin.set_fact:
+            serenity_tmp_files_status:
+              found: false
+              files: []
+
+        - name: Mock no reboot required
+          ansible.builtin.set_fact:
+            serenity_reboot_status: "No reboot required."
+
+        - name: Mock disk usage results
+          ansible.builtin.set_fact:
+            serenity_disk_clutter_status: "1.2G\t/var/log\n500M\t/opt"
+
+        - name: Generate report for Test Case 1
+          ansible.builtin.template:
+            src: src/templates/serenity_report.j2
+            dest: "{{ serenity_report_path }}_case1.txt"
+            mode: '0644'
+
+        - name: Read generated report for Test Case 1
+          ansible.builtin.slurp:
+            src: "{{ serenity_report_path }}_case1.txt"
+          register: report_content_case1
+
+        - name: Assert report content for Test Case 1 (High Serenity)
+          ansible.builtin.assert:
+            that:
+              - "'--- Serenity Level: High ---' in (report_content_case1.content | b64decode)"
+              - "'No old temporary files found.' in (report_content_case1.content | b64decode)"
+              - "'No reboot required.' in (report_content_case1.content | b64decode)"
+              - "'Synchronized with NTP server.' in (report_content_case1.content | b64decode)"
+            msg: "Test Case 1 (High Serenity) failed."
+
+    - name: Test Case 2: Issues detected, moderate to low serenity
+      block:
+        - name: Mock NTP sync status (not synchronized)
+          ansible.builtin.set_fact:
+            serenity_ntp_sync_status: "Not synchronized or NTP service inactive."
+
+        - name: Mock old temporary files found
+          ansible.builtin.set_fact:
+            serenity_tmp_files_status:
+              found: true
+              files: ['/tmp/oldfile1.log', '/var/tmp/another_old.txt']
+
+        - name: Mock reboot required
+          ansible.builtin.set_fact:
+            serenity_reboot_status: "Reboot required for system updates."
+
+        - name: Mock disk usage results (same as before)
+          ansible.builtin.set_fact:
+            serenity_disk_clutter_status: "1.2G\t/var/log\n500M\t/opt"
+
+        - name: Generate report for Test Case 2
+          ansible.builtin.template:
+            src: src/templates/serenity_report.j2
+            dest: "{{ serenity_report_path }}_case2.txt"
+            mode: '0644'
+
+        - name: Read generated report for Test Case 2
+          ansible.builtin.slurp:
+            src: "{{ serenity_report_path }}_case2.txt"
+          register: report_content_case2
+
+        - name: Assert report content for Test Case 2 (Moderate to Low Serenity)
+          ansible.builtin.assert:
+            that:
+              - "'--- Serenity Level: Moderate to Low ---' in (report_content_case2.content | b64decode)"
+              - "'Found 2 old temporary files.' in (report_content_case2.content | b64decode)"
+              - "'Reboot required for system updates.' in (report_content_case2.content | b64decode)"
+              - "'Not synchronized or NTP service inactive.' in (report_content_case2.content | b64decode)"
+            msg: "Test Case 2 (Moderate to Low Serenity) failed."
+
+    - name: Test Case 3: Clean old temporary files enabled
+      block:
+        - name: Mock NTP sync status (synchronized)
+          ansible.builtin.set_fact:
+            serenity_ntp_sync_status: "Synchronized with NTP server."
+
+        - name: Mock old temporary files found and cleaning enabled
+          ansible.builtin.set_fact:
+            serenity_tmp_files_status:
+              found: true
+              files: ['/tmp/oldfile_to_clean.log']
+            clean_old_tmp_files: true # Override for this test case
+
+        - name: Mock no reboot required
+          ansible.builtin.set_fact:
+            serenity_reboot_status: "No reboot required."
+
+        - name: Mock disk usage results
+          ansible.builtin.set_fact:
+            serenity_disk_clutter_status: ""
+
+        - name: Generate report for Test Case 3
+          ansible.builtin.template:
+            src: src/templates/serenity_report.j2
+            dest: "{{ serenity_report_path }}_case3.txt"
+            mode: '0644'
+
+        - name: Read generated report for Test Case 3
+          ansible.builtin.slurp:
+            src: "{{ serenity_report_path }}_case3.txt"
+          register: report_content_case3
+
+        - name: Assert report content for Test Case 3 (Cleaning enabled)
+          ansible.builtin.assert:
+            that:
+              - "'Found 1 old temporary files.' in (report_content_case3.content | b64decode)"
+              - "'These files were cleaned.' in (report_content_case3.content | b64decode)"
+            msg: "Test Case 3 (Cleaning enabled) failed."
+
+    - name: Clean up test reports
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ serenity_report_path }}_case1.txt"
+        - "{{ serenity_report_path }}_case2.txt"
+        - "{{ serenity_report_path }}_case3.txt"
+      delegate_to: localhost
+      run_once: true
+
+# Mock rationale: To ensure deterministic and offline testing of the Ansible playbook's logic, especially its report generation based on various system states, we use `set_fact` to simulate the output of remote commands (like `timedatectl`, `find`, `stat`, `du`). This allows us to control the inputs to the Jinja2 template and assertion logic without requiring actual remote host interaction or specific system conditions, making the tests reliable and fast.

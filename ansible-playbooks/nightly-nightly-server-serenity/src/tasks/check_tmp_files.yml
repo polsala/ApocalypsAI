@@ -1,0 +1,24 @@
+---
+- name: Find old temporary files
+  ansible.builtin.find:
+    paths: ['/tmp', '/var/tmp']
+    age: "{{ tmp_file_age_days }}d"
+    file_type: file
+  register: old_tmp_files_result
+  changed_when: false # This task only finds, not changes
+
+- name: Set fact for old temporary files status
+  ansible.builtin.set_fact:
+    serenity_tmp_files_status:
+      found: "{{ old_tmp_files_result.files | length > 0 }}"
+      files: "{{ old_tmp_files_result.files | map(attribute='path') | list }}"
+
+- name: Clean old temporary files (optional)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ old_tmp_files_result.files | map(attribute='path') | list }}"
+  when: clean_old_tmp_files and old_tmp_files_result.files | length > 0
+  # Registering change for report, but actual change is conditional
+  register: tmp_files_cleaned_result
+  changed_when: tmp_files_cleaned_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0
