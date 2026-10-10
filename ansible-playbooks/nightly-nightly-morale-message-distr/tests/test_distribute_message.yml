@@ -1,0 +1,58 @@
+---
+- name: Test Nightly Morale Message Distributor
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    test_message: "This is a deterministic test message for the Nightly Morale Message Distributor."
+    test_motd_path: "/tmp/ansible_test_motd/motd.txt"
+
+  pre_tasks:
+    - name: Create temporary directory for test MOTD
+      ansible.builtin.file:
+        path: "{{ test_motd_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+  tasks:
+    - name: Include the main playbook tasks for testing
+      ansible.builtin.include_tasks:
+        file: ../src/distribute_message.yml
+      vars:
+        motd_path: "{{ test_motd_path }}"
+        test_message: "{{ test_message }}" # Pass the deterministic message
+
+    - name: Verify MOTD file exists
+      ansible.builtin.stat:
+        path: "{{ test_motd_path }}"
+      register: motd_stat
+
+    - name: Assert MOTD file exists
+      ansible.builtin.assert:
+        that:
+          - motd_stat.stat.exists is true
+        msg: "Test failed: MOTD file does not exist at {{ test_motd_path }}"
+
+    - name: Read content of the MOTD file
+      ansible.builtin.slurp:
+        src: "{{ test_motd_path }}"
+      register: motd_content_b64
+
+    - name: Decode MOTD content
+      ansible.builtin.set_fact:
+        motd_content: "{{ motd_content_b64.content | b64decode | trim }}"
+
+    - name: Assert MOTD content matches expected test message
+      ansible.builtin.assert:
+        that:
+          - "{{ motd_content | regex_search('^Welcome, survivor!\n\n' + test_message + '\n\nStay vigilant!$') }}"
+        msg: "Test failed: MOTD content does not match expected. Expected: '{{ test_message }}', Got: '{{ motd_content }}'"
+
+  post_tasks:
+    - name: Clean up temporary directory
+      ansible.builtin.file:
+        path: "{{ test_motd_path | dirname }}"
+        state: absent
+      # Mock rationale: This cleanup task ensures the test environment is reset,
+      # making the test deterministic and preventing side effects on subsequent runs.
+      # It operates on the local filesystem, so no external mocks are needed.
