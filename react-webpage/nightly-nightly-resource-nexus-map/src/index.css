@@ -1,0 +1,137 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App {
+  background-color: #3a3f47;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h1 {
+  color: #61dafb;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.resource-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.resource-filter button {
+  background-color: #4a4f57;
+  color: #e0e0e0;
+  border: 1px solid #61dafb;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.resource-filter button:hover {
+  background-color: #61dafb;
+  color: #282c34;
+}
+
+.resource-filter button.active {
+  background-color: #61dafb;
+  color: #282c34;
+  font-weight: bold;
+}
+
+.map-container {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr); /* 10x10 grid */
+  grid-template-rows: repeat(10, 1fr);
+  width: 100%;
+  aspect-ratio: 1 / 1; /* Make it square */
+  border: 2px solid #61dafb;
+  background-color: #222;
+  position: relative;
+}
+
+.map-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  border: 1px dotted rgba(97, 218, 251, 0.2);
+  box-sizing: border-box;
+}
+
+.resource-legend {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #4a4f57;
+  border-radius: 8px;
+}
+
+.resource-legend h2 {
+  color: #61dafb;
+  margin-top: 0;
+  text-align: center;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-symbol {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #282c34;
+}
+
+/* Resource specific colors */
+.symbol-water { background-color: #00bfff; } /* Deep Sky Blue */
+.symbol-food { background-color: #32cd32; } /* Lime Green */
+.symbol-scrap { background-color: #a9a9a9; } /* Dark Gray */
+.symbol-fuel { background-color: #ff4500; } /* Orange Red */
+.symbol-meds { background-color: #ff69b4; } /* Hot Pink */
+.symbol-tools { background-color: #ffd700; } /* Gold */
