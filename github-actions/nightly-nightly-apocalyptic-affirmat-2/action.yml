@@ -1,0 +1,13 @@
+name: 'Apocalyptic Affirmation'
+description: 'Injects a random, whimsically apocalyptic affirmation into your workflow.'
+inputs:
+  target:
+    description: 'Where to output the affirmation. "summary" for workflow summary, "output" for step output.'
+    required: false
+    default: 'summary'
+outputs:
+  affirmation:
+    description: 'The chosen apocalyptic affirmation.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
