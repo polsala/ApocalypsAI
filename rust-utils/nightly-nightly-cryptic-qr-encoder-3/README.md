@@ -1,0 +1,1 @@
+# nightly-cryptic-qr-encoder\n\nEncode a short string into a QR code rendered as ASCII art.\n\n## Usage\n\n```sh\ncargo run --quiet -- "HELLO"\n```\n\nOutputs QR code.\n\n## Build\n\n```sh\ncargo build --release\n```\n\n## Test\n\n```sh\ncargo test\n```

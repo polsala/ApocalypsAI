@@ -1,0 +1,1 @@
+use std::env;\nuse nightly_cryptic_qr_encoder::encode_to_ascii;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() != 2 {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    }\n    let output = encode_to_ascii(&args[1]);\n    println!("{}", output);\n}
