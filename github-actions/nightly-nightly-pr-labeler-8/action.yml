@@ -1,0 +1,16 @@
+name: "Nightly PR Labeler"
+description: "Suggest whimsical labels for a PR based on changed files."
+inputs:
+  changed_files:
+    description: "Comma‑separated list of changed file paths."
+    required: true
+outputs:
+  labels:
+    description: "Comma‑separated list of labels to apply."
+runs:
+  using: "composite"
+  steps:
+    - name: "Determine labels"
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/src/label_pr.sh" "${{ inputs.changed_files }}"
