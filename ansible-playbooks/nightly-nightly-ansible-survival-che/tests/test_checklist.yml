@@ -1,0 +1,33 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run the survival checklist generator playbook
+      import_playbook: "../src/main.yml"
+
+    - name: Verify checklist file exists
+      stat:
+        path: "../src/survival_checklist.txt"
+      register: chk_stat
+
+    - name: Assert file was created
+      assert:
+        that:
+          - chk_stat.stat.exists
+
+    - name: Read checklist content
+      slurp:
+        src: "../src/survival_checklist.txt"
+      register: file_blob
+
+    - name: Decode content to string
+      set_fact:
+        checklist_content: "{{ file_blob.content | b64decode }}"
+
+    - name: Assert expected checklist lines are present
+      assert:
+        that:
+          - "'- Find water' in checklist_content"
+          - "'- Locate shelter' in checklist_content"
+          - "'- Gather food' in checklist_content"
+          - "'- Signal for help' in checklist_content"

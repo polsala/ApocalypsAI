@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  gather_facts: false
+  vars:
+    checklist_items:
+      - "Find water"
+      - "Locate shelter"
+      - "Gather food"
+      - "Signal for help"
+  tasks:
+    - name: Render survival checklist
+      copy:
+        dest: "{{ playbook_dir }}/survival_checklist.txt"
+        content: |
+          {% for item in checklist_items %}
+          - {{ item }}
+          {% endfor %}
+      delegate_to: localhost
