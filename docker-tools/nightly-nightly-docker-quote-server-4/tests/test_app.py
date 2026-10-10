@@ -1,0 +1,1 @@
+import unittest\nfrom unittest.mock import patch\nimport src.app as app\n\nclass TestQuoteServer(unittest.TestCase):\n    @patch('random.choice')\n    def test_get_random_quote(self, mock_choice):\n        mock_choice.return_value = \"Test quote\"\n        self.assertEqual(app.get_random_quote(), \"Test quote\")\n\nif __name__ == '__main__':\n    unittest.main()\n
