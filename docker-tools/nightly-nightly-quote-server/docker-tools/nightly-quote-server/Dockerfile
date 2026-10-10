@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/ .\nRUN go build -o quote-server .\n\nFROM alpine:latest\nWORKDIR /app\nCOPY --from=builder /app/quote-server .\nEXPOSE 8080\nENTRYPOINT [\"./quote-server\"]
