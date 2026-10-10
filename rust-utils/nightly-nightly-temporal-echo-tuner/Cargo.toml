@@ -1,0 +1,15 @@
+[package]
+name = "nightly-temporal-echo-tuner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+rand = "0.8"
+chrono = "0.4"
+sha2 = "0.10"
+hex = "0.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "1.0"
