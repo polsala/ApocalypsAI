@@ -1,0 +1,1 @@
+{\n  "name": "nightly-gear-ratio-calculator",\n  "version": "1.0.0",\n  "description": "Compute gear ratios and rotation direction for a series of gears.",\n  "main": "dist/main.js",\n  "scripts": {\n    "build": "tsc",\n    "test": "npm run build && node dist/tests/main.test.js"\n  },\n  "devDependencies": {\n    "typescript": "^5.4.2"\n  }\n}
