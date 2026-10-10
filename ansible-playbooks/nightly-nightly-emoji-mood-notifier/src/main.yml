@@ -1,0 +1,19 @@
+- name: Install Emoji Mood Notifier
+  hosts: all
+  become: true
+  vars:
+    script_path: /usr/local/bin/emoji_mood_notifier.sh
+  tasks:
+    - name: Copy notifier script
+      copy:
+        src: notify.sh
+        dest: "{{ script_path }}"
+        mode: '0755'
+
+    - name: Ensure daily cron job
+      cron:
+        name: "Emoji Mood Notifier"
+        minute: "0"
+        hour: "9"
+        job: "{{ script_path }}"
+        state: present
