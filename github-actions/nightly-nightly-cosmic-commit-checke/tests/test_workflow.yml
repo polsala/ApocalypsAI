@@ -1,0 +1,58 @@
+name: Test Nightly Cosmic Commit Checker
+on: [workflow_dispatch] # Allows manual triggering for testing
+
+jobs:
+  test_alignment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test with aligned commit message
+        id: aligned_test
+        uses: ./utils/nightly-cosmic-commit-checker # Path to the action within the repo
+        with:
+          commit_message: "Feat: Add new temporal flux capacitor. Blessed by the Void."
+          required_blessing: "Blessed by the Void"
+          fail_on_misalignment: 'false'
+      - name: Verify aligned test output
+        run: |
+          echo "Aligned test output: ${{ steps.aligned_test.outputs.is_cosmically_aligned }}"
+          if [ "${{ steps.aligned_test.outputs.is_cosmically_aligned }}" != "true" ]; then
+            echo "::error::Aligned test failed: Expected 'true', got '${{ steps.aligned_test.outputs.is_cosmically_aligned }}'"
+            exit 1
+          fi
+        # Mock rationale: Simulating workflow output for verification of the action's behavior.
+
+      - name: Test with misaligned commit message (no fail)
+        id: misaligned_no_fail_test
+        uses: ./utils/nightly-cosmic-commit-checker
+        with:
+          commit_message: "Fix: Corrected a minor temporal anomaly."
+          required_blessing: "Blessed by the Void"
+          fail_on_misalignment: 'false'
+      - name: Verify misaligned no-fail test output
+        run: |
+          echo "Misaligned no-fail test output: ${{ steps.misaligned_no_fail_test.outputs.is_cosmically_aligned }}"
+          if [ "${{ steps.misaligned_no_fail_test.outputs.is_cosmically_aligned }}" != "false" ]; then
+            echo "::error::Misaligned no-fail test failed: Expected 'false', got '${{ steps.misaligned_no_fail_test.outputs.is_cosmically_aligned }}'"
+            exit 1
+          fi
+        # Mock rationale: Simulating workflow output for verification of the action's behavior.
+
+      - name: Test with misaligned commit message (expect fail)
+        id: misaligned_fail_test
+        uses: ./utils/nightly-cosmic-commit-checker
+        with:
+          commit_message: "Chore: Update dependencies."
+          required_blessing: "Blessed by the Void"
+          fail_on_misalignment: 'true'
+        continue-on-error: true # Allow workflow to continue even if this step fails
+      - name: Verify misaligned fail test outcome
+        run: |
+          echo "Misaligned fail test outcome: ${{ steps.misaligned_fail_test.outcome }}"
+          if [ "${{ steps.misaligned_fail_test.outcome }}" != "failure" ]; then
+            echo "::error::Misaligned fail test failed: Expected 'failure', got '${{ steps.misaligned_fail_test.outcome }}'"
+            exit 1
+          fi
+        # Mock rationale: Simulating workflow outcome for verification of the action's failure condition.

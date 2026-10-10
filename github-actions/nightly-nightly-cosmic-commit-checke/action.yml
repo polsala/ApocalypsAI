@@ -1,0 +1,41 @@
+name: 'Nightly Cosmic Commit Checker'
+description: 'Ensures commit messages contain a specified "cosmic blessing" or adhere to a whimsical pattern.'
+inputs:
+  commit_message:
+    description: 'The commit message to check for cosmic alignment.'
+    required: true
+  required_blessing:
+    description: 'The specific "cosmic blessing" keyword or phrase that must be present.'
+    required: true
+  fail_on_misalignment:
+    description: 'Set to true to fail the action if the blessing is not found.'
+    required: false
+    default: 'false'
+outputs:
+  is_cosmically_aligned:
+    description: 'True if the commit message contains the required blessing, false otherwise.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Check for Cosmic Blessing
+      id: check_blessing
+      shell: bash
+      run: |
+        COMMIT_MSG="${{ inputs.commit_message }}"
+        REQUIRED_BLESSING="${{ inputs.required_blessing }}"
+        FAIL_ON_MISALIGNMENT="${{ inputs.fail_on_misalignment }}"
+
+        echo "Checking commit message for cosmic blessing: '${REQUIRED_BLESSING}'"
+        echo "Commit message: \"${COMMIT_MSG}\""
+
+        if echo "${COMMIT_MSG}" | grep -q "${REQUIRED_BLESSING}"; then
+          echo "Cosmic blessing found! The commit is cosmically aligned."
+          echo "is_cosmically_aligned=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "Cosmic blessing NOT found. The commit is misaligned with the cosmos."
+          echo "is_cosmically_aligned=false" >> "$GITHUB_OUTPUT"
+          if [ "$FAIL_ON_MISALIGNMENT" = "true" ]; then
+            echo "::error::Commit message does not contain the required cosmic blessing: '${REQUIRED_BLESSING}'"
+            exit 1
+          fi
+        fi
