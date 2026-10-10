@@ -1,0 +1,10 @@
+{
+  "image": "ubuntu:20.04",
+  "commands": [
+    "apt update && apt install -y curl -qq > /dev/null",
+    "curl -s https://www.example.com",
+    "echo 'Hello from the past (Ubuntu 20.04)!'"
+  ],
+  "output_file": "chrono_courier_output.log",
+  "mount_path": "/app"
+}
