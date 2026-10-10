@@ -1,0 +1,119 @@
+---
+- name: Test Nightly Digital Garden Front Matter Forager
+  hosts: test_hosts
+  gather_facts: yes # Required for ansible_date_time fact in assertions
+
+  vars:
+    test_garden_path: "" # Will be set by tempfile module
+
+  tasks:
+    - name: Create temporary garden directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: _garden_test
+      register: temp_garden_dir
+      # Mock rationale: Creates a temporary directory for isolated testing, ensuring no actual user files are modified.
+
+    - name: Set test_garden_path fact
+      ansible.builtin.set_fact:
+        test_garden_path: "{{ temp_garden_dir.path }}"
+
+    - name: Create test files without front matter
+      ansible.builtin.copy:
+        content: |
+          This is a note without any front matter.
+          It should get a default one.
+        dest: "{{ test_garden_path }}/no_front_matter_note.md"
+        mode: '0644'
+      # Mock rationale: Creates dummy Markdown files with specific content for testing different scenarios.
+
+    - name: Create another test file without front matter
+      ansible.builtin.copy:
+        content: |
+          Another file, another missing front matter.
+        dest: "{{ test_garden_path }}/another_missing_fm.md"
+        mode: '0644'
+      # Mock rationale: Creates another dummy Markdown file for testing.
+
+    - name: Create test file with existing front matter
+      ansible.builtin.copy:
+        content: |
+          ---
+          title: "Existing Note"
+          tags: [ansible, test]
+          date: "2023-01-01"
+          ---
+          This note already has front matter. It should remain unchanged.
+        dest: "{{ test_garden_path }}/existing_note.md"
+        mode: '0644'
+      # Mock rationale: Creates a dummy Markdown file with existing front matter to ensure idempotency.
+
+    - name: Run the main playbook against the temporary garden
+      ansible.builtin.include_tasks:
+        file: ../src/forage_front_matter.yml
+      vars:
+        garden_path: "{{ test_garden_path }}"
+      # Mock rationale: Executes the main playbook against the isolated test environment, allowing for verification of its effects.
+
+    - name: Verify 'no_front_matter_note.md' now has front matter
+      ansible.builtin.slurp:
+        src: "{{ test_garden_path }}/no_front_matter_note.md"
+      register: verified_no_fm_slurp
+      # Mock rationale: Reads the modified file content for verification.
+
+    - name: Decode verified_no_fm_slurp content
+      ansible.builtin.set_fact:
+        verified_no_fm_content: "{{ verified_no_fm_slurp.content | b64decode }}"
+
+    - name: Assert 'no_front_matter_note.md' content
+      ansible.builtin.assert:
+        that:
+          - verified_no_fm_content is search('^---\n')
+          - verified_no_fm_content is search('^title: "No Front Matter Note"\n')
+          - verified_no_fm_content is search('^date: "{{ ansible_date_time.date }}"\n')
+          - verified_no_fm_content is search('^---\n\nThis is a note without any front matter.\nIt should get a default one.\n')
+        fail_msg: "no_front_matter_note.md did not get expected front matter."
+      # Mock rationale: Asserts the content of the modified file against expected patterns.
+
+    - name: Verify 'another_missing_fm.md' now has front matter
+      ansible.builtin.slurp:
+        src: "{{ test_garden_path }}/another_missing_fm.md"
+      register: verified_another_fm_slurp
+      # Mock rationale: Reads the modified file content for verification.
+
+    - name: Decode verified_another_fm_slurp content
+      ansible.builtin.set_fact:
+        verified_another_fm_content: "{{ verified_another_fm_slurp.content | b64decode }}"
+
+    - name: Assert 'another_missing_fm.md' content
+      ansible.builtin.assert:
+        that:
+          - verified_another_fm_content is search('^---\n')
+          - verified_another_fm_content is search('^title: "Another Missing Fm"\n')
+          - verified_another_fm_content is search('^date: "{{ ansible_date_time.date }}"\n')
+          - verified_another_fm_content is search('^---\n\nAnother file, another missing front matter.\n')
+        fail_msg: "another_missing_fm.md did not get expected front matter."
+      # Mock rationale: Asserts the content of the modified file against expected patterns.
+
+    - name: Verify 'existing_note.md' is unchanged
+      ansible.builtin.slurp:
+        src: "{{ test_garden_path }}/existing_note.md"
+      register: verified_existing_slurp
+      # Mock rationale: Reads the original file content for verification.
+
+    - name: Decode verified_existing_slurp content
+      ansible.builtin.set_fact:
+        verified_existing_content: "{{ verified_existing_slurp.content | b64decode }}"
+
+    - name: Assert 'existing_note.md' content is unchanged
+      ansible.builtin.assert:
+        that:
+          - verified_existing_content == """---\ntitle: \"Existing Note\"\ntags: [ansible, test]\ndate: \"2023-01-01\"\n---\nThis note already has front matter. It should remain unchanged.\n"""
+        fail_msg: "existing_note.md was unexpectedly changed."
+      # Mock rationale: Asserts the content of the unchanged file to ensure idempotency.
+
+    - name: Clean up temporary garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: absent
+      # Mock rationale: Cleans up the temporary directory after tests, leaving no artifacts.
