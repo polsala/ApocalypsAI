@@ -1,0 +1,38 @@
+name: 'PR Blessing Bot'
+description: 'Adds a whimsical, apocalyptic affirmation or encouragement to a Pull Request based on its status.'
+inputs:
+  pr-number:
+    description: 'The number of the Pull Request to comment on.'
+    required: true
+  pr-status:
+    description: 'The status of the Pull Request (e.g., "success", "failure").'
+    required: true
+  github-token:
+    description: 'GitHub token with write permissions to comment on PRs.'
+    required: true
+outputs:
+  comment-message:
+    description: 'The message that was posted to the PR.'
+    value: ${{ steps.generate_message.outputs.message }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate Blessing Message
+      id: generate_message
+      shell: bash
+      run: |
+        MESSAGE=$(bash ${{ github.action_path }}/src/generate_message.sh "${{ inputs.pr-status }}")
+        echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+
+    - name: Post Comment to PR
+      shell: bash
+      env:
+        PR_NUMBER: ${{ inputs.pr-number }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        COMMENT_MESSAGE: ${{ steps.generate_message.outputs.message }}
+      run: |
+        echo "$COMMENT_MESSAGE" | gh pr comment "$PR_NUMBER" --body-file - --repo "$GITHUB_REPOSITORY"
+      # Mock rationale: The 'gh' CLI is expected to be available in the GitHub Actions runner environment.
+      # For local testing, one would need to install 'gh' and configure a token, or mock its behavior.
+      # In this context, the 'tests' directory focuses on the message generation logic,
+      # assuming the 'gh' CLI integration works as expected in a live GitHub Actions environment.

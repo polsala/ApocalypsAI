@@ -1,0 +1,63 @@
+name: Test Message Generation
+
+on: [push] # Trigger on push for testing purposes
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test success message generation
+        id: success_test
+        run: |
+          # Mock rationale: This test directly executes the message generation script
+          # and captures its standard output. It does not interact with the GitHub API
+          # or any external services, making it deterministic and offline.
+          OUTPUT=$(bash ./github-actions/nightly-pr-blessing-bot/src/generate_message.sh "success")
+          echo "output=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify success message
+        run: |
+          EXPECTED_MESSAGE="The cosmic dust settles, and your PR shines! ✨ May your code forever compile and your merges be swift. Huzzah, survivor! 🚀"
+          if [[ "${{ steps.success_test.outputs.output }}" != "$EXPECTED_MESSAGE" ]]; then
+            echo "Success message test failed!"
+            echo "Expected: $EXPECTED_MESSAGE"
+            echo "Got: ${{ steps.success_test.outputs.output }}"
+            exit 1
+          fi
+
+      - name: Test failure message generation
+        id: failure_test
+        run: |
+          # Mock rationale: Same as above, testing the script's output directly.
+          OUTPUT=$(bash ./github-actions/nightly-pr-blessing-bot/src/generate_message.sh "failure")
+          echo "output=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify failure message
+        run: |
+          EXPECTED_MESSAGE="A minor temporal anomaly detected in your PR. ⏳ Fear not, brave coder, for even the void has its re-tries. Adjust your flux capacitor and try again! 🛠️"
+          if [[ "${{ steps.failure_test.outputs.output }}" != "$EXPECTED_MESSAGE" ]]; then
+            echo "Failure message test failed!"
+            echo "Expected: $EXPECTED_MESSAGE"
+            echo "Got: ${{ steps.failure_test.outputs.output }}"
+            exit 1
+          fi
+
+      - name: Test unknown status message generation
+        id: unknown_test
+        run: |
+          # Mock rationale: Same as above, testing the script's output directly.
+          OUTPUT=$(bash ./github-actions/nightly-pr-blessing-bot/src/generate_message.sh "unknown_status")
+          echo "output=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify unknown status message
+        run: |
+          EXPECTED_MESSAGE="Your PR has achieved a mysterious state: unknown_status. The cosmos observes. 🌌"
+          if [[ "${{ steps.unknown_test.outputs.output }}" != "$EXPECTED_MESSAGE" ]]; then
+            echo "Unknown status message test failed!"
+            echo "Expected: $EXPECTED_MESSAGE"
+            echo "Got: ${{ steps.unknown_test.outputs.output }}"
+            exit 1
+          fi
