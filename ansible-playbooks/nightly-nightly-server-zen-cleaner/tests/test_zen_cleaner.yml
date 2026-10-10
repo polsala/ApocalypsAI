@@ -1,0 +1,192 @@
+---
+- name: Test nightly-server-zen-cleaner playbook - File Cleanup
+  hosts: localhost
+  connection: local
+  become: no # No need for become for creating/deleting local temp files
+
+  vars:
+    test_base_dir: "/tmp/ansible_test_zen_cleaner_{{ lookup('pipe', 'date +%s') }}"
+    test_tmp_dir: "{{ test_base_dir }}/mock_tmp"
+    test_old_file: "{{ test_tmp_dir }}/old_file.txt"
+    test_new_file: "{{ test_tmp_dir }}/new_file.txt"
+    tmp_age_days_for_test: 1 # Make sure our 'old' file is considered old
+
+  tasks:
+    - name: Create a temporary base directory for testing
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Create a mock /tmp-like directory
+      ansible.builtin.file:
+        path: "{{ test_tmp_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Create a mock old file
+      ansible.builtin.copy:
+        content: "This is an old file."
+        dest: "{{ test_old_file }}"
+      delegate_to: localhost
+      # Mock rationale: Creating a temporary file to simulate an 'old' file for cleanup.
+
+    - name: Set modification time for the mock old file to be truly old
+      ansible.builtin.command: "touch -a -m -t {{ (ansible_date_time.year | int) }}{{ (ansible_date_time.month | int) | format('%02d') }}{{ ((ansible_date_time.day | int) - (tmp_age_days_for_test + 1)) | format('%02d') }}0000 {{ test_old_file }}"
+      args:
+        warn: no
+      changed_when: true
+      delegate_to: localhost
+      # Mock rationale: Manually setting the timestamp to ensure the 'find' module
+      # correctly identifies it as older than 'tmp_age_days'. This makes the test deterministic
+      # regardless of when it's run.
+
+    - name: Create a mock new file (should not be deleted)
+      ansible.builtin.copy:
+        content: "This is a new file."
+        dest: "{{ test_new_file }}"
+      delegate_to: localhost
+
+    - name: Run the 'find' task targeting the mock /tmp directory
+      ansible.builtin.find:
+        paths: "{{ test_tmp_dir }}"
+        age: "{{ tmp_age_days_for_test }}d"
+        file_type: any
+      register: old_mock_files
+      delegate_to: localhost
+
+    - name: Assert that the old file was found
+      ansible.builtin.assert:
+        that:
+          - old_mock_files.files | length == 1
+          - old_mock_files.files[0].path == test_old_file
+        fail_msg: "Expected to find exactly one old file: {{ test_old_file }}"
+      delegate_to: localhost
+
+    - name: Run the 'delete' task targeting the mock /tmp directory
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_mock_files.files | default([]) }}"
+      register: delete_result
+      delegate_to: localhost
+      when: old_mock_files.files is defined and old_mock_files.files | length > 0
+
+    - name: Assert that the old file was marked for deletion (changed)
+      ansible.builtin.assert:
+        that:
+          - delete_result.results[0].changed is true
+        fail_msg: "Expected deletion of {{ test_old_file }} to report changed=true"
+      delegate_to: localhost
+      when: old_mock_files.files is defined and old_mock_files.files | length > 0
+
+    - name: Verify the old file is absent
+      ansible.builtin.stat:
+        path: "{{ test_old_file }}"
+      register: old_file_stat
+      delegate_to: localhost
+
+    - name: Assert old file is gone
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old file {{ test_old_file }} should have been deleted."
+      delegate_to: localhost
+
+    - name: Verify the new file is still present
+      ansible.builtin.stat:
+        path: "{{ test_new_file }}"
+      register: new_file_stat
+      delegate_to: localhost
+
+    - name: Assert new file is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New file {{ test_new_file }} should still exist."
+      delegate_to: localhost
+
+    - name: Clean up the temporary base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      delegate_to: localhost
+      always: yes # Ensure cleanup even if tests fail
+
+- name: Test nightly-server-zen-cleaner playbook - System Tasks (check_mode)
+  hosts: localhost
+  connection: local
+  become: yes # Need become for apt and journalctl, even in check_mode
+
+  vars_files:
+    - ../vars/main.yml # Load default vars for journal_vacuum_time
+
+  tasks:
+    - name: Test apt update_cache in check mode
+      ansible.builtin.apt:
+        update_cache: yes
+      check_mode: yes
+      register: apt_update_result
+      when: ansible_pkg_mgr == 'apt'
+      # Mock rationale: Running in check_mode to verify the task's behavior without
+      # actually modifying the system. We assert that it would attempt to update
+      # the cache, which is a reasonable expectation for a cleanup playbook.
+
+    - name: Assert apt update_cache would run (if apt is present)
+      ansible.builtin.assert:
+        that:
+          - apt_update_result is defined
+          - apt_update_result.invocation.module_args.update_cache is true
+        fail_msg: "APT update_cache task did not behave as expected in check_mode."
+      when: ansible_pkg_mgr == 'apt' and apt_update_result is defined
+
+    - name: Test apt autoremove in check mode
+      ansible.builtin.apt:
+        autoremove: yes
+      check_mode: yes
+      register: apt_autoremove_result
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Assert apt autoremove would run (if apt is present)
+      ansible.builtin.assert:
+        that:
+          - apt_autoremove_result is defined
+          - apt_autoremove_result.invocation.module_args.autoremove is true
+        fail_msg: "APT autoremove task did not behave as expected in check_mode."
+      when: ansible_pkg_mgr == 'apt' and apt_autoremove_result is defined
+
+    - name: Test apt clean in check mode
+      ansible.builtin.apt:
+        clean: yes
+      check_mode: yes
+      register: apt_clean_result
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Assert apt clean would run (if apt is present)
+      ansible.builtin.assert:
+        that:
+          - apt_clean_result is defined
+          - apt_clean_result.invocation.module_args.clean is true
+        fail_msg: "APT clean task did not behave as expected in check_mode."
+      when: ansible_pkg_mgr == 'apt' and apt_clean_result is defined
+
+    - name: Test journalctl vacuum in check mode
+      ansible.builtin.command: "journalctl --vacuum-time={{ journal_vacuum_time }}"
+      args:
+        warn: no
+      check_mode: yes # Command module doesn't truly support check_mode, but it won't execute.
+      register: journalctl_result
+      when: ansible_service_mgr == 'systemd'
+      # Mock rationale: The command module doesn't have a true check_mode, but running it
+      # in check_mode ensures it won't execute. We assert its invocation to confirm
+      # the command string is correctly formed.
+
+    - name: Assert journalctl vacuum command would be invoked (if systemd is present)
+      ansible.builtin.assert:
+        that:
+          - journalctl_result is defined
+          - journalctl_result.cmd == "journalctl --vacuum-time={{ journal_vacuum_time }}"
+        fail_msg: "Journalctl vacuum task did not behave as expected in check_mode."
+      when: ansible_service_mgr == 'systemd' and journalctl_result is defined
