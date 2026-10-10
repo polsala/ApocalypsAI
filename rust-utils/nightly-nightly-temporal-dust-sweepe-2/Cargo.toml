@@ -1,0 +1,14 @@
+[package]
+name = "nightly-temporal-dust-sweeper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+chrono = "0.12" # For date/time manipulation
+
+[dev-dependencies]
+tempfile = "3.8"
+os_pipe = "1.1" # For capturing stdout in tests
+filetime = "0.2" # For setting file access/modification times deterministically in tests
