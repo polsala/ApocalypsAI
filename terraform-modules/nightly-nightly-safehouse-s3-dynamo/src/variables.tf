@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket"\n  type        = string\n}\n\nvariable "dynamodb_table_name" {\n  description = "Name of the DynamoDB table"\n  type        = string\n}\n\nvariable "lifecycle_days" {\n  description = "Days after which non‑current versions are deleted"\n  type        = number\n  default     = 30\n}\n

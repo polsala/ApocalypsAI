@@ -1,0 +1,1 @@
+output "bucket_arn" {\n  description = "ARN of the created S3 bucket"\n  value       = aws_s3_bucket.safehouse.arn\n}\n\noutput "dynamodb_table_arn" {\n  description = "ARN of the DynamoDB table"\n  value       = aws_dynamodb_table.logs.arn\n}\n
