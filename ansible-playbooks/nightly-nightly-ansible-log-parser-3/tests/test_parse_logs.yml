@@ -1,0 +1,46 @@
+---
+- name: Test Ansible Log Parser
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Override playbook vars for testing
+    log_files: [ "{{ log_dir }}/{{ mock_log_file }}" ]
+    log_dir: "/tmp/ansible_log_test"
+    mock_log_file: "mock_system.log"
+    mock_log_content: |
+      2023-10-27 10:00:00 INFO: System started successfully.
+      2023-10-27 10:05:15 WARN: Disk space is getting low.
+      2023-10-27 10:10:30 ERROR: Failed to connect to database.
+      2023-10-27 10:15:45 INFO: User logged in.
+      2023-10-27 10:20:00 DENIED: Unauthorized access attempt.
+      2023-10-27 10:25:00 FAIL: Service restart failed.
+
+  tasks:
+    - name: Ensure mock log directory exists
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+
+    - name: Create mock log file
+      copy:
+        content: "{{ mock_log_content }}"
+        dest: "{{ log_dir }}/{{ mock_log_file }}"
+
+    - name: Include the main playbook
+      include_tasks: "../src/parse_logs.yml"
+
+    - name: Assert log summary is correct
+      assert:
+        that:
+          - log_summary is defined
+          - log_summary.total_errors == 4
+          - log_summary.issues_by_file['{{ log_dir }}/{{ mock_log_file }}'] == 4
+        fail_msg: "Log summary is incorrect."
+        success_msg: "Log summary is correct."
+
+    - name: Clean up mock log directory
+      file:
+        path: "{{ log_dir }}"
+        state: absent
