@@ -1,0 +1,31 @@
+name: Test Nightly GitHub Actions Debugger
+
+# This workflow tests the nightly-gh-action-debugger workflow.
+# It simulates a run of the debugger workflow and asserts that key environment variables are present.
+
+on: [push]
+
+jobs:
+  test_debugger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Run the debugger workflow as a test step
+        id: run_debugger
+        uses: ./.github/workflows/nightly-gh-action-debugger.yml@main
+        with:
+          debug_message: "Testing the debugger workflow itself!"
+
+      # Mock rationale: These assertions rely on standard GitHub Actions environment variables
+      # that are guaranteed to be present when the workflow runs on a GitHub Actions runner.
+      # No external services or network calls are required.
+      - name: Assert key environment variables are set
+        run: |
+          echo "Verifying environment variables from the debugger run..."
+          if [ -z "${{ steps.run_debugger.outputs.GITHUB_ACTIONS }}" ]; then echo "Error: GITHUB_ACTIONS output is missing"; exit 1; fi
+          if [ -z "${{ steps.run_debugger.outputs.GITHUB_WORKFLOW }}" ]; then echo "Error: GITHUB_WORKFLOW output is missing"; exit 1; fi
+          if [ -z "${{ steps.run_debugger.outputs.GITHUB_RUN_NUMBER }}" ]; then echo "Error: GITHUB_RUN_NUMBER output is missing"; exit 1; fi
+          if [ -z "${{ steps.run_debugger.outputs.GITHUB_REPOSITORY }}" ]; then echo "Error: GITHUB_REPOSITORY output is missing"; exit 1; fi
+          echo "All critical environment variables were found."

@@ -1,0 +1,74 @@
+name: Nightly GitHub Actions Debugger
+
+# This workflow is designed to capture and display detailed environment information
+# within a GitHub Actions runner, aiding in the debugging of other workflows.
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  schedule:
+    # Runs daily at 2:42 AM UTC, as per the ApocalypsAI convention
+    - cron: '42 2 * * *'
+
+jobs:
+  debug_environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history to ensure git commands work correctly
+          fetch-depth: 0
+
+      - name: Display Debug Message (if provided)
+        if: ${{ inputs.debug_message != '' }}
+        run: |
+          echo "----------------------------------------"
+          echo "DEBUG MESSAGE: ${{ inputs.debug_message }}"
+          echo "----------------------------------------"
+
+      - name: Capture and Display Environment Details
+        id: env_capture
+        run: |
+          echo "::group::GitHub Actions Environment Details"
+          echo "--- General Environment Variables ---"
+          env | sort
+          echo "
+          --- GitHub Context Variables ---"
+          echo "GITHUB_ACTIONS: ${{ env.GITHUB_ACTIONS }}"
+          echo "GITHUB_WORKFLOW: ${{ env.GITHUB_WORKFLOW }}"
+          echo "GITHUB_RUN_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}"
+          echo "GITHUB_RUN_ID: ${{ env.GITHUB_RUN_ID }}"
+          echo "GITHUB_JOB: ${{ env.GITHUB_JOB }}"
+          echo "GITHUB_BRANCH: ${{ env.GITHUB_BRANCH }}"
+          echo "GITHUB_REF: ${{ env.GITHUB_REF }}"
+          echo "GITHUB_SHA: ${{ env.GITHUB_SHA }}"
+          echo "GITHUB_ACTOR: ${{ env.GITHUB_ACTOR }}"
+          echo "GITHUB_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}"
+          echo "GITHUB_WORKSPACE: ${{ env.GITHUB_WORKSPACE }}"
+          echo "GITHUB_EVENT_NAME: ${{ env.GITHUB_EVENT_NAME }}"
+          echo "GITHUB_EVENT_PATH: ${{ env.GITHUB_EVENT_PATH }}"
+          echo "GITHUB_ACTION: ${{ env.GITHUB_ACTION }}"
+          echo "GITHUB_ACTION_REF: ${{ env.GITHUB_ACTION_REF }}"
+          echo "GITHUB_ACTION_PATH: ${{ env.GITHUB_ACTION_PATH }}"
+          echo "GITHUB_API_URL: ${{ env.GITHUB_API_URL }}"
+          echo "GITHUB_GRAPHQL_URL: ${{ env.GITHUB_GRAPHQL_URL }}"
+          echo "GITHUB_SERVER_URL: ${{ env.GITHUB_SERVER_URL }}"
+          echo "GITHUB_RUNNER_ID: ${{ env.RUNNER_ID }}"
+          echo "GITHUB_RUNNER_NAME: ${{ env.RUNNER_NAME }}"
+          echo "GITHUB_RUNNER_OS: ${{ env.RUNNER_OS }}"
+          echo "GITHUB_RUNNER_ARCH: ${{ env.RUNNER_ARCH }}"
+          echo "
+          --- Git Information ---"
+          echo "Current Branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo "Current Commit SHA: $(git rev-parse HEAD)"
+          echo "Last Commit Message: $(git log -1 --pretty=%B)"
+          echo "::endgroup::"
+
+      - name: Verify key environment variables exist
+        id: verify_env
+        run: |
+          if [ -z "$GITHUB_ACTIONS" ]; then echo "Error: GITHUB_ACTIONS is not set"; exit 1; fi
+          if [ -z "$GITHUB_WORKFLOW" ]; then echo "Error: GITHUB_WORKFLOW is not set"; exit 1; fi
+          if [ -z "$GITHUB_RUN_NUMBER" ]; then echo "Error: GITHUB_RUN_NUMBER is not set"; exit 1; fi
+          if [ -z "$GITHUB_REPOSITORY" ]; then echo "Error: GITHUB_REPOSITORY is not set"; exit 1; fi
+          echo "Key environment variables verified successfully."
