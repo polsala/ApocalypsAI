@@ -1,0 +1,1 @@
+name: "Nightly PR Labeler"\ndescription: "Auto‑label PRs based on title keywords"\ninputs:\n  github-token:\n    description: "GitHub token with repo permissions"\n    required: true\n    default: ${{ github.token }}\nruns:\n  using: "python"\n  main: "src/labeler.py"
