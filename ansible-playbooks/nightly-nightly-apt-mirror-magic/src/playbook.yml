@@ -1,0 +1,23 @@
+- name: APT Mirror Sync
+  hosts: all
+  become: true
+  vars:
+    local_mirror_dir: /var/local/apt-mirror
+  tasks:
+    - name: Ensure local mirror directory exists
+      file:
+        path: "{{ local_mirror_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Sync remote mirror to local directory
+      ansible.builtin.command:
+        cmd: rsync -avz --delete "{{ remote_mirror }}/" "{{ local_mirror_dir }}/"
+      args:
+        warn: false
+      register: rsync_result
+      changed_when: rsync_result.rc != 0
+
+    - name: Report rsync output
+      debug:
+        var: rsync_result.stdout
