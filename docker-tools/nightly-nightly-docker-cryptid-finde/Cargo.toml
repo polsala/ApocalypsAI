@@ -1,0 +1,10 @@
+[package]
+name = "cryptid-finder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+strip = true
