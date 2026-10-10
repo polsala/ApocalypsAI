@@ -1,0 +1,28 @@
+---
+- name: Configure nightly apt upgrades
+  hosts: all
+  become: true
+  vars:
+    quotes:
+      - "Rise and shine, packages!"
+      - "Another day, another upgrade."
+      - "Keep calm and let apt upgrade."
+  tasks:
+    - name: Ensure unattended-upgrades is installed
+      apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: yes
+
+    - name: Create cron job for nightly upgrade
+      cron:
+        name: "Nightly apt upgrade"
+        minute: "0"
+        hour: "2"
+        job: "/usr/bin/apt-get update && /usr/bin/apt-get -y upgrade"
+
+    - name: Add motivational quote to MOTD
+      lineinfile:
+        path: /etc/motd
+        line: "{{ quotes | random }}"
+        create: yes
