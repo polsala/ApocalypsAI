@@ -1,0 +1,1 @@
+export function generateQRCode(text: string): string {\n  const reversed = text.split("").reverse().join("");\n  const lines = [\n    "┌───────────────┐",\n    `│ ${reversed.padEnd(13)} │`,\n    "└───────────────┘",\n  ];\n  return lines.join("\n");\n}
