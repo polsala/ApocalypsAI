@@ -1,0 +1,21 @@
+---
+pruner_paths:
+  - path: "/var/log"
+    max_age_days: 30
+    file_patterns: ["*.log", "*.gz"]
+    age_stamp: mtime
+  - path: "/tmp"
+    max_age_days: 7
+    file_patterns: ["*"]
+    age_stamp: mtime
+  - path: "/home/{{ ansible_user | default('ansible') }}/digital_garden/temp_notes"
+    max_age_days: 60
+    file_patterns: ["*.txt", "*.md"]
+    age_stamp: mtime
+
+pruner_empty_dirs_paths:
+  - "/home/{{ ansible_user | default('ansible') }}/digital_garden/empty_folders"
+  - "/var/tmp"
+
+pruner_dry_run: true # Set to false to actually remove files/dirs
+pruner_report_path: "/tmp/digital_garden_pruning_report.txt"
