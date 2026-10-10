@@ -1,0 +1,28 @@
+- hosts: all
+  become: true
+  vars:
+    # URL of the remote APT repository (e.g., http://archive.ubuntu.com/ubuntu)
+    mirror_url: "{{ mirror_url | default('http://archive.ubuntu.com/ubuntu') }}"
+    # Local directory where the mirror will be stored
+    local_path: "{{ local_path | default('/var/local/apt-mirror') }}"
+  tasks:
+    - name: Ensure local mirror directory exists
+      file:
+        path: "{{ local_path }}"
+        state: directory
+        mode: "0755"
+
+    - name: Sync APT repository using rsync
+      # rsync works with HTTP/HTTPS sources when the remote side supports it.
+      # For pure HTTP mirrors you may need to use `apt-mirror` instead.
+      command: >
+        rsync -a --delete {{ mirror_url }}/ {{ local_path }}/
+      args:
+        # Prevent execution in check mode; Ansible will skip the command when --check is used.
+        creates: "{{ local_path }}/dists"
+      register: rsync_result
+      changed_when: rsync_result.rc == 0
+
+    - name: Report rsync outcome
+      debug:
+        msg: "Rsync completed with return code {{ rsync_result.rc }}"
