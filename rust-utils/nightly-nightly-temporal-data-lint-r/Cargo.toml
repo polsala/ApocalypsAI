@@ -1,0 +1,15 @@
+[package]
+name = "nightly-temporal-data-lint-roller"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+walkdir = "2.3"
+chrono = "0.4.31" # For time manipulation
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "0.1"
+tempfile = "3.0"
+filetime = "0.2" # To set file modification times deterministically
