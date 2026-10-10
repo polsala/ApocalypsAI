@@ -1,0 +1,67 @@
+---
+- name: Test Ansible log parser playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    log_file_path: /tmp/mock_syslog.log
+    error_keywords:
+      - 'ERROR'
+      - 'FAIL'
+    warning_keywords:
+      - 'WARNING'
+
+  tasks:
+    - name: Create mock log file
+      ansible.builtin.copy:
+        content: |
+          2023-10-27 10:00:00 ERROR: Something went wrong.
+          2023-10-27 10:01:00 INFO: Operation successful.
+          2023-10-27 10:02:00 WARNING: Disk space is low.
+          2023-10-27 10:03:00 FAIL: Connection refused.
+          2023-10-27 10:04:00 WARN: Deprecated feature used.
+          2023-10-27 10:05:00 ERROR: Another critical issue.
+        dest: "{{ log_file_path }}"
+
+    - name: Run the log parsing playbook (in test mode)
+      ansible.builtin.include_role:
+        name: ../src # Assuming the main playbook is in ../src/parse_logs.yml
+      vars:
+        log_file_path: "{{ log_file_path }}"
+        error_keywords: "{{ error_keywords }}"
+        warning_keywords: "{{ warning_keywords }}"
+        ansible_env: { TEST_MODE: 'true' }
+      register: playbook_output
+
+    - name: Assert error count
+      ansible.builtin.assert:
+        that:
+          - "playbook_output.ansible_facts.error_count == 3"
+        fail_msg: "Error count mismatch! Expected 3, got {{ playbook_output.ansible_facts.error_count }}"
+
+    - name: Assert warning count
+      ansible.builtin.assert:
+        that:
+          - "playbook_output.ansible_facts.warning_count == 2"
+        fail_msg: "Warning count mismatch! Expected 2, got {{ playbook_output.ansible_facts.warning_count }}"
+
+    - name: Assert specific error lines are present
+      ansible.builtin.assert:
+        that:
+          - "'2023-10-27 10:00:00 ERROR: Something went wrong.' in playbook_output.ansible_facts.all_error_lines"
+          - "'2023-10-27 10:03:00 FAIL: Connection refused.' in playbook_output.ansible_facts.all_error_lines"
+          - "'2023-10-27 10:05:00 ERROR: Another critical issue.' in playbook_output.ansible_facts.all_error_lines"
+        fail_msg: "Specific error lines not found."
+
+    - name: Assert specific warning lines are present
+      ansible.builtin.assert:
+        that:
+          - "'2023-10-27 10:02:00 WARNING: Disk space is low.' in playbook_output.ansible_facts.all_warning_lines"
+          - "'2023-10-27 10:04:00 WARN: Deprecated feature used.' in playbook_output.ansible_facts.all_warning_lines"
+        fail_msg: "Specific warning lines not found."
+
+    - name: Clean up mock log file
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: absent

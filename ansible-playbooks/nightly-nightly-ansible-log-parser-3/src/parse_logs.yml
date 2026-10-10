@@ -1,0 +1,65 @@
+---
+- name: Parse and summarize system logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure log file exists (for testing purposes if not present)
+      ansible.builtin.file:
+        path: "{{ log_file_path }}"
+        state: touch
+        mode: '0644'
+      when: ansible_env.TEST_MODE == 'true'
+
+    - name: Read log file content
+      ansible.builtin.slurp:
+        src: "{{ log_file_path }}"
+      register: log_content_raw
+      when: ansible_env.TEST_MODE != 'true'
+
+    - name: Set log content for testing
+      ansible.builtin.set_fact:
+        log_content: "{{ lookup('file', 'tests/mock_syslog.log') }}"
+      when: ansible_env.TEST_MODE == 'true'
+
+    - name: Decode log content
+      ansible.builtin.set_fact:
+        log_content: "{{ log_content_raw.content | b64decode }}"
+      when: ansible_env.TEST_MODE != 'true'
+
+    - name: Extract error lines
+      ansible.builtin.set_fact:
+        error_lines: "{{ (log_content.splitlines() | select('match', item) | list) }}"
+      loop: "{{ error_keywords }}"
+      register: extracted_errors
+
+    - name: Flatten error lines
+      ansible.builtin.set_fact:
+        all_error_lines: "{{ all_error_lines | default([]) + extracted_errors.results | map(attribute='ansible_facts.error_lines') | flatten | list }}"
+
+    - name: Extract warning lines
+      ansible.builtin.set_fact:
+        warning_lines: "{{ (log_content.splitlines() | select('match', item) | list) }}"
+      loop: "{{ warning_keywords }}"
+      register: extracted_warnings
+
+    - name: Flatten warning lines
+      ansible.builtin.set_fact:
+        all_warning_lines: "{{ all_warning_lines | default([]) + extracted_warnings.results | map(attribute='ansible_facts.warning_lines') | flatten | list }}"
+
+    - name: Generate summary report
+      ansible.builtin.template:
+        src: templates/log_summary.j2
+        dest: "/tmp/log_summary_{{ inventory_hostname }}.txt"
+      vars:
+        host: "{{ inventory_hostname }}"
+        errors: "{{ all_error_lines | unique }}"
+        warnings: "{{ all_warning_lines | unique }}"
+        error_count: "{{ all_error_lines | length }}"
+        warning_count: "{{ all_warning_lines | length }}"
+
+    - name: Display log summary report
+      ansible.builtin.debug:
+        msg: "Log summary for {{ inventory_hostname }}: {{ lookup('file', '/tmp/log_summary_' + inventory_hostname + '.txt') }}"
