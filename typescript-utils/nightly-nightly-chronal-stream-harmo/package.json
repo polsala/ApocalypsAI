@@ -1,0 +1,30 @@
+{
+  "name": "nightly-chronal-stream-harmonizer",
+  "version": "1.0.0",
+  "description": "A type-safe TypeScript utility to process event streams, harmonizing chronal echoes and ensuring ordered, de-duplicated delivery despite temporal distortions.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "typescript",
+    "events",
+    "stream",
+    "harmonizer",
+    "chronal",
+    "temporal",
+    "utility",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
