@@ -1,0 +1,12 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY src/ /app/src/
+COPY tests/ /app/tests/
+
+# Install Flask and its dependencies for testing
+RUN pip install Flask==2.3.3 Werkzeug==2.3.7
+
+# Command to run the tests
+CMD ["python", "-m", "unittest", "tests/test_app.py"]
