@@ -1,0 +1,39 @@
+name: Apocalypse Reaction
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  react:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add random apocalypse emoji reaction
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const emojis = ['☢️','💥','🔥','⚡','🌪️','☄️','🧟‍♂️','🧟‍♀️','🦖','🦕'];
+            const chosen = emojis[Math.floor(Math.random() * emojis.length)];
+            await github.reactions.createForIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              content: chosen
+            });
+      - name: Post whimsical comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const messages = [
+              "Brace yourself, the apocalypse is nigh!",
+              "Welcome to the end times, dear issue!",
+              "May your code survive the fallout.",
+              "The void whispers: fix this soon."
+            ];
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: msg
+            });
