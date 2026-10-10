@@ -1,0 +1,21 @@
+.anomaly-map-grid {
+  display: grid;
+  width: 600px; /* Fixed width for the grid */
+  height: 600px; /* Fixed height for the grid */
+  border: 1px solid #333;
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* Whimsical glow */
+}
+
+.anomaly-cell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  color: white;
+  transition: background-color 0.3s ease; /* Smooth transition for color changes */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
