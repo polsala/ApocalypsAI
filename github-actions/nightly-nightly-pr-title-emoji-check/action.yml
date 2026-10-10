@@ -1,0 +1,1 @@
+name: "PR Title Emoji Checker"\ndescription: "Fails the workflow if a PR title does not start with an emoji"\ninputs:\n  pr_title:\n    description: "Pull request title to validate"\n    required: true\n    default: ""\nruns:\n  using: "node12"\n  main: "index.js"
