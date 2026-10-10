@@ -1,0 +1,87 @@
+.echo-timeline-container {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  margin: 40px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.timeline-axis {
+  width: 95%;
+  height: 4px;
+  background-color: #61dafb;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 2px;
+}
+
+.echo-markers {
+  position: relative;
+  width: 95%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.echo-marker {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.6em;
+  color: white;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 8px rgba(97, 218, 251, 0.5);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transform: translateX(-50%); /* Center the marker on its 'left' position */
+}
+
+.echo-marker:hover {
+  transform: translateX(-50%) scale(1.2);
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.8);
+  z-index: 10;
+}
+
+.marker-label {
+  display: none; /* Hide labels by default, could show on hover */
+}
+
+.echo-marker:hover .marker-label {
+  display: block;
+  position: absolute;
+  top: -25px;
+  white-space: nowrap;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.5em;
+}
+
+.timeline-labels {
+  position: absolute;
+  width: 95%;
+  top: 75%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7em;
+  color: #a0a0a0;
+}
+
+.start-label {
+  position: absolute;
+  left: 0;
+}
+
+.end-label {
+  position: absolute;
+  right: 0;
+}
