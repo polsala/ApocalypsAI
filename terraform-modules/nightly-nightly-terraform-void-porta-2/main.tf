@@ -1,0 +1,1 @@
+terraform {\n  required_providers {\n    null = {\n      source  = "hashicorp/null"\n      version = "~> 3.2"\n    }\n  }\n}\n\nresource "null_resource" "void_portal" {\n  triggers = {\n    destination     = var.destination\n    activation_time = var.activation_time\n  }\n}\n
