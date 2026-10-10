@@ -1,0 +1,14 @@
+{{ item.path }} {
+    {{ item.frequency }}
+    rotate {{ item.rotate }}
+    {% if item.compress %}compress{% else %}nocompress{% endif %}
+    {% if item.delaycompress %}delaycompress{% else %}nodelaycompress{% endif %}
+    {% if item.missingok %}missingok{% else %}nomissingok{% endif %}
+    {% if item.notifempty %}notifempty{% else %}noifempty{% endif %}
+    {% if item.create %}create {{ item.create }}{% endif %}
+    {% if item.postrotate %}
+    postrotate
+        {{ item.postrotate }}
+    endscript
+    {% endif %}
+}

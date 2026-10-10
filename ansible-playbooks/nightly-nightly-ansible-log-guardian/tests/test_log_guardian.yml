@@ -1,0 +1,106 @@
+---
+- name: Test Log Guardian Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars_files:
+    - ../src/vars/main.yml
+
+  tasks:
+    - name: Ensure test environment is clean
+      ansible.builtin.file:
+        path: "/tmp/logrotate.d_test"
+        state: absent
+      # Mock rationale: Ensures a clean slate for each test run, preventing interference from previous runs.
+
+    - name: Create mock /etc/logrotate.d directory
+      ansible.builtin.file:
+        path: "/tmp/logrotate.d_test"
+        state: directory
+        mode: "0755"
+      # Mock rationale: Simulates the /etc/logrotate.d directory without requiring root access to the actual system directory.
+
+    - name: Mock logrotate package installation
+      ansible.builtin.debug:
+        msg: "Mocking logrotate package installation"
+      # Mock rationale: We cannot actually install packages in an offline, deterministic test.
+      # This task simulates the success of the package installation step.
+
+    - name: Create custom logrotate configurations (mocked destination)
+      ansible.builtin.template:
+        src: ../src/logrotate_config.j2
+        dest: "/tmp/logrotate.d_test/{{ item.name }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ log_guardian_configs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      # Mock rationale: Deploys the configuration files to a temporary, mock directory instead of the real /etc/logrotate.d.
+
+    - name: Verify logrotate config files exist
+      ansible.builtin.stat:
+        path: "/tmp/logrotate.d_test/{{ item.name }}"
+      register: config_file_stat
+      loop: "{{ log_guardian_configs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      # Mock rationale: Checks for the existence of the mock configuration files.
+
+    - name: Assert logrotate config files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is true
+          - item.stat.isreg is true
+        msg: "Logrotate config file {{ item.item.name }} does not exist or is not a regular file."
+      loop: "{{ config_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      # Mock rationale: Verifies the outcome of the stat module against the mock files.
+
+    - name: Verify content of shelter_sentry_logs config
+      ansible.builtin.slurp:
+        src: "/tmp/logrotate.d_test/shelter_sentry_logs"
+      register: shelter_sentry_content
+      # Mock rationale: Reads the content of the mock configuration file.
+
+    - name: Assert content of shelter_sentry_logs config
+      ansible.builtin.assert:
+        that:
+          - (shelter_sentry_content.content | b64decode).find('/var/log/shelter/*.log {') != -1
+          - (shelter_sentry_content.content | b64decode).find('daily') != -1
+          - (shelter_sentry_content.content | b64decode).find('rotate 7') != -1
+          - (shelter_sentry_content.content | b64decode).find('compress') != -1
+          - (shelter_sentry_content.content | b64decode).find('delaycompress') != -1
+          - (shelter_sentry_content.content | b64decode).find('missingok') != -1
+          - (shelter_sentry_content.content | b64decode).find('notifempty') != -1
+          - (shelter_sentry_content.content | b64decode).find('create 0640 root adm') != -1
+          - (shelter_sentry_content.content | b64decode).find('postrotate') != -1
+        msg: "Content of shelter_sentry_logs config is incorrect."
+      # Mock rationale: Verifies specific strings within the content of the mock configuration file.
+
+    - name: Verify content of temporal_anomaly_logs config
+      ansible.builtin.slurp:
+        src: "/tmp/logrotate.d_test/temporal_anomaly_logs"
+      register: temporal_anomaly_content
+      # Mock rationale: Reads the content of the mock configuration file.
+
+    - name: Assert content of temporal_anomaly_logs config
+      ansible.builtin.assert:
+        that:
+          - (temporal_anomaly_content.content | b64decode).find('/var/log/temporal_anomalies.log {') != -1
+          - (temporal_anomaly_content.content | b64decode).find('weekly') != -1
+          - (temporal_anomaly_content.content | b64decode).find('rotate 4') != -1
+          - (temporal_anomaly_content.content | b64decode).find('compress') != -1
+          - (temporal_anomaly_content.content | b64decode).find('missingok') != -1
+          - (temporal_anomaly_content.content | b64decode).find('notifempty') != -1
+          - (temporal_anomaly_content.content | b64decode).find('create 0600 root root') != -1
+          - (temporal_anomaly_content.content | b64decode).find('postrotate') == -1 # Should not contain postrotate
+        msg: "Content of temporal_anomaly_logs config is incorrect."
+      # Mock rationale: Verifies specific strings within the content of the mock configuration file.
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "/tmp/logrotate.d_test"
+        state: absent
+      # Mock rationale: Removes the temporary directory and files created for the test, ensuring no side effects.

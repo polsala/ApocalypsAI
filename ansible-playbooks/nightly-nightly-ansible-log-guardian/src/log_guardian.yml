@@ -1,0 +1,33 @@
+---
+- name: Configure Log Guardian for critical system logs
+  hosts: servers
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure logrotate package is installed
+      ansible.builtin.package:
+        name: logrotate
+        state: present
+
+    - name: Create custom logrotate configurations
+      ansible.builtin.template:
+        src: logrotate_config.j2
+        dest: "/etc/logrotate.d/{{ item.name }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ log_guardian_configs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      notify: Reload logrotate configuration
+
+  handlers:
+    - name: Reload logrotate configuration
+      ansible.builtin.command: logrotate -f /etc/logrotate.conf
+      listen: "Reload logrotate configuration"
+      # Mock rationale: In a real scenario, logrotate is typically run by cron.
+      # For immediate testing or specific needs, a manual run can be triggered.
+      # This handler is primarily to ensure the new config is picked up by the next cron run.
+      # For testing, we'll just ensure the config file is present.
