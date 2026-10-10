@@ -1,0 +1,81 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_host
+  become: true
+  vars_files:
+    - tests/vars/test_cleanup_paths.yml # Use test-specific paths
+  vars:
+    test_dir: "{{ cleanup_targets[0].path }}"
+    old_file: "{{ test_dir }}/old_dust_bunny.log"
+    new_file: "{{ test_dir }}/fresh_sparkle.tmp"
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost # Mock rationale: Ensure test setup is local and controlled.
+
+    - name: Create an old dummy file
+      ansible.builtin.shell: |
+        mkdir -p "{{ test_dir }}"
+        touch "{{ old_file }}"
+        # Ensure it's older than the 'age_days: 1' threshold
+        # Using 'touch -d' to set modification time to 2 days ago.
+        touch -d "2 days ago" "{{ old_file }}"
+      args:
+        creates: "{{ old_file }}"
+      delegate_to: localhost # Mock rationale: Create controlled test data locally.
+
+    - name: Create a new dummy file
+      ansible.builtin.file:
+        path: "{{ new_file }}"
+        state: touch
+      delegate_to: localhost # Mock rationale: Create controlled test data locally.
+
+    - name: Run dust bunny sweeper in check mode (expecting changes)
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      args:
+        apply:
+          check_mode: true
+      register: check_mode_result
+      delegate_to: localhost # Mock rationale: Run the playbook against the local test environment.
+
+    - name: Assert check mode would remove the old file
+      ansible.builtin.assert:
+        that:
+          - "check_mode_result.results | selectattr('task_fields.name', 'equalto', 'Delete found old files') | map(attribute='changed') | first"
+        fail_msg: "Check mode did not detect changes for old file removal."
+      # Mock rationale: Verifies the playbook's logic without actual deletion by checking the 'changed' status of the deletion task.
+
+    - name: Run dust bunny sweeper for real
+      ansible.builtin.include_tasks: ../src/dust_bunny_sweeper.yml
+      register: real_run_result
+      delegate_to: localhost # Mock rationale: Run the playbook against the local test environment.
+
+    - name: Assert old file is absent
+      ansible.builtin.stat:
+        path: "{{ old_file }}"
+      register: old_file_stat
+      delegate_to: localhost # Mock rationale: Verify local file system state.
+
+    - name: Assert new file is present
+      ansible.builtin.stat:
+        path: "{{ new_file }}"
+      register: new_file_stat
+      delegate_to: localhost # Mock rationale: Verify local file system state.
+
+    - name: Verify old file was deleted and new file remains
+      ansible.builtin.assert:
+        that:
+          - "not old_file_stat.stat.exists"
+          - "new_file_stat.stat.exists"
+        fail_msg: "Old file was not deleted or new file was deleted unexpectedly."
+      # Mock rationale: Final verification of the playbook's effect on the controlled local environment.
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      delegate_to: localhost # Mock rationale: Clean up local test artifacts.
