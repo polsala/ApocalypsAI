@@ -1,0 +1,119 @@
+---
+- name: Test Nightly Digital Dust Bunny Sweeper Logic
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - ../src/vars/main.yml # Load default variables
+
+  tasks:
+    - name: Test Case 1: No dust bunnies found (report action)
+      block:
+        - name: Mock find result for no dust bunnies
+          ansible.builtin.set_fact:
+            dust_bunnies_found:
+              files: []
+              changed: false
+              failed: false
+          # Mock rationale: Simulates the output of the 'find' module when no files match the criteria.
+
+        - name: Run the main playbook with mocked find result and report action
+          ansible.builtin.include_tasks:
+            file: ../src/dust_bunny_sweeper.yml
+            apply:
+              vars:
+                dust_bunny_action: "report"
+          register: playbook_run_result
+
+        - name: Assert no changes occurred for report action
+          ansible.builtin.assert:
+            that:
+              - "playbook_run_result.changed == false"
+            fail_msg: "Expected no changes for 'report' action with no dust bunnies."
+
+    - name: Test Case 2: Dust bunnies found (report action)
+      block:
+        - name: Mock find result with dust bunnies
+          ansible.builtin.set_fact:
+            dust_bunnies_found:
+              files:
+                - path: "/tmp/old_log.txt"
+                  size_kb: 50
+                  mtime: "2023-01-01T10:00:00Z"
+                - path: "/tmp/another_old_file.bak"
+                  size_kb: 100
+                  mtime: "2023-01-05T12:30:00Z"
+              changed: true
+              failed: false
+          # Mock rationale: Simulates the output of the 'find' module when files are found.
+
+        - name: Run the main playbook with mocked find result and report action
+          ansible.builtin.include_tasks:
+            file: ../src/dust_bunny_sweeper.yml
+            apply:
+              vars:
+                dust_bunny_action: "report"
+          register: playbook_run_result
+
+        - name: Assert no changes occurred for report action with dust bunnies
+          ansible.builtin.assert:
+            that:
+              - "playbook_run_result.changed == false"
+            fail_msg: "Expected no changes for 'report' action even with dust bunnies."
+
+    - name: Test Case 3: Dust bunnies found (delete action in check mode)
+      block:
+        - name: Mock find result with dust bunnies for delete
+          ansible.builtin.set_fact:
+            dust_bunnies_found:
+              files:
+                - path: "/tmp/delete_me.log"
+                  size_kb: 10
+                  mtime: "2023-02-01T10:00:00Z"
+              changed: true
+              failed: false
+          # Mock rationale: Simulates finding a file to be deleted.
+
+        - name: Run the main playbook with mocked find result and delete action in check mode
+          ansible.builtin.include_tasks:
+            file: ../src/dust_bunny_sweeper.yml
+            apply:
+              vars:
+                dust_bunny_action: "delete"
+              check_mode: true # Crucial for offline testing of destructive actions
+          register: playbook_run_result
+
+        - name: Assert changes would occur for delete action in check mode
+          ansible.builtin.assert:
+            that:
+              - "playbook_run_result.changed == true"
+            fail_msg: "Expected changes to be reported for 'delete' action in check mode."
+
+    - name: Test Case 4: Dust bunnies found (archive action in check mode)
+      block:
+        - name: Mock find result with dust bunnies for archive
+          ansible.builtin.set_fact:
+            dust_bunnies_found:
+              files:
+                - path: "/tmp/archive_me.data"
+                  size_kb: 200
+                  mtime: "2023-03-01T10:00:00Z"
+              changed: true
+              failed: false
+          # Mock rationale: Simulates finding a file to be archived.
+
+        - name: Run the main playbook with mocked find result and archive action in check mode
+          ansible.builtin.include_tasks:
+            file: ../src/dust_bunny_sweeper.yml
+            apply:
+              vars:
+                dust_bunny_action: "archive"
+              check_mode: true
+          register: playbook_run_result
+
+        - name: Assert changes would occur for archive action in check mode
+          ansible.builtin.assert:
+            that:
+              - "playbook_run_result.changed == true"
+            fail_msg: "Expected changes to be reported for 'archive' action in check mode."

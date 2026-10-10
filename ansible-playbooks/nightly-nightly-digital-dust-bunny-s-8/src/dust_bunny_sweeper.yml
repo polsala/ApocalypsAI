@@ -1,0 +1,51 @@
+---
+- name: Nightly Digital Dust Bunny Sweeper
+  hosts: all
+  become: yes # May need root for some paths
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure archive directory exists if action is archive
+      ansible.builtin.file:
+        path: "{{ dust_bunny_archive_dir }}"
+        state: directory
+        mode: '0755'
+      when: dust_bunny_action == "archive"
+
+    - name: Find digital dust bunnies
+      ansible.builtin.find:
+        paths: "{{ dust_bunny_paths }}"
+        age: "{{ dust_bunny_age_days }}d"
+        size: "{{ dust_bunny_min_size_kb }}k-{{ dust_bunny_max_size_kb }}k"
+        file_type: file
+      register: dust_bunnies_found
+      ignore_errors: true # Continue even if some paths are inaccessible
+
+    - name: Report found dust bunnies
+      ansible.builtin.debug:
+        msg: "Found {{ dust_bunnies_found.files | length }} digital dust bunnies:"
+      when: dust_bunnies_found.files is defined and dust_bunnies_found.files | length > 0
+
+    - name: List dust bunnies (report action)
+      ansible.builtin.debug:
+        msg: "  - {{ item.path }} ({{ item.size_kb }} KB, last modified {{ item.mtime }})"
+      loop: "{{ dust_bunnies_found.files }}"
+      when: dust_bunnies_found.files is defined and dust_bunnies_found.files | length > 0 and dust_bunny_action == "report"
+
+    - name: Delete dust bunnies (delete action)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ dust_bunnies_found.files }}"
+      when: dust_bunnies_found.files is defined and dust_bunnies_found.files | length > 0 and dust_bunny_action == "delete"
+
+    - name: Archive dust bunnies (archive action)
+      ansible.builtin.command: "mv {{ item.path }} {{ dust_bunny_archive_dir }}/"
+      loop: "{{ dust_bunnies_found.files }}"
+      when: dust_bunnies_found.files is defined and dust_bunnies_found.files | length > 0 and dust_bunny_action == "archive"
+
+    - name: No dust bunnies found
+      ansible.builtin.debug:
+        msg: "No digital dust bunnies found. Your server is sparkling clean!"
+      when: dust_bunnies_found.files is not defined or dust_bunnies_found.files | length == 0
