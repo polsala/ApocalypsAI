@@ -1,0 +1,42 @@
+---
+- name: Deploy Daily Morale Booster
+  hosts: all
+  become: yes # May need root to create directories in /opt
+
+  vars:
+    base_morale_dir: "/opt/apocalypsai_morale"
+    daily_tips_dir: "{{ base_morale_dir }}/daily_tips"
+
+  vars_files:
+    - vars/morale_tips.yml
+
+  tasks:
+    - name: Ensure base morale directory exists
+      ansible.builtin.file:
+        path: "{{ base_morale_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure daily tips directory exists
+      ansible.builtin.file:
+        path: "{{ daily_tips_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Select a random morale tip
+      ansible.builtin.set_fact:
+        current_morale_tip: "{{ morale_tips | random }}"
+      # Mock rationale: In a real run, this picks a random tip. For deterministic testing,
+      # the test playbook will override 'current_morale_tip' directly.
+
+    - name: Get current date for filename
+      ansible.builtin.set_fact:
+        current_date: "{{ ansible_date_time.date }}"
+      # Mock rationale: For deterministic testing, 'ansible_date_time.date' will be
+      # mocked by setting 'current_date' in the test playbook's vars.
+
+    - name: Deploy today's morale tip
+      ansible.builtin.copy:
+        content: "{{ current_morale_tip }}\n"
+        dest: "{{ daily_tips_dir }}/{{ current_date }}.txt"
+        mode: '0644'
