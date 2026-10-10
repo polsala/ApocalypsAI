@@ -1,0 +1,62 @@
+---
+- name: Sweep away digital dust bunnies
+  hosts: all
+  become: yes # Requires elevated privileges for system directories
+  gather_facts: yes
+
+  vars_files:
+    - vars/cleanup_paths.yml
+
+  tasks:
+    - name: Ensure cleanup_targets is defined
+      ansible.builtin.fail:
+        msg: "Variable 'cleanup_targets' is not defined. Please check vars/cleanup_paths.yml."
+      when: cleanup_targets is not defined or cleanup_targets | length == 0
+
+    - name: Initialize swept_files list for {{ inventory_hostname }}
+      ansible.builtin.set_fact:
+        swept_files: []
+
+    - name: Process each cleanup target
+      loop: "{{ cleanup_targets }}"
+      loop_control:
+        loop_var: cleanup_item
+      block:
+        - name: Find old files in {{ cleanup_item.path }}
+          ansible.builtin.find:
+            paths: "{{ cleanup_item.path }}"
+            age: "{{ cleanup_item.age_days }}d"
+            patterns: "{{ cleanup_item.patterns | default(['*']) }}"
+            recurse: yes
+            file_type: file
+          register: old_files_found
+
+        - name: Delete old files
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ old_files_found.files }}"
+          when: old_files_found.files | length > 0
+          register: deleted_files_result
+
+        - name: Add deleted files to swept_files list
+          ansible.builtin.set_fact:
+            swept_files: "{{ swept_files + [item.path] }}"
+          loop: "{{ deleted_files_result.results | selectattr('changed', 'equalto', true) | map(attribute='path') | list }}"
+          when: deleted_files_result.results is defined and deleted_files_result.results | length > 0
+
+  post_tasks:
+    - name: Report on swept digital dust bunnies
+      ansible.builtin.debug:
+        msg: |
+          Digital Dust Bunny Sweeper Report for {{ inventory_hostname }}:
+          Total files swept: {{ swept_files | length }}
+          Swept files:
+          {% if swept_files | length > 0 %}
+          {% for file in swept_files %}
+          - {{ file }}
+          {% endfor %}
+          {% else %}
+          No digital dust bunnies found to sweep!
+          {% endif %}
+      when: swept_files is defined

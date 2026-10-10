@@ -1,0 +1,80 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_host
+  become: yes
+  gather_facts: no
+
+  vars:
+    test_dir: "/tmp/ansible_test_dust_sweeper_{{ lookup('pipe', 'date +%s%N') }}" # Unique temp dir
+    old_file_name: "old_dust_bunny.log"
+    new_file_name: "new_sparkle.txt"
+    old_file_path: "{{ test_dir }}/{{ old_file_name }}"
+    new_file_path: "{{ test_dir }}/{{ new_file_name }}"
+    mock_cleanup_targets:
+      - path: "{{ test_dir }}"
+        age_days: 1
+        patterns: ["*"]
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create an old file
+      ansible.builtin.copy:
+        content: "This is an old file."
+        dest: "{{ old_file_path }}"
+      register: old_file_creation
+
+    - name: Set modification time for old file (to be older than 1 day)
+      # Mock rationale: Creating a file with a specific modification time to simulate an "old" file.
+      # This is deterministic and offline as it manipulates local filesystem state for testing.
+      # We use 'touch' to set the mtime, which is a standard local command.
+      ansible.builtin.command: "touch -d '2 days ago' {{ old_file_path }}"
+      args:
+        creates: "{{ old_file_path }}" # Ensure it only runs if the file exists
+      when: old_file_creation.changed
+
+    - name: Create a new file
+      ansible.builtin.copy:
+        content: "This is a new file."
+        dest: "{{ new_file_path }}"
+
+    - name: Run the dust sweeper playbook with mock targets
+      ansible.builtin.include_tasks:
+        file: ../src/dust_sweeper.yml
+      vars:
+        cleanup_targets: "{{ mock_cleanup_targets }}"
+
+    - name: Verify old file is deleted
+      ansible.builtin.stat:
+        path: "{{ old_file_path }}"
+      register: old_file_stat
+
+    - name: Assert old file is absent
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old file '{{ old_file_path }}' was not deleted!"
+        success_msg: "Old file '{{ old_file_path }}' was successfully deleted."
+
+    - name: Verify new file still exists
+      ansible.builtin.stat:
+        path: "{{ new_file_path }}"
+      register: new_file_stat
+
+    - name: Assert new file is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New file '{{ new_file_path }}' was unexpectedly deleted!"
+        success_msg: "New file '{{ new_file_path }}' correctly remains."
+
+  always:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: test_dir is defined and test_dir != "/" # Safety check
