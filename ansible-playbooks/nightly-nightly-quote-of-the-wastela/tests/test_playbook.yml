@@ -1,0 +1,47 @@
+- name: Test Quote of the Wasteland playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    quote_list:
+      - "Even the darkest night ends with sunrise."
+      - "Hope is the last fuel in the bunker."
+      - "When the world crumbles, build your own throne."
+      - "Radiation may scar, but it also reveals."
+      - "Survive the storm, then dance in the ash."
+    quote_dir: "/tmp/wasteland_test_quotes"
+  tasks:
+    - name: Ensure clean test directory
+      file:
+        path: "{{ quote_dir }}"
+        state: absent
+
+    - name: Run the main playbook with test vars
+      import_playbook: "../src/playbook.yml"
+      vars:
+        quote_dir: "{{ quote_dir }}"
+
+    - name: Find generated quote file
+      find:
+        paths: "{{ quote_dir }}"
+        patterns: "*.txt"
+        file_type: file
+      register: found_files
+
+    - name: Ensure exactly one file was created
+      assert:
+        that:
+          - "found_files.files | length == 1"
+
+    - name: Read the quote content
+      slurp:
+        src: "{{ found_files.files[0].path }}"
+      register: quote_content
+
+    - name: Decode content
+      set_fact:
+        quote_text: "{{ quote_content.content | b64decode | trim }}"
+
+    - name: Verify quote is from the list
+      assert:
+        that:
+          - "quote_text in quote_list"

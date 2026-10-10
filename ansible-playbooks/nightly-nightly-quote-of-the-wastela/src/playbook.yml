@@ -1,0 +1,31 @@
+- name: Generate a random wasteland quote
+  hosts: localhost
+  gather_facts: false
+  vars:
+    quote_list:
+      - "Even the darkest night ends with sunrise."
+      - "Hope is the last fuel in the bunker."
+      - "When the world crumbles, build your own throne."
+      - "Radiation may scar, but it also reveals."
+      - "Survive the storm, then dance in the ash."
+    quote_dir: "/var/wasteland/quotes"
+  tasks:
+    - name: Choose a random quote
+      set_fact:
+        chosen_quote: "{{ quote_list | random }}"
+
+    - name: Get timestamp for filename
+      set_fact:
+        ts: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+    - name: Ensure quote directory exists
+      file:
+        path: "{{ quote_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Write quote to timestamped file
+      copy:
+        dest: "{{ quote_dir }}/{{ ts }}.txt"
+        content: "{{ chosen_quote }}\n"
+        mode: '0644'
