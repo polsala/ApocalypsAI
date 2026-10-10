@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /src\nCOPY src/go.mod .\nRUN go mod download\nCOPY src/*.go .\nRUN CGO_ENABLED=0 GOOS=linux go build -o /app/tipserver .\n\nFROM alpine:3.18\nCOPY --from=builder /app/tipserver /app/tipserver\nEXPOSE 8080\nENTRYPOINT [\"/app/tipserver\"]\n
