@@ -1,0 +1,15 @@
+name: "Nightly Emoji Enhancer"
+description: "Prefixes input text with a whimsical emoji."
+inputs:
+  text:
+    description: "Text to enhance"
+    required: true
+  seed:
+    description: "Integer seed for deterministic emoji selection"
+    required: false
+outputs:
+  enhanced_text:
+    description: "Text prefixed with an emoji"
+runs:
+  using: "node12"
+  main: "src/index.js"
