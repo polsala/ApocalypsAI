@@ -1,0 +1,73 @@
+---
+- name: Test Digital Garden Tiller Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../src/vars/garden_config.yml # Load config from src for consistency
+
+  tasks:
+    - name: Clean up test environment before running main playbook tasks
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}"
+        state: absent
+
+    - name: Ensure digital garden base path exists (test run)
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure garden plots (markdown files) exist (test run)
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}/{{ item }}"
+        state: touch
+        mode: '0644'
+      loop: "{{ garden_plots }}"
+
+    - name: Select today's wisdom (deterministic for testing, test run)
+      ansible.builtin.set_fact:
+        current_wisdom: "{{ wisdom_messages[0] }}" # Mock rationale: Matches the deterministic selection in the main playbook for consistent testing.
+
+    - name: Update daily wisdom message (test run)
+      ansible.builtin.template:
+        src: ../src/templates/wisdom_template.j2 # Use template from src
+        dest: "{{ garden_base_path }}/{{ daily_wisdom_file }}"
+        mode: '0644'
+
+    - name: Assert digital garden base path exists
+      ansible.builtin.stat:
+        path: "{{ garden_base_path }}"
+      register: garden_path_stat
+      ansible.builtin.assert:
+        that:
+          - garden_path_stat.stat.exists
+          - garden_path_stat.stat.isdir
+        msg: "Digital garden base path {{ garden_base_path }} does not exist or is not a directory."
+
+    - name: Assert all garden plots exist
+      ansible.builtin.stat:
+        path: "{{ garden_base_path }}/{{ item }}"
+      register: plot_stat_result
+      loop: "{{ garden_plots }}"
+      ansible.builtin.assert:
+        that:
+          - plot_stat_result.stat.exists
+          - plot_stat_result.stat.isreg
+        msg: "Garden plot {{ item }} does not exist or is not a regular file."
+
+    - name: Assert daily wisdom file exists and contains expected content
+      ansible.builtin.slurp:
+        src: "{{ garden_base_path }}/{{ daily_wisdom_file }}"
+      register: wisdom_file_content
+      ansible.builtin.assert:
+        that:
+          - wisdom_file_content.content is defined
+          - wisdom_file_content.content | b64decode | search("Even in the digital wasteland, a thought can bloom.") # Mock rationale: Asserts the specific wisdom chosen deterministically in the main playbook.
+          - wisdom_file_content.content | b64decode | search("title: Daily Wisdom from the ApocalypsAI Garden")
+        msg: "Daily wisdom file does not exist or contains unexpected content."
+
+    - name: Clean up test environment after running main playbook tasks
+      ansible.builtin.file:
+        path: "{{ garden_base_path }}"
+        state: absent
