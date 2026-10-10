@@ -1,0 +1,19 @@
+name: 'Cosmic Commit Complimenter'
+description: 'Bestows whimsical, cosmic-themed compliments on successful PR merges or direct pushes.'
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication.'
+    required: true
+  compliment-target:
+    description: 'The event type to target: "pr-merge" for merged PRs, "push" for direct pushes.'
+    required: false
+    default: 'pr-merge'
+  compliment-message:
+    description: 'An optional custom compliment message. If provided, overrides random selection.'
+    required: false
+outputs:
+  compliment:
+    description: 'The cosmic compliment that was posted.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
