@@ -1,0 +1,122 @@
+name: Test Temporal Drift Detector Action
+
+on: [workflow_dispatch]
+
+jobs:
+  test-drift-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed to get full history for git log
+
+      - name: Setup Git User
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+      - name: Create and commit a normal file
+        run: |
+          echo "Hello, world!" > file_normal.txt
+          git add file_normal.txt
+          git commit -m "Add normal file"
+          # Ensure mtime is after commit time (default behavior)
+          ls -l file_normal.txt
+
+      - name: Create a file and simulate temporal drift
+        run: |
+          echo "This file will drift." > file_drifted.txt
+          git add file_drifted.txt
+          # Commit with a specific, older date
+          git commit -m "Add drifted file" --date="2023-01-01T12:00:00Z"
+          
+          # Now, set its modification time to be even older than the commit time
+          # This simulates a file being reverted or copied without updating mtime
+          touch -t 202212011000.00 file_drifted.txt
+          
+          echo "--- After simulating drift ---"
+          ls -l file_drifted.txt
+          echo "Last commit time for file_drifted.txt:"
+          git log -1 --format=%ct -- file_drifted.txt
+          echo "File mtime for file_drifted.txt:"
+          stat -c %Y file_drifted.txt
+
+      - name: Run Temporal Drift Detector (expect drift)
+        id: detect_drift_1
+        uses: ../ # Mock rationale: Uses the action defined in the parent directory for testing.
+        with:
+          path: .
+          fail_on_drift: false # Don't fail the test workflow itself yet
+      
+      - name: Verify drift detection
+        run: |
+          echo "Drift detected: ${{ steps.detect_drift_1.outputs.drift_detected }}"
+          echo "Drifted files: ${{ steps.detect_drift_1.outputs.drifted_files }}"
+          if [ "${{ steps.detect_drift_1.outputs.drift_detected }}" != "true" ]; then
+            echo "Error: Expected drift to be detected, but it was not."
+            exit 1
+          fi
+          if ! echo "${{ steps.detect_drift_1.outputs.drifted_files }}" | grep -q "file_drifted.txt"; then
+            echo "Error: Expected 'file_drifted.txt' in drifted files, but it was not."
+            exit 1
+          fi
+          if echo "${{ steps.detect_drift_1.outputs.drifted_files }}" | grep -q "file_normal.txt"; then
+            echo "Error: 'file_normal.txt' should not be in drifted files."
+            exit 1
+          fi
+
+      - name: Create another normal file and re-run (expect only previous drift)
+        run: |
+          echo "Another normal file." > file_another_normal.txt
+          git add file_another_normal.txt
+          git commit -m "Add another normal file"
+          ls -l file_another_normal.txt
+
+      - name: Run Temporal Drift Detector (expect only previous drift)
+        id: detect_drift_2
+        uses: ../ # Mock rationale: Uses the action defined in the parent directory for testing.
+        with:
+          path: .
+          fail_on_drift: false
+      
+      - name: Verify no new drift
+        run: |
+          echo "Drift detected: ${{ steps.detect_drift_2.outputs.drift_detected }}"
+          echo "Drifted files: ${{ steps.detect_drift_2.outputs.drifted_files }}"
+          if [ "${{ steps.detect_drift_2.outputs.drift_detected }}" != "true" ]; then
+            echo "Error: Expected drift to still be detected (from file_drifted.txt), but it was not."
+            exit 1
+          fi
+          if ! echo "${{ steps.detect_drift_2.outputs.drifted_files }}" | grep -q "file_drifted.txt"; then
+            echo "Error: Expected 'file_drifted.txt' in drifted files, but it was not."
+            exit 1
+          fi
+          if echo "${{ steps.detect_drift_2.outputs.drifted_files }}" | grep -q "file_another_normal.txt"; then
+            echo "Error: 'file_another_normal.txt' should not be in drifted files."
+            exit 1
+          fi
+
+      - name: Test fail_on_drift: true (setup file to cause failure)
+        run: |
+          echo "This file will cause a failure." > file_fail.txt
+          git add file_fail.txt
+          git commit -m "Add file to cause failure" --date="2023-01-01T12:00:00Z"
+          touch -t 202212011000.00 file_fail.txt
+          ls -l file_fail.txt
+
+      - name: Run Temporal Drift Detector with fail_on_drift: true
+        id: detect_drift_fail
+        uses: ../ # Mock rationale: Uses the action defined in the parent directory for testing.
+        with:
+          path: .
+          fail_on_drift: true
+        continue-on-error: true # Allow this step to fail for assertion below
+
+      - name: Verify action failed
+        run: |
+          if [ "${{ steps.detect_drift_fail.outcome }}" != "failure" ]; then
+            echo "Error: Expected action to fail, but it did not. Outcome: ${{ steps.detect_drift_fail.outcome }}"
+            exit 1
+          fi
+          echo "Action correctly failed as expected."
