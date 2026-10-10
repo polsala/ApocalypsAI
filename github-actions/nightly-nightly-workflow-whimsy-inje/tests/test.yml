@@ -1,0 +1,111 @@
+name: 'Test Workflow Whimsy Injector'
+
+on: [push, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create custom messages file for testing
+        run: |
+          echo "Test message 1: Hello Whimsy!" > custom_messages.txt
+          echo "Test message 2: Another test!" >> custom_messages.txt
+          echo "" >> empty_messages.txt # Create an empty file for testing fallback
+
+      - name: Run action with default messages (deterministic test)
+        id: default_whimsy_test
+        uses: ./utils/nightly-workflow-whimsy-injector
+        with:
+          test-message-index: 0 # Picks the first default message
+
+      - name: Verify default message output and summary content
+        run: |
+          EXPECTED_MESSAGE="May your code compile on the first try, and your coffee be strong!"
+          ACTUAL_OUTPUT="${{ steps.default_whimsy_test.outputs.whimsy-message }}"
+          echo "Expected: $EXPECTED_MESSAGE"
+          echo "Actual: $ACTUAL_OUTPUT"
+          if [[ "$ACTUAL_OUTPUT" != "$EXPECTED_MESSAGE" ]]; then
+            echo "Default message test failed: Output mismatch!"
+            exit 1
+          fi
+          # Mock rationale: GITHUB_STEP_SUMMARY is an environment variable set by GitHub Actions.
+          # We are verifying its content after the action runs by reading the file it points to.
+          # This is an integration test within the GitHub Actions environment, observing the side effect.
+          SUMMARY_CONTENT=$(cat "$GITHUB_STEP_SUMMARY")
+          echo "Summary content after default test:\n$SUMMARY_CONTENT"
+          if ! echo "$SUMMARY_CONTENT" | grep -q "$EXPECTED_MESSAGE"; then
+            echo "Default message test failed: Summary content does not contain the expected message!"
+            exit 1
+          fi
+
+      - name: Run action with custom messages (deterministic test)
+        id: custom_whimsy_test
+        uses: ./utils/nightly-workflow-whimsy-injector
+        with:
+          message-file: custom_messages.txt
+          test-message-index: 1 # Picks "Test message 2: Another test!"
+
+      - name: Verify custom message output and summary content
+        run: |
+          EXPECTED_MESSAGE="Test message 2: Another test!"
+          ACTUAL_OUTPUT="${{ steps.custom_whimsy_test.outputs.whimsy-message }}"
+          echo "Expected: $EXPECTED_MESSAGE"
+          echo "Actual: $ACTUAL_OUTPUT"
+          if [[ "$ACTUAL_OUTPUT" != "$EXPECTED_MESSAGE" ]]; then
+            echo "Custom message test failed: Output mismatch!"
+            exit 1
+          fi
+          # Mock rationale: Same as above, verifying GITHUB_STEP_SUMMARY content.
+          SUMMARY_CONTENT=$(cat "$GITHUB_STEP_SUMMARY")
+          echo "Summary content after custom test:\n$SUMMARY_CONTENT"
+          if ! echo "$SUMMARY_CONTENT" | grep -q "$EXPECTED_MESSAGE"; then
+            echo "Custom message test failed: Summary content does not contain the expected message!"
+            exit 1
+          fi
+
+      - name: Run action with out-of-bounds test index (should fallback to random from defaults)
+        id: oob_index_test
+        uses: ./utils/nightly-workflow-whimsy-injector
+        with:
+          test-message-index: 999 # Out of bounds
+
+      - name: Verify out-of-bounds fallback output and summary content
+        run: |
+          ACTUAL_OUTPUT="${{ steps.oob_index_test.outputs.whimsy-message }}"
+          echo "Actual (random) output for OOB index: $ACTUAL_OUTPUT"
+          if [[ -z "$ACTUAL_OUTPUT" ]]; then
+            echo "Out-of-bounds index test failed: No message output!"
+            exit 1
+          fi
+          # Mock rationale: We cannot predict the exact message, but we can ensure *a* message was outputted
+          # and that the summary was updated. The action's internal logic handles the fallback.
+          SUMMARY_CONTENT=$(cat "$GITHUB_STEP_SUMMARY")
+          echo "Summary content after OOB test:\n$SUMMARY_CONTENT"
+          if ! echo "$SUMMARY_CONTENT" | grep -q "$ACTUAL_OUTPUT"; then
+            echo "Out-of-bounds index test failed: Summary content does not contain the outputted message!"
+            exit 1
+          fi
+
+      - name: Run action with empty custom messages file (should fallback to random from defaults)
+        id: empty_file_test
+        uses: ./utils/nightly-workflow-whimsy-injector
+        with:
+          message-file: empty_messages.txt
+
+      - name: Verify empty file fallback output and summary content
+        run: |
+          ACTUAL_OUTPUT="${{ steps.empty_file_test.outputs.whimsy-message }}"
+          echo "Actual (random) output for empty file: $ACTUAL_OUTPUT"
+          if [[ -z "$ACTUAL_OUTPUT" ]]; then
+            echo "Empty file test failed: No message output!"
+            exit 1
+          fi
+          # Mock rationale: Same as above, ensuring a message is outputted and summary updated.
+          SUMMARY_CONTENT=$(cat "$GITHUB_STEP_SUMMARY")
+          echo "Summary content after empty file test:\n$SUMMARY_CONTENT"
+          if ! echo "$SUMMARY_CONTENT" | grep -q "$ACTUAL_OUTPUT"; then
+            echo "Empty file test failed: Summary content does not contain the outputted message!"
+            exit 1
+          fi
