@@ -1,0 +1,21 @@
+---
+# Paths to scan for dust bunnies. These should be absolute paths.
+dust_bunny_sweeper_paths:
+  - /tmp
+  - /var/log
+  - /opt/old_backups
+
+# Files older than this many days will be considered dust bunnies.
+dust_bunny_sweeper_age_days: 90
+
+# Files larger than this many megabytes will be considered dust bunnies.
+dust_bunny_sweeper_min_size_mb: 100
+
+# Set to 'true' for a dry run (only report, no deletion).
+# Set to 'false' to actually delete the identified files.
+dust_bunny_sweeper_dry_run: true
+
+# List of patterns or absolute paths to exclude from deletion.
+# These patterns are passed to the 'exclude' parameter of the find module.
+# Examples: "*.log.gz", "/var/log/important_app.log"
+dust_bunny_sweeper_exclude_patterns: []
