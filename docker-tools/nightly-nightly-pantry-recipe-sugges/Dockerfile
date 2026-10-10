@@ -1,0 +1,1 @@
+FROM python:3.11-slim\n\nWORKDIR /app\n\nCOPY src/ ./src/\nCOPY requirements.txt ./\n\nRUN pip install --no-cache-dir -r requirements.txt\n\nENV INPUT_CSV=/data/pantry.csv\n\nENTRYPOINT ["python", "src/app.py"]
