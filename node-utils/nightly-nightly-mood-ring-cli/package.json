@@ -1,0 +1,21 @@
+{
+  "name": "nightly-mood-ring-cli",
+  "version": "1.0.0",
+  "description": "Analyzes text input to determine its 'mood' and displays a whimsical color and description.",
+  "main": "src/index.js",
+  "bin": {
+    "nightly-mood-ring": "src/index.js"
+  },
+  "scripts": {
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "cli",
+    "mood",
+    "sentiment",
+    "whimsical",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT"
+}
