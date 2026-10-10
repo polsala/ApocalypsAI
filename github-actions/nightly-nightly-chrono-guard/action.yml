@@ -1,0 +1,23 @@
+name: 'Nightly Chrono-Guard'
+description: 'Detects temporal inconsistencies and paradoxes in PR titles and commit messages.'
+inputs:
+  pr-title:
+    description: 'The title of the Pull Request.'
+    required: true
+  commit-messages:
+    description: 'A newline-separated string of commit messages for the PR.'
+    required: true
+  current-year:
+    description: 'The current year to use for temporal checks. Defaults to current system year.'
+    required: false
+    default: ''
+outputs:
+  is-anomalous:
+    description: 'True if temporal anomalies were detected, false otherwise.'
+    value: ${{ steps.chrono-check.outputs.is-anomalous }}
+  anomaly-details:
+    description: 'Details of detected temporal anomalies.'
+    value: ${{ steps.chrono-check.outputs.anomaly-details }}
+runs:
+  using: 'node20'
+  main: 'src/main.js'
