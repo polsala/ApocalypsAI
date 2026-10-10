@@ -1,0 +1,17 @@
+serenity_services_to_stop:
+  - apache2
+  - nginx
+  - cups
+  - modemmanager
+
+serenity_temp_paths_to_clean:
+  - /tmp/*
+  - /var/tmp/*
+  - /var/log/*.old
+  - /var/log/*.bak
+
+serenity_logrotate_config_path: /etc/logrotate.d/serenity_logs
+serenity_logrotate_rotate_count: 14 # Keep logs for 14 days
+serenity_logrotate_create_mode: '0600' # More restrictive permissions
+serenity_logrotate_create_owner: 'root'
+serenity_logrotate_create_group: 'root'
