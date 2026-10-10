@@ -1,0 +1,68 @@
+---
+- name: Distribute and activate morale-boosting content
+  hosts: community_nodes
+  become: yes # Required for writing to /etc/motd and /usr/local/bin, and cron
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure morale content directory exists
+      ansible.builtin.file:
+        path: "{{ morale_content_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Copy quotes file
+      ansible.builtin.copy:
+        src: files/quotes.txt
+        dest: "{{ morale_content_dir }}/quotes.txt"
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Copy affirmations file
+      ansible.builtin.copy:
+        src: files/affirmations.txt
+        dest: "{{ morale_content_dir }}/affirmations.txt"
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Create morale display script
+      ansible.builtin.template:
+        src: templates/display_script.sh.j2
+        dest: "{{ morale_display_script_path }}"
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Ensure log directory for morale exists
+      ansible.builtin.file:
+        path: /var/log
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Ensure morale log file exists and is writable
+      ansible.builtin.file:
+        path: /var/log/apocalypsai_morale.log
+        state: touch
+        mode: '0644'
+        owner: root
+        group: root
+        # Mock rationale: This ensures the log file exists for the script to write to,
+        # even if /etc/motd is not writable in a test environment.
+
+    - name: Schedule morale display script with cron
+      ansible.builtin.cron:
+        name: "ApocalypsAI Morale Booster"
+        minute: "{{ cron_schedule.split(' ')[0] }}"
+        hour: "{{ cron_schedule.split(' ')[1] }}"
+        day: "{{ cron_schedule.split(' ')[2] }}"
+        month: "{{ cron_schedule.split(' ')[3] }}"
+        weekday: "{{ cron_schedule.split(' ')[4] }}"
+        job: "{{ morale_display_script_path }}"
+        user: root # Run as root to write to /etc/motd or /var/log
