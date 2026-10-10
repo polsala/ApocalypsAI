@@ -1,0 +1,46 @@
+.anomaly-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px; /* Scrollable area */
+  overflow-y: auto;
+  padding-right: 10px; /* For scrollbar */
+}
+
+.anomaly-item {
+  background-color: #3a3f4a;
+  padding: 10px 15px;
+  border-radius: 5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  border-left: 5px solid;
+}
+
+.anomaly-item:hover {
+  background-color: #4a505c;
+  transform: translateY(-2px);
+}
+
+.anomaly-item .anomaly-timestamp {
+  font-size: 0.8em;
+  color: #bbb;
+}
+
+.anomaly-item .anomaly-type {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #e0e0e0;
+}
+
+.anomaly-item .anomaly-severity {
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+/* Border colors based on severity */
+.anomaly-item.severity-mild-wobble { border-color: #8bc34a; }
+.anomaly-item.severity-significant-jiggle { border-color: #ffeb3b; }
+.anomaly-item.severity-reality-shredder { border-color: #f44336; }
