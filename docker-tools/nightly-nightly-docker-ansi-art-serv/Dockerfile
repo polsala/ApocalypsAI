@@ -1,0 +1,1 @@
+FROM golang:1.22-alpine AS builder\nWORKDIR /app\nCOPY src/ ./src/\nRUN go build -o server ./src/main.go\n\nFROM alpine:latest\nCOPY --from=builder /app/server /usr/local/bin/server\nEXPOSE 8080\nENTRYPOINT ["server"]\n
