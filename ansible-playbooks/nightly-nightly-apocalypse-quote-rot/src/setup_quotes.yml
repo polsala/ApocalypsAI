@@ -1,0 +1,30 @@
+- name: Apocalypse Quote Rotator
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Deploy quotes file
+      copy:
+        src: quotes.txt
+        dest: /usr/local/share/apocalypse_quotes.txt
+        mode: "0644"
+
+    - name: Install daily cron job to update MOTD
+      cron:
+        name: "Update MOTD with random apocalypse quote"
+        minute: "0"
+        hour: "9"
+        job: "shuf -n 1 /usr/local/share/apocalypse_quotes.txt > /etc/motd"
+        state: present
+
+    - name: Select a random quote now
+      command: shuf -n 1 /usr/local/share/apocalypse_quotes.txt
+      register: quote_output
+      changed_when: false
+
+    - name: Write the selected quote to MOTD
+      copy:
+        dest: /etc/motd
+        content: "{{ quote_output.stdout }}\n"
+        mode: "0644"
