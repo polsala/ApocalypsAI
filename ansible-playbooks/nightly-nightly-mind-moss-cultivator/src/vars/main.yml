@@ -1,0 +1,24 @@
+# src/vars/main.yml
+---
+# Name of your digital garden site (used for directory and Nginx config)
+site_name: my_digital_garden
+
+# Domain name for your digital garden (e.g., example.com)
+# If not using a domain, you can use your server's IP address.
+domain: example.com
+
+# Zola version to install
+zola_version: 0.17.2
+
+# Zola download URL (x86_64-unknown-linux-gnu for Linux)
+zola_url: "https://github.com/getzola/zola/releases/download/v{{ zola_version }}/zola-v{{ zola_version }}-x86_64-unknown-linux-gnu.tar.gz"
+
+# SHA256 checksum for the Zola binary (for integrity verification)
+# Update this if you change `zola_version`
+zola_checksum: "sha256:647185078519e49635955030283c4193568853610e7403487002061301389025"
+
+# Path for the Nginx site configuration file
+nginx_conf_path: /etc/nginx/sites-available/{{ site_name }}.conf
+
+# Path for the Nginx site enabled symlink
+nginx_site_enabled_path: /etc/nginx/sites-enabled/{{ site_name }}.conf

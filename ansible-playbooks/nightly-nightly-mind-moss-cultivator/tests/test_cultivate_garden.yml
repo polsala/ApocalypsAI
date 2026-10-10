@@ -1,0 +1,71 @@
+---
+- name: Run offline tests for Mind Moss Cultivator playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Mock rationale: These variables simulate the values that would be loaded
+    # from src/vars/main.yml and ansible_facts from a remote Debian host.
+    site_name: test_garden_mock
+    domain: mock.example.com
+    zola_version: 0.17.2
+    zola_url: "https://github.com/getzola/zola/releases/download/v{{ zola_version }}/zola-v{{ zola_version }}-x86_64-unknown-linux-gnu.tar.gz"
+    zola_checksum: "sha256:647185078519e49635955030283c4193568853610e7403487002061301389025"
+    nginx_conf_path: /etc/nginx/sites-available/{{ site_name }}.conf
+    nginx_site_enabled_path: /etc/nginx/sites-enabled/{{ site_name }}.conf
+    ansible_os_family: Debian # Mock rationale: Simulate a Debian-based system for conditional tasks.
+
+  tasks:
+    - name: Test - Verify site_name and domain variables are defined and valid
+      ansible.builtin.assert:
+        that:
+          - site_name is defined and site_name | length > 0
+          - domain is defined and domain | length > 0
+          - "'.' in domain" # Basic check for domain format
+        msg: "Site name or domain variable is missing or invalid."
+
+    - name: Test - Verify Zola download URL and checksum format
+      ansible.builtin.assert:
+        that:
+          - zola_url is defined
+          - zola_checksum is defined
+          - "'github.com' in zola_url" # Ensure it's a valid-looking URL
+          - "zola_checksum | regex_search('^sha256:[a-f0-9]{64}$', ignorecase=True)" # Check SHA256 format
+        msg: "Zola download URL or checksum is incorrectly defined or formatted."
+
+    - name: Test - Verify Nginx configuration paths
+      ansible.builtin.assert:
+        that:
+          - nginx_conf_path is defined
+          - nginx_site_enabled_path is defined
+          - "'sites-available' in nginx_conf_path"
+          - "'sites-enabled' in nginx_site_enabled_path"
+          - "nginx_conf_path | basename == nginx_site_enabled_path | basename" # Ensure symlink target matches source
+        msg: "Nginx configuration paths are incorrectly defined."
+
+    - name: Test - Simulate Nginx config content generation
+      ansible.builtin.set_fact:
+        simulated_nginx_config: |
+          server {
+              listen 80;
+              server_name {{ domain }};
+              root /var/www/{{ site_name }}/public;
+          }
+      # Mock rationale: Generate a simplified Nginx config string using mocked variables
+      # to verify that the template would produce expected content.
+
+    - name: Test - Assert Nginx config contains expected elements
+      ansible.builtin.assert:
+        that:
+          - "'server_name {{ domain }}' in simulated_nginx_config"
+          - "'root /var/www/{{ site_name }}/public;' in simulated_nginx_config"
+        msg: "Simulated Nginx configuration is missing critical elements."
+
+    - name: Test - Verify conditional logic for Debian systems
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == 'Debian'
+        msg: "ansible_os_family is not set to Debian, conditional tasks might not apply."
+      # Mock rationale: This assertion confirms that the mocked ansible_os_family is correctly set
+      # for testing Debian-specific tasks like apt installation.

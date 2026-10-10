@@ -1,0 +1,19 @@
+# src/templates/nginx.conf.j2
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name {{ domain }};
+
+    root /var/www/{{ site_name }}/public; # Zola builds to a 'public' directory
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Optional: Add SSL configuration here if you plan to use HTTPS
+    # listen 443 ssl;
+    # ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+}
