@@ -1,0 +1,16 @@
+---
+# Paths to scan for digital dust bunnies
+dust_bunny_scan_paths:
+  - /tmp
+  - /var/log/old_archives
+  - /opt/old_backups
+
+# Files older than this many days will be considered dust bunnies
+dust_bunny_age_threshold_days: 30
+
+# Files larger than this many megabytes will be considered dust bunnies
+dust_bunny_size_threshold_mb: 100
+
+# Set to true to actually delete files.
+# ALWAYS run with --check first to see what would be deleted!
+dust_bunny_perform_cleanup: false

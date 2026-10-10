@@ -1,0 +1,8 @@
+---
+- name: Sweep away digital dust bunnies
+  hosts: servers
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - ansible.builtin.include_tasks: dust_bunny_sweeper_tasks.yml
