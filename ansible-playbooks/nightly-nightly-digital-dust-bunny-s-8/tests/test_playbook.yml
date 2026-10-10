@@ -1,0 +1,68 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: localhost
+  connection: local
+  become: yes # Needed for cleaning system-wide paths like /tmp
+
+  vars:
+    test_cleanup_dir: "/tmp/ansible_test_cleanup_dir"
+    test_file_name: "dust_bunny_test_file.txt"
+    test_file_path: "{{ test_cleanup_dir }}/{{ test_file_name }}"
+    # Override playbook vars for testing specific age and paths
+    dust_bunny_age_days: 0 # Make all files immediately eligible for cleanup
+    paths_to_clean:
+      - "{{ test_cleanup_dir }}"
+
+  tasks:
+    - name: Create a temporary directory for testing
+      ansible.builtin.file:
+        path: "{{ test_cleanup_dir }}"
+        state: directory
+        mode: '0777'
+
+    - name: Create a dummy "dust bunny" file
+      ansible.builtin.copy:
+        content: "This is a digital dust bunny."
+        dest: "{{ test_file_path }}"
+        mode: '0644'
+
+    - name: Verify dummy file exists before cleanup
+      ansible.builtin.stat:
+        path: "{{ test_file_path }}"
+      register: file_stat_before
+      # Mock rationale: Using stat module to check file existence is deterministic and offline.
+      # It doesn't interact with external services.
+
+    - name: Assert dummy file exists
+      ansible.builtin.assert:
+        that:
+          - file_stat_before.stat.exists
+        fail_msg: "Test file '{{ test_file_path }}' does not exist before cleanup."
+
+    - name: Run the Digital Dust Bunny Sweeper playbook (import tasks)
+      ansible.builtin.include_tasks:
+        file: ../src/playbook.yml
+      vars:
+        # Pass test-specific vars to the imported playbook
+        dust_bunny_age_days: "{{ dust_bunny_age_days }}"
+        paths_to_clean: "{{ paths_to_clean }}"
+      # Mock rationale: The playbook itself uses 'find' and 'file' modules,
+      # which operate on the local filesystem (or mocked remote for tests).
+      # No external calls are made.
+
+    - name: Verify dummy file is removed after cleanup
+      ansible.builtin.stat:
+        path: "{{ test_file_path }}"
+      register: file_stat_after
+      # Mock rationale: Using stat module to check file existence is deterministic and offline.
+
+    - name: Assert dummy file is removed
+      ansible.builtin.assert:
+        that:
+          - not file_stat_after.stat.exists
+        fail_msg: "Test file '{{ test_file_path }}' was not removed after cleanup."
+
+    - name: Clean up the temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_cleanup_dir }}"
+        state: absent
