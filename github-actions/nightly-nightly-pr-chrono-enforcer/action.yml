@@ -1,0 +1,40 @@
+name: 'PR Chrono-Consistency Enforcer'
+description: 'Ensures PR titles and descriptions align with project "chrono-consistency" rules.'
+inputs:
+  min_title_length:
+    description: 'Minimum allowed length for the PR title.'
+    required: false
+    default: '10'
+  max_title_length:
+    description: 'Maximum allowed length for the PR title.'
+    required: false
+    default: '100'
+  min_body_length:
+    description: 'Minimum allowed length for the PR description.'
+    required: false
+    default: '20'
+  max_body_length:
+    description: 'Maximum allowed length for the PR description.'
+    required: false
+    default: '500'
+  required_keywords:
+    description: 'Comma-separated list of keywords that must appear in the PR title or body.'
+    required: false
+    default: ''
+  disallowed_keywords:
+    description: 'Comma-separated list of keywords that must NOT appear in the PR title or body.'
+    required: false
+    default: ''
+  fail_on_inconsistency:
+    description: 'Whether the action should fail if inconsistencies are found.'
+    required: false
+    default: 'true'
+  github_token:
+    description: 'GitHub token for API access (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+outputs:
+  is_chrono_consistent:
+    description: 'True if the PR is chrono-consistent, false otherwise.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
