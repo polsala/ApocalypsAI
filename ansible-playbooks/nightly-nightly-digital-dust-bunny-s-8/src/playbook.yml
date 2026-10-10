@@ -1,0 +1,8 @@
+---
+- name: Nightly Digital Dust Bunny Sweeper
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - import_tasks: dust_bunny_sweeper.yml
