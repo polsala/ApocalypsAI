@@ -1,0 +1,41 @@
+---
+- name: Cultivate Digital Garden
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure garden path exists
+      ansible.builtin.stat:
+        path: "{{ garden_path }}"
+      register: garden_path_stat
+      failed_when: not garden_path_stat.stat.exists or not garden_path_stat.stat.isdir
+
+    - name: Find all markdown files in the garden
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: markdown_files
+
+    - name: Initialize garden report
+      ansible.builtin.set_fact:
+        garden_report:
+          healthy_notes: []
+          notes_needing_pruning: []
+
+    - name: Process each markdown file
+      ansible.builtin.include_tasks: process_note.yml
+      loop: "{{ markdown_files.files }}"
+      loop_control:
+        loop_var: current_note
+
+    - name: Generate final garden report
+      ansible.builtin.template:
+        src: templates/garden_report.j2
+        dest: "{{ garden_path }}/garden_report.txt"
+      delegate_to: localhost
+      run_once: true
