@@ -1,0 +1,168 @@
+---
+- name: Test Nightly Bloom Pruner
+  hosts: localhost
+  gather_facts: true
+  vars:
+    test_garden_path: "/tmp/test_digital_garden"
+    test_prune_destination: "/tmp/test_digital_garden_archive"
+    test_stale_age_days: 1
+    test_evergreen_tag: "#evergreen"
+
+  pre_tasks:
+    - name: Clean up previous test runs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_prune_destination }}"
+      # Mock rationale: Cleaning up test directories ensures a clean slate for deterministic testing.
+
+    - name: Create test garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creating a mock directory for the digital garden to simulate the target environment.
+
+    - name: Create test prune destination directory
+      ansible.builtin.file:
+        path: "{{ test_prune_destination }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creating a mock directory for pruned files to simulate the archive.
+
+    - name: Create old stale note (should be pruned)
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/old_stale_note.md"
+        content: "This is an old, stale note."
+        mode: '0644'
+      # Mock rationale: Creating a mock file with specific content for testing pruning logic.
+
+    - name: Set modification time for old stale note
+      ansible.builtin.command: >-
+        touch -d "{{ ansible_date_time.date }} -{{ test_stale_age_days + 1 }} days" "{{ test_garden_path }}/old_stale_note.md"
+      changed_when: true
+      # Mock rationale: Manually setting modification time to simulate an old file, crucial for staleness detection.
+
+    - name: Create old evergreen note (should NOT be pruned)
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/old_evergreen_note.md"
+        content: "This is an old, evergreen note. {{ test_evergreen_tag }}"
+        mode: '0644'
+      # Mock rationale: Creating a mock file with specific content for testing evergreen tag detection.
+
+    - name: Set modification time for old evergreen note
+      ansible.builtin.command: >-
+        touch -d "{{ ansible_date_time.date }} -{{ test_stale_age_days + 1 }} days" "{{ test_garden_path }}/old_evergreen_note.md"
+      changed_when: true
+      # Mock rationale: Manually setting modification time to simulate an old file.
+
+    - name: Create new stale note (should NOT be pruned)
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/new_stale_note.md"
+        content: "This is a new, stale note."
+        mode: '0644'
+      # Mock rationale: Creating a mock file with specific content for testing staleness detection.
+
+    - name: Create new evergreen note (should NOT be pruned)
+      ansible.builtin.copy:
+        dest: "{{ test_garden_path }}/new_evergreen_note.md"
+        content: "This is a new, evergreen note. {{ test_evergreen_tag }}"
+        mode: '0644'
+      # Mock rationale: Creating a mock file with specific content for testing evergreen tag detection.
+
+  tasks:
+    - name: Run playbook in DRY RUN mode and capture output
+      ansible.builtin.shell: >-
+        ansible-playbook -i {{ playbook_dir }}/test_inventory.ini
+        -e notes_path={{ test_garden_path }}
+        -e prune_destination={{ test_prune_destination }}
+        -e stale_age_days={{ test_stale_age_days | string }}
+        -e evergreen_tag={{ test_evergreen_tag }}
+        -e dry_run=true
+        {{ playbook_dir }}/../src/prune_blooms.yml
+      register: dry_run_result
+      changed_when: false
+      # Mock rationale: Running the main playbook with test-specific variables and in dry-run mode to verify reporting without actual changes. Capturing stdout allows assertion of debug messages.
+
+    - name: Assert old_stale_note.md is reported in dry run
+      ansible.builtin.assert:
+        that: "'Would prune: {{ test_garden_path }}/old_stale_note.md' in dry_run_result.stdout"
+        fail_msg: "old_stale_note.md was not reported for pruning in dry run."
+      # Mock rationale: Verifying the debug output from the dry run to ensure the correct files are identified for pruning.
+
+    - name: Assert old_stale_note.md still exists after dry run
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/old_stale_note.md"
+      register: old_stale_original_stat_after_dry_run
+      # Mock rationale: Verifying the file still exists after a dry run, confirming no actual changes were made.
+    - ansible.builtin.assert:
+        that: "old_stale_original_stat_after_dry_run.stat.exists"
+        fail_msg: "old_stale_note.md was unexpectedly pruned during dry run."
+
+    - name: Run playbook in ACTUAL PRUNE mode
+      ansible.builtin.include_tasks:
+        file: ../src/prune_blooms.yml
+      vars:
+        notes_path: "{{ test_garden_path }}"
+        prune_destination: "{{ test_prune_destination }}"
+        stale_age_days: "{{ test_stale_age_days }}"
+        evergreen_tag: "{{ test_evergreen_tag }}"
+        dry_run: false
+      # Mock rationale: Running the main playbook with test-specific variables and in actual prune mode to verify file system changes.
+
+    - name: Assert old_stale_note.md is pruned (moved)
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/old_stale_note.md"
+      register: old_stale_original_stat
+      # Mock rationale: Verifying the original file is no longer in its source location.
+    - ansible.builtin.assert:
+        that: "not old_stale_original_stat.stat.exists"
+        fail_msg: "old_stale_note.md was not pruned from original location."
+
+    - name: Assert old_stale_note.md exists in prune destination
+      ansible.builtin.stat:
+        path: "{{ test_prune_destination }}/old_stale_note.md"
+      register: old_stale_pruned_stat
+      # Mock rationale: Verifying the file has been moved to the correct prune destination.
+    - ansible.builtin.assert:
+        that: "old_stale_pruned_stat.stat.exists"
+        fail_msg: "old_stale_note.md was not moved to prune destination."
+
+    - name: Assert old_evergreen_note.md is NOT pruned
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/old_evergreen_note.md"
+      register: old_evergreen_stat
+      # Mock rationale: Verifying that files with the evergreen tag are not pruned, even if stale.
+    - ansible.builtin.assert:
+        that: "old_evergreen_stat.stat.exists"
+        fail_msg: "old_evergreen_note.md was unexpectedly pruned."
+
+    - name: Assert new_stale_note.md is NOT pruned
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/new_stale_note.md"
+      register: new_stale_stat
+      # Mock rationale: Verifying that new files are not pruned, even if they lack the evergreen tag.
+    - ansible.builtin.assert:
+        that: "new_stale_stat.stat.exists"
+        fail_msg: "new_stale_note.md was unexpectedly pruned."
+
+    - name: Assert new_evergreen_note.md is NOT pruned
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/new_evergreen_note.md"
+      register: new_evergreen_stat
+      # Mock rationale: Verifying that new evergreen files are not pruned.
+    - ansible.builtin.assert:
+        that: "new_evergreen_stat.stat.exists"
+        fail_msg: "new_evergreen_note.md was unexpectedly pruned."
+
+  post_tasks:
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_prune_destination }}"
+      # Mock rationale: Cleaning up test directories after the test run to leave no artifacts.
