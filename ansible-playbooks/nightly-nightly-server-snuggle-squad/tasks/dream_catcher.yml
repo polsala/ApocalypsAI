@@ -1,0 +1,17 @@
+---
+- name: Create the dream catcher script
+  ansible.builtin.template:
+    src: templates/dream_catcher_script.sh.j2
+    dest: "{{ dream_catcher_script_path }}"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Schedule the dream catcher cron job
+  ansible.builtin.cron:
+    name: "{{ cron_job_name }}"
+    minute: "0"
+    hour: "3" # Run daily at 3 AM
+    job: "{{ dream_catcher_script_path }} >> {{ comfort_dir }}/dream_catcher_output.log 2>&1"
+    user: root
+    state: present
