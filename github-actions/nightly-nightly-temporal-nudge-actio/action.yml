@@ -1,0 +1,24 @@
+name: 'Temporal Nudge Action'
+description: 'Gently nudges stale issues/PRs with a time-themed comment to encourage activity.'
+inputs:
+  repo-token:
+    description: 'GitHub token for API calls. Usually `secrets.GITHUB_TOKEN`.'
+    required: true
+  stale-days:
+    description: 'Number of days after which an issue/PR is considered stale.'
+    required: false
+    default: '30'
+  nudge-message:
+    description: 'The whimsical message to post as a comment.'
+    required: false
+    default: 'A whisper from the temporal currents suggests this thread might appreciate a fresh perspective. What new insights have emerged from the time-stream?'
+  labels-to-ignore:
+    description: 'Comma-separated list of labels to ignore (e.g., "wontfix,closed,enhancement").'
+    required: false
+  dry-run:
+    description: 'If true, the action will only log what it would do, without posting comments.'
+    required: false
+    default: 'false'
+runs:
+  using: 'node20'
+  main: 'src/nudge.js'
