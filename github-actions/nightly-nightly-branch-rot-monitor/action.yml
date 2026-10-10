@@ -1,0 +1,16 @@
+name: 'Nightly Branch Rot Monitor'
+description: 'Identifies stale branches based on inactivity and notifies their owners via PR comments or new issues.'
+inputs:
+  stale-days:
+    description: 'Number of days without activity for a branch to be considered stale.'
+    required: true
+    default: '30'
+  repo-token:
+    description: 'GitHub token with permissions to read branches, create issues, and comment on PRs.'
+    required: true
+outputs:
+  stale-branches-count:
+    description: 'The number of stale branches found.'
+runs:
+  using: 'node16'
+  main: 'src/index.js'

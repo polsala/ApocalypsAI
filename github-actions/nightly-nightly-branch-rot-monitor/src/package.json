@@ -1,0 +1,24 @@
+{
+  "name": "nightly-branch-rot-monitor",
+  "version": "1.0.0",
+  "description": "A GitHub Action to monitor and notify about stale branches.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "github-actions",
+    "stale-branches",
+    "automation",
+    "repository-maintenance"
+  ],
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
