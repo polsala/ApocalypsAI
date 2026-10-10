@@ -1,0 +1,60 @@
+- name: Nightly Digital Dust Sweeper
+  hosts: all
+  become: yes # Requires sudo/root privileges for cleanup
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure configured cleanup_paths exist (if not, ignore)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ cleanup_paths }}"
+      ignore_errors: yes # Some paths might not exist, that's fine, we just won't clean them
+
+    - name: Find old files in /tmp
+      ansible.builtin.find:
+        paths: /tmp
+        age: "{{ cleanup_tmp_days }}d"
+        recurse: yes
+        file_type: any
+      register: old_tmp_files
+
+    - name: Delete old files in /tmp
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files.files }}"
+      when: old_tmp_files.files is defined and old_tmp_files.files | length > 0
+
+    - name: Find old files in configured cleanup_paths
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ cleanup_log_days }}d"
+        recurse: yes
+        file_type: any
+      loop: "{{ cleanup_paths }}"
+      register: old_configured_files
+      loop_control:
+        loop_var: current_path_item
+
+    - name: Delete old files in configured cleanup_paths
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_configured_files.results | map(attribute='files') | flatten }}"
+      when: old_configured_files.results is defined and (old_configured_files.results | map(attribute='files') | flatten | length > 0)
+
+    - name: Clean apt cache and remove orphaned packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: yes
+        autoremove: yes
+        purge: yes
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Clean yum cache (RHEL/CentOS)
+      ansible.builtin.yum:
+        clean: all
+      when: ansible_os_family == "RedHat"
