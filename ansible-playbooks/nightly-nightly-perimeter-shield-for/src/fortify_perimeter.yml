@@ -1,0 +1,92 @@
+---
+- name: Fortify Server Perimeter Shield
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Gather facts for OS detection
+      ansible.builtin.setup
+
+    - name: Determine firewall type
+      ansible.builtin.set_fact:
+        firewall_type: |
+          {% if force_firewall_type %}
+            {{ force_firewall_type }}
+          {% elif ansible_facts['os_family'] == 'Debian' %}
+            ufw
+          {% elif ansible_facts['os_family'] == 'RedHat' %}
+            firewalld
+          {% else %}
+            unknown
+          {% endif %}
+
+    - name: Fail if unsupported OS or unknown firewall type
+      ansible.builtin.fail:
+        msg: "Unsupported OS family '{{ ansible_facts['os_family'] }}' or unknown firewall type '{{ firewall_type }}'. Please set 'force_firewall_type'."
+      when: firewall_type == 'unknown'
+
+    - name: Configure UFW (Uncomplicated Firewall) for Debian-based systems
+      when: firewall_type == 'ufw'
+      block:
+        - name: Ensure ufw is installed
+          ansible.builtin.apt:
+            name: ufw
+            state: present
+            update_cache: yes
+
+        - name: Set default UFW incoming policy to {{ default_incoming_policy }}
+          community.general.ufw:
+            state: enabled
+            policy: "{{ default_incoming_policy }}"
+            direction: incoming
+
+        - name: Allow specified TCP ports in UFW
+          community.general.ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+            state: enabled
+          loop: "{{ allowed_tcp_ports }}"
+
+        - name: Ensure UFW is enabled and running
+          ansible.builtin.service:
+            name: ufw
+            state: started
+            enabled: yes
+
+    - name: Configure Firewalld for RedHat-based systems
+      when: firewall_type == 'firewalld'
+      block:
+        - name: Ensure firewalld is installed
+          ansible.builtin.yum:
+            name: firewalld
+            state: present
+          when: ansible_facts['os_family'] == 'RedHat'
+
+        - name: Ensure firewalld service is running and enabled
+          ansible.builtin.service:
+            name: firewalld
+            state: started
+            enabled: yes
+
+        - name: Set default firewalld zone policy to {{ default_incoming_policy }}
+          ansible.builtin.command: "firewall-cmd --set-default-zone={{ 'drop' if default_incoming_policy == 'deny' else 'public' }}"
+          changed_when: true # Command output is not easily parseable for idempotency
+          # Mock rationale: This command is hard to make idempotent with check_mode, 
+          # so we mark it as changed_when: true for simplicity in testing. 
+          # In a real run, firewalld handles idempotency for zone settings.
+
+        - name: Allow specified TCP ports in Firewalld
+          ansible.builtin.command: "firewall-cmd --permanent --add-port={{ item }}/tcp"
+          loop: "{{ allowed_tcp_ports }}"
+          register: firewall_add_port_result
+          changed_when: "'SUCCESS' in firewall_add_port_result.stdout"
+          failed_when: "'ALREADY_ENABLED' not in firewall_add_port_result.stderr and firewall_add_port_result.rc != 0"
+          # Mock rationale: Simulates firewalld command output for idempotency check.
+
+        - name: Reload firewalld to apply permanent changes
+          ansible.builtin.command: "firewall-cmd --reload"
+          changed_when: true # Reload always reports changed, but is idempotent in effect
+          # Mock rationale: Reload command always reports changed, but is idempotent in effect.

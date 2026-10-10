@@ -1,0 +1,12 @@
+---
+allowed_tcp_ports:
+  - 22 # SSH
+  - 80 # HTTP
+  - 443 # HTTPS
+
+# Set to 'ufw' or 'firewalld' to force a specific firewall,
+# or leave empty for auto-detection.
+force_firewall_type: ""
+
+# Default policy for incoming connections (e.g., 'deny', 'allow')
+default_incoming_policy: "deny"
