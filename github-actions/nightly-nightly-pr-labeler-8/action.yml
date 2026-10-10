@@ -1,0 +1,9 @@
+name: "Nightly PR Labeler"
+description: "Auto‑adds labels to PRs based on title keywords"
+inputs:
+  github_token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "node12"
+  main: "src/index.js"
