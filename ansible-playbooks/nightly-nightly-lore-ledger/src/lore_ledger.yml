@@ -1,0 +1,40 @@
+- name: Audit and standardize digital lore ledger
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure lore ledger path exists
+      ansible.builtin.file:
+        path: "{{ lore_ledger_path }}"
+        state: directory
+      delegate_to: localhost
+
+    - name: Find all markdown files in the lore ledger
+      ansible.builtin.find:
+        paths: "{{ lore_ledger_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_found
+      delegate_to: localhost
+
+    - name: Initialize audit results
+      ansible.builtin.set_fact:
+        audit_results: []
+      delegate_to: localhost
+
+    - name: Process each markdown file
+      ansible.builtin.include_tasks: process_file.yml
+      loop: "{{ md_files_found.files }}"
+      loop_control:
+        loop_var: current_file
+      delegate_to: localhost
+
+    - name: Generate lore ledger audit report
+      ansible.builtin.template:
+        src: templates/report.j2
+        dest: "{{ lore_ledger_path }}/lore_ledger_audit_report.txt"
+      delegate_to: localhost

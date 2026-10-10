@@ -1,0 +1,35 @@
+- name: Slurp file content
+  ansible.builtin.slurp:
+    src: "{{ current_file.path }}"
+  register: file_content_slurped
+  delegate_to: localhost
+
+- name: Decode file content
+  ansible.builtin.set_fact:
+    decoded_content: "{{ file_content_slurped.content | b64decode }}"
+  delegate_to: localhost
+
+- name: Extract YAML front matter
+  ansible.builtin.set_fact:
+    front_matter_block: "{{ decoded_content | regex_search('^---\n(.*?)\n---\n', multiline=True, group=1) | default([]) }}"
+  delegate_to: localhost
+
+- name: Parse front matter YAML
+  ansible.builtin.set_fact:
+    parsed_front_matter: "{{ front_matter_block[0] | from_yaml }}"
+  when: front_matter_block | length > 0
+  delegate_to: localhost
+
+- name: Determine missing fields
+  ansible.builtin.set_fact:
+    missing_fields: "{{ required_front_matter | difference(parsed_front_matter | default({}) | dict2items | map(attribute='key') | list) }}"
+  delegate_to: localhost
+
+- name: Add result to audit_results
+  ansible.builtin.set_fact:
+    audit_results: "{{ audit_results + [{
+      'file_path': current_file.path,
+      'status': 'OK' if missing_fields | length == 0 else 'MISSING_FIELDS',
+      'missing_fields': missing_fields
+    }] }}"
+  delegate_to: localhost

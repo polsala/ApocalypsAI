@@ -1,0 +1,10 @@
+---
+# Default path for the lore ledger (can be overridden via CLI or inventory)
+lore_ledger_path: "{{ playbook_dir }}/test_files"
+
+# List of required YAML front matter fields for each markdown file
+required_front_matter:
+  - title
+  - tags
+  - category
+  - status
