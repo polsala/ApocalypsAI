@@ -1,0 +1,14 @@
+name: "Nightly PR Size Commenter"
+description: "Comments on a PR with a whimsical size description based on lines changed."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+    default: "${{ github.token }}"
+outputs:
+  size-category:
+    description: "The size category (tiny, small, medium, large)"
+    value: ${{ steps.pr-size-commenter.outputs.size-category }}
+runs:
+  using: "node12"
+  main: "src/index.js"
