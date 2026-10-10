@@ -1,0 +1,43 @@
+---
+- name: Setup plant watering cron job
+  hosts: all
+  become: true
+  vars:
+    watering_time: "{{ watering_time | default('08:00') }}"
+    plug_endpoint: "{{ plug_endpoint | default('http://localhost:8080/toggle') }}"
+  tasks:
+    - name: Ensure curl is installed
+      apt:
+        name: curl
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Create watering script
+      copy:
+        dest: /usr/local/bin/water_plants.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          curl -s "{{ plug_endpoint }}" > /dev/null
+      notify: Restart cron
+
+    - name: Ensure cron is installed
+      apt:
+        name: cron
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Add cron job for watering
+      cron:
+        name: "Water houseplants"
+        minute: "{{ watering_time.split(':')[1] }}"
+        hour: "{{ watering_time.split(':')[0] }}"
+        job: "/usr/local/bin/water_plants.sh"
+        user: root
+      notify: Restart cron
+
+  handlers:
+    - name: Restart cron
+      service:
+        name: cron
+        state: restarted

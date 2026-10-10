@@ -1,0 +1,20 @@
+---
+- name: Verify plant watering cron job
+  hosts: all
+  become: true
+  tasks:
+    - name: Run the watering playbook
+      import_playbook: ../src/water_plants.yml
+
+    - name: Check cron job exists
+      cron:
+        name: "Water houseplants"
+        state: present
+      register: cron_check
+
+    - name: Assert cron job is present
+      assert:
+        that:
+          - cron_check.changed == false
+
+# Mock rationale: This test assumes a local Linux environment with apt and cron available. In CI, the playbook is applied to a container with these packages pre‑installed.
