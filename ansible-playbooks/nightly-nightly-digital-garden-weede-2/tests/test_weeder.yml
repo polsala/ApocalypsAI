@@ -1,0 +1,106 @@
+---
+- name: Test Nightly Digital Garden Weeder
+  hosts: test_hosts
+  gather_facts: false
+
+  vars:
+    test_dir: "/tmp/ansible_weeder_test_{{ lookup('pipe', 'date +%s%N') }}" # Unique temp dir
+    test_report_path: "{{ test_dir }}/garden_health_report.txt"
+    mock_date_str: "2200-01-01 12:00:00" # Deterministic date for report content
+
+  tasks:
+    - name: Create temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy old file (weed)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/old_log.txt"
+        state: touch
+        modification_time: "200001010000.00" # Very old timestamp
+        access_time: "200001010000.00" # Very old timestamp
+
+    - name: Create dummy new file (not a weed)
+      ansible.builtin.file:
+        path: "{{ test_dir }}/new_config.conf"
+        state: touch
+
+    - name: Create target for valid symlink
+      ansible.builtin.file:
+        path: "{{ test_dir }}/actual_file.txt"
+        state: touch
+
+    - name: Create valid symlink
+      ansible.builtin.file:
+        src: "{{ test_dir }}/actual_file.txt"
+        dest: "{{ test_dir }}/valid_link"
+        state: link
+
+    - name: Create broken symlink (pest)
+      ansible.builtin.file:
+        src: "{{ test_dir }}/non_existent_target"
+        dest: "{{ test_dir }}/broken_link"
+        state: link
+        force: true # Ensure it's created even if target doesn't exist
+
+    - name: Run the Digital Garden Weeder playbook in dry-run mode
+      ansible.builtin.include_tasks:
+        file: ../src/weeder.yml
+      vars:
+        scan_paths:
+          - "{{ test_dir }}"
+        age_threshold_days: 1 # Any file older than 1 day is a weed for this test
+        dry_run: true
+        report_path: "{{ test_report_path }}"
+        ansible_date_time: # Mock rationale: Override ansible_date_time for deterministic report date
+          iso8601_micro: "{{ mock_date_str }}"
+          iso8601: "{{ mock_date_str }}"
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        decoded_report: "{{ report_content_b64.content | b64decode }}"
+
+    - name: Assert report contains expected weeds
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/old_log.txt' in decoded_report"
+          - "'No digital weeds found' not in decoded_report"
+        msg: "Report should list 'old_log.txt' as a weed."
+
+    - name: Assert report contains expected pests
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/broken_link' in decoded_report"
+          - "'No digital pests found' not in decoded_report"
+        msg: "Report should list 'broken_link' as a pest."
+
+    - name: Assert report does NOT contain new files
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/new_config.conf' not in decoded_report"
+        msg: "Report should not list 'new_config.conf' as a weed."
+
+    - name: Assert report does NOT contain valid symlinks
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_dir }}/valid_link' not in decoded_report"
+        msg: "Report should not list 'valid_link' as a pest."
+
+    - name: Assert report indicates dry run
+      ansible.builtin.assert:
+        that:
+          - "'Status: Dry Run' in decoded_report"
+        msg: "Report should indicate 'Dry Run' status."
+
+    - name: Clean up temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      when: test_dir is defined and test_dir != '/' # Safety check

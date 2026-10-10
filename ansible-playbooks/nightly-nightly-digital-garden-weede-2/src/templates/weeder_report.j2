@@ -1,0 +1,35 @@
+--- Digital Garden Health Report for {{ ansible_hostname | default('localhost') }} ---
+Date: {{ report_date }}
+
+Scan Paths:
+{% for path in report_scan_paths %}
+  - {{ path }}
+{% endfor %}
+
+Weed Age Threshold: {{ report_age_threshold_days }} days
+
+--- Weeds (Old Files) ---
+{% if report_weeds %}
+{% for weed in report_weeds %}
+{{ weed }}
+{% endfor %}
+{% else %}
+No digital weeds found. Your garden is pristine!
+{% endif %}
+
+--- Pests (Broken Symlinks) ---
+{% if report_pests %}
+{% for pest in report_pests %}
+{{ pest }}
+{% endfor %}
+{% else %}
+No digital pests found. Your garden is secure!
+{% endif %}
+
+--- Garden Status ---
+{% if report_weeds or report_pests %}
+Your digital garden has some {% if report_weeds %}weeds{% endif %}{% if report_weeds and report_pests %} and {% endif %}{% if report_pests %}pests{% endif %}.
+{% else %}
+Your digital garden is perfectly healthy!
+{% endif %}
+Status: {{ 'Dry Run' if report_dry_run else 'Changes Applied' }}
