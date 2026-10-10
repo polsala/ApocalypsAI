@@ -1,0 +1,92 @@
+---
+- name: Digital Janitor - System Cleanup
+  hosts: all
+  become: yes
+  vars:
+    cleanup_tmp_path: "/tmp"
+    cleanup_var_tmp_path: "/var/tmp"
+    cleanup_log_path: "/var/log"
+    tmp_cleanup_days: 7
+    log_cleanup_days: 30
+    log_archive_path: "/var/log/archive"
+  tasks:
+    - name: Ensure log archive directory exists
+      ansible.builtin.file:
+        path: "{{ log_archive_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: This task ensures the target directory for archiving logs exists.
+      # In tests, this will create a directory within the temporary test environment.
+
+    - name: Clean old files from {{ cleanup_tmp_path }}
+      ansible.builtin.find:
+        paths: "{{ cleanup_tmp_path }}"
+        age: "{{ tmp_cleanup_days }}d"
+        file_type: file
+      register: old_tmp_files
+      # Mock rationale: This task finds files older than 'tmp_cleanup_days'.
+      # In tests, 'ansible.builtin.find' will operate on the temporary test directory,
+      # finding the mock old files created by the test setup.
+
+    - name: Remove old files from {{ cleanup_tmp_path }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files.files }}"
+      # Mock rationale: This task removes the files found by the previous 'find' task.
+      # In tests, 'ansible.builtin.file' will remove the mock old files from the temporary directory.
+
+    - name: Clean old files from {{ cleanup_var_tmp_path }}
+      ansible.builtin.find:
+        paths: "{{ cleanup_var_tmp_path }}"
+        age: "{{ tmp_cleanup_days }}d"
+        file_type: file
+      register: old_var_tmp_files
+      # Mock rationale: Similar to cleanup_tmp_path, operates on mock files in temporary directory.
+
+    - name: Remove old files from {{ cleanup_var_tmp_path }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_var_tmp_files.files }}"
+      # Mock rationale: Removes mock old files from temporary directory.
+
+    - name: Archive old logs from {{ cleanup_log_path }}
+      ansible.builtin.find:
+        paths: "{{ cleanup_log_path }}"
+        age: "{{ log_cleanup_days }}d"
+        file_type: file
+        patterns: "*.log"
+      register: old_logs
+      # Mock rationale: Finds mock old log files in the temporary log directory.
+
+    - name: Move old logs to archive
+      ansible.builtin.command: mv "{{ item.path }}" "{{ log_archive_path }}/"
+      loop: "{{ old_logs.files }}"
+      when: old_logs.files is defined and old_logs.files | length > 0
+      # Mock rationale: Moves mock old log files to the temporary archive directory.
+
+    - name: Clean unused apt packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: yes
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+      # Mock rationale: This task would run 'apt autoclean && apt autoremove'.
+      # In tests, this task will be skipped if not running on a Debian-like system.
+      # For a truly offline test, one might mock 'ansible_os_family' or the 'apt' module itself.
+      # For this utility, we'll rely on the test environment to either skip or simulate.
+
+    - name: Clean unused yum/dnf packages (RHEL/CentOS)
+      ansible.builtin.yum:
+        autoremove: yes
+      when: ansible_os_family == "RedHat"
+      # Mock rationale: Similar to apt, skipped if not RedHat.
+
+    - name: Find broken symlinks in {{ cleanup_tmp_path }} and {{ cleanup_var_tmp_path }}
+      ansible.builtin.shell: |
+        find {{ cleanup_tmp_path }} -xtype l -delete
+        find {{ cleanup_var_tmp_path }} -xtype l -delete
+      args:
+        warn: no
+      # Mock rationale: This task finds and deletes broken symlinks.
+      # In tests, this will operate on the temporary directory, deleting any mock broken symlinks.

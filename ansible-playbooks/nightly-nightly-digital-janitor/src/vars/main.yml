@@ -1,0 +1,13 @@
+# Number of days after which temporary files are considered "old" and will be removed.
+tmp_cleanup_days: 7
+
+# Number of days after which log files are considered "old" and will be archived.
+log_cleanup_days: 30
+
+# The path where old log files will be moved.
+log_archive_path: "/var/log/archive"
+
+# Paths for temporary file cleanup (can be overridden via --extra-vars for testing)
+cleanup_tmp_path: "/tmp"
+cleanup_var_tmp_path: "/var/tmp"
+cleanup_log_path: "/var/log"
