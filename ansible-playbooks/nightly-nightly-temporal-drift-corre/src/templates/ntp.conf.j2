@@ -1,0 +1,14 @@
+# /etc/ntp.conf - Managed by Ansible
+{% for server in ntp_servers %}
+server {{ server }} iburst
+{% endfor %}
+
+driftfile /var/lib/ntp/ntp.drift
+leapfile /var/lib/ntp/ntp.leap
+logfile /var/log/ntpstats
+
+restrict -4 default kod notype nomodify nopeer noquery limited
+restrict -6 default kod notype nomodify nopeer noquery limited
+
+restrict 127.0.0.1
+restrict ::1
