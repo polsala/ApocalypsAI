@@ -1,0 +1,1 @@
+use std::env;\nuse nightly_radiation_meter::get_radiation;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    let seed = if args.len() > 1 {\n        args[1].parse::<u64>().ok()\n    } else {\n        None\n    };\n    let (value, level) = get_radiation(seed);\n    println!("Radiation reading: {} mSv ({})", value, level);\n}\n
