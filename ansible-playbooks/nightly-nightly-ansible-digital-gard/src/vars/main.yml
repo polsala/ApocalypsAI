@@ -1,0 +1,19 @@
+---
+# Number of days after which files are considered 'old' and eligible for pruning.
+garden_prune_age_days: 7
+
+# Number of days after which log files are considered 'old' and eligible for composting.
+garden_log_age_days: 30
+
+# List of directories where old files will be pruned.
+# Use '~' for user home directory, it will be expanded by Ansible.
+garden_paths_to_prune:
+  - "/tmp"
+  - "~/.cache"
+
+# List of directories where old log files will be composted.
+garden_log_paths_to_compost:
+  - "/var/log"
+
+# Path where the Digital Garden Report will be generated.
+garden_report_path: "/tmp/digital_garden_report.txt"
