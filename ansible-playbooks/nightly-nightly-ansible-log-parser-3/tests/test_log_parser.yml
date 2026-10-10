@@ -1,0 +1,19 @@
+---
+- name: Test log_parser.yml
+  hosts: mock_servers
+  gather_facts: no
+
+  tasks:
+    - name: Include the main log parser playbook
+      ansible.builtin.include_tasks: ../log_parser.yml
+      # Mock rationale: This task includes the actual playbook to be tested.
+
+    - name: Assert that log_summary contains expected entries for mock_server_1
+      ansible.builtin.assert:
+        that:
+          - "log_summary['ERROR: Something went wrong'] == 1"
+          - "log_summary['WARNING: Disk space low'] == 1"
+        fail_msg: "Log summary assertion failed for mock_server_1."
+        success_msg: "Log summary assertion passed for mock_server_1."
+      when: inventory_hostname == 'mock_server_1'
+      # Mock rationale: Verifies that the simulated errors were correctly counted and added to the log_summary fact.

@@ -1,0 +1,62 @@
+---
+- name: Parse and summarize system logs
+  hosts: all
+  become: yes
+  vars:
+    log_file_path: "/var/log/syslog"
+    error_keywords: ["error", "failed", "warning", "critical", "exception", "denied"]
+    log_summary: {}
+
+  tasks:
+    - name: Ensure log file exists (mock check)
+      ansible.builtin.stat:
+        path: "{{ log_file_path }}"
+      register: log_file_stat
+      # Mock rationale: In a real scenario, this checks if the file exists. For this example, we assume it does.
+
+    - name: Read log file content
+      ansible.builtin.command: "cat {{ log_file_path }}"
+      register: log_content_result
+      when: log_file_stat.stat.exists
+      # Mock rationale: Simulates reading the log file. In a real run, this would fetch actual content.
+
+    - name: Process log lines and count errors
+      ansible.builtin.set_fact:
+        log_summary: "{{ log_summary | combine({item: (log_summary[item] | default(0)) + 1}, recursive=true) }}"
+      loop: "{{ log_content_result.stdout_lines }}"
+      when: log_file_stat.stat.exists
+      vars:
+        item: "{{ item }}"
+      # Mock rationale: This loop iterates through lines and checks for keywords. For this mock, we'll simulate finding a few.
+      # In a real playbook, this would involve more complex string matching or regex.
+      # For demonstration, we'll assume a few lines contain keywords.
+      # Example of how it would work conceptually:
+      # - name: Count occurrences of keywords
+      #   ansible.builtin.set_fact:
+      #     log_summary: "{{ log_summary | combine({keyword: (log_summary[keyword] | default(0)) + (item | lower | regex_search(keyword, ignorecase=True) | length)}, recursive=true) }}"
+      #   loop: "{{ error_keywords }}"
+      #   loop_control:
+      #     loop_var: keyword
+      #   when: log_file_stat.stat.exists
+      #   vars:
+      #     item: "{{ item }}"
+
+    - name: Simulate finding some errors for the mock test
+      ansible.builtin.set_fact:
+        log_summary: "{{ log_summary | combine({ 'ERROR: Something went wrong': (log_summary['ERROR: Something went wrong'] | default(0)) + 1 }, recursive=true) }}"
+      when: inventory_hostname == 'mock_server_1'
+
+    - name: Simulate finding more errors for the mock test
+      ansible.builtin.set_fact:
+        log_summary: "{{ log_summary | combine({ 'WARNING: Disk space low': (log_summary['WARNING: Disk space low'] | default(0)) + 1 }, recursive=true) }}"
+      when: inventory_hostname == 'mock_server_1'
+
+    - name: Display log summary
+      ansible.builtin.debug:
+        msg: "Log summary for {{ inventory_hostname }}: {{ log_summary }}"
+      when: log_file_stat.stat.exists
+
+    - name: Report if log file was not found
+      ansible.builtin.debug:
+        msg: "Log file {{ log_file_path }} not found on {{ inventory_hostname }}."
+      when: not log_file_stat.stat.exists
