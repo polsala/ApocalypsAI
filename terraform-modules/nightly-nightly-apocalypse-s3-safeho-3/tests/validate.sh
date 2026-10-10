@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Mock rationale: This script runs terraform init and validate locally to ensure the module syntax is correct.\n\nset -e\n\n# Initialise the module without a remote backend\nterraform init -backend=false > /dev/null 2>&1\n\n# Validate the configuration\nterraform validate\n\necho "✅ Terraform module validation passed"\n
