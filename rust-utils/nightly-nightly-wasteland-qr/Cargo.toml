@@ -1,0 +1,15 @@
+[package]
+name = "wasteland_qr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+qrcode = "0.13"
+
+[lib]
+name = "wasteland_qr"
+path = "src/lib.rs"
+
+[[bin]]
+name = "wasteland-qr"
+path = "src/main.rs"
