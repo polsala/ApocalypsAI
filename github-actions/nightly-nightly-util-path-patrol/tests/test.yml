@@ -1,0 +1,96 @@
+name: Test Nightly Utility Path Patrol
+
+on: [workflow_dispatch] # Manual trigger for testing
+
+jobs:
+  test_action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup dummy repository
+        run: |
+          mkdir test-repo
+          cd test-repo
+          git init
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+
+          # Base commit
+          echo "Initial content" > initial.txt
+          git add initial.txt
+          git commit -m "Initial commit"
+          BASE_SHA=$(git rev-parse HEAD)
+          echo "BASE_SHA=$BASE_SHA" >> "$GITHUB_ENV"
+
+          # Create a new branch for the PR changes
+          git checkout -b feature-branch
+
+          # --- Scenario 1: Valid utility --- (Should pass)
+          mkdir -p python-utils/nightly-valid-util/src
+          mkdir -p python-utils/nightly-valid-util/tests
+          echo "Valid README" > python-utils/nightly-valid-util/README.md
+          echo "print('hello')" > python-utils/nightly-valid-util/src/main.py
+          echo "assert True" > python-utils/nightly-valid-util/tests/test_main.py
+          git add python-utils/nightly-valid-util
+          git commit -m "Add valid utility"
+
+          # --- Scenario 2: Invalid utility (missing README) --- (Should fail)
+          mkdir -p rust-utils/nightly-missing-readme/src
+          mkdir -p rust-utils/nightly-missing-readme/tests
+          echo "fn main() {}" > rust-utils/nightly-missing-readme/src/main.rs
+          git add rust-utils/nightly-missing-readme
+          git commit -m "Add utility missing README"
+
+          # --- Scenario 3: Invalid utility (wrong prefix) --- (Should fail)
+          mkdir -p bash-utils/wrong-prefix-util/src
+          mkdir -p bash-utils/wrong-prefix-util/tests
+          echo "#!/bin/bash" > bash-utils/wrong-prefix-util/src/script.sh
+          echo "Wrong prefix README" > bash-utils/wrong-prefix-util/README.md
+          git add bash-utils/wrong-prefix-util
+          git commit -m "Add utility with wrong prefix"
+
+          # --- Scenario 4: Invalid utility (name too long) --- (Should fail)
+          mkdir -p js-utils/nightly-this-utility-name-is-way-too-long-for-the-apocalypsai-standards/src
+          mkdir -p js-utils/nightly-this-utility-name-is-way-too-long-for-the-apocalypsai-standards/tests
+          echo "console.log('long name')" > js-utils/nightly-this-utility-name-is-way-too-long-for-the-apocalypsai-standards/src/index.js
+          echo "Long name README" > js-utils/nightly-this-utility-name-is-way-too-long-for-the-apocalypsai-standards/README.md
+          git add js-utils/nightly-this-utility-name-is-way-too-long-for-the-apocalypsai-standards
+          git commit -m "Add utility with too long name"
+
+          # --- Scenario 5: Invalid utility (bad classifier name) --- (Should fail)
+          mkdir -p bad-classifier/nightly-bad-classifier-util/src
+          mkdir -p bad-classifier/nightly-bad-classifier-util/tests
+          echo "Bad classifier README" > bad-classifier/nightly-bad-classifier-util/README.md
+          git add bad-classifier/nightly-bad-classifier-util
+          git commit -m "Add utility with bad classifier name"
+
+          # --- Scenario 6: Invalid utility (bad kebab-case suffix) --- (Should fail)
+          mkdir -p python-utils/nightly-Bad_Kebab_Case_Util/src
+          mkdir -p python-utils/nightly-Bad_Kebab_Case_Util/tests
+          echo "Bad kebab README" > python-utils/nightly-Bad_Kebab_Case_Util/README.md
+          git add python-utils/nightly-Bad_Kebab_Case_Util
+          git commit -m "Add utility with bad kebab case suffix"
+
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+
+          # Move to the root of the test-repo for the action to run correctly
+          cd ..
+
+      - name: Run Nightly Utility Path Patrol
+        # Mock rationale: This test workflow creates a self-contained git repository
+        # with specific commits to simulate a PR. The `git diff` command inside the
+        # action will operate on this simulated history, making the test deterministic
+        # and offline. No external API calls are made by the action itself.
+        uses: ./github-actions/nightly-util-path-patrol # Refers to the action in the current directory
+        id: patrol
+        with:
+          base_sha: ${{ env.BASE_SHA }}
+          head_sha: ${{ env.HEAD_SHA }}
+
+      - name: Check validation status
+        run: |
+          echo "Validation status: ${{ steps.patrol.outputs.validation_status }}"
+          if [ "${{ steps.patrol.outputs.validation_status }}" != "failure" ]; then
+            echo "::error::Expected validation to fail due to invalid utilities, but it passed or skipped."
+            exit 1
+          fi
