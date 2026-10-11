@@ -1,0 +1,1 @@
+pub fn estimate_hours(current_percent: f64, consumption_per_hour: f64, radiation_factor: f64) -> f64 {\n    if consumption_per_hour <= 0.0 || radiation_factor <= 0.0 {\n        return f64::INFINITY;\n    }\n    let effective = consumption_per_hour * radiation_factor;\n    current_percent / effective\n}\n
