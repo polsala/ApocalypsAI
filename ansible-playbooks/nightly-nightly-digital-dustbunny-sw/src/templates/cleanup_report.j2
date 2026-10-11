@@ -1,0 +1,22 @@
+Digital Dustbunny Sweeper Report - {{ ansible_date_time.iso8601_micro }}
+
+Greetings, digital custodian!
+
+The Nightly Integrator's Digital Dustbunny Sweeper has completed its rounds across the following realms:
+{% for host in target_hosts %}
+- {{ host }}
+{% endfor %}
+
+A total of {{ swept_files_count }} digital dustbunnies were gently ushered into the void.
+The digital air is now a little fresher, the bytes a little lighter!
+
+Here's a glimpse of the departed:
+{% if swept_files_count > 0 %}
+{% for file in swept_files_list %}
+- {{ file }}
+{% endfor %}
+{% else %}
+No dustbunnies were found lurking today. Your digital realm is sparkling clean!
+{% endif %}
+
+May your systems hum with renewed vigor!

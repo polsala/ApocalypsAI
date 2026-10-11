@@ -1,0 +1,94 @@
+---
+- name: Test Digital Dustbunny Sweeper
+  hosts: test_servers
+  gather_facts: no
+  vars:
+    test_cleanup_dir: "/tmp/ansible_test_dustbunnies_{{ lookup('pipe', 'date +%s%N') }}" # Unique temp dir
+    cleanup_paths:
+      - "{{ test_cleanup_dir }}"
+    cleanup_age_days: 1 # Files older than 1 day will be swept
+    report_output_path: "{{ test_cleanup_dir }}/test_cleanup_report.txt"
+
+  tasks:
+    - name: Create temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_cleanup_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      # Mock rationale: Creates a controlled, isolated environment for the test.
+
+    - name: Create old file (should be swept)
+      ansible.builtin.copy:
+        content: "old content"
+        dest: "{{ test_cleanup_dir }}/old_dustbunny.log"
+        mode: '0644'
+      delegate_to: localhost
+      # Mock rationale: Simulates an old file that should be targeted by the sweeper.
+
+    - name: Set modification time for old file
+      ansible.builtin.command: "touch -d '{{ lookup('pipe', 'date +%Y-%m-%d') }} -2 days' {{ test_cleanup_dir }}/old_dustbunny.log"
+      delegate_to: localhost
+      # Mock rationale: Ensures the file is older than `cleanup_age_days` for deterministic sweeping.
+
+    - name: Create new file (should NOT be swept)
+      ansible.builtin.copy:
+        content: "new content"
+        dest: "{{ test_cleanup_dir }}/new_sparkle.txt"
+        mode: '0644'
+      delegate_to: localhost
+      # Mock rationale: Simulates a new file that should be ignored by the sweeper.
+
+    - name: Include dustbunny sweeping tasks for testing
+      ansible.builtin.include_tasks: ../src/dustbunny_sweeper_tasks.yml
+      # Mock rationale: Executes the core logic of the sweeper within the controlled test environment.
+      # Variables `cleanup_paths`, `cleanup_age_days`, `report_output_path` are defined in the test playbook's vars.
+
+    - name: Verify old file is swept
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_dir }}/old_dustbunny.log"
+      register: old_file_stat
+      delegate_to: localhost
+      # Mock rationale: Checks the state of the filesystem after the playbook run.
+
+    - name: Assert old file is absent
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old dustbunny file was not swept!"
+      # Mock rationale: Verifies the core functionality of the sweeper.
+
+    - name: Verify new file is NOT swept
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_dir }}/new_sparkle.txt"
+      register: new_file_stat
+      delegate_to: localhost
+      # Mock rationale: Checks the state of the filesystem after the playbook run.
+
+    - name: Assert new file is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New file was unexpectedly swept!"
+      # Mock rationale: Verifies that the sweeper correctly ignores recent files.
+
+    - name: Verify cleanup report was generated
+      ansible.builtin.stat:
+        path: "{{ test_cleanup_dir }}/test_cleanup_report.txt"
+      register: report_stat
+      delegate_to: localhost
+      # Mock rationale: Checks if the report generation task was successful.
+
+    - name: Assert cleanup report exists
+      ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists
+        fail_msg: "Cleanup report was not generated!"
+      # Mock rationale: Verifies that the report generation is working.
+
+    - name: Clean up temporary test directory
+      ansible.builtin.file:
+        path: "{{ test_cleanup_dir }}"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Ensures the test environment is cleaned up, making the test repeatable and non-persistent.

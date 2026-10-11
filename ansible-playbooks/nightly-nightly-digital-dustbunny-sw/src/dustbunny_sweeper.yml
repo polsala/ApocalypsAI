@@ -1,0 +1,10 @@
+---
+- name: Sweep Digital Dustbunnies
+  hosts: servers
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Include dustbunny sweeping tasks
+      ansible.builtin.include_tasks: dustbunny_sweeper_tasks.yml

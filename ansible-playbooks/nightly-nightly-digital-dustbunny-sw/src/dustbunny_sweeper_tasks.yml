@@ -1,0 +1,35 @@
+---
+- name: Ensure cleanup paths exist (idempotent)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ cleanup_paths }}"
+  become: yes # May need root for /var/log or other system paths
+
+- name: Find old dustbunnies
+  ansible.builtin.find:
+    paths: "{{ cleanup_paths }}"
+    age: "{{ cleanup_age_days }}d"
+    file_type: file
+  register: old_files_found
+
+- name: Delete identified dustbunnies
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_files_found.files }}"
+  when: old_files_found.files is defined and old_files_found.files | length > 0
+  become: yes # May need root to delete files in system paths
+
+- name: Generate whimsical cleanup report
+  ansible.builtin.template:
+    src: templates/cleanup_report.j2
+    dest: "{{ report_output_path }}"
+    mode: '0644'
+  delegate_to: localhost # Generate report on the controller
+  run_once: true
+  vars:
+    swept_files_count: "{{ old_files_found.files | length }}"
+    swept_files_list: "{{ old_files_found.files | map(attribute='path') | list }}"
+    target_hosts: "{{ ansible_play_batch }}"

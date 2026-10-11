@@ -1,0 +1,6 @@
+---
+cleanup_paths:
+  - /tmp/dustbunnies_to_sweep
+  - /var/log/old_app_logs
+cleanup_age_days: 7
+report_output_path: /tmp/dustbunny_cleanup_report.txt
