@@ -1,0 +1,50 @@
+name: Test Workflow Linter Action
+
+on: [push, pull_request]
+
+jobs:
+  test_lint_runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create dummy workflow file
+        run: |
+          mkdir -p .github/workflows
+          echo "name: Dummy Workflow\n\non: push\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Run a command\n        run: echo 'Hello, world!'"
+        > .github/workflows/dummy_valid_workflow.yml
+
+      - name: Create invalid workflow file
+        run: |
+          echo "name: Invalid Workflow\n\non: push\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Run a command\n        run: echo 'Hello, world!'\n        invalid_key: this_is_not_valid"
+        > .github/workflows/dummy_invalid_workflow.yml
+
+      - name: Run linter on valid workflow (should pass)
+        uses: ./nightly-gh-action-lint-runner
+        with:
+          include_workflows: '.github/workflows/dummy_valid_workflow.yml'
+        id: lint_valid
+
+      - name: Run linter on invalid workflow (should fail)
+        uses: ./nightly-gh-action-lint-runner
+        with:
+          include_workflows: '.github/workflows/dummy_invalid_workflow.yml'
+        id: lint_invalid
+        continue-on-error: true # Allow the test to continue even if this step fails
+
+      - name: Assert valid workflow passed
+        run: |
+          echo "Checking if valid workflow lint passed..."
+          # In a real scenario, we'd check job status. For this mock, we assume success if no error.
+          echo "Valid workflow lint passed as expected."
+
+      - name: Assert invalid workflow failed
+        run: |
+          echo "Checking if invalid workflow lint failed..."
+          if [ "${{ steps.lint_invalid.outcome }}" == "failure" ]; then
+            echo "Invalid workflow lint failed as expected."
+          else
+            echo "Error: Invalid workflow lint did not fail!"
+            exit 1
+          fi

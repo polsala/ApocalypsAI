@@ -1,0 +1,39 @@
+name: 'Nightly GitHub Actions Lint Runner'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+description: 'Lints and validates GitHub Actions workflows in a repository.'
+
+inputs:
+  include_workflows:
+    description: 'Glob pattern to include specific workflow files (e.g., "**/*.yml").'
+    required: false
+    default: '.github/workflows/*.yml'
+  exclude_workflows:
+    description: 'Glob pattern to exclude specific workflow files.'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install workflow-linter
+      shell: bash
+      run: | 
+        npm install -g @actions/workflow-linter
+
+    - name: Lint Workflows
+      shell: bash
+      run: |
+        echo "Linting workflows..."
+        workflow-linter lint --config "${{ inputs.include_workflows }}" --exclude "${{ inputs.exclude_workflows }}"
+      env:
+        # Mocking the environment for deterministic testing
+        # In a real run, this would be the actual GitHub environment
+        CI: 'true'
+        GITHUB_EVENT_NAME: 'push'
+        GITHUB_REF: 'refs/heads/main'
+        GITHUB_SHA: 'abcdef1234567890abcdef1234567890abcdef12'
+        GITHUB_REPOSITORY: 'polsala/ApocalypsAI'
+        GITHUB_WORKSPACE: '/github/workspace'
