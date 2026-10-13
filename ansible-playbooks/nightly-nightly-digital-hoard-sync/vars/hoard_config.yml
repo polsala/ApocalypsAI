@@ -1,0 +1,17 @@
+---
+# Define the base path on the Ansible controller where your hoard items reside
+base_src_path: "/tmp/ansible_hoard_src"
+
+# Define the base path on the target servers where the hoard items should be synchronized
+base_dest_path: "/tmp/ansible_hoard_dest"
+
+# List of digital hoard items to synchronize
+digital_hoard_items:
+  - src: "essential_scripts/"
+    dest: "scripts/"
+  - src: "configs/server.conf"
+    dest: "configs/server.conf"
+  - src: "important_docs/survival_guide.txt"
+    dest: "docs/survival_guide.txt"
+  - src: "nested/secret_plans.md"
+    dest: "plans/secret_plans.md"
