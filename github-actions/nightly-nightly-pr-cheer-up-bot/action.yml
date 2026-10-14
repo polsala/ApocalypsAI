@@ -1,0 +1,77 @@
+name: 'PR Cheer-Up Bot'
+description: 'Injects whimsical positivity into PRs if they seem too grim or neutral.'
+inputs:
+  github_token:
+    description: 'GitHub token for commenting on PRs.'
+    required: true
+  whimsical_phrases:
+    description: 'Comma-separated list of whimsical phrases/emojis to suggest.'
+    required: false
+    default: '✨, 🌟, 😄, 🌈, 🚀, 💖, 💡, 🎉, 🥳, 🍀'
+outputs:
+  cheered_up:
+    description: 'True if a cheer-up suggestion was made, false otherwise.'
+    value: ${{ steps.cheer_up_step.outputs.cheered_up }}
+runs:
+  using: 'composite'
+  steps:
+    - id: cheer_up_step
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }} # Pass token to gh CLI via env var
+      run: |
+        # Mock rationale: In a real GitHub Actions environment, `jq` and `gh` CLI are typically available.
+        # For offline testing, these would need to be mocked or pre-installed.
+        # We'll assume `jq` is present for parsing the event payload.
+        # We'll mock `gh` CLI for commenting.
+
+        # Get PR details from GITHUB_EVENT_PATH
+        # GITHUB_EVENT_PATH is an environment variable set by GitHub Actions.
+        # It points to a JSON file containing the webhook event payload.
+        PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
+        PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH") # Handle null body
+        PR_NUMBER=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
+
+        echo "PR Title: $PR_TITLE"
+        echo "PR Body: $PR_BODY"
+        echo "PR Number: $PR_NUMBER"
+
+        # Combine title and body for checking
+        PR_CONTENT="$PR_TITLE $PR_BODY"
+
+        # Convert phrases to an array
+        WHIMSICAL_PHRASES="${{ inputs.whimsical_phrases }}"
+        IFS=',' read -r -a PHRASE_ARRAY <<< "$WHIMSICAL_PHRASES"
+
+        CHEER_NEEDED="true"
+        for phrase in "${PHRASE_ARRAY[@]}"; do
+          # Trim whitespace from phrase
+          trimmed_phrase=$(echo "$phrase" | xargs)
+          if [[ "$PR_CONTENT" == *"$trimmed_phrase"* ]]; then
+            CHEER_NEEDED="false"
+            break
+          fi
+        done
+
+        if [ "$CHEER_NEEDED" == "true" ]; then
+          # Pick a random phrase to suggest
+          RANDOM_INDEX=$(( RANDOM % ${#PHRASE_ARRAY[@]} ))
+          SUGGESTED_PHRASE=$(echo "${PHRASE_ARRAY[$RANDOM_INDEX]}" | xargs)
+
+          COMMENT_BODY="The ApocalypsAI Nightly Integrator observes your PR is technically sound, but could use a touch of cosmic sparkle! ✨\n\nConsider adding a whimsical emoji or phrase like \`$SUGGESTED_PHRASE\` to your title or description to brighten the digital wasteland. Every bit of cheer helps! 😊"
+
+          # Use GitHub CLI to add a comment
+          # Mock rationale: For testing, we'll override the `gh` command to capture its output.
+          # In a real workflow, `gh` CLI would be installed and configured with `GH_TOKEN`.
+          echo "::debug::Attempting to comment on PR #$PR_NUMBER"
+          echo "::debug::Comment body: $COMMENT_BODY"
+          
+          # Execute the gh command. In tests, this will be mocked.
+          gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+
+          echo "::set-output name=cheered_up::true"
+          echo "A cheer-up suggestion was made for PR #$PR_NUMBER."
+        else
+          echo "::set-output name=cheered_up::false"
+          echo "PR #$PR_NUMBER already has enough cheer! No suggestion needed."
+        fi
