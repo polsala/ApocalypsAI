@@ -1,0 +1,63 @@
+name: 'PR Prophecy Checker'
+description: 'Validates if a Pull Request description contains a "Prophecy" section.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access (usually ${{ github.token }})'
+    required: true
+  prophecy-header:
+    description: 'The header to look for (e.g., "## Prophecy")'
+    required: false
+    default: '## Prophecy'
+outputs:
+  prophecy-found:
+    description: 'True if the prophecy section was found and is not empty, false otherwise.'
+    value: ${{ steps.check.outputs.prophecy-found }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      run: |
+        #!/bin/bash
+        set -euo pipefail
+
+        # Mock rationale: GITHUB_EVENT_PATH is mocked by providing a dummy JSON file in tests.
+        # Mock rationale: `jq` is assumed to be available in the runner environment.
+        PR_BODY=$(jq -r '.pull_request.body' "$GITHUB_EVENT_PATH")
+        PROPHECY_HEADER="${{ inputs.prophecy-header }}"
+
+        echo "Checking PR body for header: '${PROPHECY_HEADER}'"
+        echo "PR Body (first 200 chars): ${PR_BODY:0:200}..."
+
+        if echo "$PR_BODY" | grep -q "$PROPHECY_HEADER"; then
+          echo "Prophecy header found."
+          
+          # Use awk to extract content between the prophecy header and the next markdown header (or EOF).
+          PROPHECY_CONTENT=$(echo "$PR_BODY" | awk -v header_pattern="^${PROPHECY_HEADER}$" '
+            $0 ~ header_pattern {
+              in_prophecy = 1;
+              next;
+            }
+            /^##/ && in_prophecy { # Found next header while in prophecy section
+              in_prophecy = 0;
+              next;
+            }
+            in_prophecy {
+              print;
+            }
+          ')
+
+          # Trim whitespace, remove empty lines, and remove newlines to check for actual content.
+          TRIMMED_CONTENT=$(echo "$PROPHECY_CONTENT" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^\s*$' | tr -d '\n')
+
+          if [ -n "$TRIMMED_CONTENT" ]; then
+            echo "Prophecy section found and contains content."
+            echo "prophecy-found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Prophecy section not found or is empty."
+            echo "prophecy-found=false" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "Prophecy header '${PROPHECY_HEADER}' not found in PR body."
+          echo "prophecy-found=false" >> "$GITHUB_OUTPUT"
+        fi
+      shell: bash
