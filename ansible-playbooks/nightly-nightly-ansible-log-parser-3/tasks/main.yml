@@ -1,0 +1,34 @@
+- name: Ensure log file exists
+  ansible.builtin.stat:
+    path: "{{ log_file_path }}"
+  register: log_file_stat
+
+- name: Fail if log file does not exist
+  ansible.builtin.fail:
+    msg: "Log file {{ log_file_path }} not found on target host."
+  when: not log_file_stat.stat.exists
+
+- name: Fetch log file content
+  ansible.builtin.command: "cat {{ log_file_path }}"
+  register: log_content_raw
+  changed_when: false
+
+- name: Set fact for log content
+  ansible.builtin.set_fact:
+    log_content: "{{ log_content_raw.stdout_lines }}"
+
+- name: Initialize log summary facts
+  ansible.builtin.set_fact:
+    log_summary: {}
+
+- name: Parse log lines for error patterns
+  ansible.builtin.set_fact:
+    log_summary: "{{ log_summary | combine({ item: (log_summary[item] | default(0)) + 1 }) }}"
+  loop:
+    - "{{ log_content | select('match', '(error|failed|warning|denied)', ignorecase=True) | list | count }}"
+  when: "{{ item | int > 0 }}"
+
+- name: Generate log summary report
+  ansible.builtin.template:
+    src: "templates/log_summary.j2"
+    dest: "/tmp/log_summary_{{ inventory_hostname }}.txt"
