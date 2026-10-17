@@ -1,0 +1,58 @@
+---
+- name: Whispering to Survival Caches
+  hosts: cache_servers
+  gather_facts: yes
+  vars_files:
+    - ../vars/cache_manifest.yml
+  vars:
+    # Default report file path on the control node
+    control_node_report_file: "{{ ansible_env.HOME }}/cache_harmony_report.txt"
+
+  tasks:
+    - name: Ensure cache_base_path is defined
+      ansible.builtin.fail:
+        msg: "Variable 'cache_base_path' must be defined in vars/cache_manifest.yml"
+      when: cache_base_path is not defined
+
+    - name: Check base cache path existence
+      ansible.builtin.stat:
+        path: "{{ cache_base_path }}"
+      register: cache_base_path_stat
+
+    - name: Fail if base cache path does not exist
+      ansible.builtin.fail:
+        msg: "Base cache path '{{ cache_base_path }}' does not exist on {{ inventory_hostname }}"
+      when: not cache_base_path_stat.stat.exists
+
+    - name: Initialize cache status for {{ inventory_hostname }}
+      ansible.builtin.set_fact:
+        cache_status:
+          host: "{{ inventory_hostname }}"
+          base_path: "{{ cache_base_path }}"
+          discrepancies: []
+          harmonized: true
+
+    - name: Verify required items
+      ansible.builtin.include_tasks: verify_item.yml
+      loop: "{{ required_items }}"
+      loop_control:
+        loop_var: item
+      when: cache_base_path_stat.stat.exists
+
+- name: Generate Consolidated Cache Harmony Report
+  hosts: localhost
+  gather_facts: no
+  vars:
+    # Use the report_file variable passed via -e, or the default control_node_report_file
+    final_report_path: "{{ report_file | default(control_node_report_file) }}"
+  tasks:
+    - name: Collect all cache statuses
+      ansible.builtin.set_fact:
+        all_cache_statuses: "{{ ansible_play_batch | map('extract', hostvars, 'cache_status') | list }}"
+      run_once: true # Only run this task once on localhost
+
+    - name: Generate report file
+      ansible.builtin.template:
+        src: ../templates/cache_report.j2
+        dest: "{{ final_report_path }}"
+      when: all_cache_statuses is defined and all_cache_statuses | length > 0
