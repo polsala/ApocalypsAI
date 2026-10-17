@@ -1,0 +1,28 @@
+- name: 🛠️ Post‑apocalypse APT repair
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Update APT package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all installed packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+
+    - name: Remove orphaned packages
+      apt:
+        autoremove: yes
+
+    - name: Set fact indicating repair success
+      set_fact:
+        apt_repaired: true
+
+    - name: Display whimsical morale boost
+      debug:
+        msg: "✅ The system has been healed! Even the void whispers approval."
