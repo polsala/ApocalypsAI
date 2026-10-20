@@ -1,0 +1,1 @@
+pub fn generate_qr_ascii(text: &str) -> Result<String, Box<dyn std::error::Error>> {\n    let code = qrcode::QrCode::new(text.as_bytes())?;\n    let rendered = code\n        .render::<qrcode::render::unicode::Dense1x2>()\n        .quiet_zone(false)\n        .build();\n    Ok(rendered)\n}\n
