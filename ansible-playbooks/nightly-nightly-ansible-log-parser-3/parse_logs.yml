@@ -1,0 +1,90 @@
+---
+- name: Parse System Logs
+  hosts: log_servers
+  become: yes
+  vars:
+    log_directory: "/var/log"
+    report_output_path: "./log_summary_report.txt"
+    error_patterns:
+      - "ERROR"
+      - "WARN"
+      - "CRITICAL"
+      - "failed"
+      - "exception"
+
+  tasks:
+    - name: Ensure log directory exists (for testing purposes)
+      file:
+        path: "{{ log_directory }}"
+        state: directory
+      when: ansible_test_mode | default(false) # Only run in test mode
+
+    - name: Create dummy log files for testing
+      copy:
+        dest: "{{ log_directory }}/{{ item.filename }}"
+        content: "{{ item.content }}"
+        mode: '0644'
+      loop:
+        - { filename: 'syslog', content: 'Oct 26 10:00:01 server1 kernel: [    0.000000] Linux version 5.15.0-87-generic (buildd@lcy02-amd64-030) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #97-Ubuntu SMP Mon Oct 2 21:09:21 UTC 2023\n' }
+        - { filename: 'auth.log', content: 'Oct 26 10:05:15 server1 sshd[1234]: Accepted password for user from 192.168.1.10 port 54321 ssh2\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:10:20 server1 systemd[1]: Starting Some Service...\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:15:30 server1 systemd[1]: Some Service failed to start. ERROR: Service crashed.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:20:40 server1 systemd[1]: Another service is running fine.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:25:50 server1 systemd[1]: WARN: Disk space is getting low.\n' }
+        - { filename: 'syslog', content: 'Oct 26 10:30:00 server1 systemd[1]: CRITICAL: System shutdown initiated.\n' }
+      when: ansible_test_mode | default(false) # Only run in test mode
+
+    - name: Find log files in the specified directory
+      find:
+        paths: "{{ log_directory }}"
+        patterns: "*"
+        file_type: file
+      register: found_logs
+      when: not ansible_test_mode | default(false) # Skip in test mode
+
+    - name: Initialize log analysis results
+      set_fact:
+        log_analysis_results: {}
+
+    - name: Process each log file
+      block:
+        - name: Read log file content
+          slurp:
+            src: "{{ item.path }}"
+          register: log_content_raw
+
+        - name: Decode log content
+          set_fact:
+            log_content: "{{ log_content_raw.content | b64decode }}"
+
+        - name: Analyze log content for errors
+          set_fact:
+            log_analysis_results: "{{ log_analysis_results | combine({ (item.path | basename): { 'error_count': (log_content.splitlines() | select('match', pattern) | list | length) } }, recursive=true) }}"
+          loop: "{{ found_logs.files }}"
+          loop_control:
+            loop_var: item
+          vars:
+            pattern: "{{ error_patterns | join('|') }}"
+      when: not ansible_test_mode | default(false) # Skip in test mode
+
+    - name: Generate summary report
+      template:
+        src: templates/log_summary_report.j2
+        dest: "{{ report_output_path }}"
+      vars:
+        analysis_data: "{{ log_analysis_results }}"
+      when: not ansible_test_mode | default(false) # Skip in test mode
+
+    - name: Display summary report (for testing)
+      debug:
+        msg: "Log analysis results: {{ log_analysis_results }}"
+      when: ansible_test_mode | default(false) # Only run in test mode
+
+    - name: Clean up dummy log files (for testing)
+      file:
+        path: "{{ log_directory }}/{{ item.filename }}"
+        state: absent
+      loop:
+        - { filename: 'syslog' }
+        - { filename: 'auth.log' }
+      when: ansible_test_mode | default(false) # Only run in test mode
