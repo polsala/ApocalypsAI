@@ -1,0 +1,12 @@
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather human‑readable uptime
+      command: uptime -p
+      register: uptime_result
+      changed_when: false
+
+    - name: Render uptime report
+      template:
+        src: templates/uptime_report.j2
+        dest: ./uptime_report.txt
