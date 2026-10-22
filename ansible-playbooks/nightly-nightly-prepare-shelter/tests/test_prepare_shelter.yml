@@ -1,0 +1,43 @@
+---
+- name: Test nightly‑prepare‑shelter playbook
+  hosts: all
+  gather_facts: false
+  vars:
+    shelter_path: /tmp/shelter
+    flag_file: /tmp/shelter/ready.txt
+    expected_content: "Shelter is ready. Stay safe!"
+
+  pre_tasks:
+    # Ensure a clean state before the test runs
+    - name: Remove existing shelter directory if present (mock rationale: start clean)
+      ansible.builtin.file:
+        path: "{{ shelter_path }}"
+        state: absent
+
+  tasks:
+    - name: Include the shelter provisioning playbook
+      ansible.builtin.include_role:
+        name: "../src/prepare_shelter.yml"
+      # Mock rationale: we directly run the playbook as a role for test isolation
+
+    - name: Verify the flag file exists
+      ansible.builtin.stat:
+        path: "{{ flag_file }}"
+      register: flag_stat
+
+    - name: Assert flag file was created
+      ansible.builtin.assert:
+        that:
+          - flag_stat.stat.exists
+        fail_msg: "Flag file was not created"
+
+    - name: Read flag file content
+      ansible.builtin.slurp:
+        src: "{{ flag_file }}"
+      register: flag_content
+
+    - name: Decode and assert flag content
+      ansible.builtin.assert:
+        that:
+          - "{{ flag_content.content | b64decode }}" == expected_content
+        fail_msg: "Flag file content is incorrect"

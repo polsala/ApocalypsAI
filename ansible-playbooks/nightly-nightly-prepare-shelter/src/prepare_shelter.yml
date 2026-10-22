@@ -1,0 +1,17 @@
+---
+- name: Prepare post‑apocalyptic shelter
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure shelter directory exists
+      ansible.builtin.file:
+        path: /tmp/shelter
+        state: directory
+        mode: "0755"
+
+    - name: Create shelter readiness flag
+      ansible.builtin.copy:
+        dest: /tmp/shelter/ready.txt
+        content: "Shelter is ready. Stay safe!"
+        mode: "0644"
