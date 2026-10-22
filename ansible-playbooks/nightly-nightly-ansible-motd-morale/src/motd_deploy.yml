@@ -1,0 +1,44 @@
+---
+- name: Deploy Whimsical Morale MOTD
+  hosts: all
+  become: true
+  gather_facts: true # Needed for ansible_hostname and ansible_date_time in template
+  vars:
+    motd_path: /etc/motd # Default path for MOTD
+  tasks:
+    - name: Load MOTD messages
+      ansible.builtin.include_vars:
+        file: vars/motd_messages.yml
+        name: motd_data
+
+    - name: Select a random MOTD message or use a predefined one for testing
+      ansible.builtin.set_fact:
+        selected_motd_message: "{{ test_message | default(motd_data.motd_messages | random) }}"
+      # Mock rationale: For testing, 'test_message' can be passed to ensure deterministic output.
+      # In production, 'motd_data.motd_messages | random' provides the whimsical element.
+
+    - name: Ensure MOTD directory exists
+      ansible.builtin.file:
+        path: "{{ motd_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy MOTD from template
+      ansible.builtin.template:
+        src: templates/motd_template.j2
+        dest: "{{ motd_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart MOTD service (if applicable)
+
+  handlers:
+    - name: Restart MOTD service (if applicable)
+      # This handler is a placeholder. Many systems don't have a dedicated MOTD service.
+      # If your system uses a service to generate/display MOTD (e.g., motd-news), you might
+      # uncomment and adapt this. Otherwise, the file update is usually sufficient.
+      # ansible.builtin.service:
+      #   name: motd
+      #   state: restarted
+      #   enabled: true
+      listen: "Restart MOTD service (if applicable)"

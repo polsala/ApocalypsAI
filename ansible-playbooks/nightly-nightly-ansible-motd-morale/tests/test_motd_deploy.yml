@@ -1,0 +1,60 @@
+---
+- name: Setup Test Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    _test_motd_file_unique_id: "{{ lookup('pipe', 'date +%s%N') }}"
+    test_motd_file: "/tmp/ansible_test_motd_{{ _test_motd_file_unique_id }}.txt"
+    expected_test_message: "Test message for deterministic verification."
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_motd_file | dirname }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a temporary directory for the mock MOTD file.
+      # This avoids modifying system files during testing.
+
+- name: Run Main Playbook with Test Variables
+  import_playbook: ../src/motd_deploy.yml
+  vars:
+    motd_path: "{{ hostvars['localhost']['test_motd_file'] }}"
+    test_message: "{{ hostvars['localhost']['expected_test_message'] }}"
+  # Mock rationale: Overrides 'motd_path' to point to a temporary file
+  # and 'test_message' to ensure a specific, deterministic message is used.
+  # This prevents actual system modification and random message selection during test.
+
+- name: Verify and Cleanup Test Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Read the content of the deployed MOTD file
+      ansible.builtin.slurp:
+        src: "{{ hostvars['localhost']['test_motd_file'] }}"
+      register: motd_content_slurp
+      # Mock rationale: Reads the content of the temporary file created by the playbook.
+
+    - name: Decode and set MOTD content fact
+      ansible.builtin.set_fact:
+        actual_motd_content: "{{ motd_content_slurp['content'] | b64decode }}"
+      # Mock rationale: Decodes the base64 content from 'slurp' module for assertion.
+
+    - name: Assert that the MOTD file contains the expected message
+      ansible.builtin.assert:
+        that:
+          - "'{{ hostvars['localhost']['expected_test_message'] }}' in actual_motd_content"
+          - "'Welcome, localhost!' in actual_motd_content"
+          - "'Last updated:' in actual_motd_content"
+        fail_msg: "MOTD content does not match expected output."
+      # Mock rationale: Verifies the content of the temporary MOTD file.
+      # Checks for the specific test message and structural elements to ensure
+      # the template rendering and variable substitution worked correctly.
+
+    - name: Clean up the temporary MOTD file
+      ansible.builtin.file:
+        path: "{{ hostvars['localhost']['test_motd_file'] }}"
+        state: absent
+      # Mock rationale: Removes the temporary file and directory after the test.
+      # Ensures a clean state and no lingering test artifacts.
