@@ -1,0 +1,13 @@
+name: 'Nightly Utility Structure Validator'
+description: 'Validates the directory structure and required files for new utilities, ensuring compliance with AGENTS.md.'
+inputs:
+  util-path:
+    description: 'The path to the utility directory to validate (e.g., python-utils/nightly-my-tool).'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Run structure validation script
+      shell: bash
+      run: |
+        bash ${{ github.action_path }}/src/validate_util_structure.sh "${{ inputs.util-path }}"
