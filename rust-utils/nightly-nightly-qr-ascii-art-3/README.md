@@ -1,0 +1,1 @@
+# nightly-qr-ascii-art\n\nGenerate QR codes as ASCII art from input text.\n\n## Usage\n\n```sh\ncargo run -- <text>\n```\n\nExample:\n\n```sh\ncargo run -- "Hello, world!"\n```\n\nThe command prints a QR code rendered with Unicode block characters directly to the terminal.\n\n## Build\n\n```sh\ncargo build --release\n```\n\n## Test\n\n```sh\ncargo test\n```\n\n## License\n\nMIT
