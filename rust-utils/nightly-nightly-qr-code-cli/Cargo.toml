@@ -1,0 +1,11 @@
+[package]
+name = "nightly-qr-code-cli"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "nightly_qr_code_cli"
+path = "src/lib.rs"
+
+[dependencies]
+qrcode = "0.13"
