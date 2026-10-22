@@ -1,0 +1,13 @@
+---
+- name: Syntax check for rotate_ssh_keys playbook
+  hosts: localhost
+  tasks:
+    - name: Run syntax check
+      command: ansible-playbook -i inventory.ini src/rotate_ssh_keys.yml --syntax-check
+      register: syntax_check
+      changed_when: false
+
+    - name: Assert syntax check succeeded
+      assert:
+        that:
+          - syntax_check.rc == 0
