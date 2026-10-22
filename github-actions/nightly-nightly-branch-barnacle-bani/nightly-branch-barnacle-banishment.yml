@@ -1,0 +1,32 @@
+name: Nightly Branch Barnacle Banishment
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Run daily at 03:00 UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  banish_barnacles:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # For git commands
+      pull-requests: write # For commenting on PRs
+      issues: write # For creating issues
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for accurate branch age
+
+      - name: Install gh CLI (if not present)
+        run: |
+          sudo apt-get update && sudo apt-get install -y gh || true # gh is usually pre-installed on GitHub-hosted runners
+
+      - name: Run Branch Barnacle Banishment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          STALE_DAYS: 60 # Configure how many days before a branch is considered stale
+          PROTECTED_BRANCHES: "main master develop release/*" # Space-separated list of branches/patterns to ignore
+        run: |
+          bash "${{ github.workspace }}/github-actions/nightly-branch-barnacle-banishment/src/branch_banisher.sh"
