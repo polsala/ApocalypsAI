@@ -1,0 +1,44 @@
+---
+- name: Orchestrate a server lullaby
+  hosts: servers
+  become: yes
+  vars_files:
+    - ../vars/lullaby_config.yml
+
+  tasks:
+    - name: Ensure goodnight message directory exists
+      ansible.builtin.file:
+        path: "{{ lullaby_goodnight_message_path | dirname }}"
+        state: directory
+        mode: '0755'
+      when: lullaby_goodnight_message_path is defined and lullaby_goodnight_message_path | length > 0
+
+    - name: Leave a whimsical goodnight message
+      ansible.builtin.copy:
+        content: "{{ lullaby_goodnight_message_content }}"
+        dest: "{{ lullaby_goodnight_message_path }}"
+        mode: '0644'
+      when: lullaby_goodnight_message_path is defined and lullaby_goodnight_message_path | length > 0
+
+    - name: Stop non-essential services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ lullaby_services_to_stop }}"
+      ignore_errors: yes # Some services might not exist or be running
+      when: lullaby_services_to_stop is defined and lullaby_services_to_stop | length > 0
+
+    - name: Clean up temporary files and directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ lullaby_temp_paths_to_clean }}"
+      ignore_errors: yes # Some paths might not exist
+      when: lullaby_temp_paths_to_clean is defined and lullaby_temp_paths_to_clean | length > 0
+
+    - name: Rotate/truncate logs (example: clear a specific log file)
+      ansible.builtin.copy:
+        content: ""
+        dest: /var/log/lullaby_example.log
+        force: yes
+      when: lullaby_goodnight_message_path is defined # Simple condition to always run this example

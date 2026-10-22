@@ -1,0 +1,126 @@
+---
+- name: Test Nightly Server Lullaby Orchestrator
+  hosts: test_servers
+  become: yes
+  vars_files:
+    - ../vars/lullaby_config.yml # Use the same config for consistency
+
+  tasks:
+    - name: Mock setup - Create dummy files and service indicators
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+        mode: '0644'
+      loop:
+        - /tmp/test_file_1.txt
+        - /var/tmp/test_file_2.log
+        - /var/log/lullaby_example.log # For log truncation test
+      # Mock rationale: Create files that the playbook will attempt to clean/truncate.
+
+    - name: Mock setup - Create dummy service indicator files
+      ansible.builtin.file:
+        path: "/var/run/{{ item }}.pid"
+        state: touch
+        mode: '0644'
+      loop: "{{ lullaby_services_to_stop }}"
+      ignore_errors: yes # Some services might not be configured in test env
+      # Mock rationale: Simulate running services by creating PID files.
+
+    - name: Run the lullaby playbook for real to apply changes
+      ansible.builtin.include_tasks: ../src/lullaby.yml
+      # Mock rationale: Execute the playbook to make changes that can be asserted.
+
+    - name: Assert goodnight message file exists and contains content
+      ansible.builtin.stat:
+        path: "{{ lullaby_goodnight_message_path }}"
+      register: message_file_stat
+      # Mock rationale: Check if the goodnight message file was created.
+
+    - name: Verify goodnight message file exists
+      ansible.builtin.assert:
+        that:
+          - message_file_stat.stat.exists is true
+          - message_file_stat.stat.isreg is true
+        fail_msg: "Goodnight message file '{{ lullaby_goodnight_message_path }}' does not exist or is not a regular file."
+      # Mock rationale: Assert the file's existence.
+
+    - name: Verify goodnight message content
+      ansible.builtin.command: cat "{{ lullaby_goodnight_message_path }}"
+      register: message_content
+      changed_when: false
+      # Mock rationale: Read the content of the goodnight message file.
+
+    - name: Assert goodnight message content is correct
+      ansible.builtin.assert:
+        that:
+          - message_content.stdout | trim == lullaby_goodnight_message_content | trim
+        fail_msg: "Goodnight message content is incorrect."
+      # Mock rationale: Assert the content matches the expected message.
+
+    - name: Assert temporary files are removed
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: temp_file_stat
+      loop:
+        - /tmp/test_file_1.txt
+        - /var/tmp/test_file_2.log
+      # Mock rationale: Check if the dummy temporary files were removed.
+
+    - name: Verify temporary files are absent
+      ansible.builtin.assert:
+        that:
+          - temp_file_stat.results[0].stat.exists is false
+          - temp_file_stat.results[1].stat.exists is false
+        fail_msg: "Temporary files were not removed."
+      # Mock rationale: Assert the temporary files are gone.
+
+    - name: Assert log file is truncated (empty)
+      ansible.builtin.command: cat /var/log/lullaby_example.log
+      register: log_content
+      changed_when: false
+      # Mock rationale: Read the content of the log file.
+
+    - name: Verify log file is empty
+      ansible.builtin.assert:
+        that:
+          - log_content.stdout | length == 0
+        fail_msg: "Log file /var/log/lullaby_example.log was not truncated."
+      # Mock rationale: Assert the log file is empty.
+
+    - name: Assert service indicator files are removed (simulating service stop)
+      ansible.builtin.stat:
+        path: "/var/run/{{ item }}.pid"
+      register: service_pid_stat
+      loop: "{{ lullaby_services_to_stop }}"
+      ignore_errors: yes # Some services might not be configured in test env
+      # Mock rationale: Check if the dummy PID files (simulating running services) were removed.
+
+    - name: Verify service indicator files are absent
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is false
+        fail_msg: "Service indicator file '{{ item.item }}.pid' was not removed, implying service was not 'stopped'."
+      loop: "{{ service_pid_stat.results }}"
+      when: item.item in lullaby_services_to_stop # Only assert for services we tried to stop
+      # Mock rationale: Assert the PID files are gone.
+
+    - name: Cleanup - Remove goodnight message file
+      ansible.builtin.file:
+        path: "{{ lullaby_goodnight_message_path }}"
+        state: absent
+      # Mock rationale: Clean up the goodnight message file created during the test.
+
+    - name: Cleanup - Remove log file
+      ansible.builtin.file:
+        path: /var/log/lullaby_example.log
+        state: absent
+      # Mock rationale: Clean up the log file created during the test.
+
+    - name: Cleanup - Remove dummy files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/test_file_1.txt
+        - /var/tmp/test_file_2.log
+      # Mock rationale: Clean up dummy files created for testing.
