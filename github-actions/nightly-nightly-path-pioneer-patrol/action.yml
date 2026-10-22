@@ -1,0 +1,31 @@
+name: 'Nightly Path Pioneer Patrol'
+description: 'Ensures new utility directories adhere to the V2 classifier-based path structure.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  pr-number:
+    description: 'The pull request number.'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Fetch PR files
+      id: fetch_pr_files
+      run: |
+        # Mock rationale: In a real GitHub Action, this curl command would fetch actual PR files.
+        # For local testing or scenarios where the GitHub API is not available,
+        # the 'src/check_paths.sh' script is designed to accept file paths via stdin,
+        # allowing for easy mocking by piping a list of paths.
+        PR_FILES=$(curl -s -H "Authorization: token ${{ inputs.github-token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/${{ inputs.pr-number }}/files" | \
+          jq -r '.[].filename')
+        echo "PR_FILES_OUTPUT<<EOF" >> $GITHUB_OUTPUT
+        echo "$PR_FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Run path check script
+      run: |
+        echo "${{ steps.fetch_pr_files.outputs.PR_FILES_OUTPUT }}" | bash "${{ github.action_path }}/src/check_paths.sh"
+      shell: bash
