@@ -1,0 +1,12 @@
+name: 'Nightly PR Ponderer'
+description: 'Adds a random, thought-provoking philosophical quote to newly opened pull requests.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN)'
+    required: true
+outputs:
+  quote:
+    description: 'The philosophical quote added to the PR.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
