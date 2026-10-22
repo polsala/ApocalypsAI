@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # The Quantum Quirk Quencher itself
+  quirk-quencher:
+    build: .
+    image: apocalypsai/quantum-quirk-quencher:latest
+    container_name: quirk-quencher
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Mount Docker socket to allow monitoring
+    environment:
+      - QUIRK_PATTERNS=error|fail|exception|critical
+      - QUENCH_ACTION=restart # or 'notify'
+      - MONITORED_LABELS=apocalypsai.monitor=true # Only monitor containers with this label
+      - LOG_LEVEL=INFO # Set to DEBUG for more verbose output
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Example service to be monitored
+  my-critical-app:
+    image: alpine/git
+    container_name: my-critical-app
+    command: sh -c "while true; do echo 'INFO: App is running fine.'; sleep 2; echo 'ERROR: Something went wrong!'; sleep 3; done"
+    labels:
+      - apocalypsai.monitor=true # This label makes it discoverable by the quencher
+      - env=prod # Additional label for more specific monitoring
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Another example service, not monitored by default
+  my-other-app:
+    image: busybox
+    container_name: my-other-app
+    command: sh -c "while true; do echo 'INFO: Other app is doing its thing.'; sleep 5; done"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
