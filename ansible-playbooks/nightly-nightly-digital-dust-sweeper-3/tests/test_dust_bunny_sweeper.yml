@@ -1,0 +1,127 @@
+---
+- name: Test Digital Dust Bunny Sweeper (Dry Run Scenario)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    test_scan_paths: ["/mock/path1", "/mock/path2"]
+    test_age_threshold_days: 7
+    test_dry_run: true
+    test_report_path: "/tmp/test_dust_bunny_report_localhost_dryrun.txt"
+
+  tasks:
+    - name: Mock 'find' command results for dry run
+      ansible.builtin.set_fact:
+        find_results:
+          results:
+            - stdout_lines:
+                - "/mock/path1/old_file_a.log"
+                - "/mock/path1/old_dir_b"
+              rc: 0
+            - stdout_lines:
+                - "/mock/path2/another_old_file.txt"
+              rc: 0
+            - stdout_lines: [] # Simulate an empty path result
+              rc: 0
+      # Mock rationale: Simulates the output of the 'find' command without actually running it on the filesystem.
+      # This allows deterministic testing of the playbook's parsing and reporting logic.
+
+    - name: Include the main playbook with test variables (dry run)
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        scan_paths: "{{ test_scan_paths }}"
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        dry_run: "{{ test_dry_run }}"
+        report_path: "{{ test_report_path }}"
+
+    - name: Assert that dust_bunnies fact is set correctly for dry run
+      ansible.builtin.assert:
+        that:
+          - dust_bunnies is defined
+          - dust_bunnies | length == 3
+          - "/mock/path1/old_file_a.log" in dust_bunnies
+          - "/mock/path1/old_dir_b" in dust_bunnies
+          - "/mock/path2/another_old_file.txt" in dust_bunnies
+        fail_msg: "Dust bunnies fact not set as expected for dry run."
+
+    - name: Verify report file content (dry run)
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+      delegate_to: localhost
+      run_once: true
+
+    - name: Decode report content for dry run
+      ansible.builtin.set_fact:
+        decoded_report: "{{ report_content_b64['content'] | b64decode }}"
+
+    - name: Assert report content for dry run
+      ansible.builtin.assert:
+        that:
+          - "'Digital Dust Bunny Sweeper Report for localhost' in decoded_report"
+          - "'Dry Run Mode: True' in decoded_report"
+          - "'/mock/path1/old_file_a.log' in decoded_report"
+          - "'--- This was a DRY RUN. No items were deleted. ---' in decoded_report"
+        fail_msg: "Report content is incorrect for dry run."
+      # Mock rationale: Verifies that the report template correctly processes the mocked 'dust_bunnies' and 'dry_run' variables.
+
+- name: Test Digital Dust Bunny Sweeper (Actual Deletion Scenario)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    test_scan_paths: ["/mock/path3"]
+    test_age_threshold_days: 14
+    test_dry_run: false
+    test_report_path: "/tmp/test_dust_bunny_report_localhost_actual.txt"
+
+  tasks:
+    - name: Mock 'find' command results for actual deletion
+      ansible.builtin.set_fact:
+        find_results:
+          results:
+            - stdout_lines:
+                - "/mock/path3/very_old_file.zip"
+              rc: 0
+      # Mock rationale: Simulates the output of the 'find' command for a deletion scenario.
+
+    - name: Include the main playbook with test variables (actual deletion)
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        scan_paths: "{{ test_scan_paths }}"
+        age_threshold_days: "{{ test_age_threshold_days }}"
+        dry_run: "{{ test_dry_run }}"
+        report_path: "{{ test_report_path }}"
+
+    - name: Assert that dust_bunnies fact is set correctly for deletion
+      ansible.builtin.assert:
+        that:
+          - dust_bunnies is defined
+          - dust_bunnies | length == 1
+          - "/mock/path3/very_old_file.zip" in dust_bunnies
+        fail_msg: "Dust bunnies fact not set as expected for deletion."
+
+    - name: Verify report file content (actual deletion)
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64_actual
+      delegate_to: localhost
+      run_once: true
+
+    - name: Decode report content for actual deletion
+      ansible.builtin.set_fact:
+        decoded_report_actual: "{{ report_content_b64_actual['content'] | b64decode }}"
+
+    - name: Assert report content for actual deletion
+      ansible.builtin.assert:
+        that:
+          - "'Digital Dust Bunny Sweeper Report for localhost' in decoded_report_actual"
+          - "'Dry Run Mode: False' in decoded_report_actual"
+          - "'/mock/path3/very_old_file.zip' in decoded_report_actual"
+          - "'--- WARNING: The above items were DELETED! ---' in decoded_report_actual"
+        fail_msg: "Report content is incorrect for actual deletion."
+      # Mock rationale: Verifies that the report template correctly reflects the deletion status when dry_run is false.

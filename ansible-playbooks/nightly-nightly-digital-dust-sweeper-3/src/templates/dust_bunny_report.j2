@@ -1,0 +1,24 @@
+Digital Dust Bunny Sweeper Report for {{ ansible_hostname }}
+===================================================
+
+Date: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+
+Configuration:
+  Scan Paths: {{ host_scan_paths | join(', ') }}
+  Age Threshold: {{ host_age_threshold_days }} days
+  Dry Run Mode: {{ host_dry_run }}
+
+Identified Digital Dust Bunnies ({{ host_dust_bunnies | length }} items):
+{% if host_dust_bunnies %}
+{% for item in host_dust_bunnies %}
+- {{ item }}
+{% endfor %}
+{% else %}
+No digital dust bunnies found! Your server is sparkling clean.
+{% endif %}
+
+{% if not host_dry_run and host_dust_bunnies %}
+--- WARNING: The above items were DELETED! ---
+{% elif host_dry_run %}
+--- This was a DRY RUN. No items were deleted. ---
+{% endif %}
