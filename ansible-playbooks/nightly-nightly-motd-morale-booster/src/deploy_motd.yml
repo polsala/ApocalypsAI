@@ -1,0 +1,27 @@
+---
+- name: Deploy Whimsical MOTD Morale Booster
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/motd_messages.yml
+  
+  tasks:
+    - name: Select a random MOTD message
+      set_fact:
+        selected_motd_message: "{{ motd_messages | random }}"
+      when: motd_message is not defined # Allow overriding for testing
+
+    - name: Use provided motd_message for testing if defined
+      set_fact:
+        selected_motd_message: "{{ motd_message }}"
+      when: motd_message is defined
+
+    - name: Ensure /etc/motd is updated with the selected message
+      template:
+        src: templates/motd_template.j2
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        motd_content: "{{ selected_motd_message }}"
