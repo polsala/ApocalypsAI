@@ -1,0 +1,28 @@
+{
+  "name": "nightly-scavenger-stash-sorter",
+  "version": "1.0.0",
+  "description": "A type-safe TypeScript CLI utility to help post-apocalyptic scavengers sort their found items into predefined stash categories based on custom rules and priorities.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "typescript",
+    "cli",
+    "utility",
+    "sorting",
+    "inventory",
+    "apocalypse"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
