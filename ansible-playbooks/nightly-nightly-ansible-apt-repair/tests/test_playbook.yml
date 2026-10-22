@@ -1,0 +1,13 @@
+- name: Test nightly-ansible-apt-repair
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Import the repair playbook
+      import_playbook: ../src/playbook.yml
+
+    - name: Verify that the apt_repaired fact is true
+      assert:
+        that:
+          - apt_repaired | default(false) == true
+        fail_msg: "❌ apt_repaired fact was not set – the repair playbook may have failed."
+        success_msg: "✅ apt_repaired fact confirmed – the system is healthy."
