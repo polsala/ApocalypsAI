@@ -1,0 +1,26 @@
+---
+- name: Synchronize Digital Hoard to Bunker Servers
+  hosts: bunker_servers
+  gather_facts: no
+  vars_files:
+    - ../vars/hoard_config.yml
+
+  tasks:
+    - name: Ensure base destination path exists
+      ansible.builtin.file:
+        path: "{{ base_dest_path }}"
+        state: directory
+        mode: '0755'
+      become: yes # Assuming root privileges might be needed for common deployment paths like /opt
+
+    - name: Synchronize digital hoard items
+      ansible.posix.synchronize:
+        src: "{{ base_src_path }}/{{ item.src }}"
+        dest: "{{ base_dest_path }}/{{ item.dest }}"
+        mode: push
+        delete: no # Do not delete files on destination that are not in source
+        recursive: yes
+      loop: "{{ digital_hoard_items }}"
+      loop_control:
+        label: "{{ item.src }} -> {{ item.dest }}"
+      become: yes # Assuming root privileges might be needed for common deployment paths like /opt

@@ -1,0 +1,98 @@
+---
+- name: Test Digital Hoard Sync Playbook
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  vars_files:
+    - ../vars/hoard_config.yml
+
+  tasks:
+    - name: Mock rationale: Define test source and destination paths
+      ansible.builtin.set_fact:
+        test_base_src: "{{ playbook_dir }}/test_src"
+        test_base_dest: "{{ playbook_dir }}/test_dest"
+
+    - name: Mock rationale: Override hoard_config vars for testing
+      ansible.builtin.set_fact:
+        base_src_path: "{{ test_base_src }}"
+        base_dest_path: "{{ test_base_dest }}"
+
+    - name: Mock rationale: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_base_src }}"
+        - "{{ test_base_dest }}"
+
+    - name: Mock rationale: Create dummy source files and directories
+      ansible.builtin.file:
+        path: "{{ test_base_src }}/{{ item.path }}"
+        state: "{{ item.state | default('file') }}"
+        mode: '0644'
+      loop:
+        - { path: "essential_scripts/script1.sh" }
+        - { path: "essential_scripts/script2.sh" }
+        - { path: "configs/server.conf" }
+        - { path: "important_docs/survival_guide.txt" }
+        - { path: "nested/secret_plans.md" }
+        - { path: "essential_scripts/", state: "directory", mode: '0755' } # Ensure directory exists for files
+        - { path: "configs/", state: "directory", mode: '0755' }
+        - { path: "important_docs/", state: "directory", mode: '0755' }
+        - { path: "nested/", state: "directory", mode: '0755' }
+
+    - name: Mock rationale: Populate dummy source files with content
+      ansible.builtin.copy:
+        content: "This is {{ item.path }} content."
+        dest: "{{ test_base_src }}/{{ item.path }}"
+      loop:
+        - { path: "essential_scripts/script1.sh" }
+        - { path: "essential_scripts/script2.sh" }
+        - { path: "configs/server.conf" }
+        - { path: "important_docs/survival_guide.txt" }
+        - { path: "nested/secret_plans.md" }
+
+    - name: Run the main sync playbook (first run - expect changes)
+      ansible.builtin.include_tasks:
+        file: ../src/sync_hoard.yml
+      register: first_run_result
+
+    - name: Assert that changes were made on the first run
+      ansible.builtin.assert:
+        that:
+          - first_run_result is changed
+        fail_msg: "Expected changes on first run, but none occurred."
+
+    - name: Verify synchronized files exist
+      ansible.builtin.stat:
+        path: "{{ test_base_dest }}/{{ item.dest }}"
+      loop: "{{ digital_hoard_items }}"
+      register: stat_results
+
+    - name: Assert all expected files/directories exist after sync
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists is true
+        fail_msg: "File or directory '{{ item.item.dest }}' does not exist after sync."
+      loop: "{{ stat_results.results }}"
+
+    - name: Run the main sync playbook again in check mode (expect no changes - idempotency test)
+      ansible.builtin.include_tasks:
+        file: ../src/sync_hoard.yml
+      check_mode: yes
+      register: second_run_check_result
+
+    - name: Assert no changes were reported in check mode (idempotency)
+      ansible.builtin.assert:
+        that:
+          - not second_run_check_result is changed
+        fail_msg: "Expected no changes on second run (check mode), but changes were reported."
+
+    - name: Mock rationale: Clean up test environment after tests
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_base_src }}"
+        - "{{ test_base_dest }}"
+      when: ansible_check_mode is not defined or not ansible_check_mode
