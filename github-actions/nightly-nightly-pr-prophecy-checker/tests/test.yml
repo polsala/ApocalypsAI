@@ -1,0 +1,149 @@
+name: Action Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main # Trigger on push to main for CI
+
+jobs:
+  test_pr_with_prophecy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock PR event (with prophecy)
+        run: |
+          mkdir -p .github/workflows/mock_events
+          cat <<EOF > .github/workflows/mock_events/pr_with_prophecy.json
+          {
+            "pull_request": {
+              "body": "This is a great PR.\n\n## Prophecy\n\nThis PR will fix all bugs and bring peace to the galaxy.\n\n## Changelog"
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Run action with prophecy
+        id: check
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Token is required but not used for reading event path
+        env:
+          GITHUB_EVENT_PATH: .github/workflows/mock_events/pr_with_prophecy.json # Mock rationale: Simulating the event payload for testing.
+
+      - name: Verify output (prophecy found)
+        run: |
+          echo "Output: ${{ steps.check.outputs.prophecy-found }}"
+          if [ "${{ steps.check.outputs.prophecy-found }}" != "true" ]; then
+            echo "::error::Expected prophecy-found to be 'true', but got '${{ steps.check.outputs.prophecy-found }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_pr_empty_prophecy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock PR event (empty prophecy)
+        run: |
+          mkdir -p .github/workflows/mock_events
+          cat <<EOF > .github/workflows/mock_events/pr_empty_prophecy.json
+          {
+            "pull_request": {
+              "body": "This is a PR.\n\n## Prophecy\n\n   \n\n## Changelog"
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Run action with empty prophecy
+        id: check
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_EVENT_PATH: .github/workflows/mock_events/pr_empty_prophecy.json # Mock rationale: Simulating the event payload for testing.
+
+      - name: Verify output (prophecy not found - empty)
+        run: |
+          echo "Output: ${{ steps.check.outputs.prophecy-found }}"
+          if [ "${{ steps.check.outputs.prophecy-found }}" != "false" ]; then
+            echo "::error::Expected prophecy-found to be 'false' for empty prophecy, but got '${{ steps.check.outputs.prophecy-found }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_pr_no_prophecy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock PR event (no prophecy)
+        run: |
+          mkdir -p .github/workflows/mock_events
+          cat <<EOF > .github/workflows/mock_events/pr_no_prophecy.json
+          {
+            "pull_request": {
+              "body": "This is a PR without any prophecy section."
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Run action with no prophecy
+        id: check
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_EVENT_PATH: .github/workflows/mock_events/pr_no_prophecy.json # Mock rationale: Simulating the event payload for testing.
+
+      - name: Verify output (prophecy not found)
+        run: |
+          echo "Output: ${{ steps.check.outputs.prophecy-found }}"
+          if [ "${{ steps.check.outputs.prophecy-found }}" != "false" ]; then
+            echo "::error::Expected prophecy-found to be 'false' for no prophecy, but got '${{ steps.check.outputs.prophecy-found }}'"
+            exit 1
+          fi
+        shell: bash
+
+  test_pr_custom_prophecy_header:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create mock PR event (with custom prophecy header)
+        run: |
+          mkdir -p .github/workflows/mock_events
+          cat <<EOF > .github/workflows/mock_events/pr_custom_prophecy.json
+          {
+            "pull_request": {
+              "body": "This PR has a custom prophecy.\n\n### My Custom Prophecy\n\nThis is a very specific prophecy.\n\n## Other Section"
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Run action with custom prophecy header
+        id: check
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          prophecy-header: '### My Custom Prophecy' # Use a custom header
+        env:
+          GITHUB_EVENT_PATH: .github/workflows/mock_events/pr_custom_prophecy.json # Mock rationale: Simulating the event payload for testing.
+
+      - name: Verify output (custom prophecy found)
+        run: |
+          echo "Output: ${{ steps.check.outputs.prophecy-found }}"
+          if [ "${{ steps.check.outputs.prophecy-found }}" != "true" ]; then
+            echo "::error::Expected prophecy-found to be 'true' for custom prophecy, but got '${{ steps.check.outputs.prophecy-found }}'"
+            exit 1
+          fi
+        shell: bash
