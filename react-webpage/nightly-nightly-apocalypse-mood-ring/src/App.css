@@ -1,0 +1,100 @@
+/* src/App.css */
+
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  transition: background-color 0.5s ease-in-out;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.App-header {
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay for text readability */
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  margin: 20px;
+}
+
+h1 {
+  font-size: 2.5em;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.mood-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.mood-icon {
+  font-size: 4em;
+  margin-right: 20px;
+  animation: pulse 2s infinite alternate;
+}
+
+.mood-name {
+  font-size: 3em;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.mood-insight {
+  font-size: 1.2em;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+.mood-button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 15px 30px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1.2em;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mood-button:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.mood-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.footer-note {
+  font-size: 0.8em;
+  margin-top: 30px;
+  opacity: 0.7;
+}
+
+.app-loading {
+  font-size: 2em;
+  color: white;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
