@@ -1,0 +1,105 @@
+name: "Nightly Utility Path Patrol"
+description: "Validates new utility PRs adhere to the 'nightly-<name>' naming convention and V2 classifier path structure (e.g., python-utils/nightly-my-util)."
+inputs:
+  base_sha:
+    description: "The base SHA of the pull request."
+    required: true
+  head_sha:
+    description: "The head SHA of the pull request."
+    required: true
+outputs:
+  validation_status:
+    description: "Status of the validation (success/failure/skipped)."
+    value: ${{ steps.validate.outputs.status }}
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Needed for git diff to compare base and head
+    - name: Validate utility paths
+      id: validate
+      shell: bash
+      run: |
+        # Access inputs directly
+        BASE_SHA="${{ inputs.base_sha }}"
+        HEAD_SHA="${{ inputs.head_sha }}"
+
+        if [ -z "$BASE_SHA" ] || [ -z "$HEAD_SHA" ]; then
+          echo "Not a pull request context (base_sha or head_sha missing). Skipping utility path validation."
+          echo "status=skipped" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "Validating utility paths for PR: $BASE_SHA...$HEAD_SHA"
+
+        # Get all directories added in this PR that match the V2 classifier pattern.
+        # This command lists files added between BASE_SHA and HEAD_SHA.
+        # It then extracts the root utility directory from these file paths.
+        NEW_UTIL_FILES=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$HEAD_SHA" | grep -E '^[a-z-]+-(utils|webpage|actions|tools|apps|apis|scripts|automation|playbooks|modules|resources|pipelines|notebooks|clients)/nightly-[a-z0-9-]+/.*$')
+
+        # Extract unique utility root directories from the file list
+        NEW_UTIL_DIRS=$(echo "$NEW_UTIL_FILES" | sed -E 's|^([a-z-]+-(utils|webpage|actions|tools|apps|apis|scripts|automation|playbooks|modules|resources|pipelines|notebooks|clients)/nightly-[a-z0-9-]+)/.*$|\1|' | sort -u)
+
+        VALID=true
+        ERROR_MESSAGES=""
+
+        if [ -z "$NEW_UTIL_DIRS" ]; then
+          echo "No new utility directories detected matching V2 classifier pattern in the diff."
+        else
+          echo "Detected new utility directories:"
+          echo "$NEW_UTIL_DIRS"
+
+          for util_dir in $NEW_UTIL_DIRS; do
+            # Example: util_dir = "python-utils/nightly-my-awesome-util"
+            CLASSIFIER=$(echo "$util_dir" | cut -d'/' -f1)
+            UTIL_NAME_FULL=$(echo "$util_dir" | cut -d'/' -f2) # e.g., nightly-my-awesome-util
+
+            # 1. Validate classifier name against known patterns
+            # This regex covers most of the explicitly listed V2 classifiers from AGENTS.md.
+            if ! echo "$CLASSIFIER" | grep -E '^[a-z-]+-(utils|webpage|actions|tools|apps|apis|scripts|automation|playbooks|modules|resources|pipelines|notebooks|clients)$'; then
+              ERROR_MESSAGES+="::error file=$util_dir::Invalid classifier name '$CLASSIFIER'. Must match a V2 classifier pattern (e.g., 'python-utils', 'react-webpage', 'github-actions').\n"
+              VALID=false
+            fi
+
+            # 2. Validate utility name prefix
+            if [[ ! "$UTIL_NAME_FULL" =~ ^nightly- ]]; then
+              ERROR_MESSAGES+="::error file=$util_dir::Utility directory '$UTIL_NAME_FULL' must start with 'nightly-'.\n"
+              VALID=false
+            fi
+
+            UTIL_NAME_SUFFIX=$(echo "$UTIL_NAME_FULL" | sed 's/^nightly-//')
+
+            # 3. Validate utility name suffix (kebab-case, length)
+            if ! echo "$UTIL_NAME_SUFFIX" | grep -E '^[a-z0-9-]+$'; then
+              ERROR_MESSAGES+="::error file=$util_dir::Utility name suffix '$UTIL_NAME_SUFFIX' must be kebab-case (lowercase letters, numbers, hyphens only).\n"
+              VALID=false
+            fi
+
+            # Max length for util_name_full is 32 characters.
+            if [[ ${#UTIL_NAME_FULL} -gt 32 ]]; then
+              ERROR_MESSAGES+="::error file=$util_dir::Utility directory name '$UTIL_NAME_FULL' is too long. Max 32 characters.\n"
+              VALID=false
+            fi
+
+            # 4. Check for required files/subdirectories
+            REQUIRED_CONTENTS=("README.md" "src" "tests")
+            for item in "${REQUIRED_CONTENTS[@]}"; do
+              if [ ! -e "$util_dir/$item" ]; then
+                ERROR_MESSAGES+="::error file=$util_dir::Missing required file or directory '$item' inside '$util_dir'.\n"
+                VALID=false
+              fi
+            done
+          done
+        fi
+
+        if "$VALID"; then
+          echo "All new utility paths adhere to the ApocalypsAI V2 standards."
+          echo "status=success" >> "$GITHUB_OUTPUT"
+        else
+          echo -e "$ERROR_MESSAGES"
+          echo "Utility path validation failed. Please fix the errors above."
+          echo "status=failure" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
