@@ -1,0 +1,73 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header {
+  margin-bottom: 20px;
+}
+
+.dashboard-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 1200px;
+}
+
+.dashboard-card {
+  background-color: #3a3f47;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-title {
+  font-size: 1.2em;
+  margin-bottom: 15px;
+  color: #61dafb;
+}
+
+.resource-list li {
+  text-align: left;
+  margin-bottom: 8px;
+}
+
+.survival-odds-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #90ee90;
+}
+
+.threat-level-indicator {
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.threat-low { color: #90ee90; background-color: #2e8b57; }
+.threat-medium { color: #ffd700; background-color: #daa520; }
+.threat-high { color: #ff6347; background-color: #b22222; }
+
+.alerts-container {
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #4a4f57;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 1200px;
+  border: 1px dashed #61dafb;
+}
+
+.alert-message {
+  font-style: italic;
+  color: #ccc;
+}
