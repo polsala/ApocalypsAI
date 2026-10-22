@@ -1,0 +1,56 @@
+.mood-input-container {
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.mood-input-container label {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.mood-slider {
+  width: 80%;
+  -webkit-appearance: none;
+  height: 10px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  border-radius: 5px;
+}
+
+.mood-slider:hover {
+  opacity: 1;
+}
+
+.mood-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.mood-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.mood-description {
+  font-style: italic;
+  color: #bbb;
+}
