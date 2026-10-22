@@ -1,0 +1,12 @@
+---
+cache_base_path: "/opt/survival_cache"
+required_items:
+  - type: directory
+    path: "rations"
+  - type: directory
+    path: "tools"
+  - type: file
+    path: "manifest.txt"
+    content_regex: ".*(water|food|meds).*"
+  - type: file
+    path: "secret_plans.txt"

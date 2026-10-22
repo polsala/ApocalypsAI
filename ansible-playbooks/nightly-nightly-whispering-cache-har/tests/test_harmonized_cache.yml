@@ -1,0 +1,97 @@
+---
+- name: Setup mock harmonized cache environment
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_base_path: "/tmp/ansible_test_cache_harmonizer_harmonized"
+    test_report_file: "/tmp/ansible_test_cache_harmony_report_harmonized.txt"
+  tasks:
+    - name: Clean up previous test environment
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      changed_when: false
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+    - name: Ensure base test directory exists
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create required directories
+      ansible.builtin.file:
+        path: "{{ test_base_path }}/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "rations"
+        - "tools"
+
+    - name: Create required files with correct content
+      ansible.builtin.copy:
+        content: "water, food, meds, bandages\n"
+        dest: "{{ test_base_path }}/manifest.txt"
+        mode: '0644'
+    - ansible.builtin.copy:
+        content: "secret plans for survival\n"
+        dest: "{{ test_base_path }}/secret_plans.txt"
+        mode: '0644'
+
+    - name: Clean up previous test report
+      ansible.builtin.file:
+        path: "{{ test_report_file }}"
+        state: absent
+      changed_when: false
+      # Mock rationale: Ensures a clean slate for deterministic testing.
+
+- name: Run the Whispering Cache Harmonizer playbook against harmonized mock environment
+  import_playbook: ../src/harmonize_caches.yml
+  vars:
+    cache_base_path: "/tmp/ansible_test_cache_harmonizer_harmonized"
+    report_file: "/tmp/ansible_test_cache_harmony_report_harmonized.txt"
+
+- name: Verify the results for harmonized cache
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_report_file: "/tmp/ansible_test_cache_harmony_report_harmonized.txt"
+  tasks:
+    - name: Check if report file was created
+      ansible.builtin.stat:
+        path: "{{ test_report_file }}"
+      register: report_stat
+
+    - name: Assert report file exists
+      ansible.builtin.assert:
+        that:
+          - report_stat.stat.exists
+          - report_stat.stat.isreg
+        fail_msg: "Harmonized cache report file was not created at {{ test_report_file }}"
+        success_msg: "Harmonized cache report file exists."
+
+    - name: Read the report content
+      ansible.builtin.slurp:
+        src: "{{ test_report_file }}"
+      register: report_content
+
+    - name: Assert report content indicates full harmonization
+      ansible.builtin.assert:
+        that:
+          - report_content.content | b64decode | search("HARMONIZED - All whispers in tune!")
+          - report_content.content | b64decode | search("No discrepancies found. All items present and accounted for.")
+        fail_msg: "Report content does not indicate correct harmonization status for harmonized cache."
+        success_msg: "Report content correctly indicates harmonized status for harmonized cache."
+
+    - name: Clean up test environment after verification
+      ansible.builtin.file:
+        path: "/tmp/ansible_test_cache_harmonizer_harmonized"
+        state: absent
+      changed_when: false
+      # Mock rationale: Cleans up temporary files created during testing.
+    - name: Clean up test report file
+      ansible.builtin.file:
+        path: "{{ test_report_file }}"
+        state: absent
+      changed_when: false
+      # Mock rationale: Cleans up temporary files created during testing.
