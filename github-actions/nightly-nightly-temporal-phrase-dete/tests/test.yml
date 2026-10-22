@@ -1,0 +1,110 @@
+name: 'Test Temporal Phrase Detector'
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test_detection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test 1: No paradox
+        id: test1
+        uses: ./ # Mock rationale: Using local action for testing. This simulates how GitHub Actions are tested by referencing the local path.
+        with:
+          message: 'Feat: Add new user authentication module'
+          fail-on-paradox: 'false'
+      - name: Assert Test 1
+        run: |
+          echo "Output paradox-detected: ${{ steps.test1.outputs.paradox-detected }}"
+          echo "Output detected-phrases: ${{ steps.test1.outputs.detected-phrases }}"
+          if [ "${{ steps.test1.outputs.paradox-detected }}" != "false" ]; then
+            echo "Test 1 failed: Paradox detected when none should be."
+            exit 1
+          fi
+          if [ "${{ steps.test1.outputs.detected-phrases }}" != "" ]; then
+            echo "Test 1 failed: Phrases detected when none should be.""
+            exit 1
+          fi
+
+      - name: Test 2: Single paradox phrase (warn)
+        id: test2
+        uses: ./ # Mock rationale: Using local action for testing.
+        with:
+          message: 'Fix: Pre-emptively fixed a bug that will appear next week'
+          fail-on-paradox: 'false'
+      - name: Assert Test 2
+        run: |
+          echo "Output paradox-detected: ${{ steps.test2.outputs.paradox-detected }}"
+          echo "Output detected-phrases: ${{ steps.test2.outputs.detected-phrases }}"
+          if [ "${{ steps.test2.outputs.paradox-detected }}" != "true" ]; then
+            echo "Test 2 failed: Paradox not detected when it should be."
+            exit 1
+          fi
+          if [ "${{ steps.test2.outputs.detected-phrases }}" != "pre-emptively fixed" ]; then
+            echo "Test 2 failed: Incorrect phrases detected."
+            exit 1
+          fi
+
+      - name: Test 3: Multiple paradox phrases (warn)
+        id: test3
+        uses: ./ # Mock rationale: Using local action for testing.
+        with:
+          message: 'Refactor: Reverted a future change and applied a patch from 2077'
+          fail-on-paradox: 'false'
+      - name: Assert Test 3
+        run: |
+          echo "Output paradox-detected: ${{ steps.test3.outputs.paradox-detected }}"
+          echo "Output detected-phrases: ${{ steps.test3.outputs.detected-phrases }}"
+          if [ "${{ steps.test3.outputs.paradox-detected }}" != "true" ]; then
+            echo "Test 3 failed: Paradox not detected when it should be."
+            exit 1
+          fi
+          if [ "${{ steps.test3.outputs.detected-phrases }}" != "reverted a future change, applied a patch from 2077" ]; then
+            echo "Test 3 failed: Incorrect phrases detected."
+            exit 1
+          fi
+
+      - name: Test 4: Single paradox phrase (fail)
+        id: test4
+        uses: ./ # Mock rationale: Using local action for testing.
+        with:
+          message: 'Docs: This commit is from another timeline'
+          fail-on-paradox: 'true'
+        continue-on-error: true # Allow workflow to continue to assert failure
+      - name: Assert Test 4
+        run: |
+          echo "Output paradox-detected: ${{ steps.test4.outputs.paradox-detected }}"
+          echo "Output detected-phrases: ${{ steps.test4.outputs.detected-phrases }}"
+          if [ "${{ steps.test4.outputs.paradox-detected }}" != "true" ]; then
+            echo "Test 4 failed: Paradox not detected when it should be."
+            exit 1
+          fi
+          if [ "${{ steps.test4.outputs.detected-phrases }}" != "this commit is from another timeline" ]; then
+            echo "Test 4 failed: Incorrect phrases detected."
+            exit 1
+          fi
+          # Check if the step actually failed
+          if [ "${{ steps.test4.outcome }}" != "failure" ]; then
+            echo "Test 4 failed: Action did not fail when fail-on-paradox was true."
+            exit 1
+          fi
+
+      - name: Test 5: Case-insensitivity
+        id: test5
+        uses: ./ # Mock rationale: Using local action for testing.
+        with:
+          message: 'feat: This Commit Is From Another Timeline'
+          fail-on-paradox: 'false'
+      - name: Assert Test 5
+        run: |
+          echo "Output paradox-detected: ${{ steps.test5.outputs.paradox-detected }}"
+          echo "Output detected-phrases: ${{ steps.test5.outputs.detected-phrases }}"
+          if [ "${{ steps.test5.outputs.paradox-detected }}" != "true" ]; then
+            echo "Test 5 failed: Paradox not detected (case-insensitivity issue)."
+            exit 1
+          fi
+          if [ "${{ steps.test5.outputs.detected-phrases }}" != "this commit is from another timeline" ]; then
+            echo "Test 5 failed: Incorrect phrases detected (case-insensitivity issue)."
+            exit 1
+          fi
