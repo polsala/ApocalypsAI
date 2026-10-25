@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Beacon</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background-color: #0a0a0a; color: #00ff00; text-align: center; padding-top: 100px; }
+        .beacon-message { font-size: 2em; animation: flicker 1.5s infinite alternate; }
+        .sub-message { font-size: 1em; color: #00cc00; }
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="beacon-message">${beacon_message}</div>
+    <div class="sub-message">Transmitting from the ApocalypsAI network...</div>
+</body>
+</html>
