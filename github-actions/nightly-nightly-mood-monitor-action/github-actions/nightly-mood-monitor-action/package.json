@@ -1,0 +1,24 @@
+{
+  "name": "nightly-mood-monitor-action",
+  "version": "1.0.0",
+  "description": "GitHub Action to monitor sentiment and thematic consistency.",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "github-actions",
+    "sentiment",
+    "community",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
