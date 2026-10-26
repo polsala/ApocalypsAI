@@ -1,0 +1,33 @@
+{
+  "name": "nightly-chrono-categorizer",
+  "version": "1.0.0",
+  "description": "A type-safe CLI tool to categorize tasks or items into whimsical temporal urgency buckets.",
+  "main": "dist/index.js",
+  "bin": {
+    "chrono-categorizer": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "jest --coverage"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "utility",
+    "apocalypse",
+    "task-management"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  }
+}
