@@ -1,0 +1,32 @@
+---
+- name: Bestow a whimsical blessing upon the server
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/blessings.yml
+  vars:
+    blessing_output_path: "/etc/motd.d/ansible-blessing" # Default output path
+    # Mock rationale: In a real scenario, chosen_blessing would be randomly selected.
+    # For testing, this variable is overridden via --extra-vars to ensure determinism.
+    chosen_blessing: "{{ blessings | random }}" # Select a random blessing
+
+  tasks:
+    - name: Ensure MOTD directory exists (if using default path)
+      ansible.builtin.file:
+        path: "{{ blessing_output_path | dirname }}"
+        state: directory
+        mode: '0755'
+      when: blessing_output_path.startswith('/etc/motd.d/') or blessing_output_path.startswith('/tmp/')
+
+    - name: Render and deploy the blessing to the server
+      ansible.builtin.template:
+        src: templates/blessing.j2
+        dest: "{{ blessing_output_path }}"
+        mode: '0644'
+      notify:
+        - Log blessing
+
+  handlers:
+    - name: Log blessing
+      ansible.builtin.debug:
+        msg: "Server blessed with: {{ chosen_blessing }}"
