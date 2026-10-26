@@ -1,0 +1,56 @@
+---
+- name: Setup Test Digital Garden Environment
+  hosts: localhost
+  gather_facts: no
+  vars:
+    test_garden_path: "/tmp/test_garden_bloom"
+    test_report_path: "/tmp/test_garden_bloom_report.md"
+    current_time: "{{ lookup('pipe', 'date +%s') }}"
+
+  tasks:
+    - name: Ensure test garden directory exists
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Ensure report file is absent before test
+      ansible.builtin.file:
+        path: "{{ test_report_path }}"
+        state: absent
+
+    - name: Create a fresh note (blooming)
+      ansible.builtin.copy:
+        content: |
+          # Fresh Note
+          This note was just created.
+        dest: "{{ test_garden_path }}/fresh_note.md"
+      # Mock rationale: Create a file that will be considered 'blooming' based on the bloom_threshold_days.
+
+    - name: Create an old note (stale)
+      ansible.builtin.copy:
+        content: |
+          # Old Note
+          This note is very old.
+        dest: "{{ test_garden_path }}/old_note.md"
+      # Mock rationale: Create a file that will be considered 'stale' based on the stale_threshold_days.
+
+    - name: Set mtime for old_note.md to be very old (e.g., 100 days ago)
+      ansible.builtin.command:
+        cmd: "touch -d '@{{ current_time | int - (100 * 86400) }}' {{ test_garden_path }}/old_note.md"
+      changed_when: true
+      # Mock rationale: Manipulate file modification time to simulate an old file for stale detection.
+
+    - name: Create a moderately old note (neither blooming nor stale)
+      ansible.builtin.copy:
+        content: |
+          # Moderate Note
+          This note is neither fresh nor stale.
+        dest: "{{ test_garden_path }}/moderate_note.md"
+      # Mock rationale: Create a file that falls between blooming and stale thresholds.
+
+    - name: Set mtime for moderate_note.md (e.g., 30 days ago)
+      ansible.builtin.command:
+        cmd: "touch -d '@{{ current_time | int - (30 * 86400) }}' {{ test_garden_path }}/moderate_note.md"
+      changed_when: true
+      # Mock rationale: Manipulate file modification time to simulate a file for neither blooming nor stale detection.
