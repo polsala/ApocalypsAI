@@ -1,0 +1,86 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34; /* Dark background for contrast */
+  color: #f0f0f0; /* Light text */
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  font-size: 2.5em;
+  color: #61dafb; /* React blue */
+}
+
+.App-header p {
+  font-style: italic;
+  color: #bbb;
+}
+
+.mood-selector {
+  margin-bottom: 30px;
+}
+
+.mood-selector label {
+  font-size: 1.1em;
+  margin-right: 10px;
+}
+
+.mood-selector select {
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #61dafb;
+  background-color: #3a3f47;
+  color: #f0f0f0;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.mood-selector select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(97, 218, 251, 0.5);
+}
+
+.palette-display {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.color-swatch {
+  width: 150px;
+  height: 150px;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-end; /* Position hex code at bottom */
+  justify-content: center;
+  padding-bottom: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+.color-swatch:hover {
+  transform: translateY(-5px);
+}
+
+.hex-code {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
