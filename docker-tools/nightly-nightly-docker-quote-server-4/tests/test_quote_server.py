@@ -1,0 +1,1 @@
+import json\nfrom src import quote_server\n\ndef test_get_quote():\n    client = quote_server.app.test_client()\n    response = client.get("/")\n    assert response.status_code == 200\n    data = json.loads(response.data)\n    assert "quote" in data\n    assert data["quote"] in quote_server.QUOTES
