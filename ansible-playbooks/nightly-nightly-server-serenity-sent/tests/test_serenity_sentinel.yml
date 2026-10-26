@@ -1,0 +1,153 @@
+---
+- name: Test Nightly Server Serenity Sentinel
+  hosts: localhost
+  connection: local
+  become: yes
+  vars_files:
+    - vars/test_config.yml
+  tasks:
+    - name: Ensure test log directory exists
+      ansible.builtin.file:
+        path: "{{ test_log_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy log files for tidying
+      ansible.builtin.file:
+        path: "{{ test_log_path }}/old_log_{{ item }}.log"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (item * 86400)) | timestamp_to_datetime | date('%Y%m%d%H%M.%S') }}" # Create logs older than 7 days
+      loop: [8, 9, 10] # 3 logs older than 7 days
+      when: item > test_log_retention_days # Mock rationale: Ensure logs are older than retention policy
+
+    - name: Create dummy recent log file
+      ansible.builtin.file:
+        path: "{{ test_log_path }}/recent_log.log"
+        state: touch
+        modification_time: "{{ (ansible_date_time.epoch | int - (1 * 86400)) | timestamp_to_datetime | date('%Y%m%d%H%M.%S') }}" # 1 day old
+
+    # Mock rationale: Simulate 'df -h /' command output for deterministic testing.
+    - name: Mock disk_usage_output
+      ansible.builtin.set_fact:
+        disk_usage_output:
+          stdout: |
+            Filesystem      Size  Used Avail Use% Mounted on
+            /dev/root        20G  5.0G   14G  27% /
+          stdout_lines:
+            - "Filesystem      Size  Used Avail Use% Mounted on"
+            - "/dev/root        20G  5.0G   14G  27% /"
+
+    # Mock rationale: Simulate 'free -m' command output for deterministic testing.
+    - name: Mock memory_usage_output
+      ansible.builtin.set_fact:
+        memory_usage_output:
+          stdout: |
+            total        used        free      shared  buff/cache   available
+            Mem:           1000         200         700           0         100         700
+            Swap:           500           0         500
+          stdout_lines:
+            - "              total        used        free      shared  buff/cache   available"
+            - "Mem:           1000         200         700           0         100         700"
+            - "Swap:           500           0         500"
+
+    # Mock rationale: Simulate 'uptime' command output for deterministic testing.
+    - name: Mock cpu_load_output
+      ansible.builtin.set_fact:
+        cpu_load_output:
+          stdout: " 10:00:00 up 1 day,  0 users,  load average: 0.10, 0.05, 0.01"
+
+    # Mock rationale: Simulate 'service_facts' output for specific services to control test scenarios.
+    - name: Mock services_status
+      ansible.builtin.set_fact:
+        services_status:
+          ansible_facts:
+            services:
+              sshd:
+                name: sshd
+                state: running
+                status: enabled
+              systemd-journald:
+                name: systemd-journald
+                state: running
+                status: enabled
+              nginx: # This service is monitored but not running
+                name: nginx
+                state: stopped
+                status: enabled
+              non_monitored_service: # This service exists but is not monitored
+                name: non_monitored_service
+                state: running
+                status: enabled
+
+    - name: Run the Serenity Sentinel playbook
+      ansible.builtin.include_tasks: ../src/serenity_sentinel.yml
+      vars:
+        services_to_monitor: "{{ test_services_to_monitor }}"
+        log_paths_to_tidy: "{{ test_log_paths_to_tidy }}"
+        log_retention_days: "{{ test_log_retention_days }}"
+
+    - name: Assert report file exists
+      ansible.builtin.stat:
+        path: "/tmp/serenity_report_localhost.txt"
+      register: report_file_stat
+
+    - name: Verify report file exists
+      ansible.builtin.assert:
+        that:
+          - report_file_stat.stat.exists is true
+          - report_file_stat.stat.isreg is true
+        msg: "Serenity report file was not created."
+
+    - name: Read report content
+      ansible.builtin.slurp:
+        src: "/tmp/serenity_report_localhost.txt"
+      register: report_content_slurp
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_slurp.content | b64decode }}"
+
+    - name: Verify report content for disk usage
+      ansible.builtin.assert:
+        that: "'Disk Usage (root): /dev/root        20G  5.0G   14G  27% /' in report_content"
+        msg: "Disk usage not found or incorrect in report."
+
+    - name: Verify report content for serene services
+      ansible.builtin.assert:
+        that: "'Serene Services (Running):\n    - sshd\n    - systemd-journald' in report_content"
+        msg: "Serene services not found or incorrect in report."
+
+    - name: Verify report content for unserene services
+      ansible.builtin.assert:
+        that: "'Unserene Services (Not Running):\n    - nginx' in report_content"
+        msg: "Unserene services not found or incorrect in report."
+
+    - name: Verify report content for log tidying
+      ansible.builtin.assert:
+        that: "'3 old log files were tidied (deleted).' in report_content"
+        msg: "Log tidying count not found or incorrect in report."
+
+    - name: Assert old log files are deleted
+      ansible.builtin.stat:
+        path: "{{ test_log_path }}/old_log_8.log"
+      register: old_log_8_stat
+
+    - name: Verify old log 8 is deleted
+      ansible.builtin.assert:
+        that: "old_log_8_stat.stat.exists is false"
+        msg: "Old log file old_log_8.log was not deleted."
+
+    - name: Assert recent log file still exists
+      ansible.builtin.stat:
+        path: "{{ test_log_path }}/recent_log.log"
+      register: recent_log_stat
+
+    - name: Verify recent log still exists
+      ansible.builtin.assert:
+        that: "recent_log_stat.stat.exists is true"
+        msg: "Recent log file was unexpectedly deleted."
+
+    - name: Clean up test log directory
+      ansible.builtin.file:
+        path: "{{ test_log_path }}"
+        state: absent

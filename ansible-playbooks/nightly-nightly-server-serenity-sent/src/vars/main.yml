@@ -1,0 +1,15 @@
+---
+services_to_monitor:
+  - sshd
+  - systemd-journald
+  # Add other critical services here, e.g.,
+  # - nginx
+  # - postgresql
+
+log_paths_to_tidy:
+  - /var/log/ansible_test_logs # Example path for testing, ensure it exists or is mocked
+  # Add other log directories to tidy up
+  # - /var/log/nginx
+  # - /var/log/apache2
+
+log_retention_days: 7
