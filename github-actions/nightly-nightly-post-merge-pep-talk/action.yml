@@ -1,0 +1,9 @@
+name: 'Nightly Post-Merge Pep Talk'
+description: 'Adds a whimsical, encouraging comment to a Pull Request after it is merged.'
+inputs:
+  github-token:
+    description: 'GitHub token with permissions to comment on PRs.'
+    required: true
+runs:
+  using: 'node16'
+  main: 'src/main.js'
