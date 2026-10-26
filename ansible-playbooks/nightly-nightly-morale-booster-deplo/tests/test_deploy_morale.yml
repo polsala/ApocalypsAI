@@ -1,0 +1,117 @@
+---
+- name: Test Morale Booster Deployment
+  hosts: localhost
+  gather_facts: no
+  connection: local # Run tests locally
+
+  vars:
+    # Mock rationale: Overriding 'current_morale_tip' to ensure deterministic testing
+    # without relying on the 'random' filter.
+    current_morale_tip: "Test Tip: Keep calm and carry a spork."
+    # Mock rationale: Fixing the date for deterministic filename generation.
+    current_date: "2023-10-27"
+    test_base_dir: "/tmp/apocalypsai_morale_test"
+    test_tips_dir: "/tmp/apocalypsai_morale_test/daily_tips"
+    test_tip_file: "/tmp/apocalypsai_morale_test/daily_tips/2023-10-27.txt"
+
+  tasks:
+    - name: Clean up previous test run (if any)
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      check_mode: no # Always clean up
+
+    - name: Run the main playbook in check mode
+      ansible.builtin.include_tasks:
+        file: ../src/deploy_morale.yml
+      vars:
+        # Override paths for testing in /tmp
+        base_morale_dir: "{{ test_base_dir }}"
+        daily_tips_dir: "{{ test_tips_dir }}"
+        # Override current_date and current_morale_tip for deterministic testing
+        current_date: "{{ current_date }}"
+        current_morale_tip: "{{ current_morale_tip }}"
+      # Mock rationale: We run in check_mode to verify expected changes without actual file system modification.
+      check_mode: yes
+      register: deploy_results_check_mode
+
+    - name: Assert base morale directory would be created
+      ansible.builtin.assert:
+        that:
+          - "deploy_results_check_mode.tasks[0].task.name == 'Ensure base morale directory exists'"
+          - "deploy_results_check_mode.tasks[0].changed == true"
+        msg: "Base morale directory should report 'changed' in check mode if not present."
+
+    - name: Assert daily tips directory would be created
+      ansible.builtin.assert:
+        that:
+          - "deploy_results_check_mode.tasks[1].task.name == 'Ensure daily tips directory exists'"
+          - "deploy_results_check_mode.tasks[1].changed == true"
+        msg: "Daily tips directory should report 'changed' in check mode if not present."
+
+    - name: Assert random tip selection task would run
+      ansible.builtin.assert:
+        that:
+          - "deploy_results_check_mode.tasks[2].task.name == 'Select a random morale tip'"
+          - "deploy_results_check_mode.tasks[2].changed == true" # set_fact always reports changed
+        msg: "Random tip selection should run."
+
+    - name: Assert current date fact task would run
+      ansible.builtin.assert:
+        that:
+          - "deploy_results_check_mode.tasks[3].task.name == 'Get current date for filename'"
+          - "deploy_results_check_mode.tasks[3].changed == true" # set_fact always reports changed
+        msg: "Current date fact should be set."
+
+    - name: Assert today's morale tip file would be deployed
+      ansible.builtin.assert:
+        that:
+          - "deploy_results_check_mode.tasks[4].task.name == 'Deploy today\'s morale tip'"
+          - "deploy_results_check_mode.tasks[4].changed == true"
+        msg: "Morale tip file should report 'changed' in check mode if not present or content differs."
+
+    # To make it more robust, let's actually run it once and check content.
+    - name: Run the main playbook for real to check content
+      ansible.builtin.include_tasks:
+        file: ../src/deploy_morale.yml
+      vars:
+        base_morale_dir: "{{ test_base_dir }}"
+        daily_tips_dir: "{{ test_tips_dir }}"
+        current_date: "{{ current_date }}"
+        current_morale_tip: "{{ current_morale_tip }}"
+      # Mock rationale: Running without check_mode to verify actual file creation and content.
+      # The 'current_date' and 'current_morale_tip' are still fixed by the test playbook's vars.
+      register: real_deploy_results
+
+    - name: Verify base morale directory exists
+      ansible.builtin.stat:
+        path: "{{ test_base_dir }}"
+      register: base_dir_stat
+    - ansible.builtin.assert:
+        that:
+          - "base_dir_stat.stat.exists"
+          - "base_dir_stat.stat.isdir"
+
+    - name: Verify daily tips directory exists
+      ansible.builtin.stat:
+        path: "{{ test_tips_dir }}"
+      register: tips_dir_stat
+    - ansible.builtin.assert:
+        that:
+          - "tips_dir_stat.stat.exists"
+          - "tips_dir_stat.stat.isdir"
+
+    - name: Verify morale tip file exists and has correct content
+      ansible.builtin.slurp:
+        src: "{{ test_tip_file }}"
+      register: tip_file_content
+    - ansible.builtin.assert:
+        that:
+          - "tip_file_content.content | b64decode | trim == current_morale_tip"
+        msg: "Morale tip file content does not match expected."
+
+    - name: Clean up after test
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent"
+      check_mode: no # Always clean up
