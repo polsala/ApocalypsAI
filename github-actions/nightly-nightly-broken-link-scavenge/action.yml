@@ -1,0 +1,54 @@
+name: 'Nightly Broken Link Scavenger'
+description: 'Scans markdown files for broken external links and reports them.'
+
+inputs:
+  path:
+    description: 'The directory to start scanning for markdown files.'
+    required: false
+    default: '.'
+  ignore_patterns:
+    description: 'Newline-separated regex patterns for URLs to ignore.'
+    required: false
+    default: ''
+
+outputs:
+  broken_links_found:
+    description: 'True if any broken links were found, false otherwise.'
+    value: ${{ steps.run_scavenger.outputs.broken_links_found }}
+  broken_links_report:
+    description: 'A multiline string of the broken links found.'
+    value: ${{ steps.run_scavenger.outputs.broken_links_report }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Link Scavenger Script
+      id: run_scavenger
+      shell: bash
+      run: |
+        # Ensure the script is executable
+        chmod +x ${{ github.action_path }}/src/check_links.sh
+        
+        # Pass inputs to the script
+        REPORT_OUTPUT=$(
+          ${{ github.action_path }}/src/check_links.sh \
+            "${{ inputs.path }}" \
+            "${{ inputs.ignore_patterns }}"
+        )
+        
+        # Set outputs based on script's return value and output
+        if [ -n "$REPORT_OUTPUT" ]; then
+          echo "broken_links_found=true" >> "$GITHUB_OUTPUT"
+          echo "broken_links_report<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$REPORT_OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "## ⚠️ Broken Links Detected! ⚠️" >> "$GITHUB_STEP_SUMMARY"
+          echo "The Nightly Broken Link Scavenger has found the following 'wasteland' URLs:\n" >> "$GITHUB_STEP_SUMMARY"
+          echo "```" >> "$GITHUB_STEP_SUMMARY"
+          echo "$REPORT_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+          echo "```" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "broken_links_found=false" >> "$GITHUB_OUTPUT"
+          echo "broken_links_report=" >> "$GITHUB_OUTPUT"
+          echo "✅ All links are sound! The digital wasteland is clear." >> "$GITHUB_STEP_SUMMARY"
+        fi
