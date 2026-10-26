@@ -1,0 +1,41 @@
+---
+- name: Verify fun fact distribution
+  hosts: localhost
+  become: false
+  vars:
+    dest_path: /tmp/motd_fun_fact_test
+    expected_facts:
+      - "Honey never spoils."
+      - "Bananas are berries, but strawberries aren't."
+      - "Octopuses have three hearts."
+      - "A day on Venus is longer than its year."
+      - "There are more stars in the universe than grains of sand on Earth."
+  tasks:
+    - name: Run the fun_fact playbook with custom destination
+      import_playbook: ../src/fun_fact.yml
+      vars:
+        dest_path: "{{ dest_path }}"
+
+    - name: Ensure the fact file exists
+      stat:
+        path: "{{ dest_path }}"
+      register: fact_file
+
+    - name: Assert file exists
+      assert:
+        that:
+          - fact_file.stat.exists
+
+    - name: Read the fact file content
+      slurp:
+        src: "{{ dest_path }}"
+      register: fact_content
+
+    - name: Decode fact text
+      set_fact:
+        fact_text: "{{ fact_content.content | b64decode | trim }}"
+
+    - name: Assert fact is from the predefined list
+      assert:
+        that:
+          - fact_text in expected_facts
