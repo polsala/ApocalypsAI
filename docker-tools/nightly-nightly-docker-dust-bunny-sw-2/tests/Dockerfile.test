@@ -1,0 +1,10 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY src/dust_bunny_sweeper.py /app/
+COPY tests/test_sweeper.py /app/
+
+RUN pip install pytest
+
+ENTRYPOINT ["pytest", "/app/test_sweeper.py"]
