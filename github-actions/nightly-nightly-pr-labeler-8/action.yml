@@ -1,0 +1,13 @@
+name: "Nightly PR Labeler"
+description: "Auto‑label PRs based on changed files and add a random emoji label."
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+  label-mapping:
+    description: "JSON string mapping glob patterns to label names"
+    required: false
+    default: "{}"
+runs:
+  using: "node12"
+  main: "src/index.js"
