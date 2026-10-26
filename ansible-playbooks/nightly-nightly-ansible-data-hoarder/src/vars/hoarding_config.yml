@@ -1,0 +1,9 @@
+# src/vars/hoarding_config.yml
+# Define the local directories you want to archive.
+source_dirs:
+  - /tmp/my_precious_data
+  - /tmp/another_vault
+
+# Define the remote path where archives should be stored.
+# This path must exist and be writable on the target host(s).
+remote_hoard_path: /tmp/the_digital_bunker

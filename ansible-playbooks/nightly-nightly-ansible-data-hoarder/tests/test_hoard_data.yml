@@ -1,0 +1,99 @@
+---
+- name: Test Nightly Data Hoarder Playbook
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    test_source_dir_1: "/tmp/test_hoard_data_1"
+    test_source_dir_2: "/tmp/test_hoard_data_2"
+    test_remote_hoard_path: "/tmp/test_digital_bunker_hoard"
+
+  pre_tasks:
+    - name: Ensure test source directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_source_dir_1 }}"
+        - "{{ test_source_dir_2 }}"
+      # Mock rationale: Creates local dummy directories to simulate actual source data paths.
+
+    - name: Create dummy files in test source directories
+      ansible.builtin.copy:
+        content: "This is some test data for {{ item.file }}."
+        dest: "{{ item.path }}/{{ item.file }}"
+      loop:
+        - { path: "{{ test_source_dir_1 }}", file: "file1.txt" }
+        - { path: "{{ test_source_dir_1 }}", file: "file2.log" }
+        - { path: "{{ test_source_dir_2 }}", file: "config.json" }
+      # Mock rationale: Populates dummy directories with files, making them valid targets for archiving.
+
+    - name: Ensure test remote hoard path exists and is empty
+      ansible.builtin.file:
+        path: "{{ test_remote_hoard_path }}"
+        state: absent
+      # Mock rationale: Ensures a clean state for the test destination.
+
+    - name: Re-create test remote hoard path
+      ansible.builtin.file:
+        path: "{{ test_remote_hoard_path }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a local dummy directory to simulate the remote hoard location.
+
+  tasks:
+    - name: Get current timestamp for expected archive names
+      ansible.builtin.set_fact:
+        expected_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+      # Mock rationale: Captures the timestamp that the main playbook will use for naming archives, enabling deterministic checks.
+
+    - name: Run the main data hoarding playbook
+      ansible.builtin.include_tasks:
+        file: ../src/hoard_data.yml
+      vars:
+        source_dirs:
+          - "{{ test_source_dir_1 }}"
+          - "{{ test_source_dir_2 }}"
+        remote_hoard_path: "{{ test_remote_hoard_path }}"
+      # Mock rationale: Executes the target playbook with test-specific variables, directing its operations to the dummy paths.
+
+    - name: Verify archive 1 was created and transferred
+      ansible.builtin.stat:
+        path: "{{ test_remote_hoard_path }}/{{ test_source_dir_1 | basename }}-{{ expected_timestamp }}.tar.gz"
+      register: stat_archive_1
+      # Mock rationale: Checks for the existence of the expected archive file in the dummy remote hoard path.
+
+    - name: Assert archive 1 exists
+      ansible.builtin.assert:
+        that:
+          - stat_archive_1.stat.exists is true
+        msg: "Archive for {{ test_source_dir_1 }} was not found in {{ test_remote_hoard_path }}"
+
+    - name: Verify archive 2 was created and transferred
+      ansible.builtin.stat:
+        path: "{{ test_remote_hoard_path }}/{{ test_source_dir_2 | basename }}-{{ expected_timestamp }}.tar.gz"
+      register: stat_archive_2
+      # Mock rationale: Checks for the existence of the expected archive file in the dummy remote hoard path.
+
+    - name: Assert archive 2 exists
+      ansible.builtin.assert:
+        that:
+          - stat_archive_2.stat.exists is true
+        msg: "Archive for {{ test_source_dir_2 }} was not found in {{ test_remote_hoard_path }}"
+
+  post_tasks:
+    - name: Clean up test source directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_source_dir_1 }}"
+        - "{{ test_source_dir_2 }}"
+      # Mock rationale: Removes the dummy source directories after testing.
+
+    - name: Clean up test remote hoard path
+      ansible.builtin.file:
+        path: "{{ test_remote_hoard_path }}"
+        state: absent
+      # Mock rationale: Removes the dummy remote hoard directory after testing.
