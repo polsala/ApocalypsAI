@@ -1,0 +1,1 @@
+use ansi_palette::{color_line, generate_palette};\n\n#[test]\nfn test_color_line() {\n    let line = color_line(0);\n    assert_eq!(line, "0: \\x1b[38;5;0m█\\x1b[0m");\n}\n\n#[test]\nfn test_generate_palette_first_two() {\n    let palette = generate_palette(0..2);\n    let expected = format!("{}\\n{}", color_line(0), color_line(1));\n    assert_eq!(palette, expected);\n}\n
