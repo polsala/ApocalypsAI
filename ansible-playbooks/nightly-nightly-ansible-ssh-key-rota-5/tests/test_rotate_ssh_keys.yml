@@ -1,0 +1,11 @@
+---
+- name: Test SSH key rotator playbook (check mode)
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run rotate playbook in check mode
+      import_playbook: "../rotate_ssh_keys.yml"
+      vars:
+        old_fingerprint: "FA:KE:FI:NG:ER:PR:IN:T"
+      check_mode: true
+      # Mock rationale: using check mode ensures the test runs deterministically without altering the host.

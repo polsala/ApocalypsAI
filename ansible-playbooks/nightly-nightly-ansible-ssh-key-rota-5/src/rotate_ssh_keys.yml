@@ -1,0 +1,28 @@
+---
+- name: Rotate SSH keys on target hosts
+  hosts: all
+  become: true
+  vars:
+    key_path: "{{ key_path | default('~/.ssh/id_rsa') }}"
+    old_fingerprint: "{{ old_fingerprint | default('') }}"
+  tasks:
+    - name: Generate new RSA key pair
+      openssh_keypair:
+        path: "{{ key_path }}"
+        type: rsa
+        size: 4096
+        force: true
+      register: new_key
+
+    - name: Ensure public key is present in authorized_keys
+      authorized_key:
+        user: "{{ ansible_user | default('root') }}"
+        state: present
+        key: "{{ new_key.public_key }}"
+
+    - name: Remove old key by fingerprint
+      lineinfile:
+        path: "~/.ssh/authorized_keys"
+        state: absent
+        regexp: "{{ old_fingerprint }}"
+      when: old_fingerprint != ''
