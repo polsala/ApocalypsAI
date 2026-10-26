@@ -1,0 +1,16 @@
+{
+  "name": "nightly-temporal-nudge-action",
+  "version": "1.0.0",
+  "description": "Gently nudges stale issues/PRs with a time-themed comment.",
+  "main": "src/nudge.js",
+  "scripts": {
+    "test": "jest tests/test.js"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
