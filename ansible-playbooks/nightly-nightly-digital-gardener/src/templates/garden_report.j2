@@ -1,0 +1,21 @@
+Digital Garden Cultivation Report - {{ ansible_date_time.iso8601_basic_short }}
+
+---
+Healthy Notes ({{ garden_report.healthy_notes | length }}):
+{% for note in garden_report.healthy_notes %}
+- {{ note }}
+{% endfor %}
+
+---
+Notes Needing Pruning ({{ garden_report.notes_needing_pruning | length }}):
+{% for note in garden_report.notes_needing_pruning %}
+- {{ note.path }}
+  Reason: {{ note.reason }}
+  {% if note.missing_fields %}Missing Fields: {{ note.missing_fields | join(', ') }}{% endif %}
+{% endfor %}
+
+---
+Summary:
+Total notes scanned: {{ markdown_files.files | length }}
+Healthy notes: {{ garden_report.healthy_notes | length }}
+Notes needing pruning: {{ garden_report.notes_needing_pruning | length }}
