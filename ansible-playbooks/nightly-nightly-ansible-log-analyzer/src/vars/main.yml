@@ -1,0 +1,14 @@
+log_files_to_analyze:
+  - /var/log/syslog
+  - /var/log/auth.log
+  - /var/log/kern.log
+
+patterns_to_find:
+  - name: "ERROR"
+    regex: "ERROR"
+  - name: "WARNING"
+    regex: "WARN(ING)?"
+  - name: "CRITICAL"
+    regex: "CRITICAL"
+  - name: "FAILED_LOGIN"
+    regex: "Failed password for invalid user"
