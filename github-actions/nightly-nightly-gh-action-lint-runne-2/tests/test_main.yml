@@ -1,0 +1,59 @@
+name: 'Test GitHub Actions Linter'
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-linting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Mocking the actual linter action for deterministic testing.
+      # In a real scenario, this would be the actual action.
+      - name: Mock Linter Action (Success Case)
+        uses: ./nightly-gh-action-lint-runner
+        id: mock-linter-success
+        with:
+          workflow_path: 'tests/mock_workflows/valid'
+          linters: "yamllint,actionlint"
+        # Mock rationale: This step simulates the successful execution of the linter action.
+        # We are not testing the actual linter tools here, but the action's ability to call them.
+        # The actual linters are tested by their own unit tests.
+
+      - name: Assert Success Case
+        run: |
+          if [ "${{ steps.mock-linter-success.outcome }}" != "success" ]; then
+            echo "Mock linter action failed unexpectedly in success case!"
+            exit 1
+          fi
+          echo "Success case passed."
+
+      # This test case is designed to fail the linter.
+      # We'll use a mock workflow file that has intentional errors.
+      - name: Mock Linter Action (Failure Case)
+        uses: ./nightly-gh-action-lint-runner
+        id: mock-linter-failure
+        with:
+          workflow_path: 'tests/mock_workflows/invalid'
+          linters: "yamllint,actionlint"
+        continue-on-error: true # Allow the workflow to continue to check the outcome
+        # Mock rationale: This step simulates the linter action encountering errors.
+        # The 'continue-on-error: true' allows us to inspect the outcome.
+
+      - name: Assert Failure Case
+        run: |
+          if [ "${{ steps.mock-linter-failure.outcome }}" != "failure" ]; then
+            echo "Mock linter action did not fail as expected in failure case!"
+            exit 1
+          fi
+          echo "Failure case passed."
+
+# --- Mock Workflow Files ---
+# Create these directories and files for the tests to run.
+# tests/mock_workflows/valid/sample.yml
+# tests/mock_workflows/invalid/sample.yml

@@ -1,0 +1,60 @@
+name: 'GitHub Actions Workflow Linter'
+
+# This action lints and validates GitHub Actions workflow files.
+# It uses a combination of tools to ensure correctness and adherence to best practices.
+
+on: [workflow_call]
+
+inputs:
+  workflow_path:
+    description: 'Path to the directory containing workflow files (e.g., .github/workflows)'
+    required: false
+    default: '.github/workflows'
+  linters:
+    description: 'Comma-separated list of linters to run (e.g., yamllint,actionlint). Defaults to all available.'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y yamllint
+        # actionlint requires Go, which is usually available in GitHub-hosted runners.
+        # If not, you might need to install Go first.
+        # For local runners, ensure Go is installed and in PATH.
+        if ! command -v actionlint &> /dev/null; then
+          echo "Installing actionlint..."
+          GO111MODULE=on go install github.com/rhysd/actionlint/cmd/actionlint@latest
+        fi
+
+    - name: Lint Workflows
+      shell: bash
+      run: |
+        WORKFLOW_DIR=${{ inputs.workflow_path }}
+        LINTERS=${{ inputs.linters }}
+
+        echo "Linting workflows in: $WORKFLOW_DIR"
+
+        if [ -z "$LINTERS" ] || [[ "$LINTERS" == *"yamllint"* ]]; then
+          echo "Running yamllint..."
+          yamllint $WORKFLOW_DIR
+          if [ $? -ne 0 ]; then
+            echo "yamllint found issues. Please fix them."
+            exit 1
+          fi
+        fi
+
+        if [ -z "$LINTERS" ] || [[ "$LINTERS" == *"actionlint"* ]]; then
+          echo "Running actionlint..."
+          actionlint -color $WORKFLOW_DIR
+          if [ $? -ne 0 ]; then
+            echo "actionlint found issues. Please fix them."
+            exit 1
+          fi
+        fi
+
+        echo "Workflow linting complete. No issues found."
