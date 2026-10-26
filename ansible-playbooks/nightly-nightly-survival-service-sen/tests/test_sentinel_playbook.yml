@@ -1,0 +1,93 @@
+---
+- name: Test Nightly Survival Service Sentinel - Nominal Case
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../vars/survival_services.yml
+  vars:
+    mock_facts: true
+    mock_service_facts_data:
+      sshd: { state: 'running', status: 'active' }
+      systemd-journald: { state: 'running', status: 'active' }
+      cron: { state: 'running', status: 'active' }
+    mock_config_file_status_data:
+      - item: { path: '/etc/ssh/sshd_config' }
+        stat: { exists: true }
+      - item: { path: '/etc/fstab' }
+        stat: { exists: true }
+      - item: { path: '/etc/crontab' }
+        stat: { exists: true }
+    ansible_hostname: "test-host-nominal"
+    ansible_date_time:
+      iso8601: "2023-10-27T22:00:00Z"
+      iso8601_basic_short: "20231027T220000"
+  tasks:
+    - name: Run the main playbook with mocked facts
+      ansible.builtin.import_playbook: ../src/sentinel_playbook.yml
+
+    - name: Read generated report
+      ansible.builtin.slurp:
+        src: "/tmp/sentinel_reports/test-host-nominal_sentinel_log_20231027T220000.txt"
+      register: nominal_report_content
+      delegate_to: localhost
+
+    - name: Assert report content for nominal case
+      ansible.builtin.assert:
+        that:
+          - "'Overall Status: NOMINAL' in (nominal_report_content.content | b64decode)"
+          - "'Service: sshd\n  Status: running (Running: True)' in (nominal_report_content.content | b64decode)"
+          - "'File: /etc/fstab\n  Present: True' in (nominal_report_content.content | b64decode)"
+        msg: "Nominal case report content assertion failed."
+
+    - name: Clean up generated report (nominal)
+      ansible.builtin.file:
+        path: "/tmp/sentinel_reports/test-host-nominal_sentinel_log_20231027T220000.txt"
+        state: absent
+      delegate_to: localhost
+
+
+- name: Test Nightly Survival Service Sentinel - Alert Case
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../vars/survival_services.yml
+  vars:
+    mock_facts: true
+    mock_service_facts_data:
+      sshd: { state: 'stopped', status: 'inactive' } # Mocked as stopped
+      systemd-journald: { state: 'running', status: 'active' }
+      cron: { state: 'running', status: 'active' }
+    mock_config_file_status_data:
+      - item: { path: '/etc/ssh/sshd_config' }
+        stat: { exists: true }
+      - item: { path: '/etc/fstab' }
+        stat: { exists: false } # Mocked as missing
+      - item: { path: '/etc/crontab' }
+        stat: { exists: true }
+    ansible_hostname: "test-host-alert"
+    ansible_date_time:
+      iso8601: "2023-10-27T22:05:00Z"
+      iso8601_basic_short: "20231027T220500"
+  tasks:
+    - name: Run the main playbook with mocked facts
+      ansible.builtin.import_playbook: ../src/sentinel_playbook.yml
+
+    - name: Read generated report
+      ansible.builtin.slurp:
+        src: "/tmp/sentinel_reports/test-host-alert_sentinel_log_20231027T220500.txt"
+      register: alert_report_content
+      delegate_to: localhost
+
+    - name: Assert report content for alert case
+      ansible.builtin.assert:
+        that:
+          - "'Overall Status: ALERT' in (alert_report_content.content | b64decode)"
+          - "'Service: sshd\n  Status: stopped (Running: False)' in (alert_report_content.content | b64decode)"
+          - "'File: /etc/fstab\n  Present: False' in (alert_report_content.content | b64decode)"
+        msg: "Alert case report content assertion failed."
+
+    - name: Clean up generated report (alert)
+      ansible.builtin.file:
+        path: "/tmp/sentinel_reports/test-host-alert_sentinel_log_20231027T220500.txt"
+        state: absent
+      delegate_to: localhost

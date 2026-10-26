@@ -1,0 +1,79 @@
+---
+- name: Nightly Survival Service Sentinel
+  hosts: all
+  # gather_facts: yes # Fact gathering is controlled by the 'mock_facts' variable for testability
+  vars_files:
+    - ../vars/survival_services.yml
+  vars:
+    mock_facts: false # Set to true for testing with mocked facts
+    # Default mock data, will be overridden by test playbook if mock_facts is true
+    mock_service_facts_data: {}
+    mock_config_file_status_data: {}
+
+  tasks:
+    - name: Gather facts (if not mocking)
+      ansible.builtin.setup:
+      when: mock_facts is false
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: /tmp/sentinel_reports
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Set service_facts_source based on mock_facts
+      ansible.builtin.set_fact:
+        service_facts_source: "{{ mock_facts | ternary(mock_service_facts_data, ansible_facts.services) }}"
+      # Mock rationale: This task conditionally sets the source of service facts. If `mock_facts` is true, it uses `mock_service_facts_data` provided by the test. Otherwise, it uses the actual `ansible_facts.services` gathered from the target host. This ensures deterministic testing without actual service interaction.
+
+    - name: Check presence of critical configuration files (actual)
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop: "{{ critical_config_files }}"
+      register: config_file_status_actual
+      when: mock_facts is false
+
+    - name: Set config_file_status_source based on mock_facts
+      ansible.builtin.set_fact:
+        config_file_status_source: "{{ mock_facts | ternary(mock_config_file_status_data, config_file_status_actual.results) }}"
+      # Mock rationale: Similar to service facts, this task conditionally sets the source for configuration file status. It uses `mock_config_file_status_data` for tests and actual `stat` results otherwise, ensuring offline and deterministic behavior during testing.
+
+    - name: Process service and config checks
+      ansible.builtin.set_fact:
+        sentinel_report_data:
+          services: []
+          configs: []
+          overall_status: "NOMINAL"
+
+    - name: Populate service status
+      ansible.builtin.set_fact:
+        sentinel_report_data: "{{ sentinel_report_data | combine({'services': (sentinel_report_data.services | default([])) + [{'name': item.name, 'status': service_facts_source[item.name].state | default('not_found'), 'running': (service_facts_source[item.name].state | default('stopped')) == 'running'}]}) }}"
+      loop: "{{ critical_services }}"
+      when: item.name in service_facts_source
+
+    - name: Populate service status for not found services
+      ansible.builtin.set_fact:
+        sentinel_report_data: "{{ sentinel_report_data | combine({'services': (sentinel_report_data.services | default([])) + [{'name': item.name, 'status': 'not_found', 'running': false}]}) }}"
+      loop: "{{ critical_services }}"
+      when: item.name not in service_facts_source
+
+    - name: Populate config file status
+      ansible.builtin.set_fact:
+        sentinel_report_data: "{{ sentinel_report_data | combine({'configs': (sentinel_report_data.configs | default([])) + [{'path': item.item.path, 'present': item.stat.exists}]}) }}"
+      loop: "{{ config_file_status_source }}"
+
+    - name: Determine overall status
+      ansible.builtin.set_fact:
+        sentinel_report_data: "{{ sentinel_report_data | combine({'overall_status': 'ALERT'}) }}"
+      when: >
+        (sentinel_report_data.services | selectattr('running', 'equalto', false) | list | length > 0) or
+        (sentinel_report_data.configs | selectattr('present', 'equalto', false) | list | length > 0)
+
+    - name: Generate Sentinel's Log report
+      ansible.builtin.template:
+        src: ../templates/sentinel_report.j2
+        dest: "/tmp/sentinel_reports/{{ ansible_hostname }}_sentinel_log_{{ ansible_date_time.iso8601_basic_short }}.txt"
+      delegate_to: localhost
+      vars:
+        report: "{{ sentinel_report_data }}"
