@@ -1,0 +1,47 @@
+---
+- name: Scan for Digital Dust Bunnies
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+  vars:
+    cleanup_mode: false # Set to true via -e "cleanup_mode=true" to enable cleanup
+
+  tasks:
+    - name: Ensure scan paths exist (and create if missing for testing purposes)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ scan_paths }}"
+      delegate_to: "{{ inventory_hostname }}" # Ensure this runs on the target host
+      become: yes # May need elevated privileges to create dirs like /tmp
+
+    - name: Find potential dust bunnies
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ dust_bunny_age_days }}d"
+        recurse: yes
+        file_type: file
+      register: found_dust_bunnies
+
+    - name: Set fact if dust bunnies were found
+      ansible.builtin.set_fact:
+        dust_bunnies_found: "{{ found_dust_bunnies.files | length > 0 }}"
+
+    - name: Display Dust Bunny Report (console output)
+      ansible.builtin.debug:
+        msg: "{{ lookup('ansible.builtin.template', 'templates/dust_bunny_report.j2', vars={
+          'hostname': inventory_hostname,
+          'dust_bunnies': found_dust_bunnies.files,
+          'age_threshold': dust_bunny_age_days
+        }) }}"
+      when: found_dust_bunnies.files | length > 0
+
+    - name: Clean up dust bunnies (if cleanup_mode is true)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_dust_bunnies.files }}"
+      when: cleanup_mode | bool
+      become: yes # May need elevated privileges to delete files

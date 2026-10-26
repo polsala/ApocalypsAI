@@ -1,0 +1,130 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_hosts
+  gather_facts: yes # Needed for ansible_date_time.date in touch command
+  vars_files:
+    - test_vars.yml
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_scan_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Clean up previous test files
+      ansible.builtin.file:
+        path: "{{ test_scan_path }}"
+        state: absent
+      ignore_errors: yes # In case directory doesn't exist yet
+
+    - name: Recreate test directory
+      ansible.builtin.file:
+        path: "{{ test_scan_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create an old dust bunny file
+      ansible.builtin.copy:
+        dest: "{{ test_scan_path }}/old_log.txt"
+        content: "This is an old log file."
+        mode: '0644'
+      # Mock rationale: We create a file and then touch it to set its mtime to be old.
+      # This simulates an old file on a remote system. The 'find' module will then
+      # correctly identify it based on its mtime. This is deterministic and offline.
+    - name: Set mtime for old dust bunny file
+      ansible.builtin.command: "touch -d '{{ ansible_date_time.date }} -{{ test_age_days + 1 }} days' {{ test_scan_path }}/old_log.txt"
+      changed_when: true # touch always changes mtime
+
+    - name: Create another old dust bunny file
+      ansible.builtin.copy:
+        dest: "{{ test_scan_path }}/another_old_file.bak"
+        content: "Another old backup."
+        mode: '0644'
+    - name: Set mtime for another old dust bunny file
+      ansible.builtin.command: "touch -d '{{ ansible_date_time.date }} -{{ test_age_days + 2 }} days' {{ test_scan_path }}/another_old_file.bak"
+      changed_when: true
+
+    - name: Create a new file (should not be a dust bunny)
+      ansible.builtin.copy:
+        dest: "{{ test_scan_path }}/new_report.txt"
+        content: "This is a new report."
+        mode: '0644'
+      # This file's mtime will be current, so 'find' should ignore it.
+
+    - name: Run dust bunny sweeper in report-only mode
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        scan_paths:
+          - "{{ test_scan_path }}"
+        dust_bunny_age_days: "{{ test_age_days }}"
+        cleanup_mode: false
+      register: report_run_result
+
+    - name: Assert old files are identified in report
+      ansible.builtin.assert:
+        that:
+          - "'old_log.txt' in item.msg"
+          - "'another_old_file.bak' in item.msg"
+          - "'new_report.txt' not in item.msg"
+        msg: "Report did not correctly identify dust bunnies."
+      loop: "{{ report_run_result.results | selectattr('task_action', 'equalto', 'debug') | list }}"
+      when: item.msg is defined
+
+    - name: Verify old files still exist before cleanup
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_scan_path }}/old_log.txt"
+        - "{{ test_scan_path }}/another_old_file.bak"
+      register: old_files_stat
+    - ansible.builtin.assert:
+        that: item.stat.exists
+        msg: "Old file {{ item.item }} should exist before cleanup."
+      loop: "{{ old_files_stat.results }}"
+
+    - name: Verify new file still exists before cleanup
+      ansible.builtin.stat:
+        path: "{{ test_scan_path }}/new_report.txt"
+      register: new_file_stat
+    - ansible.builtin.assert:
+        that: new_file_stat.stat.exists
+        msg: "New file should exist before cleanup."
+
+    - name: Run dust bunny sweeper in cleanup mode
+      ansible.builtin.include_tasks:
+        file: ../src/dust_bunny_sweeper.yml
+      vars:
+        scan_paths:
+          - "{{ test_scan_path }}"
+        dust_bunny_age_days: "{{ test_age_days }}"
+        cleanup_mode: true
+      register: cleanup_run_result
+
+    - name: Assert old files are removed after cleanup
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_scan_path }}/old_log.txt"
+        - "{{ test_scan_path }}/another_old_file.bak"
+      register: old_files_after_cleanup
+    - ansible.builtin.assert:
+        that: not item.stat.exists
+        msg: "Old file {{ item.item }} should have been removed."
+      loop: "{{ old_files_after_cleanup.results }}"
+
+    - name: Assert new file still exists after cleanup
+      ansible.builtin.stat:
+        path: "{{ test_scan_path }}/new_report.txt"
+      register: new_file_after_cleanup
+    - ansible.builtin.assert:
+        that: new_file_after_cleanup.stat.exists
+        msg: "New file should still exist after cleanup."
+
+  always:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_scan_path }}"
+        state: absent
+      ignore_errors: yes # Ensure cleanup even if previous tasks failed
