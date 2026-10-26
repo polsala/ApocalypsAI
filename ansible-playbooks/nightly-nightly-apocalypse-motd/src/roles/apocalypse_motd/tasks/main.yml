@@ -1,0 +1,12 @@
+- name: Ensure MOTD directory exists
+  file:
+    path: "{{ motd_path | dirname }}"
+    state: directory
+    mode: '0755'
+  when: motd_path != '/etc/motd'
+
+- name: Deploy MOTD file
+  template:
+    src: motd.j2
+    dest: "{{ motd_path }}"
+    mode: '0644'
