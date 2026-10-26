@@ -1,0 +1,23 @@
+name: 'Nightly Workflow Emojifier'
+description: 'Converts GitHub Actions workflow run statuses into whimsical emoji sequences.'
+author: 'ApocalypsAI Integrator Agent'
+
+inputs:
+  status:
+    description: 'The status of the workflow run or job (e.g., success, failure, cancelled).'
+    required: true
+    type: string
+
+outputs:
+  emojis:
+    description: 'The whimsical emoji string representing the status.'
+    value: ${{ steps.emojify_status.outputs.emojis }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: emojify_status
+      shell: bash
+      run: |
+        EMOJIS=$(bash "${{ github.action_path }}/src/emojify.sh" "${{ inputs.status }}")
+        echo "emojis=$EMOJIS" >> "$GITHUB_OUTPUT"
