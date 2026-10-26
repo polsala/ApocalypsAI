@@ -1,0 +1,13 @@
+name: "Nightly PR Labeler"
+description: "Suggests PR labels based on changed files"
+inputs:
+  files:
+    description: "Multiline string of changed file paths"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler
+      shell: bash
+      run: |
+        bash "${{ github.action_path }}/src/labeler.sh" "${{ inputs.files }}"
