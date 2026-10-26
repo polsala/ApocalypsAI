@@ -1,0 +1,56 @@
+.echo-map {
+  display: grid;
+  border: 2px solid #61dafb;
+  width: 600px; /* Adjust as needed */
+  height: 600px; /* Adjust as needed */
+  background-color: #1a1a1a;
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.5);
+}
+
+.cell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(97, 218, 251, 0.1);
+  box-sizing: border-box;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.cell:hover {
+  background-color: rgba(97, 218, 251, 0.1);
+}
+
+.echo-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5); /* Base scale for low strength */
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: all 0.3s ease-out;
+  width: 100%;
+  height: 100%;
+}
+
+/* Echo Type Specific Styles */
+.cell.echo.temporal-rift .echo-indicator {
+  background-color: #ff00ff; /* Magenta */
+  box-shadow: 0 0 15px 5px #ff00ff;
+}
+
+.cell.echo.echo-chamber .echo-indicator {
+  background-color: #ffff00; /* Yellow */
+  box-shadow: 0 0 12px 4px #ffff00;
+}
+
+.cell.echo.time-warp .echo-indicator {
+  background-color: #00ffff; /* Cyan */
+  box-shadow: 0 0 10px 3px #00ffff;
+}
+
+.cell.echo.stable-zone .echo-indicator {
+  background-color: #00ff00; /* Green */
+  box-shadow: 0 0 5px 2px #00ff00;
+  opacity: 0.4;
+}
