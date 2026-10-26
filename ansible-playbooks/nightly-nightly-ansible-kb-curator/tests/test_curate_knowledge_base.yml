@@ -1,0 +1,80 @@
+---
+- name: Test Knowledge Base Curator Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    knowledge_base_path: "{{ playbook_dir }}/test_files"
+    stale_threshold_days: 30 # For testing, a shorter stale period
+    report_file: "{{ playbook_dir }}/test_curation_report.txt"
+    # Mock rationale: Fixed timestamp for deterministic report generation.
+    # This timestamp is used in the report and for calculating staleness.
+    current_timestamp_epoch: "1698393600" # 2023-10-27 10:00:00 UTC
+    current_timestamp_iso: "2023-10-27T10:00:00Z"
+    current_timestamp_formatted: "2023-10-27 10:00:00"
+
+  tasks:
+    - name: Clean up previous test report
+      ansible.builtin.file:
+        path: "{{ report_file }}"
+        state: absent
+      delegate_to: localhost
+
+    - name: Set mtime for stale_note.md
+      ansible.builtin.file:
+        path: "{{ knowledge_base_path }}/stale_note.md"
+        modification_time: "202309010000" # YYYYMMDDHHMM. Mock rationale: Set mtime to a specific past date for deterministic staleness testing.
+      delegate_to: localhost
+
+    - name: Run the main curation playbook
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/../src/curate_knowledge_base.yml"
+      vars:
+        knowledge_base_path: "{{ knowledge_base_path }}"
+        stale_threshold_days: "{{ stale_threshold_days }}"
+        report_file: "{{ report_file }}"
+        # Override dynamic timestamp lookup with fixed values for deterministic testing
+        current_timestamp: "{{ current_timestamp_formatted }}"
+        ansible_date_time: # Mock rationale: Override ansible_date_time for deterministic staleness calculation.
+          epoch: "{{ current_timestamp_epoch }}"
+          iso8601: "{{ current_timestamp_iso }}"
+
+    - name: Read the generated report
+      ansible.builtin.slurp:
+        src: "{{ report_file }}"
+      register: generated_report_slurp
+
+    - name: Decode the report content
+      ansible.builtin.set_fact:
+        generated_report_content: "{{ generated_report_slurp.content | b64decode }}"
+
+    - name: Assert report content for missing metadata
+      ansible.builtin.assert:
+        that:
+          - "'missing_meta.md: Missing title, Missing tags' in generated_report_content"
+          - "'valid_note.md' not in generated_report_content"
+          - "'healthy_note.md' not in generated_report_content"
+        msg: "Report does not correctly identify missing metadata or includes healthy files incorrectly."
+
+    - name: Assert report content for stale files
+      ansible.builtin.assert:
+        that:
+          - "'stale_note.md (Last Modified: 2023-09-01)' in generated_report_content"
+          - "'valid_note.md' not in generated_report_content"
+          - "'healthy_note.md' not in generated_report_content"
+        msg: "Report does not correctly identify stale files or includes healthy files incorrectly."
+
+    - name: Assert report content for healthy files
+      ansible.builtin.assert:
+        that:
+          - "'healthy_note.md' in generated_report_content"
+          - "'valid_note.md' in generated_report_content"
+          - "'Total Files Scanned: 4' in generated_report_content" # valid_note, stale_note, missing_meta, healthy_note
+          - "'Files Needing Attention: 2' in generated_report_content" # stale_note, missing_meta
+        msg: "Report does not correctly identify healthy files or total counts."
+
+    - name: Clean up generated test report
+      ansible.builtin.file:
+        path: "{{ report_file }}"
+        state: absent
+      delegate_to: localhost
