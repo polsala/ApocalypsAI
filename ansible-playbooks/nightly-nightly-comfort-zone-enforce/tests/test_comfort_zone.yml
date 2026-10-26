@@ -1,0 +1,70 @@
+- name: Test Nightly Digital Comfort Zone Enforcer
+  hosts: localhost
+  connection: local
+  become: yes # For paths like /etc/motd.d if not overridden
+  vars:
+    test_base_dir: "{{ lookup('env', 'HOME') }}/.ansible_test_comfort_zone" # Mock rationale: Use a temporary directory for isolated testing.
+    ansible_user: "{{ lookup('env', 'USER') }}" # Mock rationale: Simulate the remote user for path resolution.
+    comfort_zone_base_path: "{{ test_base_dir }}" # Override base path for testing
+  vars_files:
+    - ../vars/comfort_files.yml # Access the same variable definitions
+
+  pre_tasks:
+    - name: Clean up previous test run directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+
+    - name: Create test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+  tasks:
+    - name: Run the main comfort zone playbook
+      ansible.builtin.include_tasks: ../src/comfort_zone.yml
+      delegate_to: localhost
+      run_once: true
+
+    - name: Verify comfort files content and permissions
+      block:
+        - name: Get file stats
+          ansible.builtin.stat:
+            path: "{{ test_base_dir + item.path }}"
+          register: file_stats
+          loop: "{{ comfort_zone_files }}"
+          loop_control:
+            label: "Stat {{ test_base_dir + item.path }}"
+
+        - name: Get file content
+          ansible.builtin.slurp:
+            src: "{{ test_base_dir + item.path }}"
+          register: file_contents
+          loop: "{{ comfort_zone_files }}"
+          loop_control:
+            label: "Slurp {{ test_base_dir + item.path }}"
+
+        - name: Assert file properties
+          ansible.builtin.assert:
+            that:
+              - "item.0.stat.exists"
+              - "item.0.stat.isreg"
+              - "item.0.stat.mode == '{{ item.1.item.mode }}'"
+              - "item.1.content | b64decode == item.1.item.content"
+            fail_msg: "File {{ test_base_dir + item.1.item.path }} verification failed."
+          loop: "{{ file_stats.results | zip(file_contents.results) | list }}"
+          loop_control:
+            label: "Asserting {{ test_base_dir + item.1.item.path }}"
+
+  post_tasks:
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_base_dir }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
