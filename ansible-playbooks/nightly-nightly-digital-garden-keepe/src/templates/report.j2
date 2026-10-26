@@ -1,0 +1,35 @@
+# Digital Garden Keeper Report - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+
+## Summary
+- Total files scanned: {{ report.summary.total_files_scanned | default(0) }}
+- Untagged files found: {{ report.untagged_files | length }}
+- Broken links found: {{ report.broken_links_found | length }}
+- Files archived: {{ report.old_files_archived | length }}
+
+## Untagged Files (missing '{{ required_tags_field }}' or empty)
+{% if report.untagged_files %}
+{% for file in report.untagged_files %}
+- {{ file }}
+{% endfor %}
+{% else %}
+_None found._
+{% endif %}
+
+## Broken Internal Links
+{% if report.broken_links_found %}
+{% for link_info in report.broken_links_found %}
+- Source: {{ link_info.source }}
+  Broken Link: `{{ link_info.link }}` (Target: `{{ link_info.target_path }}`)
+{% endfor %}
+{% else %}
+_None found._
+{% endif %}
+
+## Archived Files (older than {{ archive_after_days }} days)
+{% if report.old_files_archived %}
+{% for file in report.old_files_archived %}
+- {{ file }}
+{% endfor %}
+{% else %}
+_None found._
+{% endif %}

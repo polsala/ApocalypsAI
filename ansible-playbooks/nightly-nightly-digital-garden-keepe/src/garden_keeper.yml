@@ -1,0 +1,52 @@
+---
+- name: Digital Garden Keeper Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure archive directory exists
+      ansible.builtin.file:
+        path: "{{ archive_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find all markdown files
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files_found
+
+    - name: Initialize report variables
+      ansible.builtin.set_fact:
+        untagged_files: []
+        old_files_archived: []
+        broken_links_found: []
+        report_summary: {}
+
+    - name: Process each markdown file
+      ansible.builtin.include_tasks: process_file.yml
+      loop: "{{ md_files_found.files }}"
+      loop_control:
+        loop_var: current_file
+
+    - name: Populate report summary
+      ansible.builtin.set_fact:
+        report_summary:
+          total_files_scanned: "{{ md_files_found.files | length }}"
+      # Mock rationale: Uses local variables derived from previous tasks.
+
+    - name: Generate Digital Garden Report
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/report.j2"
+        dest: "{{ garden_path }}/digital_garden_report.md"
+      vars:
+        report:
+          untagged_files: "{{ untagged_files }}"
+          old_files_archived: "{{ old_files_archived }}"
+          broken_links_found: "{{ broken_links_found }}"
+          summary: "{{ report_summary }}"
