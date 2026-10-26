@@ -1,0 +1,1 @@
+# Nightly Apocalypse Resource Map\n\nA whimsical interactive web page that shows a map of post‑apocalypse resources (food, water, ammo, medicine). Users can filter by category and see a playful illustration.\n\n## Usage\n\n```sh\nnpm install\nnpm start\n```\n\nOpen http://localhost:3000 in a browser.\n\n## Development\n\nRun tests:\n\n```sh\nnpm test\n```\n\n## License\n\nMIT
