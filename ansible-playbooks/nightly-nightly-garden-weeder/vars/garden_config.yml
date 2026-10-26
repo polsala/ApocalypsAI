@@ -1,0 +1,10 @@
+# vars/garden_config.yml
+# Path to your digital garden (directory containing Markdown files)
+# Example: /home/user/notes or "{{ playbook_dir }}/my_garden"
+garden_path: "{{ playbook_dir }}/my_garden"
+
+# List of required keys that must be present in the YAML front matter
+required_front_matter_keys:
+  - title
+  - date
+  - tags
