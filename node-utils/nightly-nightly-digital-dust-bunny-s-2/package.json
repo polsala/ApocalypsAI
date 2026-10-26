@@ -1,0 +1,25 @@
+{
+  "name": "nightly-digital-dust-bunny-sweeper",
+  "version": "1.0.0",
+  "description": "A whimsical CLI tool to sweep away old, unused files (digital dust bunnies) from your directories.",
+  "main": "src/index.js",
+  "bin": {
+    "dust-bunny-sweeper": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-cleanup",
+    "node-js",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
