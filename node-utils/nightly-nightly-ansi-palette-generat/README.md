@@ -1,0 +1,1 @@
+# nightly-ansi-palette-generator\n\nGenerate a random ANSI 8‑bit color palette.\n\n## Install\n\n```sh\nnpm install\n```\n\n## Usage\n\n```sh\nnode src/index.js [count]\n```\n\nOutputs a JSON array of `count` numbers (0‑255). Default is 8.\n\n## Example\n\n```sh\n$ node src/index.js 3\n[12,200,45]\n```\n\n## Testing\n\n```sh\nnpm test\n```\n
