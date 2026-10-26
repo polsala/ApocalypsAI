@@ -1,0 +1,20 @@
+# Default variables for the Knowledge Seed Sower playbook
+knowledge_base_root: "/tmp/my_knowledge_garden" # IMPORTANT: Change this for production!
+default_dir_mode: "0755"
+default_file_mode: "0644"
+
+directories_to_ensure:
+  - path: "{{ knowledge_base_root }}/daily_notes"
+  - path: "{{ knowledge_base_root }}/project_templates"
+  - path: "{{ knowledge_base_root }}/ideas"
+
+files_to_seed:
+  - path: "{{ knowledge_base_root }}/daily_notes/{{ ansible_date_time.date | default('YYYY-MM-DD') }}.md"
+    template: "daily_note.j2"
+    mode: "0600" # More restrictive for daily notes
+  - path: "{{ knowledge_base_root }}/project_templates/new_project_readme.md"
+    content: "# New Project Readme\n\n## Overview\n\n## Setup\n"
+  - path: "{{ knowledge_base_root }}/.garden_config"
+    content: "garden_version: 1.0\n"
+    mode: "0600"
+  - path: "{{ knowledge_base_root }}/empty_seed.txt" # Example of an empty file
