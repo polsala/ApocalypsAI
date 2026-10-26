@@ -1,0 +1,27 @@
+---
+- name: Distribute Nightly MOTD Morale Booster
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Read wisdom message from source file
+      ansible.builtin.slurp:
+        src: "{{ motd_wisdom_source_path }}"
+      register: wisdom_content
+      delegate_to: localhost # Read the file from the control node
+
+    - name: Decode wisdom message
+      ansible.builtin.set_fact:
+        decoded_wisdom: "{{ wisdom_content['content'] | b64decode }}"
+
+    - name: Ensure /etc/motd is updated with the wisdom
+      ansible.builtin.template:
+        src: templates/motd.j2
+        dest: "{{ motd_target_path }}"
+        mode: '0644'
+        owner: root
+        group: root
+      vars:
+        current_timestamp: "{{ ansible_date_time.iso8601_micro | default(ansible_date_time.date + ' ' + ansible_date_time.time) }}" # Fallback for older Ansible
