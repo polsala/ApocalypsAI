@@ -1,0 +1,17 @@
+name: 'Nightly GitHub Actions Lint Runner'
+
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+description: 'Lints and validates GitHub Actions workflow YAML files.'
+
+inputs:
+  workflow_path:
+    description: 'The directory containing the GitHub Actions workflow files to lint.'
+    required: false
+    default: '.github/workflows/'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
