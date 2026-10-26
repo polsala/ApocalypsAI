@@ -1,0 +1,17 @@
+---
+- name: Cleanup test digital garden environment
+  hosts: garden_hosts
+  gather_facts: no
+
+  vars:
+    test_garden_path: "/tmp/test_digital_garden"
+    test_compost_path: "/tmp/test_digital_garden_compost"
+
+  tasks:
+    - name: Remove test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_garden_path }}"
+        - "{{ test_compost_path }}"

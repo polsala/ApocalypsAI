@@ -1,0 +1,49 @@
+---
+- name: Verify digital garden weeder playbook results
+  hosts: garden_hosts
+  gather_facts: no
+
+  vars:
+    test_garden_path: "/tmp/test_digital_garden"
+    test_compost_path: "/tmp/test_digital_garden_compost"
+
+  tasks:
+    - name: Check if recent_note.md is still in the garden
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/recent_note.md"
+      register: recent_note_stat
+
+    - name: Assert recent_note.md exists in garden
+      ansible.builtin.assert:
+        that:
+          - recent_note_stat.stat.exists
+        fail_msg: "ERROR: recent_note.md should still be in the garden!"
+      # Mock rationale: Asserting file existence after the main playbook runs.
+      # This verifies the 'find' module's 'age' filter correctly ignored the recent file.
+
+    - name: Check if stale_note.md is in the compost bin
+      ansible.builtin.stat:
+        path: "{{ test_compost_path }}/stale_note.md"
+      register: stale_note_stat
+
+    - name: Assert stale_note.md exists in compost bin
+      ansible.builtin.assert:
+        that:
+          - stale_note_stat.stat.exists
+        fail_msg: "ERROR: stale_note.md should have been moved to the compost bin!"
+      # Mock rationale: Asserting file existence in the compost bin.
+      # This verifies the 'find' module correctly identified the stale file
+      # and the 'command' module successfully moved it.
+
+    - name: Check if stale_note.md is NOT in the garden anymore
+      ansible.builtin.stat:
+        path: "{{ test_garden_path }}/stale_note.md"
+      register: stale_note_in_garden_stat
+
+    - name: Assert stale_note.md is NOT in the garden
+      ansible.builtin.assert:
+        that:
+          - not stale_note_in_garden_stat.stat.exists
+        fail_msg: "ERROR: stale_note.md should NOT be in the garden anymore!"
+      # Mock rationale: Asserting file non-existence in the original garden path.
+      # This confirms the move operation was successful and the file is no longer there.

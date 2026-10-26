@@ -1,0 +1,45 @@
+---
+- name: Weed the Digital Garden
+  hosts: garden_hosts
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure compost bin exists
+      ansible.builtin.file:
+        path: "{{ compost_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find stale markdown files
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        age: "{{ stale_days }}d"
+        age_stamp: mtime
+        recurse: yes
+      register: stale_files_result
+
+    - name: Move stale files to compost bin
+      ansible.builtin.command:
+        cmd: mv "{{ item.path }}" "{{ compost_path }}/"
+      loop: "{{ stale_files_result.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      register: moved_files
+      changed_when: moved_files.rc == 0
+      failed_when: moved_files.rc != 0 and "No such file or directory" not in moved_files.stderr
+      # Mock rationale: The 'command' module is used here to simulate file system operations.
+      # In a real test, this would interact with the actual file system. For offline testing,
+      # the test playbook will set up a mock file system state and then assert the expected
+      # changes after this playbook runs. The 'changed_when' and 'failed_when' ensure
+      # deterministic behavior based on command exit codes.
+
+    - name: Report on weeded files
+      ansible.builtin.set_fact:
+        weeded_file_paths: "{{ moved_files.results | selectattr('changed', 'equalto', true) | map(attribute='item.path') | list }}"
+
+    - name: Display weeded files
+      ansible.builtin.debug:
+        msg: "Weeded {{ weeded_file_paths | length }} file(s) from the digital garden: {{ weeded_file_paths }}"
