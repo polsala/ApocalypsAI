@@ -1,0 +1,80 @@
+---
+- name: Whimsical Digital Attic Tidy
+  hosts: all
+  become: true # Requires sudo for many cleanup tasks
+  vars_files:
+    - ../vars/tidy_config.yml
+
+  tasks:
+    - name: Find and remove old temporary files (digital dust bunnies)
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ temp_file_age_days }}d"
+        age_stamp: atime # Access time, ctime (status change time), mtime (modification time)
+        file_type: file
+      loop: "{{ temp_paths }}"
+      register: old_temp_files
+      changed_when: false # This task only finds, not changes
+
+    - name: Remove identified old temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_temp_files.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      tags: [ 'temp_files' ]
+
+    - name: Find and remove old log archives (forgotten scrolls)
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        age: "{{ log_file_age_days }}d"
+        age_stamp: mtime
+        file_type: file
+        patterns: "*.log.gz,*.log.[0-9],*.old" # Common log archive patterns
+      loop: "{{ log_paths }}"
+      register: old_log_files
+      changed_when: false
+
+    - name: Remove identified old log archives
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_log_files.results | map(attribute='files') | flatten }}"
+      when: item.path is defined
+      tags: [ 'log_files' ]
+
+    - name: Clean APT cache (if enabled and Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: true
+        autoremove: true
+      when: enable_apt_clean and ansible_os_family == "Debian"
+      tags: [ 'package_cache' ]
+
+    - name: Clean YUM cache (if enabled and RedHat)
+      ansible.builtin.yum:
+        clean: all
+      when: enable_yum_clean and ansible_os_family == "RedHat"
+      tags: [ 'package_cache' ]
+
+    - name: Clean DNF cache (if enabled and Fedora/newer RedHat)
+      ansible.builtin.dnf:
+        clean: all
+      when: enable_dnf_clean and ansible_os_family == "RedHat"
+      tags: [ 'package_cache' ]
+
+    - name: Find and remove empty directories (cobwebbed corners)
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        file_type: directory
+        recurse: true
+      loop: "{{ empty_dir_paths }}"
+      register: empty_dirs
+      changed_when: false
+
+    - name: Remove identified empty directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ empty_dirs.results | map(attribute='files') | flatten | sort(reverse=true) }}" # Sort reverse to delete deepest first
+      when: item.path is defined and item.isdir and item.size == 0 # Ensure it's an empty directory
+      tags: [ 'empty_dirs' ]
