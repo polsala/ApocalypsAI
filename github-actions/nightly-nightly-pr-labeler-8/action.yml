@@ -1,0 +1,1 @@
+name: "Nightly PR Labeler"\ndescription: "Auto‑label PRs based on title keywords"\ninputs:\n  token:\n    description: "GitHub token"\n    required: true\n    default: ${{ github.token }}\n  mapping:\n    description: "JSON mapping of keyword to label"\n    required: true\nruns:\n  using: "node12"\n  main: "src/index.js"\n
