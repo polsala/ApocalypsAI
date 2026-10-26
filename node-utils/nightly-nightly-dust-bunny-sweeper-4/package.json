@@ -1,0 +1,30 @@
+{
+  "name": "nightly-dust-bunny-sweeper",
+  "version": "1.0.0",
+  "description": "A Node.js CLI tool to sweep away digital dust bunnies (temporary files and build artifacts) from your projects.",
+  "main": "src/index.js",
+  "bin": {
+    "nightly-dust-bunny-sweeper": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "cleanup",
+    "node",
+    "dust-bunnies",
+    "temp-files",
+    "build-artifacts"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
