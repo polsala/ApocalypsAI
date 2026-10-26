@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  signal-flare-dispatcher:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      FLASK_APP: app.py
+    # Optional: If you want to mount the source code for live reloading during development
+    # volumes:
+    #   - ./src:/app
+    # command: flask run --host=0.0.0.0 --port=8080 --debug
