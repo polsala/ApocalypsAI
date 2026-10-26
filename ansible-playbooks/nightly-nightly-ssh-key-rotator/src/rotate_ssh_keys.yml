@@ -1,0 +1,48 @@
+- hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Backup existing SSH host RSA key
+      copy:
+        src: /etc/ssh/ssh_host_rsa_key
+        dest: /etc/ssh/ssh_host_rsa_key.bak
+        remote_src: true
+      ignore_errors: true
+
+    - name: Backup existing SSH host ECDSA key
+      copy:
+        src: /etc/ssh/ssh_host_ecdsa_key
+        dest: /etc/ssh/ssh_host_ecdsa_key.bak
+        remote_src: true
+      ignore_errors: true
+
+    - name: Backup existing SSH host ED25519 key
+      copy:
+        src: /etc/ssh/ssh_host_ed25519_key
+        dest: /etc/ssh/ssh_host_ed25519_key.bak
+        remote_src: true
+      ignore_errors: true
+
+    - name: Generate new SSH host RSA key
+      command: ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ''
+      args:
+        creates: /etc/ssh/ssh_host_rsa_key
+
+    - name: Generate new SSH host ECDSA key
+      command: ssh-keygen -t ecdsa -b 521 -f /etc/ssh/ssh_host_ecdsa_key -N ''
+      args:
+        creates: /etc/ssh/ssh_host_ecdsa_key
+
+    - name: Generate new SSH host ED25519 key
+      command: ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ''
+      args:
+        creates: /etc/ssh/ssh_host_ed25519_key
+
+    - name: Restart sshd service
+      service:
+        name: sshd
+        state: restarted
+
+    - name: Set rotation flag fact
+      set_fact:
+        ssh_key_rotated: true

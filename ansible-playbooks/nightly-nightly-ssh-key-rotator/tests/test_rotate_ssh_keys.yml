@@ -1,0 +1,11 @@
+- hosts: all
+  gather_facts: false
+  tasks:
+    - import_playbook: ../src/rotate_ssh_keys.yml
+
+    - name: Verify rotation flag is set
+      assert:
+        that:
+          - ssh_key_rotated is defined
+          - ssh_key_rotated == true
+        fail_msg: "SSH key rotation flag was not set as expected."
