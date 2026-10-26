@@ -1,0 +1,19 @@
+name: "Survival Tip Commenter"
+description: "Selects a whimsical survival tip and outputs it; optionally posts as a PR comment."
+inputs:
+  token:
+    description: "GitHub token to post comment"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Run tip selector
+      shell: bash
+      env:
+        INPUT_TOKEN: ${{ inputs.token }}
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        bash src/run.sh
