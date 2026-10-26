@@ -1,0 +1,46 @@
+---
+- name: Nightly Package Gardener - Ensure essential packages and prune whimsical ones
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    # Note: ansible_facts.packages is expected to be available, either gathered by
+    # a previous play (e.g., by setting 'gather_facts: yes' at the play level),
+    # or mocked for testing purposes. For production, ensure facts are gathered.
+
+    - name: Identify packages to install
+      ansible.builtin.set_fact:
+        packages_to_install: "{{ essential_packages | difference(ansible_facts.packages.keys() | list) }}"
+      when: ansible_facts.packages is defined
+
+    - name: Identify packages to remove
+      ansible.builtin.set_fact:
+        packages_to_remove: "{{ whimsical_packages | intersect(ansible_facts.packages.keys() | list) }}"
+      when: ansible_facts.packages is defined
+
+    - name: Install essential packages
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages_to_install | default([]) }}"
+      when: packages_to_install is defined and packages_to_install | length > 0
+      register: install_results
+      changed_when: install_results.changed
+
+    - name: Remove whimsical packages
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ packages_to_remove | default([]) }}"
+      when: packages_to_remove is defined and packages_to_remove | length > 0
+      register: remove_results
+      changed_when: remove_results.changed
+
+    - name: Report gardening activities
+      ansible.builtin.debug:
+        msg: |
+          Gardening Report for {{ inventory_hostname }}:
+          Essential packages to install: {{ packages_to_install | default([]) }}
+          Whimsical packages to remove: {{ packages_to_remove | default([]) }}
+      when: ansible_facts.packages is defined
