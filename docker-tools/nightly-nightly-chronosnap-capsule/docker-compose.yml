@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  my_app:
+    image: alpine/git # Replace with your actual application image
+    container_name: my_app_service
+    volumes:
+      - ./my_data:/data # This is the directory whose state you want to manage
+    command: tail -f /dev/null # Keep the application container running
+
+  chronosnap:
+    image: chronosnap-capsule # This image needs to be built first: docker build -t chronosnap-capsule .
+    container_name: chronosnap_capsule_service
+    volumes:
+      - ./my_data:/data       # Mount the target directory (same as my_app)
+      - ./snapshots:/snapshots # Mount the snapshot storage directory
+    environment:
+      - TARGET_DIR=/data       # Optional: specify if different from /data
+      - SNAPSHOT_ROOT_DIR=/snapshots # Optional: specify if different from /snapshots
+    command: tail -f /dev/null # Keep the capsule running in the background
+    # To interact with it, use:
+    # docker compose exec chronosnap /usr/local/bin/entrypoint.sh snapshot
+    # docker compose exec chronosnap /usr/local/bin/entrypoint.sh list
+    # docker compose exec chronosnap /usr/local/bin/entrypoint.sh restore <timestamp>
