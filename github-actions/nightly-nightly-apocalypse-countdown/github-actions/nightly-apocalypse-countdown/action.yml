@@ -1,0 +1,19 @@
+name: "Apocalypse Countdown"
+description: "Prints a whimsical countdown to a configurable apocalypse date."
+inputs:
+  target_date:
+    description: "Apocalypse date in YYYY-MM-DD"
+    required: true
+  current_date:
+    description: "Override current date (YYYY-MM-DD) for deterministic runs"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Run countdown script
+      shell: bash
+      env:
+        TARGET_DATE: ${{ inputs.target_date }}
+        CURRENT_DATE: ${{ inputs.current_date }}
+      run: |
+        bash ${{ github.action_path }}/src/countdown.sh
