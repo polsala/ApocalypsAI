@@ -1,0 +1,121 @@
+---
+- name: Perform Post-Apocalyptic System Health Checks
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/main.yml
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+      # Mock rationale: This task gathers actual service facts. For offline testing,
+      # these facts are mocked using 'set_fact' in the test playbook.
+
+    - name: Check if Secure Comms Relay (SSH) is active
+      ansible.builtin.debug:
+        msg: "Secure Comms Relay (SSH) is {{ 'active' if ansible_facts.services['ssh.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['ssh.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Secure Comms Relay (SSH) is inactive
+      ansible.builtin.fail:
+        msg: "CRITICAL: Secure Comms Relay (SSH) is INACTIVE! Immediate attention required."
+      when: ansible_facts.services['ssh.service'] is defined and ansible_facts.services['ssh.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check if Perimeter Defense (firewalld/ufw) is active
+      ansible.builtin.debug:
+        msg: "Perimeter Defense (firewalld) is {{ 'active' if ansible_facts.services['firewalld.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['firewalld.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Perimeter Defense (firewalld) is inactive
+      ansible.builtin.fail:
+        msg: "CRITICAL: Perimeter Defense (firewalld) is INACTIVE! System vulnerable."
+      when: ansible_facts.services['firewalld.service'] is defined and ansible_facts.services['firewalld.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check if Perimeter Defense (ufw) is active (fallback)
+      ansible.builtin.debug:
+        msg: "Perimeter Defense (ufw) is {{ 'active' if ansible_facts.services['ufw.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['firewalld.service'] is not defined and ansible_facts.services['ufw.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Perimeter Defense (ufw) is inactive (fallback)
+      ansible.builtin.fail:
+        msg: "CRITICAL: Perimeter Defense (ufw) is INACTIVE! System vulnerable."
+      when: ansible_facts.services['firewalld.service'] is not defined and ansible_facts.services['ufw.service'] is defined and ansible_facts.services['ufw.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check if Resource Harvester (Docker) is active
+      ansible.builtin.debug:
+        msg: "Resource Harvester (Docker) is {{ 'active' if ansible_facts.services['docker.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['docker.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Resource Harvester (Docker) is inactive
+      ansible.builtin.fail:
+        msg: "CRITICAL: Resource Harvester (Docker) is INACTIVE! Resource collection halted."
+      when: ansible_facts.services['docker.service'] is defined and ansible_facts.services['docker.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check if Temporal Drift Monitor (NTP/Chrony) is active
+      ansible.builtin.debug:
+        msg: "Temporal Drift Monitor (NTP) is {{ 'active' if ansible_facts.services['ntp.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['ntp.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Temporal Drift Monitor (NTP) is inactive
+      ansible.builtin.fail:
+        msg: "CRITICAL: Temporal Drift Monitor (NTP) is INACTIVE! Time synchronization lost."
+      when: ansible_facts.services['ntp.service'] is defined and ansible_facts.services['ntp.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check if Temporal Drift Monitor (Chrony) is active (fallback)
+      ansible.builtin.debug:
+        msg: "Temporal Drift Monitor (Chrony) is {{ 'active' if ansible_facts.services['chronyd.service'].state == 'running' else 'inactive' }}."
+      when: ansible_facts.services['ntp.service'] is not defined and ansible_facts.services['chronyd.service'] is defined
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Fail if Temporal Drift Monitor (Chrony) is inactive (fallback)
+      ansible.builtin.fail:
+        msg: "CRITICAL: Temporal Drift Monitor (Chrony) is INACTIVE! Time synchronization lost."
+      when: ansible_facts.services['ntp.service'] is not defined and ansible_facts.services['chronyd.service'] is defined and ansible_facts.services['chronyd.service'].state != 'running'
+      # Mock rationale: The 'ansible_facts.services' dictionary is mocked in tests.
+
+    - name: Check Data Vault Integrity (directory existence)
+      ansible.builtin.stat:
+        path: "{{ data_vault_path }}"
+      register: data_vault_stat
+      # Mock rationale: This task gathers actual file stats. For offline testing,
+      # the 'data_vault_stat' result is mocked using 'set_fact' in the test playbook.
+
+    - name: Fail if Data Vault directory does not exist
+      ansible.builtin.fail:
+        msg: "CRITICAL: Data Vault directory '{{ data_vault_path }}' does not exist! Data integrity compromised."
+      when: not data_vault_stat.stat.exists
+      # Mock rationale: The 'data_vault_stat' result is mocked in tests.
+
+    - name: Check Data Vault Integrity (permissions and ownership)
+      ansible.builtin.debug:
+        msg: "Data Vault '{{ data_vault_path }}' has correct permissions and ownership."
+      when:
+        - data_vault_stat.stat.exists
+        - data_vault_stat.stat.pw_name == data_vault_owner
+        - data_vault_stat.stat.gr_name == data_vault_group
+        - data_vault_stat.stat.mode == data_vault_mode
+      # Mock rationale: The 'data_vault_stat' result is mocked in tests.
+
+    - name: Fail if Data Vault permissions or ownership are incorrect
+      ansible.builtin.fail:
+        msg: "CRITICAL: Data Vault '{{ data_vault_path }}' has incorrect permissions or ownership! Expected owner: {{ data_vault_owner }}, group: {{ data_vault_group }}, mode: {{ data_vault_mode }}. Found owner: {{ data_vault_stat.stat.pw_name }}, group: {{ data_vault_stat.stat.gr_name }}, mode: {{ data_vault_stat.stat.mode }}."
+      when:
+        - data_vault_stat.stat.exists
+        - not (data_vault_stat.stat.pw_name == data_vault_owner and data_vault_stat.stat.gr_name == data_vault_group and data_vault_stat.stat.mode == data_vault_mode)
+      # Mock rationale: The 'data_vault_stat' result is mocked in tests.
+
+    - name: Report overall health status
+      ansible.builtin.debug:
+        msg: "All essential Post-Apocalyptic System Health Checks PASSED. System ready for daily challenges."
+      when: not ansible_failed_tasks | default([])
+      # Mock rationale: 'ansible_failed_tasks' is an internal Ansible variable.
+      # For testing, we rely on the 'fail' tasks being triggered or not by the mocks.
