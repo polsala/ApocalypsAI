@@ -1,0 +1,14 @@
+---
+- name: Syntax check apt upgrade playbook
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run syntax check
+      command: ansible-playbook -i inventory.ini ../src/apt_upgrade.yml --syntax-check
+      register: result
+      changed_when: false
+
+    - name: Ensure exit code 0
+      assert:
+        that:
+          - result.rc == 0
