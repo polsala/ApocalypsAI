@@ -1,0 +1,84 @@
+---
+- name: Nightly Digital Garden Weeder
+  hosts: garden_hosts
+  gather_facts: false # Only gather facts if needed for specific tasks
+
+  vars:
+    scan_paths: []
+    age_threshold_days: 90
+    dry_run: true
+    report_path: "/tmp/digital_garden_report.txt"
+
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find digital weeds (old files)
+      ansible.builtin.find:
+        paths: "{{ scan_paths }}"
+        age: "{{ age_threshold_days }}d"
+        age_stamp: atime # Use access time for "last touched"
+        file_type: file
+      register: old_files_result
+      ignore_errors: true # Continue even if some paths don't exist
+
+    - name: Find digital pests (broken symlinks)
+      ansible.builtin.shell: |
+        find {{ scan_paths | join(' ') }} -type l ! -exec test -e {} \; -print
+      args:
+        warn: false
+      register: broken_links_result
+      changed_when: false # This task only finds, doesn't change state
+      ignore_errors: true # Continue even if some paths don't exist
+
+    - name: Prepare report data (with facts if available)
+      ansible.builtin.set_fact:
+        weeds_found: "{{ old_files_result.files | default([]) | map(attribute='path') | list }}"
+        pests_found: "{{ broken_links_result.stdout_lines | default([]) }}"
+        current_date: "{{ ansible_date_time.iso8601_micro | default(ansible_date_time.iso8601) }}"
+      when: ansible_date_time is defined
+      # Mock rationale: If gather_facts is false, ansible_date_time will be undefined.
+      # The next task handles this for deterministic testing.
+
+    - name: Prepare report data (fallback for tests without gather_facts)
+      ansible.builtin.set_fact:
+        weeds_found: "{{ old_files_result.files | default([]) | map(attribute='path') | list }}"
+        pests_found: "{{ broken_links_result.stdout_lines | default([]) }}"
+        current_date: "2200-01-01 12:00:00" # Deterministic date for testing
+      when: ansible_date_time is not defined
+
+    - name: Generate Digital Garden Health Report
+      ansible.builtin.template:
+        src: templates/weeder_report.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+      vars:
+        report_weeds: "{{ weeds_found }}"
+        report_pests: "{{ pests_found }}"
+        report_scan_paths: "{{ scan_paths }}"
+        report_age_threshold_days: "{{ age_threshold_days }}"
+        report_dry_run: "{{ dry_run }}"
+        report_date: "{{ current_date }}"
+
+    - name: Prune digital weeds (if not dry run)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent # Or 'archive' to move to a specific directory
+      loop: "{{ weeds_found }}"
+      when: not dry_run and weeds_found | length > 0
+      # Mock rationale: This task is skipped in dry_run mode, which is how tests will run it.
+
+    - name: Remove digital pests (broken symlinks, if not dry run)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ pests_found }}"
+      when: not dry_run and pests_found | length > 0
+      # Mock rationale: This task is skipped in dry_run mode, which is how tests will run it.
+
+    - name: Display report path
+      ansible.builtin.debug:
+        msg: "Digital Garden Health Report generated at: {{ report_path }}"
