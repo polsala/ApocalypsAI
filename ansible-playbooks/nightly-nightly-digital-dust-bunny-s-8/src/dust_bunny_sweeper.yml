@@ -1,0 +1,49 @@
+---
+- name: Sweep away digital dust bunnies
+  hosts: all
+  become: true
+  vars_files:
+    - ../vars/cleanup_paths.yml
+  tasks:
+    - name: Ensure cleanup target directories exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ cleanup_targets }}"
+      loop_control:
+        label: "Ensuring {{ item.path }} exists"
+
+    - name: Find old files (digital dust bunnies)
+      ansible.builtin.find:
+        paths: "{{ item.path }}"
+        age: "{{ item.age_days }}d"
+        recurse: yes
+        file_type: file
+      register: old_files_per_path
+      loop: "{{ cleanup_targets }}"
+      loop_control:
+        label: "Finding old files in {{ item.path }}"
+
+    - name: Collect all files to delete
+      ansible.builtin.set_fact:
+        files_to_delete: "{{ files_to_delete | default([]) + item.files }}"
+      loop: "{{ old_files_per_path.results }}"
+      loop_control:
+        label: "Collecting files from {{ item.item.path }}"
+      when: item.files is defined and item.files | length > 0
+
+    - name: Delete found old files
+      ansible.builtin.file:
+        path: "{{ file_item.path }}"
+        state: absent
+      loop: "{{ files_to_delete | default([]) }}"
+      loop_control:
+        loop_var: file_item
+        label: "Deleting {{ file_item.path }}"
+      when: files_to_delete is defined and files_to_delete | length > 0
+
+    - name: Report on cleanup results
+      ansible.builtin.debug:
+        msg: "Swept {{ (files_to_delete | default([])) | length }} digital dust bunnies in total."
+      when: files_to_delete is defined
