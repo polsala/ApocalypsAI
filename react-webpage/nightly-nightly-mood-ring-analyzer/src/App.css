@@ -1,0 +1,61 @@
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.App-header {
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  color: #61dafb;
+  margin-bottom: 10px;
+}
+
+.mood-ring-container {
+  margin: 40px 0;
+}
+
+.input-section {
+  width: 90%;
+  max-width: 800px;
+  margin-bottom: 20px;
+}
+
+textarea {
+  width: 100%;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #61dafb;
+  background-color: #3a3f47;
+  color: white;
+  font-size: 1rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+textarea::placeholder {
+  color: #aaa;
+}
+
+.error-message {
+  color: #ff6b6b;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+footer {
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: #aaa;
+}
