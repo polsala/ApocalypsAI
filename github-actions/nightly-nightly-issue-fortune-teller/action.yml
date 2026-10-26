@@ -1,0 +1,16 @@
+name: "Nightly Issue Fortune Teller"
+description: "Posts a whimsical fortune comment on newly opened issues."
+author: "ApocalypsAI"
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run fortune script
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        bash "${{ github.action_path }}/src/main.sh"
