@@ -1,0 +1,15 @@
+- name: Simulate SSH key rotation
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure placeholder directory exists
+      file:
+        path: /tmp/ssh_key_rotator
+        state: directory
+        mode: '0755'
+
+    - name: Create rotation marker file with timestamp
+      copy:
+        dest: /tmp/ssh_key_rotator/rotated_at.txt
+        content: "Rotated at {{ ansible_date_time.iso8601 }}"
+        mode: '0644'
