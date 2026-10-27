@@ -1,0 +1,18 @@
+[package]
+name = "chrono-scrub"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Integrator"]
+description = "A high-performance Rust CLI tool to identify and optionally remove files older than a specified duration, simulating digital temporal decay."
+license = "MIT"
+repository = "https://github.com/polsala/ApocalypsAI"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4"
+walkdir = "2"
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"
+filetime = "0.2"
