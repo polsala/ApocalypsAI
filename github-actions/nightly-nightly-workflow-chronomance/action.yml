@@ -1,0 +1,30 @@
+name: 'Nightly Workflow Chronomancer'
+description: 'Monitors workflow run durations, identifies anomalies, and reports their "temporal mood".'
+inputs:
+  workflow_id:
+    description: 'The ID or file name of the workflow to monitor (e.g., "my-ci.yml" or 12345).'
+    required: true
+  repo_token:
+    description: 'GitHub token with permissions to read workflow runs. Defaults to ${{ github.token }}.'
+    required: false
+    default: ${{ github.token }}
+  threshold_percent:
+    description: 'Percentage threshold for detecting significant duration changes (e.g., 20 for 20% faster/slower). Default is 15.'
+    required: false
+    default: '15'
+  num_runs_for_average:
+    description: 'Number of recent successful runs to consider for calculating the average duration. Default is 10.'
+    required: false
+    default: '10'
+outputs:
+  status:
+    description: 'The temporal mood of the workflow run (zippy, sluggish, steady, unknown).'
+  duration_change_percent:
+    description: 'Percentage change of the latest run duration compared to the average. Positive for slower, negative for faster.'
+  latest_duration_seconds:
+    description: 'Duration of the latest workflow run in seconds.'
+  average_duration_seconds:
+    description: 'Average duration of recent successful workflow runs in seconds.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
