@@ -1,0 +1,55 @@
+---
+- name: Prune Digital Garden
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/pruning_config.yml
+  tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Update package cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Update if older than 1 hour
+      when: ansible_os_family == 'Debian'
+
+    - name: Autoremove unused apt packages (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoremove: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Clean apt cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        clean: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Update yum cache (CentOS/RHEL)
+      ansible.builtin.yum:
+        update_cache: yes
+      when: ansible_os_family == 'RedHat'
+
+    - name: Autoremove unused yum packages (CentOS/RHEL)
+      ansible.builtin.yum:
+        autoremove: yes
+      when: ansible_os_family == 'RedHat'
+
+    - name: Clean yum cache (CentOS/RHEL)
+      ansible.builtin.yum:
+        clean: all
+      when: ansible_os_family == 'RedHat'
+
+    - name: Find old temporary files
+      ansible.builtin.find:
+        paths: "{{ pruning_paths }}"
+        age: "{{ pruning_temp_days_old }}d"
+        file_type: file
+        recurse: yes
+      register: old_temp_files
+
+    - name: Delete old temporary files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_temp_files.files }}"
+      when: old_temp_files.files | length > 0
