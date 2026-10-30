@@ -1,0 +1,116 @@
+---
+- name: Test Digital Garden Pruner Components
+  hosts: localhost
+  connection: local
+  gather_facts: yes # Needed for ansible_date_time and ansible_os_family
+  vars:
+    pruning_temp_days_old: 0 # For testing, consider all files as 'old' immediately
+    pruning_paths:
+      - "{{ playbook_dir }}/test_temp_dir"
+  tasks:
+    - name: Ensure test_temp_dir exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/test_temp_dir"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy temporary files
+      ansible.builtin.copy:
+        content: "Test file {{ item }} created at {{ ansible_date_time.iso8601_micro }}"
+        dest: "{{ playbook_dir }}/test_temp_dir/test_file_{{ item }}.tmp"
+      loop: [1, 2, 3]
+      register: create_files_result
+      # Mock rationale: Creating local files to simulate a system state for the 'find' module. This is deterministic and offline.
+
+    - name: Find old temporary files (simulating main playbook's find task)
+      ansible.builtin.find:
+        paths: "{{ pruning_paths }}"
+        age: "{{ pruning_temp_days_old }}d"
+        file_type: file
+        recurse: yes
+      register: found_old_temp_files
+      # Mock rationale: Running the 'find' module directly to test its behavior with our dummy files. This is deterministic and offline.
+
+    - name: Assert that dummy files were found
+      ansible.builtin.assert:
+        that:
+          - found_old_temp_files.files | length == 3
+          - "'test_file_1.tmp' in found_old_temp_files.files | map(attribute='path') | list | join(', ')"
+        fail_msg: "Expected 3 dummy files to be found."
+      # Mock rationale: Verifying the 'find' module correctly identifies the test files.
+
+    - name: Delete old temporary files in check mode (first pass)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_old_temp_files.files }}"
+      check_mode: yes # Simulate deletion without actually deleting
+      register: delete_check_result_1
+      # Mock rationale: Running 'file' module in check_mode to verify it reports changes for existing files. This is deterministic and offline.
+
+    - name: Assert that deletion would be reported as changed in check mode
+      ansible.builtin.assert:
+        that:
+          - delete_check_result_1 is changed
+          - delete_check_result_1.results | map(attribute='changed') | select('true') | list | length == 3
+        fail_msg: "Expected file deletion to be reported as changed in check mode."
+      # Mock rationale: Confirming check_mode correctly indicates pending changes.
+
+    - name: Delete old temporary files in check mode (second pass for idempotency)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_old_temp_files.files }}"
+      check_mode: yes # Simulate deletion again
+      register: delete_check_result_2
+      # Mock rationale: Running 'file' module a second time in check_mode to test idempotency. This is deterministic and offline.
+
+    - name: Assert that no changes would be reported in second check mode run (idempotency)
+      ansible.builtin.assert:
+        that:
+          - delete_check_result_2 is not changed
+        fail_msg: "Expected no changes in the second check run (idempotency check failed)."
+      # Mock rationale: Confirming check_mode correctly indicates no further changes are needed.
+
+    - name: Test package manager logic for Debian (mocking ansible_os_family)
+      block:
+        - name: Set ansible_os_family to Debian for testing
+          ansible.builtin.set_fact:
+            ansible_os_family: 'Debian'
+          # Mock rationale: Overriding a fact to test OS-specific conditional logic without a real Debian host. This is deterministic and offline.
+
+        - name: Check if apt update_cache task would run
+          ansible.builtin.apt:
+            update_cache: yes
+          check_mode: yes
+          register: apt_update_check
+          when: ansible_os_family == 'Debian'
+          # Mock rationale: Running apt module in check_mode to see if it reports changes. The module itself can simulate 'changed' without network access.
+
+        - name: Assert apt update_cache would be changed
+          ansible.builtin.assert:
+            that:
+              - apt_update_check is changed
+            fail_msg: "Expected apt update_cache to report change in check mode for Debian."
+          # Mock rationale: Verifying apt module's behavior in check_mode.
+
+        - name: Check if yum update_cache task would NOT run
+          ansible.builtin.yum:
+            update_cache: yes
+          check_mode: yes
+          register: yum_update_check
+          when: ansible_os_family == 'RedHat' # This condition should be false
+          # Mock rationale: Running yum module in check_mode with a false 'when' condition to ensure it's skipped. This is deterministic and offline.
+
+        - name: Assert yum update_cache task was skipped
+          ansible.builtin.assert:
+            that:
+              - yum_update_check is skipped
+            fail_msg: "Expected yum update_cache task to be skipped for Debian."
+          # Mock rationale: Verifying conditional task execution based on mocked facts.
+      always:
+        - name: Clean up dummy temporary directory
+          ansible.builtin.file:
+            path: "{{ playbook_dir }}/test_temp_dir"
+            state: absent
+          # Mock rationale: Ensuring the test environment is cleaned up after execution. This is deterministic and offline.
