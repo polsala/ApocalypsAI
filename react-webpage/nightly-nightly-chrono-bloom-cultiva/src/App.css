@@ -1,0 +1,160 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a1a2e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.App-header {
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  color: #e94560;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.App-header p {
+  font-size: 1.1em;
+  color: #b0b0b0;
+}
+
+.bloom-input-section {
+  background-color: #2a2a4a;
+  padding: 25px;
+  border-radius: 10px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+}
+
+.bloom-input-section input[type="text"],
+.bloom-input-section input[type="number"] {
+  padding: 12px 15px;
+  border: 1px solid #4a4a6a;
+  border-radius: 8px;
+  background-color: #3a3a5a;
+  color: #e0e0e0;
+  font-size: 1em;
+  width: calc(50% - 10px);
+  min-width: 200px;
+}
+
+.bloom-input-section input::placeholder {
+  color: #888;
+}
+
+.bloom-input-section button {
+  padding: 12px 25px;
+  background-color: #e94560;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.bloom-input-section button:hover {
+  background-color: #d03050;
+}
+
+.blooms-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+  justify-content: center;
+}
+
+.no-blooms-message {
+  grid-column: 1 / -1;
+  color: #888;
+  font-style: italic;
+  font-size: 1.2em;
+  padding: 50px;
+}
+
+.chrono-bloom-card {
+  background-color: #2a2a4a;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-align: left;
+  transition: transform 0.2s ease-in-out;
+}
+
+.chrono-bloom-card:hover {
+  transform: translateY(-5px);
+}
+
+.bloom-visual {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #ccc;
+  flex-shrink: 0;
+  transition: all 1s ease-out;
+}
+
+.bloom-info h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  color: #f0f0f0;
+}
+
+.bloom-info p {
+  margin: 0 0 8px 0;
+  color: #b0b0b0;
+  font-size: 0.9em;
+}
+
+.progress-bar-container {
+  width: 100%;
+  background-color: #4a4a6a;
+  border-radius: 5px;
+  height: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #e94560;
+  border-radius: 5px;
+  transition: width 0.5s ease-out;
+}
+
+.wither-button {
+  background-color: #6a1a2e;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background-color 0.3s ease;
+}
+
+.wither-button:hover {
+  background-color: #501020;
+}
