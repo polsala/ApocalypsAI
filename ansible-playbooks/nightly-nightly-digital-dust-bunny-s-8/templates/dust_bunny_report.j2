@@ -1,0 +1,38 @@
+Digital Dust Bunny Sweeper Report - {{ ansible_date_time.iso8601_basic_short }}
+
+Scanning directories: {{ target_dirs | join(', ') }}
+Age threshold: {{ age_threshold_days }} days
+Dry Run: {{ dry_run }}
+Report Path: {{ report_path }}
+
+---
+
+--- Old Files (older than {{ age_threshold_days }} days) ---
+{% if old_files_result.files | length > 0 %}
+{% for file in old_files_result.files %}
+- {{ file.path }} (Last modified: {{ file.mtime | float | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }})
+{% endfor %}
+{% else %}
+No old files found.
+{% endif %}
+
+--- Empty Files ---
+{% if empty_files_result.files | length > 0 %}
+{% for file in empty_files_result.files %}
+- {{ file.path }}
+{% endfor %}
+{% else %}
+No empty files found.
+{% endif %}
+
+---
+
+--- Summary ---
+Total old files found: {{ old_files_result.files | length }}
+Total empty files found: {{ empty_files_result.files | length }}
+
+{% if not dry_run %}
+Action: Files listed above were DELETED.
+{% else %}
+Action: This was a DRY RUN. No files were deleted.
+{% endif %}

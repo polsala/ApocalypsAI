@@ -1,0 +1,65 @@
+---
+- name: Digital Dust Bunny Sweeper
+  hosts: local
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_path | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find old files (older than {{ age_threshold_days }} days)
+      ansible.builtin.find:
+        paths: "{{ target_dirs }}"
+        age: "{{ age_threshold_days }}d"
+        file_type: file
+      register: old_files_result
+
+    - name: Find empty files
+      ansible.builtin.find:
+        paths: "{{ target_dirs }}"
+        size: "0"
+        file_type: file
+      register: empty_files_result
+
+    - name: Generate Digital Dust Bunny Report
+      ansible.builtin.template:
+        src: ../templates/dust_bunny_report.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+      vars:
+        old_files_result: "{{ old_files_result }}"
+        empty_files_result: "{{ empty_files_result }}"
+      delegate_to: localhost
+
+    - name: Report on findings (dry run)
+      ansible.builtin.debug:
+        msg: "Digital Dust Bunny Report generated at {{ report_path }}. This was a DRY RUN. No files were deleted."
+      when: dry_run | bool
+
+    - name: Delete old files (if not dry run)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_files_result.files }}"
+      when: not dry_run | bool
+      changed_when: true # Mock rationale: Assume deletion always changes state for testing purposes
+
+    - name: Delete empty files (if not dry run)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ empty_files_result.files }}"
+      when: not dry_run | bool
+      changed_when: true # Mock rationale: Assume deletion always changes state for testing purposes
+
+    - name: Report on cleanup (actual run)
+      ansible.builtin.debug:
+        msg: "Digital Dust Bunny Report generated at {{ report_path }}. Identified files have been deleted."
+      when: not dry_run | bool
