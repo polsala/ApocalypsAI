@@ -1,0 +1,118 @@
+---
+- name: Test Digital Dust Bunny Sweeper
+  hosts: test_host
+  connection: local
+  gather_facts: true # Needed for ansible_date_time.epoch
+
+  vars:
+    test_dir: "/tmp/ansible_dust_bunny_test_{{ lookup('pipe', 'date +%s') }}"
+    report_file: "{{ test_dir }}/test_report.txt"
+    main_playbook_path: "{{ playbook_dir }}/../src/sweep_dust_bunnies.yml"
+    main_inventory_path: "{{ playbook_dir }}/../src/inventory.ini"
+
+  tasks:
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create dummy old file
+      ansible.builtin.shell:
+        cmd: |
+          touch "{{ test_dir }}/old_file.txt"
+          # Mock rationale: Set modification time to be older than default age_threshold_days (30 days)
+          touch -d "{{ (ansible_date_time.epoch | int - (31 * 24 * 60 * 60)) | timestamp_to_datetime | strftime('%Y-%m-%d') }}" "{{ test_dir }}/old_file.txt"
+      args:
+        creates: "{{ test_dir }}/old_file.txt"
+
+    - name: Create dummy empty file
+      ansible.builtin.file:
+        path: "{{ test_dir }}/empty_file.txt"
+        state: touch
+        mode: '0644'
+
+    - name: Create dummy new file
+      ansible.builtin.file:
+        path: "{{ test_dir }}/new_file.txt"
+        state: touch
+        mode: '0644'
+      # Mock rationale: This file should not be touched by the playbook as it's new and not empty.
+
+    - name: Run playbook in DRY RUN mode
+      ansible.builtin.command:
+        cmd: "ansible-playbook -i {{ main_inventory_path }} {{ main_playbook_path }} -e 'target_dirs={{ test_dir }} age_threshold_days=30 dry_run=true report_path={{ report_file }}'"
+      register: dry_run_result
+      changed_when: false # Mock rationale: Dry run should not report changes from the command itself.
+
+    - name: Assert dry run report content
+      ansible.builtin.assert:
+        that:
+          - "'old_file.txt' in lookup('file', report_file)"
+          - "'empty_file.txt' in lookup('file', report_file)"
+          - "'new_file.txt' not in lookup('file', report_file)"
+          - "'DRY RUN' in lookup('file', report_file)"
+          - "'No files were deleted' in lookup('file', report_file)"
+        msg: "Dry run report content assertion failed."
+
+    - name: Assert files still exist after dry run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/old_file.txt"
+        - "{{ test_dir }}/empty_file.txt"
+        - "{{ test_dir }}/new_file.txt"
+      register: stat_results
+
+    - name: Verify all files exist after dry run
+      ansible.builtin.assert:
+        that:
+          - "item.stat.exists is true"
+        msg: "File {{ item.item }} should exist after dry run."
+      loop: "{{ stat_results.results }}"
+
+    - name: Run playbook in ACTUAL DELETE mode
+      ansible.builtin.command:
+        cmd: "ansible-playbook -i {{ main_inventory_path }} {{ main_playbook_path }} -e 'target_dirs={{ test_dir }} age_threshold_days=30 dry_run=false report_path={{ report_file }}'"
+      register: delete_run_result
+      changed_when: true # Mock rationale: Actual run should report changes from the command itself if files are deleted.
+
+    - name: Assert actual run report content
+      ansible.builtin.assert:
+        that:
+          - "'old_file.txt' in lookup('file', report_file)"
+          - "'empty_file.txt' in lookup('file', report_file)"
+          - "'new_file.txt' not in lookup('file', report_file)"
+          - "'DELETED' in lookup('file', report_file)"
+        msg: "Actual run report content assertion failed."
+
+    - name: Assert old and empty files are deleted after actual run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ test_dir }}/old_file.txt"
+        - "{{ test_dir }}/empty_file.txt"
+      register: deleted_files_stat_results
+
+    - name: Verify old and empty files are absent
+      ansible.builtin.assert:
+        that:
+          - "item.stat.exists is false"
+        msg: "File {{ item.item }} should be deleted after actual run."
+      loop: "{{ deleted_files_stat_results.results }}"
+
+    - name: Assert new file still exists after actual run
+      ansible.builtin.stat:
+        path: "{{ test_dir }}/new_file.txt"
+      register: new_file_stat_result
+
+    - name: Verify new file still exists
+      ansible.builtin.assert:
+        that:
+          - "new_file_stat_result.stat.exists is true"
+        msg: "New file should still exist after actual run."
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
