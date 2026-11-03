@@ -1,0 +1,25 @@
+name: "Apocalypse Readiness Report Card"
+description: "Generates a 'readiness report card' for a GitHub repository by checking for essential project files and best practices."
+inputs:
+  report-level:
+    description: "Level of detail for the report. 'basic' (README, LICENSE), 'standard' (basic + CONTRIBUTING, SECURITY, CODE_OF_CONDUCT), 'full' (standard + templates, changelog, workflows)."
+    required: false
+    default: "standard"
+outputs:
+  report:
+    description: "The generated markdown report card."
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Readiness Report
+      shell: bash
+      env:
+        REPORT_LEVEL: ${{ inputs.report-level }}
+      run: |
+        # Call the script and capture its output
+        REPORT_OUTPUT=$(bash "${{ github.action_path }}/src/generate_report.sh")
+        
+        # Set the output for the action
+        echo "report<<EOF" >> $GITHUB_OUTPUT
+        echo -e "$REPORT_OUTPUT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
