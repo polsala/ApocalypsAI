@@ -1,0 +1,45 @@
+---
+- name: Nightly Digital Garden Pruner
+  hosts: garden_servers
+  become: yes
+  gather_facts: yes
+  vars:
+    report_path: "/tmp/pruning_report_{{ ansible_hostname }}.txt"
+
+  tasks:
+    - name: Record disk usage before pruning
+      ansible.builtin.command: df -h --output=source,size,used,avail,pcent,target
+      register: disk_usage_before
+      changed_when: false
+      # Mock rationale: This command is run on the target system. In tests, we'll mock its output.
+
+    - name: Include package update tasks
+      ansible.builtin.include_tasks: tasks/update_packages.yml
+
+    - name: Include kernel cleanup tasks
+      ansible.builtin.include_tasks: tasks/clean_kernels.yml
+
+    - name: Include orphaned package cleanup tasks
+      ansible.builtin.include_tasks: tasks/clean_orphans.yml
+
+    - name: Include temporary file cleanup tasks
+      ansible.builtin.include_tasks: tasks/clean_tmp.yml
+
+    - name: Record disk usage after pruning
+      ansible.builtin.command: df -h --output=source,size,used,avail,pcent,target
+      register: disk_usage_after
+      changed_when: false
+      # Mock rationale: This command is run on the target system. In tests, we'll mock its output.
+
+    - name: Generate pruning report
+      ansible.builtin.template:
+        src: templates/pruning_report.j2
+        dest: "{{ report_path }}"
+      register: report_file
+      # Mock rationale: The template module generates a file. In tests, we'll check if this task is configured correctly.
+
+    - name: Display pruning report
+      ansible.builtin.debug:
+        msg: "{{ lookup('file', report_path) }}"
+      when: report_file.changed or report_file.skipped is not defined
+      # Mock rationale: This task reads a local file. In tests, we'll ensure the report path is correct.

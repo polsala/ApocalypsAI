@@ -1,0 +1,37 @@
+---
+- name: Clean old files from /tmp
+  ansible.builtin.find:
+    paths: /tmp
+    age: 7d
+    file_type: file
+  register: old_tmp_files
+  # Mock rationale: The find module interacts with the filesystem. In tests, we'll mock its output.
+
+- name: Delete old files from /tmp
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_tmp_files.files }}"
+  register: tmp_file_deletion_result
+  # Mock rationale: The file module interacts with the filesystem. In tests, we'll verify this task is called.
+
+- name: Clean old files from /var/tmp
+  ansible.builtin.find:
+    paths: /var/tmp
+    age: 7d
+    file_type: file
+  register: old_var_tmp_files
+  # Mock rationale: The find module interacts with the filesystem. In tests, we'll mock its output.
+
+- name: Delete old files from /var/tmp
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_var_tmp_files.files }}"
+  register: var_tmp_file_deletion_result
+  # Mock rationale: The file module interacts with the filesystem. In tests, we'll verify this task is called.
+
+- name: Report on temporary file cleanup
+  ansible.builtin.debug:
+    msg: "Cleaned {{ tmp_file_deletion_result.results | selectattr('changed', 'equalto', true) | list | length }} files from /tmp and {{ var_tmp_file_deletion_result.results | selectattr('changed', 'equalto', true) | list | length }} files from /var/tmp."
+  when: tmp_file_deletion_result.changed or var_tmp_file_deletion_result.changed

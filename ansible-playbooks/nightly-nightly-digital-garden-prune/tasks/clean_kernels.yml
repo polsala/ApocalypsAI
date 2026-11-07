@@ -1,0 +1,27 @@
+---
+- name: Get current kernel version
+  ansible.builtin.command: uname -r
+  register: current_kernel_version
+  changed_when: false
+  # Mock rationale: This command is run on the target system. In tests, we'll mock its output.
+
+- name: Find old kernels
+  ansible.builtin.command: dpkg -l | grep linux-image | awk '{print $2}' | grep -v "{{ current_kernel_version.stdout }}"
+  register: old_kernels_list
+  changed_when: false
+  # Mock rationale: This command is run on the target system. In tests, we'll mock its output.
+
+- name: Remove old kernels
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: absent
+    autoremove: yes
+  loop: "{{ old_kernels_list.stdout_lines }}"
+  when: old_kernels_list.stdout_lines | length > 0
+  register: kernel_removal_result
+  # Mock rationale: The apt module interacts with the system's package manager. In tests, we'll verify this task is called.
+
+- name: Report on kernel removal
+  ansible.builtin.debug:
+    msg: "Removed {{ kernel_removal_result.results | selectattr('changed', 'equalto', true) | list | length }} old kernels."
+  when: kernel_removal_result.changed
