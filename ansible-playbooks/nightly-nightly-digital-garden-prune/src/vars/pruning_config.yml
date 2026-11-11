@@ -1,0 +1,10 @@
+---
+# Number of days old a temporary file must be to be considered for deletion.
+pruning_temp_days_old: 7
+
+# List of paths where temporary files should be pruned.
+pruning_paths:
+  - /tmp
+  - /var/tmp
+  # Add more paths if you have specific application temp directories
+  # - /opt/app/temp
