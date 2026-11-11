@@ -1,0 +1,27 @@
+- name: Rotate SSH host keys
+  hosts: all
+  become: true
+  vars:
+    ssh_key_types:
+      - rsa
+      - ecdsa
+      - ed25519
+  tasks:
+    - name: Generate new SSH host key for {{ item }}
+      ansible.builtin.command: ssh-keygen -t {{ item }} -f /etc/ssh/ssh_host_{{ item }}_key -N '' -q
+      loop: "{{ ssh_key_types }}"
+      args:
+        creates: "/etc/ssh/ssh_host_{{ item }}_key"
+      register: keygen_results
+      changed_when: keygen_results.rc == 0 and keygen_results.stdout != ''
+
+    - name: Reload sshd if any key was generated
+      ansible.builtin.service:
+        name: sshd
+        state: reloaded
+      when: keygen_results.changed
+
+    - name: Debug generated keys
+      ansible.builtin.debug:
+        msg: "Generated {{ item }} host key"
+      loop: "{{ ssh_key_types }}"
