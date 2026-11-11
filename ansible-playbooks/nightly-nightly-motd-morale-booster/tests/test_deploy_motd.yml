@@ -1,0 +1,27 @@
+---
+- name: Test Nightly MOTD Morale Booster
+  hosts: test_hosts
+  become: yes
+  vars:
+    motd_message: "TEST: The ApocalypsAI Integrator says: 'You are doing great!'" # Mock rationale: This variable overrides the random selection in the main playbook, making the test deterministic.
+  
+  tasks:
+    - name: Include the main playbook for deployment
+      include_tasks: ../src/deploy_motd.yml
+
+    - name: Verify MOTD file exists
+      stat:
+        path: /etc/motd
+      register: motd_stat_result
+      failed_when: not motd_stat_result.stat.exists
+
+    - name: Verify MOTD content
+      slurp:
+        src: /etc/motd
+      register: motd_content_result
+
+    - name: Assert MOTD content matches expected test message
+      assert:
+        that:
+          - motd_content_result.content | b64decode | trim is search("TEST: The ApocalypsAI Integrator says: 'You are doing great!'")
+        msg: "MOTD content does not match the expected test message."
