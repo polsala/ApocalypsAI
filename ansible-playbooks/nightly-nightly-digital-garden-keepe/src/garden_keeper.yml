@@ -1,0 +1,93 @@
+---
+- name: Digital Garden Keeper Playbook
+  hosts: garden_hosts
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ backup_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Get current timestamp for backup and report
+      ansible.builtin.set_fact:
+        current_timestamp: "{{ ansible_date_time.strftime('%Y%m%d_%H%M%S') }}"
+        report_timestamp: "{{ ansible_date_time.strftime('%Y-%m-%d %H:%M:%S') }}"
+
+    - name: Create a timestamped archive of the digital garden
+      ansible.builtin.archive:
+        path: "{{ garden_path }}"
+        dest: "{{ backup_path }}/digital_garden_{{ current_timestamp }}.tar.gz"
+        format: gz
+      register: backup_result
+
+    - name: Find all markdown files in the garden path
+      ansible.builtin.find:
+        paths: "{{ garden_path }}"
+        patterns: "*.md"
+        recurse: yes
+      register: md_files
+
+    - name: Initialize report data
+      ansible.builtin.set_fact:
+        stale_notes: []
+        tagged_notes: {}
+        all_notes_processed: []
+
+    - name: Process each markdown file
+      ansible.builtin.block:
+        - name: Get file stats
+          ansible.builtin.stat:
+            path: "{{ item.path }}"
+          register: file_stats
+
+        - name: Read file content
+          ansible.builtin.slurp:
+            src: "{{ item.path }}"
+          register: file_content_b64
+
+        - name: Decode file content
+          ansible.builtin.set_fact:
+            decoded_content: "{{ file_content_b64['content'] | b64decode }}"
+
+        - name: Check for stale notes
+          ansible.builtin.set_fact:
+            file_mtime_days_ago: "{{ ((ansible_date_time.epoch | int) - (file_stats.stat.mtime | int)) / (60 * 60 * 24) | int }}"
+          when: file_stats.stat.exists
+
+        - name: Add to stale notes if applicable
+          ansible.builtin.set_fact:
+            stale_notes: "{{ stale_notes + [ {'path': item.path, 'last_modified': file_stats.stat.mtime | ansible.builtin.to_datetime('%s') | ansible.builtin.strftime('%Y-%m-%d')} ] }}"
+          when:
+            - file_stats.stat.exists
+            - file_mtime_days_ago > stale_days_threshold
+
+        - name: Check for required tags
+          ansible.builtin.set_fact:
+            tagged_notes: "{{ tagged_notes | combine({tag: (tagged_notes[tag] | default([])) + [item.path]}) }}"
+          loop: "{{ required_tags }}"
+          loop_control:
+            loop_var: tag
+          when: decoded_content is search(tag)
+
+        - name: Add to all notes processed list
+          ansible.builtin.set_fact:
+            all_notes_processed: "{{ all_notes_processed + [item.path] }}"
+      loop: "{{ md_files.files }}"
+      loop_control:
+        loop_var: item
+
+    - name: Generate the digital garden health report
+      ansible.builtin.template:
+        src: templates/garden_report.j2
+        dest: "{{ backup_path }}/garden_report_{{ current_timestamp }}.md"
+      vars:
+        report_data:
+          backup_path: "{{ backup_result.dest }}"
+          backup_status: "{{ 'successful' if backup_result.changed else 'no changes needed' }}"
+          stale_notes: "{{ stale_notes }}"
+          tagged_notes: "{{ tagged_notes }}"
+          report_timestamp: "{{ report_timestamp }}"
