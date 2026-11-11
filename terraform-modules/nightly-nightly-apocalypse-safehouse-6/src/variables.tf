@@ -1,0 +1,1 @@
+variable "bucket_name" {\n  description = "Name of the S3 bucket"\n  type        = string\n}\n\nvariable "create_supply_cache" {\n  description = "Whether to create a placeholder supply cache object"\n  type        = bool\n  default     = false\n}\n\nvariable "aws_region" {\n  description = "AWS region for the bucket"\n  type        = string\n  default     = "us-east-1"\n}
