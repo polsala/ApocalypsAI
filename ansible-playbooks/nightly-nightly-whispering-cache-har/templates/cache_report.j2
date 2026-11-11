@@ -1,0 +1,23 @@
+Whispering Cache Harmony Report - {{ ansible_date_time.iso8601_micro }}
+
+{% for host_status in all_cache_statuses %}
+Host: {{ host_status.host }} (Base Path: {{ host_status.base_path }})
+Status: {% if host_status.harmonized %}HARMONIZED - All whispers in tune!{% else %}DISCREPANCIES DETECTED - Whispers are troubled!{% endif %}
+
+{% if host_status.discrepancies %}
+  Discrepancies:
+  {% for disc in host_status.discrepancies %}
+    - Type: {{ disc.type | default('unknown') }}, Path: {{ disc.path | default('N/A') }}, Status: {{ disc.status | default('N/A') }}
+      {% if disc.status == 'content_mismatch' %} (Expected regex: "{{ disc.expected_regex }}"){% endif %}
+  {% endfor %}
+{% else %}
+  No discrepancies found. All items present and accounted for.
+{% endif %}
+---
+{% endfor %}
+
+Summary:
+{% set harmonized_count = all_cache_statuses | selectattr('harmonized', 'equalto', true) | list | length %}
+{% set total_count = all_cache_statuses | length %}
+{{ harmonized_count }} out of {{ total_count }} caches are harmonized.
+May your stashes be ever full and your whispers clear.

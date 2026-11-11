@@ -1,0 +1,27 @@
+---
+- name: Check if {{ item.type }} {{ item.path }} exists
+  ansible.builtin.stat:
+    path: "{{ cache_base_path }}/{{ item.path }}"
+  register: item_stat
+
+- name: Add discrepancy if {{ item.type }} {{ item.path }} is missing
+  ansible.builtin.set_fact:
+    cache_status: "{{ cache_status | combine({'discrepancies': cache_status.discrepancies + [{'type': item.type, 'path': item.path, 'status': 'missing'}]}) }}"
+    harmonized: false
+  when: not item_stat.stat.exists
+
+- name: Check file content if type is file and content_regex is defined
+  ansible.builtin.slurp:
+    src: "{{ cache_base_path }}/{{ item.path }}"
+  register: file_content
+  when: item.type == 'file' and item.content_regex is defined and item_stat.stat.exists
+
+- name: Add discrepancy if file content does not match regex
+  ansible.builtin.set_fact:
+    cache_status: "{{ cache_status | combine({'discrepancies': cache_status.discrepancies + [{'type': item.type, 'path': item.path, 'status': 'content_mismatch', 'expected_regex': item.content_regex}]}) }}"
+    harmonized: false
+  when:
+    - item.type == 'file'
+    - item.content_regex is defined
+    - item_stat.stat.exists
+    - file_content.content | b64decode | not search(item.content_regex)
