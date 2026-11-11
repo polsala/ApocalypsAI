@@ -1,0 +1,36 @@
+name: 'Cosmic PR Aligner'
+description: 'Checks PR title/description for cosmic alignment and offers stellar suggestions.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls.'
+    required: true
+  aligned-keywords:
+    description: 'Comma-separated list of keywords indicating cosmic alignment.'
+    required: false
+    default: 'feat,fix,chore,docs,style,refactor,perf,test,build,ci,revert,✨,🚀,🎉,harmonious,stellar,radiant'
+  misaligned-keywords:
+    description: 'Comma-separated list of keywords indicating cosmic misalignment.'
+    required: false
+    default: 'WIP,ugh,broken,temp,draft,bad,fixme,TODO'
+  alignment-threshold:
+    description: 'Minimum number of aligned keywords to consider a PR "aligned".'
+    required: false
+    default: '1'
+  misalignment-threshold:
+    description: 'Minimum number of misaligned keywords to consider a PR "misaligned".'
+    required: false
+    default: '1'
+  comment-on-alignment:
+    description: 'Whether to add a positive comment if aligned.'
+    required: false
+    default: 'true'
+  comment-on-misalignment:
+    description: 'Whether to add a suggestion comment if misaligned.'
+    required: false
+    default: 'true'
+outputs:
+  is-aligned:
+    description: 'True if the PR is cosmically aligned, false otherwise.'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
