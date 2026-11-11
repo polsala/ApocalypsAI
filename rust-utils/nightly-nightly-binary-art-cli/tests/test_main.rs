@@ -1,0 +1,1 @@
+#[cfg(test)]\nmod tests {\n    use binary_art_cli::binary_art;\n\n    #[test]\n    fn test_single_char() {\n        let result = binary_art("A");\n        assert_eq!(result, " █    █");\n    }\n\n    #[test]\n    fn test_multiple_chars() {\n        let result = binary_art("AB");\n        let expected = " █    █\n █   █ ";\n        assert_eq!(result, expected);\n    }\n}\n

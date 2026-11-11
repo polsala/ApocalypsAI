@@ -1,0 +1,1 @@
+use std::env;\nuse binary_art_cli::binary_art;\n\nfn main() {\n    let args: Vec<String> = env::args().collect();\n    if args.len() < 2 {\n        eprintln!("Usage: {} <text>", args[0]);\n        std::process::exit(1);\n    }\n    let input = &args[1];\n    let art = binary_art(input);\n    println!("{}", art);\n}\n
