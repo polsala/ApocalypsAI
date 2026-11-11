@@ -1,0 +1,30 @@
+{
+  "name": "nightly-cosmic-calendar-conv",
+  "version": "1.0.0",
+  "description": "Converts Earth dates into whimsical 'Cosmic Calendar' dates, featuring Stellar Cycles, Lunar Phases, and Galactic Eras.",
+  "main": "dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "jest",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "cosmic",
+    "calendar",
+    "date",
+    "converter",
+    "cli",
+    "typescript",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
