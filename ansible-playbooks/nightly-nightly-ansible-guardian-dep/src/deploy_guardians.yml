@@ -1,0 +1,74 @@
+---
+- name: Deploy and Configure Digital Guardians
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Ensure guardian packages are present
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop: "{{ guardian_packages }}"
+
+    - name: Configure Fail2Ban for SSH protection
+      ansible.builtin.copy:
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+          bantime = 3600
+        dest: /etc/fail2ban/jail.d/sshd.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart fail2ban
+      register: fail2ban_config_status
+
+    - name: Configure Unattended Upgrades for automatic security updates
+      ansible.builtin.copy:
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::AutocleanInterval "7";
+          APT::Periodic::Unattended-Upgrade "1";
+          Unattended-Upgrade::Automatic-Reboot "true";
+          Unattended-Upgrade::Automatic-Reboot-Time "03:00";
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        owner: root
+        group: root
+        mode: '0644'
+      register: unattended_upgrades_config_status
+
+    - name: Ensure guardian services are running and enabled
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: "{{ guardian_services }}"
+
+    - name: Gather service status for report
+      ansible.builtin.service_facts:
+      register: service_status_facts
+
+    - name: Generate Digital Guardian Vigil Report
+      ansible.builtin.template:
+        src: guardian_report.j2
+        dest: /tmp/digital_guardian_vigil_report.txt
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: localhost # Generate report on the Ansible controller
+      vars:
+        fail2ban_config_file_present: "{{ fail2ban_config_status.changed or not fail2ban_config_status.skipped }}"
+        unattended_upgrades_config_file_present: "{{ unattended_upgrades_config_status.changed or not unattended_upgrades_config_status.skipped }}"
+
+  handlers:
+    - name: Restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
