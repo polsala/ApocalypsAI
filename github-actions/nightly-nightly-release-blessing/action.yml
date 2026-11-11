@@ -1,0 +1,26 @@
+name: 'Nightly Release Blessing'
+description: 'Bestows a whimsical, post-apocalyptic blessing and a survival tip upon successful releases or merges.'
+inputs:
+  github-token:
+    description: 'GitHub token for API interaction.'
+    required: true
+  blessing-type:
+    description: 'Type of blessing to generate: "ominous", "hopeful", or "random".'
+    required: false
+    default: 'random'
+outputs:
+  blessing-message:
+    description: 'The full generated blessing message, including the survival tip.'
+runs:
+  using: 'composite'
+  steps:
+    - run: |
+        echo "Running Nightly Release Blessing..."
+        BLESSING_TYPE="${{ inputs.blessing-type }}"
+        echo "BLESSING_TYPE=$BLESSING_TYPE" >> $GITHUB_ENV
+      shell: bash
+    - run: |
+        chmod +x ${{ github.action_path }}/src/bless_release.sh
+        BLESSING_MESSAGE=$(${github.action_path}/src/bless_release.sh)
+        echo "blessing-message=$BLESSING_MESSAGE" >> $GITHUB_OUTPUT
+      shell: bash
