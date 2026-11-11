@@ -1,0 +1,14 @@
+# Log Summary Report for {{ inventory_hostname }}
+
+Generated on: {{ ansible_date_time.iso8601 }}
+
+Log File Parsed: {{ log_file_path }}
+
+## Error Pattern Counts:
+{% for pattern, count in log_summary.items() %}
+- {{ pattern }}: {{ count }}
+{% endfor %}
+
+{% if log_summary | length == 0 %}
+No specific error patterns found in the log file.
+{% endif %}

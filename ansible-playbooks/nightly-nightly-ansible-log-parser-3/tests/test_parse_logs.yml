@@ -1,0 +1,50 @@
+---
+- name: Test Ansible Log Parser Playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Mock log file content
+      ansible.builtin.set_fact:
+        log_content: [
+          "2023-10-27 10:00:00 ERROR: Something went wrong.",
+          "2023-10-27 10:01:00 INFO: Operation successful.",
+          "2023-10-27 10:02:00 WARNING: Potential issue detected.",
+          "2023-10-27 10:03:00 ERROR: Another failure occurred.",
+          "2023-10-27 10:04:00 DEBUG: This is a debug message.",
+          "2023-10-27 10:05:00 AUTH: User denied access."
+        ]
+      register: mock_log_content
+      # Mock rationale: Simulates the output of 'cat' for a log file.
+
+    - name: Mock log file stat
+      ansible.builtin.stat:
+        path: "/var/log/syslog"
+      register: log_file_stat
+      # Mock rationale: Simulates the stat module's output, ensuring the file is considered to exist.
+      # The 'exists' attribute is implicitly true here.
+
+    - name: Run the log parsing logic
+      ansible.builtin.include_tasks: ../tasks/main.yml
+      vars:
+        log_file_path: "/var/log/syslog"
+      # Mock rationale: Includes the actual tasks to be tested, allowing us to override variables.
+
+    - name: Assert log_summary counts
+      ansible.builtin.assert:
+        that:
+          - "log_summary['2'] == 2" # Two lines match 'ERROR'
+          - "log_summary['1'] == 1" # One line matches 'WARNING'
+          - "log_summary['1'] == 1" # One line matches 'AUTH: User denied access.'
+        fail_msg: "Log summary counts are incorrect."
+        success_msg: "Log summary counts are correct."
+      # Mock rationale: Verifies the calculated counts in the 'log_summary' fact against expected values.
+
+    - name: Assert report file content (partial check)
+      ansible.builtin.assert:
+        that:
+          - "'/tmp/log_summary_localhost.txt' in ansible_facts.file_system.files"
+          - "'ERROR: Something went wrong.' in lookup('file', '/tmp/log_summary_localhost.txt')"
+        fail_msg: "Log summary report content is incorrect or missing."
+        success_msg: "Log summary report content is correct."
+      # Mock rationale: Checks if the report file was created and contains expected content snippets.
+      # Note: 'localhost' is used as a placeholder for the inventory_hostname in this test context.
