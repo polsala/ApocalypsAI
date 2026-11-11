@@ -1,0 +1,51 @@
+name: 'Chronicle Entry Reminder'
+description: 'Reminds contributors to include a "Chronicle Entry" (changelog or release note) in their PR description.'
+inputs:
+  github_token:
+    description: 'GitHub token for API calls (e.g., secrets.GITHUB_TOKEN).'
+    required: true
+  required_phrase:
+    description: 'The regex phrase to look for in the PR description (e.g., "Chronicle Entry:|Changelog:|Release Notes:").'
+    required: false
+    default: 'Chronicle Entry:|Changelog:|Release Notes:'
+  comment_message:
+    description: 'The message to post as a comment if the phrase is not found.'
+    required: false
+    default: |-
+      👋 Greetings, fellow chrononaut!
+      It appears this Pull Request is missing a "Chronicle Entry" (changelog or release note).
+      Please consider adding a section like "## Chronicle Entry" or "## Changelog" to your description to help us track the unfolding history of our repository!
+      Your future self (and your teammates) will thank you. ✨
+outputs:
+  chronicle_entry_found:
+    description: 'Boolean indicating if the required phrase was found in the PR description.'
+runs:
+  using: "composite"
+  steps:
+    - name: Get PR Body and Context
+      id: get_pr_context
+      shell: bash
+      run: |
+        # Mock rationale: In a real workflow, github.event_path points to the full event payload.
+        # We extract necessary details from it.
+        PR_BODY=$(jq -r '.pull_request.body' "$GITHUB_EVENT_PATH")
+        echo "$PR_BODY" > pr_body.txt
+        echo "pr_number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
+        echo "repo_full_name=$(jq -r '.repository.full_name' "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
+      env:
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+    - name: Check for Chronicle Entry
+      id: check_entry
+      shell: bash
+      run: |
+        chmod +x ${{ github.action_path }}/src/check_chronicle_entry.sh
+        ${{ github.action_path }}/src/check_chronicle_entry.sh \
+          pr_body.txt \
+          "${{ steps.get_pr_context.outputs.pr_number }}" \
+          "${{ steps.get_pr_context.outputs.repo_full_name }}" \
+          "${{ inputs.github_token }}" \
+          "${{ inputs.required_phrase }}" \
+          "${{ inputs.comment_message }}"
+      env:
+        GITHUB_OUTPUT: ${{ github.output }}
