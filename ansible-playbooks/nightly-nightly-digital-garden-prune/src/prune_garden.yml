@@ -1,0 +1,43 @@
+---
+- name: Prune the Digital Garden
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/garden_config.yml
+
+  tasks:
+    - name: Ensure pruning directory exists
+      ansible.builtin.file:
+        path: "{{ pruning_report_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      # Mock rationale: The report directory is created locally for report generation.
+
+    - name: Clear overgrown log files
+      ansible.builtin.copy:
+        content: ""
+        dest: "{{ item.path }}"
+        force: yes
+      loop: "{{ garden_config.log_files_to_clear | default([]) }}"
+      when: item.clear_on_prune | default(true)
+      register: cleared_logs
+      # Mock rationale: In a real scenario, this would use 'ansible.builtin.copy' to overwrite or 'ansible.builtin.file' with state=absent.
+      # For testing, we simulate clearing by ensuring the file is empty.
+
+    - name: Restart wilting services
+      ansible.builtin.command: "touch {{ item.restart_marker_path }}" # Simulate service restart by touching a marker file
+      loop: "{{ garden_config.services_to_restart | default([]) }}"
+      when: item.restart_on_prune | default(true)
+      register: restarted_services
+      # Mock rationale: In a real scenario, this would use 'ansible.builtin.service' module. For testing, we simulate a restart by creating/updating a marker file.
+
+    - name: Generate pruning report
+      ansible.builtin.template:
+        src: templates/pruning_report.j2
+        dest: "{{ pruning_report_dir }}/pruning_report_{{ ansible_date_time.iso8601_basic_short }}.txt"
+      delegate_to: localhost
+      vars:
+        cleared_logs_summary: "{{ cleared_logs.results | map(attribute='item.name') | list }}"
+        restarted_services_summary: "{{ restarted_services.results | map(attribute='item.name') | list }}"
+      # Mock rationale: The report generation uses Jinja2 templating, which is deterministic and offline.
