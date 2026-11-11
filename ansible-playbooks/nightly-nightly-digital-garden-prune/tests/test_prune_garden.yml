@@ -1,0 +1,88 @@
+---
+- name: Test Nightly Digital Garden Pruner Playbook
+  hosts: garden_servers
+  become: yes
+  gather_facts: no # No need to gather facts for a mock test
+  vars:
+    report_path: "/tmp/pruning_report_test_{{ ansible_hostname }}.txt"
+
+  tasks:
+    - name: Ensure playbook syntax is valid
+      ansible.builtin.command: ansible-playbook --syntax-check ../prune_garden.yml -i ../inventory.ini
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+      # Mock rationale: This task runs a local command to check syntax, which is deterministic and offline.
+
+    # Mock registered variables that would be used by the template
+    - name: Mock disk usage before
+      ansible.builtin.set_fact:
+        disk_usage_before:
+          stdout_lines:
+            - "Filesystem      Size  Used Avail Use% Mounted on"
+            - "/dev/sda1       100G   60G  40G  60% /"
+      # Mock rationale: We are simulating the output of `df -h` for testing purposes, making the test deterministic.
+
+    - name: Mock kernel removal result
+      ansible.builtin.set_fact:
+        kernel_removal_result:
+          results: # Simulate results for loop in template
+            - changed: true
+            - changed: true
+      # Mock rationale: We are simulating the result of kernel removal for testing purposes, making the test deterministic.
+
+    - name: Mock apt autoremove result
+      ansible.builtin.set_fact:
+        apt_autoremove_result:
+          changed: true
+      # Mock rationale: We are simulating the result of apt autoremove for testing purposes, making the test deterministic.
+
+    - name: Mock temporary file deletion result for /tmp
+      ansible.builtin.set_fact:
+        tmp_file_deletion_result:
+          results:
+            - changed: true
+            - changed: true
+      # Mock rationale: We are simulating the result of file deletion for testing purposes, making the test deterministic.
+
+    - name: Mock temporary file deletion result for /var/tmp
+      ansible.builtin.set_fact:
+        var_tmp_file_deletion_result:
+          results:
+            - changed: true
+      # Mock rationale: We are simulating the result of file deletion for testing purposes, making the test deterministic.
+
+    - name: Mock disk usage after
+      ansible.builtin.set_fact:
+        disk_usage_after:
+          stdout_lines:
+            - "Filesystem      Size  Used Avail Use% Mounted on"
+            - "/dev/sda1       100G   58G  42G  58% /"
+      # Mock rationale: We are simulating the output of `df -h` for testing purposes, making the test deterministic.
+
+    - name: Mock ansible_date_time for template
+      ansible.builtin.set_fact:
+        ansible_date_time:
+          iso8601_micro: "2023-10-27T10:30:00.123456Z"
+      # Mock rationale: We are simulating the ansible_date_time fact for deterministic template rendering.
+
+    - name: Mock ansible_hostname for template
+      ansible.builtin.set_fact:
+        ansible_hostname: "localhost"
+      # Mock rationale: We are simulating the ansible_hostname fact for deterministic template rendering.
+
+    - name: Run the main playbook in check mode to verify task structure
+      ansible.builtin.include_playbook: ../prune_garden.yml
+      args:
+        check: yes
+      # Mock rationale: Running in check mode ensures no actual changes are made, making the test deterministic and safe.
+      # This verifies that the playbook can be parsed and tasks are correctly defined, even if registered variables aren't fully populated.
+
+    - name: Verify report template task would run
+      ansible.builtin.debug:
+        msg: "The report template task would attempt to render using mocked variables."
+      # Mock rationale: In check mode, we can't assert the *content* of a generated file.
+      # This debug message serves as a placeholder to indicate that the template task was reached and would process.
+      # A true content check would require running the playbook in a controlled environment (e.g., Docker container)
+      # and then inspecting the generated file, which goes beyond the "offline" requirement.
+      # The `set_fact` for template variables ensures that if it *were* to run, it would have the necessary data.

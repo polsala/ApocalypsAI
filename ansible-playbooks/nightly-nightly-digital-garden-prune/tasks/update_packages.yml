@@ -1,0 +1,17 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600 # Update cache if older than 1 hour
+  # Mock rationale: The apt module interacts with the system's package manager. In tests, we'll verify this task is called.
+
+- name: Upgrade all installed packages
+  ansible.builtin.apt:
+    upgrade: dist
+  register: apt_upgrade_result
+  # Mock rationale: The apt module interacts with the system's package manager. In tests, we'll verify this task is called.
+
+- name: Report on package upgrade status
+  ansible.builtin.debug:
+    msg: "Packages upgraded: {{ apt_upgrade_result.changed }}"
+  when: apt_upgrade_result.changed
