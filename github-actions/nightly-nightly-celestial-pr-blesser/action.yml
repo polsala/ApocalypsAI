@@ -1,0 +1,32 @@
+name: 'Celestial PR Blesser'
+description: 'Bestows a Celestial Blessing upon Pull Requests based on configurable alignment criteria.'
+inputs:
+  github-token:
+    description: 'GitHub token for API calls.'
+    required: true
+  pr-title-keywords:
+    description: 'Comma-separated keywords required in PR title (e.g., "feat,fix").'
+    required: false
+    default: 'feat,fix,docs,chore'
+  pr-body-min-length:
+    description: 'Minimum length for the PR body description.'
+    required: false
+    default: '20'
+  max-lines-changed:
+    description: 'Maximum total lines added/deleted for a blessing.'
+    required: false
+    default: '500'
+  blessing-message:
+    description: 'Message to add if the PR receives a blessing.'
+    required: false
+    default: '✨ This Pull Request has achieved Celestial Alignment! May its merge be swift and its impact profound. ✨'
+  failure-message:
+    description: 'Message to add if the PR does not receive a blessing.'
+    required: false
+    default: '🌌 This Pull Request seeks further cosmic alignment. Review the stars (and criteria) for a blessing. 🌌'
+outputs:
+  is-blessed:
+    description: 'True if the PR received a blessing, false otherwise.'
+runs:
+  using: 'node20'
+  main: 'src/index.js'
