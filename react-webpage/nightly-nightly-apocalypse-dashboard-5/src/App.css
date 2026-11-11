@@ -1,0 +1,111 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  line-height: 1.6;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #333;
+  padding: 40px 20px;
+  border-bottom: 5px solid #f44336;
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  color: #f44336;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.App-header p {
+  font-size: 1.2em;
+  color: #bdbdbd;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+section {
+  background-color: #2a2a2a;
+  padding: 30px;
+  margin-bottom: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  border: 1px solid #444;
+}
+
+section h2 {
+  color: #f44336;
+  margin-top: 0;
+  font-size: 1.8em;
+  border-bottom: 2px solid #555;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.agent-grid,
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.agent-card,
+.workflow-card {
+  background-color: #3a3a3a;
+  padding: 20px;
+  border-radius: 8px;
+  border: 3px solid transparent; /* For dynamic border color */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+.agent-card:hover,
+.workflow-card:hover {
+  transform: translateY(-5px);
+}
+
+.agent-card h3,
+.workflow-card h3 {
+  margin-top: 0;
+  color: #f44336;
+  font-size: 1.4em;
+}
+
+.agent-card p,
+.workflow-card p {
+  font-size: 1em;
+  margin-bottom: 5px;
+}
+
+.classifier-list {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+  display: inline-block;
+  margin-top: 15px;
+}
+
+.classifier-list li {
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+footer {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #333;
+  color: #999;
+  font-size: 0.9em;
+  border-top: 1px solid #444;
+}
