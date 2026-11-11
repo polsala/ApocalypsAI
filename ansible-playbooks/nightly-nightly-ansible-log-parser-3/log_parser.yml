@@ -1,0 +1,55 @@
+---
+- name: Parse and Summarize System Logs
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/log_analysis.yml
+
+  tasks:
+    - name: Ensure log analysis variables are defined
+      ansible.builtin.assert:
+        that:
+          - log_files_to_parse is defined
+          - log_files_to_parse | length > 0
+          - keywords_to_find is defined
+          - keywords_to_find | length > 0
+        fail_msg: "Log analysis variables (log_files_to_parse, keywords_to_find) must be defined."
+
+    - name: Create temporary directory for log snippets
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: log_snippets
+      register: temp_log_dir
+
+    - name: Iterate over log files and extract matching lines
+      ansible.builtin.lineinfile:
+        path: "{{ item }}"
+        regexp: "(?i)({{ keywords_to_find | join('|') }})"
+      loop: "{{ log_files_to_parse }}"
+      register: log_matches
+      when: item is defined
+
+    - name: Collect and format log snippets
+      ansible.builtin.set_fact:
+        log_summary:
+          "{{ log_summary | default([]) + [ {'host': inventory_hostname, 'file': item.item, 'lines': item.results | selectattr('rc', 'equal', 0) | map(attribute='line') | list} ] }}"
+      loop: "{{ log_matches.results }}"
+      when: item.results | length > 0 and (item.results | selectattr('rc', 'equal', 0) | list | length) > 0
+
+    - name: Display log summary
+      ansible.builtin.debug:
+        msg: "Log analysis for {{ item.host }} in {{ item.file }}: {{ item.lines | length }} matching lines found."
+      loop: "{{ log_summary }}"
+      when: item.lines | length > 0
+
+    - name: Display detailed matching lines (if any)
+      ansible.builtin.debug:
+        msg: "  - {{ item.lines | join('\n    ') }}"
+      loop: "{{ log_summary }}"
+      when: item.lines | length > 0
+
+    - name: Clean up temporary directory
+      ansible.builtin.file:
+        path: "{{ temp_log_dir.path }}"
+        state: absent
+      when: temp_log_dir.path is defined
