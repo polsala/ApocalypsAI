@@ -1,0 +1,16 @@
+name: "Nightly PR Emoji Labeler"
+description: "Adds a random emoji label to PRs and posts a comment."
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run labeler
+      env:
+        GITHUB_TOKEN: ${{{{ inputs.github-token }}}}
+        GITHUB_REPOSITORY: ${{{{ github.repository }}}}
+        GITHUB_PR_NUMBER: ${{{{ github.event.pull_request.number }}}}
+      run: |
+        bash "${{{{ github.action_path }}}}/labeler.sh"
