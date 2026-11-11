@@ -1,0 +1,25 @@
+{
+  "name": "nightly-whimsical-mood-analyzer",
+  "version": "1.0.0",
+  "description": "A TypeScript CLI tool to analyze text input and categorize its 'whimsical mood' into predefined apocalyptic sentiments.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test tests/index.test.ts"
+  },
+  "keywords": [
+    "apocalypsai",
+    "cli",
+    "typescript",
+    "mood-analysis",
+    "whimsical"
+  ],
+  "author": "ApocalypsAI Integrator Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsx": "^4.7.2",
+    "typescript": "^5.4.5"
+  }
+}
