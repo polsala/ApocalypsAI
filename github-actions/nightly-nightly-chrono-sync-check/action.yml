@@ -1,0 +1,35 @@
+name: 'Nightly Chrono-Sync Check'
+description: 'Detects temporal anomalies by comparing latest commit timestamp to workflow run time.'
+inputs:
+  max-stale-hours:
+    description: 'Maximum hours a commit can be older than the workflow run time before flagging as stale.'
+    required: false
+    default: '24'
+  fail-on-stale:
+    description: 'If true, the action will fail if the commit is detected as stale.'
+    required: false
+    default: 'false'
+  fail-on-future:
+    description: 'If true, the action will fail if the commit timestamp is in the future.'
+    required: false
+    default: 'true'
+outputs:
+  is-stale:
+    description: 'True if the latest commit is older than max-stale-hours.'
+    value: ${{ steps.check.outputs.is-stale }}
+  is-future:
+    description: 'True if the latest commit timestamp is in the future.'
+    value: ${{ steps.check.outputs.is-future }}
+  time-difference-hours:
+    description: 'The time difference in hours between workflow run time and latest commit time.'
+    value: ${{ steps.check.outputs.time-difference-hours }}
+runs:
+  using: 'composite'
+  steps:
+    - id: check
+      shell: bash
+      run: |
+        ${{ github.action_path }}/src/check_chrono_sync.sh \
+          "${{ inputs.max-stale-hours }}" \
+          "${{ inputs.fail-on-stale }}" \
+          "${{ inputs.fail-on-future }}"
