@@ -1,0 +1,102 @@
+---
+- name: Test Digital Dust Bunny Removal Playbook
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    test_dir_tmp: "/tmp/ansible_test_dust_bunnies_tmp"
+    test_dir_var_tmp: "/var/tmp/ansible_test_dust_bunnies_var_tmp"
+    test_file_old: "{{ test_dir_tmp }}/old_dust_bunny.txt"
+    test_file_new: "{{ test_dir_tmp }}/new_dust_bunny.txt"
+    test_file_var_old: "{{ test_dir_var_tmp }}/old_var_dust_bunny.txt"
+    test_file_var_new: "{{ test_dir_var_tmp }}/new_var_dust_bunny.txt"
+
+  tasks:
+    - name: Ensure test directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ test_dir_tmp }}"
+        - "{{ test_dir_var_tmp }}"
+
+    - name: Create old dust bunnies (files older than 7 days)
+      ansible.builtin.copy:
+        content: "This is an old dust bunny."
+        dest: "{{ test_file_old }}"
+    - name: Set modification time for old dust bunny
+      ansible.builtin.shell: "touch -d '8 days ago' {{ test_file_old }}"
+      changed_when: false # Mock rationale: This task is part of test setup, not a change to be reported by the test itself.
+
+    - name: Create new dust bunnies (files newer than 7 days)
+      ansible.builtin.copy:
+        content: "This is a new dust bunny."
+        dest: "{{ test_file_new }}"
+
+    - name: Create old var_tmp dust bunnies
+      ansible.builtin.copy:
+        content: "This is an old var_tmp dust bunny."
+        dest: "{{ test_file_var_old }}"
+    - name: Set modification time for old var_tmp dust bunny
+      ansible.builtin.shell: "touch -d '8 days ago' {{ test_file_var_old }}"
+      changed_when: false # Mock rationale: This task is part of test setup, not a change to be reported by the test itself.
+
+    - name: Create new var_tmp dust bunnies
+      ansible.builtin.copy:
+        content: "This is a new var_tmp dust bunny."
+        dest: "{{ test_file_var_new }}"
+
+    - name: Run the main cleanup playbook
+      ansible.builtin.include_tasks: ../src/dust_bunny_cleanup.yml
+      # Mock rationale: We are including the main playbook directly to test its tasks
+      # in isolation within this controlled test environment, rather than running
+      # it as a separate process.
+
+    - name: Verify old dust bunny is removed
+      ansible.builtin.stat:
+        path: "{{ test_file_old }}"
+      register: old_file_stat
+    - name: Assert old dust bunny is gone
+      ansible.builtin.assert:
+        that:
+          - not old_file_stat.stat.exists
+        fail_msg: "Old dust bunny file {{ test_file_old }} was not removed!"
+
+    - name: Verify new dust bunny is still present
+      ansible.builtin.stat:
+        path: "{{ test_file_new }}"
+      register: new_file_stat
+    - name: Assert new dust bunny is present
+      ansible.builtin.assert:
+        that:
+          - new_file_stat.stat.exists
+        fail_msg: "New dust bunny file {{ test_file_new }} was unexpectedly removed!"
+
+    - name: Verify old var_tmp dust bunny is removed
+      ansible.builtin.stat:
+        path: "{{ test_file_var_old }}"
+      register: old_var_file_stat
+    - name: Assert old var_tmp dust bunny is gone
+      ansible.builtin.assert:
+        that:
+          - not old_var_file_stat.stat.exists
+        fail_msg: "Old var_tmp dust bunny file {{ test_file_var_old }} was not removed!"
+
+    - name: Verify new var_tmp dust bunny is still present
+      ansible.builtin.stat:
+        path: "{{ test_file_var_new }}"
+      register: new_var_file_stat
+    - name: Assert new var_tmp dust bunny is present
+      ansible.builtin.assert:
+        that:
+          - new_var_file_stat.stat.exists
+        fail_msg: "New var_tmp dust bunny file {{ test_file_var_new }} was unexpectedly removed!"
+
+    - name: Clean up test directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ test_dir_tmp }}"
+        - "{{ test_dir_var_tmp }}"
