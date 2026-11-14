@@ -1,0 +1,67 @@
+---
+- name: Whimsical Digital Dust Bunny Removal
+  hosts: all
+  become: yes
+  tasks:
+    - name: Gather facts for OS detection
+      ansible.builtin.setup:
+        gather_subset:
+          - 'min'
+
+    - name: Clean APT cache (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: yes
+        autoremove: yes
+        update_cache: yes
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Clean YUM cache (RedHat-based, using yum)
+      ansible.builtin.yum:
+        clean: all
+      when: ansible_facts['os_family'] == 'RedHat' and ansible_facts['pkg_mgr'] == 'yum'
+
+    - name: Clean DNF cache (RedHat-based, using dnf)
+      ansible.builtin.dnf:
+        clean: all
+      when: ansible_facts['os_family'] == 'RedHat' and ansible_facts['pkg_mgr'] == 'dnf'
+
+    - name: Remove old temporary files from /tmp (older than 7 days)
+      ansible.builtin.find:
+        paths: /tmp
+        age: 7d
+        file_type: any
+        recurse: yes
+      register: old_tmp_files
+      changed_when: old_tmp_files.files | length > 0
+
+    - name: Delete old temporary files from /tmp
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_tmp_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Remove old temporary files from /var/tmp (older than 7 days)
+      ansible.builtin.find:
+        paths: /var/tmp
+        age: 7d
+        file_type: any
+        recurse: yes
+      register: old_var_tmp_files
+      changed_when: old_var_tmp_files.files | length > 0
+
+    - name: Delete old temporary files from /var/tmp
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_var_tmp_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Clear systemd journal logs (older than 30 days, or to 100M)
+      ansible.builtin.command: journalctl --vacuum-time=30d --vacuum-size=100M
+      args:
+        warn: no # Suppress warning about command module
+      changed_when: true # Assume it always changes something or attempts to
+      failed_when: false # Don't fail if journalctl isn't present or command fails
