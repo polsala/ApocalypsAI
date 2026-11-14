@@ -1,0 +1,24 @@
+{
+  "name": "nightly-echo-purifier",
+  "version": "1.0.0",
+  "description": "Scans directories for forgotten files (digital echoes) and moves them to a designated archive.",
+  "main": "src/index.js",
+  "bin": {
+    "nightly-echo-purifier": "src/cli.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "cleanup",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
