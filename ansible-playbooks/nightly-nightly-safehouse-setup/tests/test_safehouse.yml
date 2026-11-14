@@ -1,0 +1,50 @@
+---
+- name: Test nightly‑safehouse‑setup playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run the safehouse setup playbook
+      import_playbook: "../src/setup_safehouse.yml"
+
+    - name: Verify base safehouse directory exists
+      stat:
+        path: /tmp/safehouse
+      register: base_dir
+
+    - name: Assert base directory is present
+      assert:
+        that:
+          - base_dir.stat.isdir
+
+    - name: Verify sub‑directories exist
+      vars:
+        subdirs:
+          - food
+          - water
+          - tools
+      loop: "{{ subdirs }}"
+      stat:
+        path: "/tmp/safehouse/{{ item }}"
+      register: subdir_stat
+      loop_control:
+        label: "{{ item }}"
+      failed_when: not subdir_stat.stat.isdir
+
+    - name: Verify placeholder files exist
+      vars:
+        files:
+          - { dir: food, file: rations.txt }
+          - { dir: water, file: water_supply.txt }
+          - { dir: tools, file: toolkit.txt }
+      loop: "{{ files }}"
+      stat:
+        path: "/tmp/safehouse/{{ item.dir }}/{{ item.file }}"
+      register: file_stat
+      loop_control:
+        label: "{{ item.dir }}/{{ item.file }}"
+      failed_when: not file_stat.stat.isfile
+
+    - name: Cleanup safehouse directory after test
+      file:
+        path: /tmp/safehouse
+        state: absent

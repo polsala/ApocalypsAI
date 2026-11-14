@@ -1,0 +1,30 @@
+---
+- name: Create post‑apocalyptic safehouse
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure base safehouse directory exists
+      file:
+        path: /tmp/safehouse
+        state: directory
+        mode: "0755"
+
+    - name: Create sub‑directories
+      loop:
+        - food
+        - water
+        - tools
+      file:
+        path: "/tmp/safehouse/{{ item }}"
+        state: directory
+        mode: "0755"
+
+    - name: Place placeholder files in each sub‑directory
+      loop:
+        - { dir: food, file: "rations.txt", content: "Canned beans, dried fruit, chocolate bars" }
+        - { dir: water, file: "water_supply.txt", content: "Rainwater barrels, purification tablets" }
+        - { dir: tools, file: "toolkit.txt", content: "Multi‑tool, rope, flashlight, batteries" }
+      copy:
+        dest: "/tmp/safehouse/{{ item.dir }}/{{ item.file }}"
+        content: "{{ item.content }}"
+        mode: "0644"
