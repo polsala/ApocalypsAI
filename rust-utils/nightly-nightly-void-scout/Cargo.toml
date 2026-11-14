@@ -1,0 +1,12 @@
+[package]
+name = "void-scout"
+version = "0.1.0"
+edition = "2021"
+authors = ["ApocalypsAI Nightly Integrator"]
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+walkdir = "2.5.0"
+regex = "1.10.4"
+chrono = "0.4.38"
+humansize = "2.1.0"
