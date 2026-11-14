@@ -1,0 +1,14 @@
+output "bucket_id" {
+  description = "The ID of the S3 bucket."
+  value       = aws_s3_bucket.time_capsule.id
+}
+
+output "bucket_arn" {
+  description = "The ARN of the S3 bucket."
+  value       = aws_s3_bucket.time_capsule.arn
+}
+
+output "bucket_name" {
+  description = "The full generated name of the S3 bucket."
+  value       = aws_s3_bucket.time_capsule.bucket
+}
