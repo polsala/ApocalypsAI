@@ -1,0 +1,68 @@
+---
+- name: Deploy ApocalypsAI Morale Beacon
+  hosts: morale_beacons
+  become: yes
+  vars:
+    app_port: 5000
+    app_dir: /opt/morale_beacon
+  tasks:
+    - name: Ensure Python and pip are installed
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian" # Only for Debian-based systems
+
+    - name: Ensure Flask is installed
+      ansible.builtin.pip:
+        name: Flask
+        state: present
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy Flask application file
+      ansible.builtin.copy:
+        src: app.py
+        dest: "{{ app_dir }}/app.py"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy morale messages file
+      ansible.builtin.copy:
+        src: morale_messages.txt
+        dest: "{{ app_dir }}/morale_messages.txt"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Deploy systemd service file
+      ansible.builtin.template:
+        src: templates/morale_beacon.service.j2
+        dest: /etc/systemd/system/morale_beacon.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart morale beacon service
+
+    - name: Ensure morale beacon service is started and enabled
+      ansible.builtin.systemd:
+        name: morale_beacon
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+  handlers:
+    - name: Restart morale beacon service
+      ansible.builtin.systemd:
+        name: morale_beacon
+        state: restarted
+        daemon_reload: yes
