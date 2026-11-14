@@ -1,0 +1,10 @@
+name: "PR Quote Commenter"
+description: "Posts a whimsical quote as a comment on newly opened pull requests."
+inputs: {}
+runs:
+  using: "composite"
+  steps:
+    - name: "Post Quote"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: bash "${{ github.action_path }}/src/entrypoint.sh"
