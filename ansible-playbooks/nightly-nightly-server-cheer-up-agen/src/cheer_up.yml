@@ -1,0 +1,39 @@
+- name: Deploy Nightly Server Cheer-Up Agent
+  hosts: all
+  become: true # Requires root privileges for package installation and /etc modifications
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure cowsay is installed
+      ansible.builtin.package:
+        name: cowsay
+        state: present
+      when: cheer_up_enable_cowsay
+      # Mock rationale: In a real run, this installs cowsay. For testing, we assume this task would succeed and the mock_cowsay_installed variable reflects this.
+
+    - name: Ensure fortune-mod is installed
+      ansible.builtin.package:
+        name: fortune-mod
+        state: present
+      when: cheer_up_enable_fortune
+      # Mock rationale: In a real run, this installs fortune-mod. For testing, we assume this task would succeed and the mock_fortune_installed variable reflects this.
+
+    - name: Create cheer-up login script
+      ansible.builtin.template:
+        src: motd_cheer.j2
+        dest: "{{ cheer_up_motd_path }}"
+        mode: '0755'
+        owner: root
+        group: root
+      # Mock rationale: This task creates the login script. For testing, we assume this task would succeed and the mock_motd_script_exists and mock_motd_script_content variables reflect this.
+
+    - name: Deploy custom ASCII art (optional)
+      ansible.builtin.copy:
+        src: "{{ cheer_up_custom_ascii_art_source }}"
+        dest: "{{ cheer_up_custom_ascii_art_path }}"
+        mode: '0644'
+        owner: root
+        group: root
+      when: cheer_up_deploy_ascii_art
+      # Mock rationale: This task deploys an ASCII art file. For testing, we assume this task would succeed and the mock_ascii_art_file_exists variable reflects this.

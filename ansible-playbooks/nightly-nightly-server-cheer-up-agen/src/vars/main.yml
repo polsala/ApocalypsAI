@@ -1,0 +1,7 @@
+# Default variables for the Nightly Server Cheer-Up Agent
+cheer_up_enable_cowsay: true
+cheer_up_enable_fortune: true
+cheer_up_motd_path: "/etc/profile.d/nightly_cheer.sh" # Path for the login script
+cheer_up_deploy_ascii_art: false # Set to true to deploy custom ASCII art
+cheer_up_custom_ascii_art_source: "files/my_whimsical_art.txt" # Source path for ASCII art (relative to playbook)
+cheer_up_custom_ascii_art_path: "/usr/local/share/nightly_ascii_art.txt" # Destination path on target server
