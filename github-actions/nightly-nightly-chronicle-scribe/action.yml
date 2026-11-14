@@ -1,0 +1,24 @@
+name: 'Chronicle Scribe'
+description: 'Automatically appends merged PRs to a chronicle file.'
+inputs:
+  github-token:
+    description: 'GitHub token with write permissions for the repository.'
+    required: true
+  chronicle-file:
+    description: 'Path to the chronicle file.'
+    required: false
+    default: 'CHRONICLE.md'
+  entry-format:
+    description: 'Template for the chronicle entry. Placeholders: {PR_TITLE}, {PR_NUMBER}, {PR_AUTHOR}, {MERGE_DATE}.'
+    required: false
+    default: '* {PR_TITLE} (#{PR_NUMBER}) by @{PR_AUTHOR} on {MERGE_DATE}'
+  commit-message:
+    description: 'Commit message for the chronicle update. Placeholders: {PR_NUMBER}.'
+    required: false
+    default: 'docs: Chronicle update for PR #{PR_NUMBER}'
+outputs:
+  chronicle-entry:
+    description: 'The new entry added to the chronicle file.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
