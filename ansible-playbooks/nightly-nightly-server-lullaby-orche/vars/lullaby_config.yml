@@ -1,0 +1,24 @@
+---
+# Configuration for the Nightly Server Lullaby Orchestrator
+
+# List of services to stop.
+# Note: Be cautious with production services! This is intended for non-essential dev/test environments.
+lullaby_services_to_stop:
+  - apache2
+  - nginx
+  - mysql
+
+# List of temporary paths to clean.
+# Wildcards are supported (e.g., /tmp/*).
+lullaby_temp_paths_to_clean:
+  - /tmp/*
+  - /var/tmp/*
+  - /var/log/old_app_logs/
+
+# Path where the goodnight message will be placed.
+# For example, /etc/motd.d/lullaby_message for MOTD on login.
+lullaby_goodnight_message_path: /etc/motd.d/lullaby_message
+
+# The whimsical goodnight message content.
+lullaby_goodnight_message_content: |
+  "Shhh... the servers are sleeping now.\n  Dream of efficient processes and minimal resource usage.\n  See you in the morning, bright and refreshed!"
