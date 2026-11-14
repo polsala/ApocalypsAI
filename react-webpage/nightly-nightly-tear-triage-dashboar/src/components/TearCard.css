@@ -1,0 +1,38 @@
+.tear-card {
+  background-color: #4a4f57;
+  border-radius: 6px;
+  padding: 10px 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  border-left: 5px solid transparent;
+}
+
+.tear-card:hover {
+  background-color: #5a606a;
+}
+
+.tear-card h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  color: #e0e0e0;
+}
+
+.tear-card p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #c0c0c0;
+}
+
+.tear-card.severity-low {
+  border-left-color: #4CAF50; /* Green */
+}
+
+.tear-card.severity-medium {
+  border-left-color: #FFC107; /* Amber */
+}
+
+.tear-card.severity-high {
+  border-left-color: #F44336; /* Red */
+}
