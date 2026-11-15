@@ -1,0 +1,13 @@
+name: "PR Title Emoji"
+description: "Append a random emoji to the pull request title"
+inputs:
+  github-token:
+    description: "GitHub token with repo scope"
+    required: true
+    default: ""
+outputs:
+  emoji:
+    description: "The emoji that was added"
+runs:
+  using: "node12"
+  main: "src/index.js"
