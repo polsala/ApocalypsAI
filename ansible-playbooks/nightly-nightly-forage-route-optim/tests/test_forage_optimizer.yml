@@ -1,0 +1,129 @@
+---
+- name: Test Nightly Forage Route Optimizer
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    test_dir: "{{ lookup('env', 'HOME') }}/ansible_test_forage_optim_temp"
+    test_known_caches:
+      - path: "{{ test_dir }}/known_cache_a/water_filter.txt"
+        mode: '0644'
+      - path: "{{ test_dir }}/known_cache_b/medical_kit/"
+        mode: '0755'
+      - path: "{{ test_dir }}/known_cache_c/secret_map.conf"
+        mode: '0600'
+    test_foraging_root: "{{ test_dir }}/potential_finds"
+    test_report_path: "{{ test_dir }}/test_foraging_manifest.txt"
+
+  tasks:
+    - name: Ensure test directory is clean before starting
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+
+    - name: Create test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create mock known caches
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: "{{ 'directory' if item.path.endswith('/') else 'file' }}"
+        mode: "{{ item.mode }}"
+        # Mock rationale: Create local files/directories to simulate remote resources.
+        # This allows deterministic testing of stat and file module behavior.
+      loop: "{{ test_known_caches }}"
+
+    - name: Populate mock known cache files
+      ansible.builtin.copy:
+        content: "Content for {{ item.path }}"
+        dest: "{{ item.path }}"
+        # Mock rationale: Add content to mock files for more realistic stat results.
+      when: not item.path.endswith('/')
+      loop: "{{ test_known_caches }}"
+
+    - name: Create mock new foraging zone files (recent)
+      ansible.builtin.file:
+        path: "{{ test_foraging_root }}/new_find_recent_{{ item }}.log"
+        state: file
+        mode: '0644'
+        # Set modification_time to be within the last 24 hours relative to current time
+        modification_time: '{{ (ansible_date_time.epoch | int) - (item * 3600) }}'
+        modification_time_format: epoch
+        # Mock rationale: Create files with recent modification times to be picked up by 'find age: -1d'.
+      loop: [0, 1, 2] # 0, 1, 2 hours ago
+
+    - name: Create mock new foraging zone files (old)
+      ansible.builtin.file:
+        path: "{{ test_foraging_root }}/old_find_{{ item }}.log"
+        state: file
+        mode: '0644'
+        # Set modification_time to be older than 24 hours relative to current time
+        modification_time: '{{ (ansible_date_time.epoch | int) - (item * 86400) - 86400 }}'
+        modification_time_format: epoch
+        # Mock rationale: Create files with old modification times to ensure they are NOT picked up by 'find age: -1d'.
+      loop: [2, 3] # 2, 3 days ago
+
+    - name: Run the main foraging optimizer playbook
+      ansible.builtin.include_tasks:
+        file: ../src/forage_optimizer.yml
+      vars:
+        known_caches: "{{ test_known_caches }}"
+        foraging_root: "{{ test_foraging_root }}"
+        report_path: "{{ test_report_path }}"
+        # Mock rationale: Provide a consistent date_time for template rendering to ensure deterministic report content.
+        ansible_date_time:
+          iso8601_micro: "2023-10-27T10:00:00.000000Z"
+          epoch: 1698393600 # Corresponds to 2023-10-27 10:00:00 UTC
+
+    - name: Assert report file exists
+      ansible.builtin.stat:
+        path: "{{ test_report_path }}"
+      register: report_file_stat
+    - name: Verify report file exists
+      ansible.builtin.assert:
+        that:
+          - report_file_stat.stat.exists
+          - report_file_stat.stat.isreg
+        fail_msg: "Foraging manifest report file was not created at {{ test_report_path }}"
+
+    - name: Read report content
+      ansible.builtin.slurp:
+        src: "{{ test_report_path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_b64.content | b64decode }}"
+
+    - name: Assert report content for known caches
+      ansible.builtin.assert:
+        that:
+          - "'Path: {{ test_known_caches[0].path }}' in report_content"
+          - "'Exists: Yes' in report_content"
+          - "'Permissions: 0644' in report_content"
+          - "'Path: {{ test_known_caches[1].path }}' in report_content"
+          - "'Exists: Yes' in report_content"
+          - "'Permissions: 0755' in report_content"
+          - "'Path: {{ test_known_caches[2].path }}' in report_content"
+          - "'Exists: Yes' in report_content"
+          - "'Permissions: 0600' in report_content"
+        fail_msg: "Report content for known caches is incorrect."
+
+    - name: Assert report content for new finds
+      ansible.builtin.assert:
+        that:
+          - "'new_find_recent_0.log' in report_content"
+          - "'new_find_recent_1.log' in report_content"
+          - "'new_find_recent_2.log' in report_content"
+          - "'old_find_2.log' not in report_content" # Should not be found due to age filter
+          - "'old_find_3.log' not in report_content" # Should not be found due to age filter
+        fail_msg: "Report content for new finds is incorrect."
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
