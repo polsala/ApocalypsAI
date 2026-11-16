@@ -1,0 +1,16 @@
+# vars/log_analysis.yml
+# Define the log files to be parsed on the remote hosts.
+log_files_to_parse:
+  - /var/log/syslog
+  - /var/log/auth.log
+  - /var/log/kern.log
+
+# Define keywords (case-insensitive) to search for within the log files.
+# These can be simple words or more complex regex patterns.
+keywords_to_find:
+  - ERROR
+  - WARNING
+  - CRITICAL
+  - "failed login"
+  - "permission denied"
+  - "segmentation fault"
