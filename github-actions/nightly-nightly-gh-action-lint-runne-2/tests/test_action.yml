@@ -1,0 +1,63 @@
+name: Test Nightly GitHub Actions Lint Runner
+
+on: [push, pull_request]
+
+jobs:
+  test_lint_runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install action-validator globally
+        run: npm install -g @actions/action-validator
+
+      - name: Create a dummy workflow file (valid)
+        run: |
+          mkdir -p .github/workflows
+          echo "name: Valid Workflow\n
+on: [push]\n
+jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Run a one-line script\n        run: echo Hello, world!"
+          > .github/workflows/valid_workflow.yml
+
+      - name: Run lint runner on valid workflow (should pass)
+        id: lint_valid
+        uses: ./src # Use the local action for testing
+        with:
+          workflow_path: '.github/workflows/'
+        continue-on-error: true # We expect this to pass, but don't fail the whole test job if it somehow errors
+
+      - name: Assert valid workflow passed
+        run: |
+          if [ "${{ steps.lint_valid.outcome }}" == "success" ]; then
+            echo "Valid workflow linting passed as expected."
+          else
+            echo "Valid workflow linting failed unexpectedly!" && exit 1
+          fi
+
+      - name: Create a dummy workflow file (invalid)
+        run: |
+          echo "name: Invalid Workflow\n
+on: [push]\n
+jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Missing required key\n        run: echo This step is missing a required key"
+          > .github/workflows/invalid_workflow.yml
+
+      - name: Run lint runner on invalid workflow (should fail)
+        id: lint_invalid
+        uses: ./src # Use the local action for testing
+        with:
+          workflow_path: '.github/workflows/'
+        continue-on-error: true # We expect this to fail, so we catch the error
+
+      - name: Assert invalid workflow failed
+        run: |
+          if [ "${{ steps.lint_invalid.outcome }}" == "failure" ]; then
+            echo "Invalid workflow linting failed as expected."
+          else
+            echo "Invalid workflow linting passed unexpectedly!" && exit 1
+          fi
