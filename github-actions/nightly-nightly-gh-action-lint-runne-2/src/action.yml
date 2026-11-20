@@ -1,0 +1,19 @@
+name: 'GitHub Actions Lint Runner'
+
+# This action uses a Docker container to run the linting tool.
+# The container image is built from the Dockerfile in this repository.
+# For more details on the linting tool, see the README.
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+
+inputs:
+  workflows_path:
+    description: 'Path to the directory containing GitHub Actions workflow files.'
+    required: false
+    default: '.github/workflows'
+  fail_on_warnings:
+    description: 'Set to true to fail the job on warnings as well as errors.'
+    required: false
+    default: 'false'
