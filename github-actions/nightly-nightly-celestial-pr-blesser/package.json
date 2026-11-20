@@ -1,0 +1,26 @@
+{
+  "name": "nightly-celestial-pr-blesser",
+  "version": "1.0.0",
+  "description": "A GitHub Action that bestows a 'Celestial Blessing' on Pull Requests based on configurable alignment criteria.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "github-actions",
+    "pr-review",
+    "automation",
+    "celestial",
+    "blessing"
+  ],
+  "author": "ApocalypsAI",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
