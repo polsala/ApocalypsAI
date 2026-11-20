@@ -1,0 +1,44 @@
+---
+- name: Test ApocalypsAI Morale Beacon Deployment (Mocked)
+  hosts: test_hosts
+  gather_facts: no # We are providing mocked facts via host_vars
+
+  tasks:
+    - name: Assert Python and pip are "installed"
+      ansible.builtin.assert:
+        that:
+          - apt_python_installed is defined and apt_python_installed
+          - apt_pip_installed is defined and apt_pip_installed
+        fail_msg: "Mocked Python/pip installation failed."
+      # Mock rationale: Checks if the mock facts indicate successful Python/pip installation.
+
+    - name: Assert Flask is "installed"
+      ansible.builtin.assert:
+        that:
+          - pip_flask_installed is defined and pip_flask_installed
+        fail_msg: "Mocked Flask installation failed."
+      # Mock rationale: Checks if the mock facts indicate successful Flask installation.
+
+    - name: Assert application directory is "created"
+      ansible.builtin.assert:
+        that:
+          - app_py_deployed is defined and app_py_deployed # Implies directory was created for files
+        fail_msg: "Mocked application directory creation failed."
+      # Mock rationale: Assumes that if files are deployed, their parent directory was created.
+
+    - name: Assert application files are "deployed"
+      ansible.builtin.assert:
+        that:
+          - app_py_deployed is defined and app_py_deployed
+          - messages_file_deployed is defined and messages_file_deployed
+          - service_file_deployed is defined and service_file_deployed
+        fail_msg: "Mocked application file deployment failed."
+      # Mock rationale: Checks if the mock facts indicate successful file transfers.
+
+    - name: Assert service is "running" and "enabled"
+      ansible.builtin.assert:
+        that:
+          - morale_beacon_service_status is defined and morale_beacon_service_status == "running"
+          - morale_beacon_service_enabled is defined and morale_beacon_service_enabled
+        fail_msg: "Mocked Morale Beacon service status is incorrect."
+      # Mock rationale: Checks if the mock facts indicate the service is active and enabled.

@@ -1,0 +1,16 @@
+[Unit]
+Description=ApocalypsAI Morale Beacon Service
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory={{ app_dir }}
+ExecStart={{ ansible_python_interpreter }} {{ app_dir }}/app.py
+Environment="FLASK_APP={{ app_dir }}/app.py"
+Environment="FLASK_RUN_HOST=0.0.0.0"
+Environment="FLASK_RUN_PORT={{ app_port }}"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
