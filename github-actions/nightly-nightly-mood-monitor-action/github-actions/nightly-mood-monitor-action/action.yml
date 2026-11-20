@@ -1,0 +1,28 @@
+name: 'Nightly Mood Monitor'
+description: 'Monitors issue/PR titles and descriptions for sentiment and thematic consistency, offering whimsical suggestions.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  positive-keywords:
+    description: 'Comma-separated list of words indicating positive sentiment.'
+    required: false
+    default: 'great, excellent, fantastic, awesome, success, triumph, victory, hope, progress, thriving'
+  negative-keywords:
+    description: 'Comma-separated list of words indicating negative sentiment.'
+    required: false
+    default: 'bug, error, failure, broken, terrible, awful, disaster, void, despair, struggle'
+  thematic-keywords:
+    description: 'Comma-separated list of words relevant to the ApocalypsAI theme.'
+    required: false
+    default: 'wasteland, scavenger, anomaly, bunker, temporal, rift, relic, survival, resource, mutation'
+  neutral-threshold:
+    description: 'Threshold for determining neutral sentiment (float between 0 and 1).'
+    required: false
+    default: '0.1'
+outputs:
+  mood-status:
+    description: 'The detected mood of the content: positive, negative, neutral, thematic, off-topic.'
+runs:
+  using: 'node20'
+  main: 'src/main.js'
