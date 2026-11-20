@@ -1,0 +1,158 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #282c34;
+  color: white;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #1a1c20;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  color: #61dafb;
+  margin: 0;
+}
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.metric-card {
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.metric-card h3 {
+  color: #61dafb;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.metric-card p {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0;
+}
+
+.chart-section, .agent-activity-section {
+  background-color: #3a3f47;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.chart-section h3, .agent-activity-section h3 {
+  color: #61dafb;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  height: 150px;
+  border-bottom: 1px solid #555;
+  padding-bottom: 5px;
+  gap: 2px;
+}
+
+.chart-bar {
+  flex-grow: 1;
+  background-color: #a07dff; /* Purple-ish */
+  width: 10px; /* Default width, flex-grow will adjust */
+  transition: height 0.3s ease-out;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.bar-label {
+  position: absolute;
+  top: -20px;
+  font-size: 0.7em;
+  color: #ccc;
+}
+
+.bar-date {
+  position: absolute;
+  bottom: -20px;
+  font-size: 0.6em;
+  color: #aaa;
+  transform: rotate(-45deg);
+  transform-origin: bottom center;
+  white-space: nowrap;
+}
+
+.agent-list {
+  list-style: none;
+  padding: 0;
+}
+
+.agent-list li {
+  background-color: #4a4f57;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-list li span:first-child {
+  font-weight: bold;
+}
+
+.time-range-selector {
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.time-range-selector button {
+  background-color: #61dafb;
+  color: #282c34;
+  border: none;
+  padding: 8px 15px;
+  margin-left: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.time-range-selector button:hover {
+  background-color: #21a1f1;
+}
+
+.time-range-selector button.active {
+  background-color: #21a1f1;
+  color: white;
+}
