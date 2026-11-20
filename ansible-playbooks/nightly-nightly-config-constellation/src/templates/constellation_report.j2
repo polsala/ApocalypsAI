@@ -1,0 +1,12 @@
+--- CONFIGURATION CONSTELLATION MAP ---
+
+{% set constellation_number = namespace(value=1) %}
+{% for combined_hash, hosts in constellations.items() %}
+Constellation {{ constellation_number.value }} (Hash: {{ combined_hash | truncate(12, True, '') }}...)
+{% for host in hosts %}
+  - {{ host }}
+{% endfor %}
+{% set constellation_number.value = constellation_number.value + 1 %}
+
+{% endfor %}
+---------------------------------------
