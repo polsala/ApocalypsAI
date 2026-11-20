@@ -1,0 +1,23 @@
+Digital Guardian Vigil Report - {{ ansible_date_time.iso8601_micro }}
+
+Host: {{ inventory_hostname }} ({{ ansible_default_ipv4.address }})
+
+--- Guardian Status ---
+{% for service_name in guardian_services %}
+- {{ service_name }}:
+  Status: {% if service_status_facts.ansible_facts.services[service_name] is defined %}
+            {% if service_status_facts.ansible_facts.services[service_name].state == 'running' %}Vigilant and Active{% else %}Slumbering ({{ service_status_facts.ansible_facts.services[service_name].state }}){% endif %}
+          {% else %}Unknown (Service facts not available or service not found){% endif %}
+{% endfor %}
+
+--- Configuration Insights ---
+Fail2Ban SSH Jail:
+  Status: {% if fail2ban_config_file_present %}Configured{% else %}Missing{% endif %}
+Unattended Upgrades:
+  Status: {% if unattended_upgrades_config_file_present %}Configured{% else %}Missing{% endif %}
+
+--- System Overview ---
+Operating System: {{ ansible_distribution }} {{ ansible_distribution_version }}
+Kernel: {{ ansible_kernel }}
+
+May your digital realm be ever protected by these vigilant familiars!

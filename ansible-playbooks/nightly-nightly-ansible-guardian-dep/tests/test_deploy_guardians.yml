@@ -1,0 +1,102 @@
+---
+- name: Test Digital Guardian Deployment Playbook
+  hosts: localhost
+  connection: local
+  become: yes # Needed for apt and service modules, even in check mode
+  vars_files:
+    - ../src/vars/main.yml # Path relative to test playbook
+  tasks:
+    - name: Run main playbook in check mode to verify changes
+      ansible.builtin.include_tasks: ../src/deploy_guardians.yml
+      vars:
+        # Mock rationale: Simulate a fresh system where packages are not installed
+        # and services are not running, to ensure the playbook attempts to install/start them.
+        # In a real test, this would be a clean VM/container.
+        # For check mode, we assume the modules report 'changed' if they would make changes.
+        ansible_facts:
+          services: {} # Mock rationale: Assume no services are running initially
+          distribution: "MockOS" # Mock rationale: Provide dummy facts for template rendering
+          distribution_version: "1.0"
+          kernel: "MockKernel"
+          default_ipv4:
+            address: "127.0.0.1"
+      args:
+        # Mock rationale: Run in check mode to prevent actual system changes
+        # and verify the playbook's intended actions.
+        # This is Ansible's built-in mocking for task execution.
+        check_mode: yes
+      register: check_run_result
+
+    - name: Assert that packages would be installed (check mode)
+      ansible.builtin.assert:
+        that:
+          - "'Ensure guardian packages are present' in check_run_result.results | map(attribute='task') | list"
+          - "check_run_result.results | selectattr('task', 'equalto', 'Ensure guardian packages are present') | first | json_query('results[0].changed')"
+        fail_msg: "Expected guardian packages to be marked for installation in check mode."
+      # Mock rationale: We expect 'changed' in check mode if the package is not present.
+      # This implicitly mocks the 'apt' module's behavior in check mode.
+
+    - name: Assert that Fail2Ban config would be copied (check mode)
+      ansible.builtin.assert:
+        that:
+          - "'Configure Fail2Ban for SSH protection' in check_run_result.results | map(attribute='task') | list"
+          - "check_run_result.results | selectattr('task', 'equalto', 'Configure Fail2Ban for SSH protection') | first | json_query('changed')"
+        fail_msg: "Expected Fail2Ban config to be marked for copy in check mode."
+      # Mock rationale: We expect 'changed' in check mode if the file is not present or differs.
+
+    - name: Assert that Unattended Upgrades config would be copied (check mode)
+      ansible.builtin.assert:
+        that:
+          - "'Configure Unattended Upgrades for automatic security updates' in check_run_result.results | map(attribute='task') | list"
+          - "check_run_result.results | selectattr('task', 'equalto', 'Configure Unattended Upgrades for automatic security updates') | first | json_query('changed')"
+        fail_msg: "Expected Unattended Upgrades config to be marked for copy in check mode."
+      # Mock rationale: We expect 'changed' in check mode if the file is not present or differs.
+
+    - name: Assert that services would be started/enabled (check mode)
+      ansible.builtin.assert:
+        that:
+          - "'Ensure guardian services are running and enabled' in check_run_result.results | map(attribute='task') | list"
+          - "check_run_result.results | selectattr('task', 'equalto', 'Ensure guardian services are running and enabled') | first | json_query('results[0].changed')"
+        fail_msg: "Expected guardian services to be marked for start/enable in check mode."
+      # Mock rationale: We expect 'changed' in check mode if the service is not running/enabled.
+
+    - name: Verify generated report content (mocked facts)
+      ansible.builtin.template:
+        src: ../src/templates/guardian_report.j2
+        dest: /tmp/test_digital_guardian_vigil_report.txt
+        # Mock rationale: Render template with mocked facts to ensure correct output format
+        # without needing actual service status or file existence checks on the system.
+      vars:
+        ansible_date_time:
+          iso8601_micro: "2023-10-27T10:00:00.000000Z" # Mock rationale: Deterministic timestamp
+        inventory_hostname: "test-host" # Mock rationale: Deterministic hostname
+        ansible_default_ipv4:
+          address: "127.0.0.1" # Mock rationale: Deterministic IP
+        service_status_facts:
+          ansible_facts:
+            services:
+              fail2ban:
+                state: running
+              unattended-upgrades:
+                state: running
+        fail2ban_config_file_present: true # Mock rationale: Assume config files are present
+        unattended_upgrades_config_file_present: true
+      delegate_to: localhost
+      register: report_render_result
+
+    - name: Read the generated test report
+      ansible.builtin.slurp:
+        src: /tmp/test_digital_guardian_vigil_report.txt
+      register: test_report_content
+
+    - name: Assert report content
+      ansible.builtin.assert:
+        that:
+          - "'Digital Guardian Vigil Report - 2023-10-27T10:00:00.000000Z' in (test_report_content.content | b64decode)"
+          - "'Host: test-host (127.0.0.1)' in (test_report_content.content | b64decode)"
+          - "'- fail2ban:\n  Status: Vigilant and Active' in (test_report_content.content | b64decode)"
+          - "'- unattended-upgrades:\n  Status: Vigilant and Active' in (test_report_content.content | b64decode)"
+          - "'Fail2Ban SSH Jail:\n  Status: Configured' in (test_report_content.content | b64decode)"
+          - "'Unattended Upgrades:\n  Status: Configured' in (test_report_content.content | b64decode)"
+        fail_msg: "Generated report content does not match expected output."
+      # Mock rationale: Verifies the template renders correctly with mocked data.
