@@ -1,0 +1,1 @@
+variable "region" {\n  description = "AWS region"\n  type        = string\n}\n\nvariable "bucket_name_prefix" {\n  description = "Prefix for bucket name"\n  type        = string\n  default     = "safehouse"\n}\n\nvariable "lifecycle_days" {\n  description = "Days to retain non‑current versions"\n  type        = number\n  default     = 30\n}
