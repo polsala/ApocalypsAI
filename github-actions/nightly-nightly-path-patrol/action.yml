@@ -1,0 +1,31 @@
+name: "Nightly Path Patrol"
+description: "Validates new utility PRs for correct V2 classifier-based path structure."
+inputs:
+  pr-number:
+    description: "The pull request number to validate."
+    required: true
+  github-token:
+    description: "GitHub token for API access."
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Needed for git diff to compare branches
+
+    - name: Set up GitHub CLI
+      uses: cli/gh-cli@v2
+      with:
+        version: latest
+        token: ${{ inputs.github-token }}
+
+    - name: Run Path Validator
+      shell: bash
+      run: |
+        # Pass PR number and token to the script
+        # The script will use 'gh pr view --json files' to get changed files
+        ./github-actions/nightly-path-patrol/src/path_validator.sh \
+          "${{ inputs.pr-number }}" \
+          "${{ inputs.github-token }}"
