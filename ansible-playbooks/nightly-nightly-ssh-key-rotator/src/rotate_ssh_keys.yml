@@ -1,0 +1,33 @@
+- hosts: all
+  become: true
+  vars:
+    key_name: "{{ key_name | default('nightly_key') }}"
+    key_path: "/etc/ssh/{{ key_name }}"
+  tasks:
+    - name: Ensure ssh-keygen is present
+      ansible.builtin.package:
+        name: openssh-client
+        state: present
+
+    - name: Generate new SSH key pair if not present
+      ansible.builtin.command: ssh-keygen -t rsa -b 4096 -f {{ key_path }} -N ""
+      args:
+        creates: "{{ key_path }}"
+      register: keygen_result
+
+    - name: Backup existing authorized_keys
+      ansible.builtin.copy:
+        src: "{{ ansible_user_dir }}/.ssh/authorized_keys"
+        dest: "{{ ansible_user_dir }}/.ssh/authorized_keys.bak_{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: true
+      when: keygen_result.changed
+
+    - name: Deploy new public key to authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', key_path + '.pub') }}"
+
+    - name: Placeholder for old‑key removal (optional)
+      ansible.builtin.debug:
+        msg: "Add tasks here to purge old keys if desired."

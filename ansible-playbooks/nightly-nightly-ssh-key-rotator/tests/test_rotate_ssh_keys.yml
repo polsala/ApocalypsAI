@@ -1,0 +1,25 @@
+- hosts: localhost
+  gather_facts: false
+  vars:
+    key_name: "test_key"
+    key_path: "/tmp/{{ key_name }}"
+  tasks:
+    - name: Remove any pre‑existing test key (cleanup)
+      ansible.builtin.file:
+        path: "{{ key_path }}"
+        state: absent
+
+    - name: Run the rotate playbook in check mode
+      ansible.builtin.command: >
+        ansible-playbook -i localhost, src/rotate_ssh_keys.yml \
+        --extra-vars "key_name={{ key_name }} key_path={{ key_path }}" \
+        --check
+      register: result
+      changed_when: false
+      # Mock rationale: In a real CI environment this would execute the playbook; here we assume success.
+
+    - name: Assert playbook exited cleanly
+      ansible.builtin.assert:
+        that:
+          - result.rc == 0
+        fail_msg: "Playbook failed when run in check mode"
