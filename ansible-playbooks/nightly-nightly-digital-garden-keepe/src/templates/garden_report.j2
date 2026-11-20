@@ -1,0 +1,28 @@
+# Digital Garden Health Report (Generated: {{ report_data.report_timestamp }})
+
+## Backup Status
+*   **Last Backup**: {{ report_data.backup_path }}
+*   **Status**: Backup {{ report_data.backup_status }}.
+
+{% if report_data.stale_notes %}
+## Stale Notes (Not modified in {{ stale_days_threshold }} days)
+{% for note in report_data.stale_notes %}
+*   {{ note.path }} (Last Modified: {{ note.last_modified }})
+{% endfor %}
+{% else %}
+## Stale Notes
+*   No stale notes detected. Your garden is fresh!
+{% endif %}
+
+{% if report_data.tagged_notes %}
+## Notes with Required Tags
+{% for tag, notes in report_data.tagged_notes.items() %}
+### Tag: {{ tag }}
+{% for note in notes %}
+*   {{ note }}
+{% endfor %}
+{% endfor %}
+{% else %}
+## Notes with Required Tags
+*   No notes found with the configured required tags.
+{% endif %}
