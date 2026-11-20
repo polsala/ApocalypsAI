@@ -1,0 +1,23 @@
+pruning_report_dir: "/tmp/digital_garden_reports"
+
+garden_config:
+  log_files_to_clear:
+    - name: "App Log"
+      path: "/tmp/app.log"
+      clear_on_prune: true
+    - name: "System Log"
+      path: "/tmp/sys.log"
+      clear_on_prune: true
+    - name: "Another Log"
+      path: "/tmp/another.log"
+      clear_on_prune: false # Example of a log not to clear
+  services_to_restart:
+    - name: "Web Service"
+      restart_marker_path: "/tmp/web_service_restarted.marker"
+      restart_on_prune: true
+    - name: "DB Service"
+      restart_marker_path: "/tmp/db_service_restarted.marker"
+      restart_on_prune: true
+    - name: "Monitoring Agent"
+      restart_marker_path: "/tmp/monitoring_agent_restarted.marker"
+      restart_on_prune: false # Example of a service not to restart

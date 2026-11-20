@@ -1,0 +1,24 @@
+Digital Garden Pruning Report - {{ ansible_date_time.iso8601_basic }}
+
+---
+Logs Cleared:
+{% if cleared_logs_summary %}
+{% for log in cleared_logs_summary %}
+- {{ log }}
+{% endfor %}
+{% else %}
+No logs were cleared.
+{% endif %}
+
+---
+Services Restarted:
+{% if restarted_services_summary %}
+{% for service in restarted_services_summary %}
+- {{ service }}
+{% endfor %}
+{% else %}
+No services were restarted.
+{% endif %}
+
+---
+Pruning complete. Your digital garden is refreshed!
