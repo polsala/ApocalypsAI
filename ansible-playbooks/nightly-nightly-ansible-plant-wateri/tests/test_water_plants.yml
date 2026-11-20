@@ -1,0 +1,1 @@
+- hosts: localhost\n  gather_facts: false\n  tasks:\n    - name: Run the plant watering playbook\n      command: ansible-playbook -i src/inventory.ini src/water_plants.yml\n      register: result\n      changed_when: false\n\n    - name: Verify playbook succeeded\n      assert:\n        that:\n          - result.rc == 0\n
