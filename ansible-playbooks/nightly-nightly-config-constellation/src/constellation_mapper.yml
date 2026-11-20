@@ -1,0 +1,63 @@
+---
+- name: Gather configuration file hashes and map constellations
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure config_hashes fact is initialized on localhost
+      ansible.builtin.set_fact:
+        config_hashes: {}
+      run_once: true
+      delegate_to: localhost
+
+    - name: Fetch and hash specified configuration files for {{ inventory_hostname }}
+      block:
+        - name: Slurp file content for {{ item }}
+          ansible.builtin.slurp:
+            src: "{{ item }}"
+          register: file_content
+
+        - name: Calculate SHA256 hash of file content for {{ item }}
+          ansible.builtin.set_fact:
+            current_file_hash: "{{ file_content.content | b64decode | hash('sha256') }}"
+
+        - name: Store hash for current file and host
+          ansible.builtin.set_fact:
+            host_file_hashes: "{{ host_file_hashes | default({}) | combine({item: current_file_hash}) }}"
+      loop: "{{ config_files_to_monitor }}"
+      loop_control:
+        label: "{{ inventory_hostname }} - {{ item }}"
+
+    - name: Aggregate host file hashes on localhost
+      ansible.builtin.set_fact:
+        config_hashes: "{{ config_hashes | combine({inventory_hostname: host_file_hashes}) }}"
+      delegate_to: localhost
+
+    - name: Generate constellation report
+      ansible.builtin.template:
+        src: templates/constellation_report.j2
+        dest: /dev/stdout
+      delegate_to: localhost
+      run_once: true
+      vars:
+        # Group hosts by their combined configuration hash
+        constellations: >-
+          {% set grouped_constellations = {} %}
+          {% for host, files in config_hashes.items() %}
+            {% set combined_hash = [] %}
+            {% for file_path in config_files_to_monitor %}
+              {% if file_path in files %}
+                {% set _ = combined_hash.append(files[file_path]) %}
+              {% else %}
+                {% set _ = combined_hash.append('FILE_NOT_FOUND') %}
+              {% endif %}
+            {% endfor %}
+            {% set combined_hash_str = combined_hash | join('-') %}
+            {% if combined_hash_str not in grouped_constellations %}
+              {% set _ = grouped_constellations.update({combined_hash_str: []}) %}
+            {% endif %}
+            {% set _ = grouped_constellations[combined_hash_str].append(host) %}
+          {% endfor %}
+          {{ grouped_constellations }}
