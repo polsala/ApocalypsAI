@@ -1,0 +1,32 @@
+FORAGING MANIFEST - Generated on {{ ansible_date_time.iso8601_micro }}
+
+--- Known Resource Caches ---
+{% if known_caches_results %}
+{% for cache in known_caches_results %}
+- Path: {{ cache.item.path }}
+  Exists: {{ 'Yes' if cache.stat.exists else 'No' }}
+  {% if cache.stat.exists %}
+  Type: {{ 'Directory' if cache.stat.isdir else 'File' }}
+  Permissions: {{ cache.stat.mode }}
+  Owner: {{ cache.stat.pw_name | default('N/A') }}
+  Group: {{ cache.stat.gr_name | default('N/A') }}
+  {% else %}
+  Status: MISSING
+  {% endif %}
+{% endfor %}
+{% else %}
+No known caches configured.
+{% endif %}
+
+--- Newly Discovered Foraging Zones ---
+{% if new_finds_results %}
+{% for find in new_finds_results %}
+- Path: {{ find.path }}
+  Size: {{ find.size }} bytes
+  Modified: {{ find.mtime | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}
+{% endfor %}
+{% else %}
+No new finds in the last 24 hours.
+{% endif %}
+
+--- End of Manifest ---
