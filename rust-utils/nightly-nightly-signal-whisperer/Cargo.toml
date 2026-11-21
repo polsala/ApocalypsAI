@@ -1,0 +1,11 @@
+[package]
+name = "nightly-signal-whisperer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] } # For CLI argument parsing
+regex = "1.5" # For keyword searching and potentially more complex patterns
+
+[dev-dependencies]
+tempfile = "3.8" # For creating temporary files in tests
