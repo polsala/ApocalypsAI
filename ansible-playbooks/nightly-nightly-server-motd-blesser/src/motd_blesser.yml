@@ -1,0 +1,33 @@
+---
+- name: Bless servers with a whimsical Message Of The Day
+  hosts: all
+  become: true
+  vars_files:
+    - vars/messages.yml
+  tasks:
+    - name: Select a random whimsical message
+      set_fact:
+        selected_message: "{{ messages | random }}"
+      # Mock rationale: In a real run, 'random' selects a message. For deterministic testing,
+      # the test playbook will override 'selected_message' directly, bypassing this random selection.
+
+    - name: Ensure MOTD script directory exists for Debian-based systems
+      ansible.builtin.file:
+        path: /etc/update-motd.d
+        state: directory
+        mode: '0755'
+      when: ansible_os_family == "Debian"
+
+    - name: Deploy the whimsical MOTD script for Debian-based systems
+      ansible.builtin.template:
+        src: templates/motd_script.j2
+        dest: /etc/update-motd.d/99-whimsical-motd
+        mode: '0755'
+      when: ansible_os_family == "Debian"
+
+    - name: Deploy the whimsical MOTD directly for other Linux systems
+      ansible.builtin.template:
+        src: templates/motd.j2
+        dest: /etc/motd
+        mode: '0644'
+      when: ansible_os_family != "Debian"

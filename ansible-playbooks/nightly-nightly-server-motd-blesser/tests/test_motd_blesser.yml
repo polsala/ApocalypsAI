@@ -1,0 +1,47 @@
+---
+- name: Test the nightly-server-motd-blesser playbook
+  hosts: localhost
+  connection: local
+  become: true
+  vars:
+    test_message: "This is a deterministic test message for MOTD blessing."
+  tasks:
+    - name: Run the main playbook with a specific test message
+      ansible.builtin.include_tasks:
+        file: ../src/motd_blesser.yml
+      vars:
+        selected_message: "{{ test_message }}"
+      # Mock rationale: Explicitly define the message to be used for testing.
+      # This overrides the random selection in the main playbook, ensuring determinism.
+
+    - name: Gather facts to determine OS family for assertion
+      ansible.builtin.setup:
+        filter: ansible_os_family
+
+    - name: Assert MOTD content for Debian-based systems
+      ansible.builtin.assert:
+        that:
+          - "lookup('file', '/etc/update-motd.d/99-whimsical-motd') is search('{{ test_message }}')"
+        fail_msg: "Debian-based MOTD script does not contain the expected test message."
+      when: ansible_os_family == "Debian"
+
+    - name: Assert MOTD content for other Linux systems
+      ansible.builtin.assert:
+        that:
+          - "lookup('file', '/etc/motd') is search('{{ test_message }}')"
+        fail_msg: "Non-Debian MOTD file does not contain the expected test message."
+      when: ansible_os_family != "Debian"
+
+    - name: Clean up deployed MOTD script (Debian)
+      ansible.builtin.file:
+        path: /etc/update-motd.d/99-whimsical-motd
+        state: absent
+      when: ansible_os_family == "Debian"
+      ignore_errors: true # Allow cleanup to fail if file wasn't created
+
+    - name: Clean up deployed MOTD file (Other Linux)
+      ansible.builtin.file:
+        path: /etc/motd
+        state: absent
+      when: ansible_os_family != "Debian"
+      ignore_errors: true # Allow cleanup to fail if file wasn't created
