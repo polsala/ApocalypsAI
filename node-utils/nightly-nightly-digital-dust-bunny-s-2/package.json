@@ -1,0 +1,26 @@
+{
+  "name": "nightly-digital-dust-bunny-sweeper",
+  "version": "1.0.0",
+  "description": "Scans specified directories for old, unused files (digital dust bunnies) and generates a report on their 'dustiness' for potential cleanup or repurposing.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "cli",
+    "utility",
+    "file-management",
+    "cleanup",
+    "node-utils",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
