@@ -1,0 +1,60 @@
+---
+- name: Nightly Forage Route Optimizer
+  hosts: foraging_hosts
+  gather_facts: yes
+  vars_files:
+    - vars/forage_config.yml
+
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_path | dirname }}"
+        state: directory
+        mode: '0755'
+      become: yes # Needed if report_path is in a system directory
+
+    - name: Verify known resource caches
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      register: cache_status
+      loop: "{{ known_caches }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Ensure known cache file permissions
+      ansible.builtin.file:
+        path: "{{ item.item.path }}"
+        mode: "{{ item.item.mode }}"
+        state: file
+      when: item.stat.exists and item.stat.isreg
+      loop: "{{ cache_status.results }}"
+      loop_control:
+        label: "file {{ item.item.path }}"
+
+    - name: Ensure known cache directory permissions
+      ansible.builtin.file:
+        path: "{{ item.item.path }}"
+        mode: "{{ item.item.mode }}"
+        state: directory
+      when: item.stat.exists and item.stat.isdir
+      loop: "{{ cache_status.results }}"
+      loop_control:
+        label: "dir {{ item.item.path }}"
+
+    - name: Discover new foraging zones
+      ansible.builtin.find:
+        paths: "{{ foraging_root }}"
+        file_type: file
+        recurse: yes
+        age: -1d # Find files newer than 1 day
+      register: new_finds
+
+    - name: Generate foraging manifest
+      ansible.builtin.template:
+        src: forage_report.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+      vars:
+        known_caches_results: "{{ cache_status.results }}"
+        new_finds_results: "{{ new_finds.files }}"
+      become: yes # Needed if report_path is in a system directory
