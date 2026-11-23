@@ -1,0 +1,17 @@
+[package]
+name = "nightly-chronal-cleaner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+chrono = "0.4"
+walkdir = "2.3"
+log = "0.4"
+env_logger = "0.10"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "1.0"
+tempfile = "3.0"
+filetime = "0.2"
