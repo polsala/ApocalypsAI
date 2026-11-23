@@ -1,0 +1,37 @@
+{
+  "inventory": {
+    "protein": [
+      {"name": "Canned Tuna", "quantity": 5},
+      {"name": "Dried Beef Jerky", "quantity": 10},
+      {"name": "Lentil Soup (canned)", "quantity": 3},
+      {"name": "Protein Bar", "quantity": 8}
+    ],
+    "carb": [
+      {"name": "Hardtack Biscuits", "quantity": 20},
+      {"name": "Instant Noodles", "quantity": 7},
+      {"name": "Rice (pouch)", "quantity": 4},
+      {"name": "Oatmeal Packets", "quantity": 12}
+    ],
+    "fat": [
+      {"name": "Peanut Butter Jar", "quantity": 2},
+      {"name": "Olive Oil (small bottle)", "quantity": 1},
+      {"name": "Avocado Oil (small bottle)", "quantity": 1}
+    ],
+    "veggie": [
+      {"name": "Canned Green Beans", "quantity": 6},
+      {"name": "Dried Carrot Chips", "quantity": 8},
+      {"name": "Canned Corn", "quantity": 5},
+      {"name": "Dehydrated Spinach", "quantity": 3}
+    ],
+    "treat": [
+      {"name": "Chocolate Bar", "quantity": 3},
+      {"name": "Candy Mints", "quantity": 15},
+      {"name": "Fruit Leather", "quantity": 7}
+    ]
+  },
+  "meal_composition": {
+    "standard": ["protein", "carb", "veggie"],
+    "hearty": ["protein", "carb", "fat", "veggie"],
+    "snack": ["protein", "treat"]
+  }
+}
