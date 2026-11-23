@@ -1,0 +1,144 @@
+---
+- name: Test Digital Garden Keeper Playbook
+  hosts: garden_hosts
+  gather_facts: no
+  vars:
+    # Variables for the test environment setup
+    test_base_path: "/tmp/ansible_test_garden_{{ ansible_date_time.strftime('%Y%m%d%H%M%S') }}"
+    test_garden_path: "{{ test_base_path }}/garden"
+    test_backup_path: "{{ test_base_path }}/backups"
+    test_stale_days_threshold: 1 # For testing, a note modified 2 days ago is stale
+    test_required_tags:
+      - "#test_tag"
+      - "#another_tag"
+
+  tasks:
+    - name: Clean up previous test environment (if any)
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent
+      ignore_errors: yes # Mock rationale: Ensure a clean slate for deterministic tests.
+
+    - name: Create test base directory
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create test digital garden directory
+      ansible.builtin.file:
+        path: "{{ test_garden_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create test backup directory
+      ansible.builtin.file:
+        path: "{{ test_backup_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create a fresh note (not stale, no tags)
+      ansible.builtin.copy:
+        content: |
+          # Fresh Idea
+          This is a fresh note.
+        dest: "{{ test_garden_path }}/fresh_idea.md"
+        mode: '0644'
+
+    - name: Create a stale note (modified 2 days ago, no tags)
+      ansible.builtin.copy:
+        content: |
+          # Old Thought
+          This note is old.
+        dest: "{{ test_garden_path }}/old_thought.md"
+        mode: '0644'
+      # Mock rationale: Set mtime to simulate an old file for stale detection.
+      # In a real scenario, this would be a file that hasn't been touched.
+      # For testing, we explicitly set it.
+    - name: Set mtime for stale note
+      ansible.builtin.command: "touch -d '2 days ago' {{ test_garden_path }}/old_thought.md"
+      changed_when: true
+
+    - name: Create a tagged note (fresh, with #test_tag)
+      ansible.builtin.copy:
+        content: |
+          # Project Alpha
+          This is a project note with #test_tag.
+        dest: "{{ test_garden_path }}/project_alpha.md"
+        mode: '0644'
+
+    - name: Create another tagged note (fresh, with #another_tag)
+      ansible.builtin.copy:
+        content: |
+          # Review Item
+          This needs #another_tag for review.
+        dest: "{{ test_garden_path }}/review_item.md"
+        mode: '0644'
+
+    - name: Run the Digital Garden Keeper playbook
+      ansible.builtin.import_playbook: ../src/garden_keeper.yml
+      vars: # These vars will override those in src/vars/main.yml
+        garden_path: "{{ test_garden_path }}"
+        backup_path: "{{ test_backup_path }}"
+        stale_days_threshold: "{{ test_stale_days_threshold }}"
+        required_tags: "{{ test_required_tags }}"
+
+    - name: Get generated report file path
+      ansible.builtin.find:
+        paths: "{{ test_backup_path }}"
+        patterns: "garden_report_*.md"
+      register: report_file_find_result
+
+    - name: Assert that a report file was generated
+      ansible.builtin.assert:
+        that:
+          - report_file_find_result.files | length == 1
+        msg: "Expected exactly one report file to be generated."
+
+    - name: Read the generated report content
+      ansible.builtin.slurp:
+        src: "{{ report_file_find_result.files[0].path }}"
+      register: report_content_b64
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        decoded_report_content: "{{ report_content_b64['content'] | b64decode }}"
+
+    - name: Assert backup archive was created
+      ansible.builtin.find:
+        paths: "{{ test_backup_path }}"
+        patterns: "digital_garden_*.tar.gz"
+      register: backup_archive_find_result
+
+    - name: Assert that a backup archive was generated
+      ansible.builtin.assert:
+        that:
+          - backup_archive_find_result.files | length == 1
+        msg: "Expected exactly one backup archive to be generated."
+
+    - name: Assert report contains stale note
+      ansible.builtin.assert:
+        that:
+          - "'old_thought.md' in decoded_report_content"
+          - "'Stale Notes' in decoded_report_content"
+        msg: "Report should mention stale note 'old_thought.md'."
+
+    - name: Assert report contains tagged notes
+      ansible.builtin.assert:
+        that:
+          - "'#test_tag' in decoded_report_content"
+          - "'project_alpha.md' in decoded_report_content"
+          - "'#another_tag' in decoded_report_content"
+          - "'review_item.md' in decoded_report_content"
+        msg: "Report should mention tagged notes."
+
+    - name: Assert report mentions backup status
+      ansible.builtin.assert:
+        that:
+          - "'Backup successful' in decoded_report_content"
+        msg: "Report should confirm backup status."
+
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ test_base_path }}"
+        state: absent"
