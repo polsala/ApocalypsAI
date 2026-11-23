@@ -1,0 +1,9 @@
+---
+target_dirs:
+  - "/tmp/dust_bunnies_test"
+# Files older than this threshold will be considered 'old'
+age_threshold_days: 30
+# Set to true for a dry run (report only), false to actually delete files
+dry_run: true
+# Path where the cleanup report will be saved
+report_path: "/tmp/digital_dust_bunny_report.txt"
