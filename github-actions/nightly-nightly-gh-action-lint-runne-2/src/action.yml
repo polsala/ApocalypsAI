@@ -1,0 +1,29 @@
+name: 'Nightly GitHub Actions Lint Runner'
+
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+description: 'Lints and validates GitHub Actions workflows in a repository.'
+
+inputs:
+  workflow_path:
+    description: 'Path to the directory containing GitHub Actions workflow files.'
+    required: false
+    default: '.github/workflows/'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install action-validator
+      shell: bash
+      run: | 
+        npm install -g @actions/action-validator
+
+    - name: Lint GitHub Actions Workflows
+      shell: bash
+      run: |
+        echo "Linting workflows in: ${{ inputs.workflow_path }}"
+        action-validator ${{ inputs.workflow_path }} || exit 1
+      env:
+        CI: true
