@@ -1,0 +1,20 @@
+{
+  "name": "nightly-data-scavenger-manifest",
+  "version": "1.0.0",
+  "description": "Generates a manifest of 'valuable data fragments' by scanning a directory for specified file types and reporting their size and a simulated integrity score.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/index.test.js"
+  },
+  "keywords": [
+    "apocalypse",
+    "data",
+    "scavenger",
+    "manifest",
+    "cli",
+    "node-utils"
+  ],
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT"
+}
