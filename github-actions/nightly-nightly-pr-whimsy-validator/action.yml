@@ -1,0 +1,32 @@
+name: 'Nightly PR Whimsy Validator'
+description: 'Validates Pull Request titles and descriptions for whimsical keywords and warns about grim ones.'
+inputs:
+  github-token:
+    description: 'GitHub token for API access.'
+    required: true
+  whimsy-keywords:
+    description: 'Comma-separated list of keywords considered whimsical. Case-insensitive.'
+    required: false
+    default: 'sparkle, joy, delightful, cheerful, fantastic, wondrous, magical, whimsical, gleeful, radiant'
+  grim-keywords:
+    description: 'Comma-separated list of keywords considered grim. Case-insensitive.'
+    required: false
+    default: 'bug, error, failure, broken, grim, despair, apocalypse, doom, catastrophe'
+  min-whimsy-count:
+    description: 'Minimum number of whimsical keywords required in the PR title or body.'
+    required: false
+    default: '1'
+  fail-on-grim:
+    description: 'If true, the action will fail if any grim keywords are found.'
+    required: false
+    default: 'true'
+outputs:
+  whimsy-score:
+    description: 'The total count of whimsical keywords found.'
+  grim-found:
+    description: 'True if any grim keywords were found, false otherwise.'
+  validation-status:
+    description: 'A string indicating the overall validation result: success, warning, failure.'
+runs:
+  using: 'node16'
+  main: 'src/main.js'
