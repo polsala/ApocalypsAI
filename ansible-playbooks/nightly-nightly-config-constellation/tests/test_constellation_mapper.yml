@@ -1,0 +1,106 @@
+---
+- name: Test Config Constellation Mapper logic
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  vars:
+    # Mock rationale: Simulates the list of configuration files to monitor.
+    config_files_to_monitor:
+      - /etc/app/config.ini
+      - /etc/service/settings.conf
+
+    # Mock rationale: Simulates the b64decode output of ansible.builtin.slurp for various hosts and files.
+    mock_file_contents:
+      host1:
+        /etc/app/config.ini: "[app]\nenable=true\nport=8080\n"
+        /etc/service/settings.conf: "SERVICE_NAME=api\nLOG_LEVEL=INFO\n"
+      host2:
+        /etc/app/config.ini: "[app]\nenable=true\nport=8080\n"
+        /etc/service/settings.conf: "SERVICE_NAME=api\nLOG_LEVEL=INFO\n"
+      host3:
+        /etc/app/config.ini: "[app]\nenable=false\nport=8081\n"
+        /etc/service/settings.conf: "SERVICE_NAME=worker\nLOG_LEVEL=DEBUG\n"
+      host4:
+        /etc/app/config.ini: "[app]\nenable=true\nport=8080\n"
+        /etc/service/settings.conf: "SERVICE_NAME=api\nLOG_LEVEL=WARN\n"
+      host5:
+        /etc/app/config.ini: "[app]\nenable=false\nport=8081\n"
+        /etc/service/settings.conf: "SERVICE_NAME=worker\nLOG_LEVEL=DEBUG\n"
+
+  tasks:
+    - name: Initialize config_hashes for testing
+      ansible.builtin.set_fact:
+        config_hashes: {}
+
+    - name: Simulate fetching and hashing for each mock host
+      ansible.builtin.set_fact:
+        config_hashes: "{{ config_hashes | combine({item.key: host_file_hashes_for_item}) }}"
+      loop: "{{ mock_file_contents | dict2items }}"
+      loop_control:
+        loop_var: item
+      vars:
+        host_file_hashes_for_item: >-
+          {% set temp_hashes = {} %}
+          {% for file_path in config_files_to_monitor %}
+            {% if file_path in item.value %}
+              {% set _ = temp_hashes.update({file_path: item.value[file_path] | hash('sha256')}) %}
+            {% else %}
+              {% set _ = temp_hashes.update({file_path: 'FILE_NOT_FOUND'}) %}
+            {% endif %}
+          {% endfor %}
+          {{ temp_hashes }}
+
+    - name: Debug aggregated config_hashes (for inspection)
+      ansible.builtin.debug:
+        var: config_hashes
+
+    - name: Generate constellations from mock data
+      ansible.builtin.set_fact:
+        constellations:
+          {% set grouped_constellations = {} %}
+          {% for host, files in config_hashes.items() %}
+            {% set combined_hash = [] %}
+            {% for file_path in config_files_to_monitor %}
+              {% if file_path in files %}
+                {% set _ = combined_hash.append(files[file_path]) %}
+              {% else %}
+                {% set _ = combined_hash.append('FILE_NOT_FOUND') %}
+              {% endif %}
+            {% endfor %}
+            {% set combined_hash_str = combined_hash | join('-') %}
+            {% if combined_hash_str not in grouped_constellations %}
+              {% set _ = grouped_constellations.update({combined_hash_str: []}) %}
+            {% endif %}
+            {% set _ = grouped_constellations[combined_hash_str].append(host) %}
+          {% endfor %}
+          {{ grouped_constellations }}
+
+    - name: Assert that host1 and host2 are in the same constellation
+      ansible.builtin.assert:
+        that:
+          - "'host1' in constellations[('{{ mock_file_contents.host1["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host1["/etc/service/settings.conf"] | hash("sha256") }}')]"
+          - "'host2' in constellations[('{{ mock_file_contents.host2["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host2["/etc/service/settings.conf"] | hash("sha256") }}')]"
+          - "constellations[('{{ mock_file_contents.host1["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host1["/etc/service/settings.conf"] | hash("sha256") }}')] | length == 2"
+        fail_msg: "Host1 and Host2 should be in the same constellation."
+
+    - name: Assert that host3 and host5 are in the same constellation
+      ansible.builtin.assert:
+        that:
+          - "'host3' in constellations[('{{ mock_file_contents.host3["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host3["/etc/service/settings.conf"] | hash("sha256") }}')]"
+          - "'host5' in constellations[('{{ mock_file_contents.host5["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host5["/etc/service/settings.conf"] | hash("sha256") }}')]"
+          - "constellations[('{{ mock_file_contents.host3["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host3["/etc/service/settings.conf"] | hash("sha256") }}')] | length == 2"
+        fail_msg: "Host3 and Host5 should be in the same constellation."
+
+    - name: Assert that host4 is in a unique constellation
+      ansible.builtin.assert:
+        that:
+          - "'host4' in constellations[('{{ mock_file_contents.host4["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host4["/etc/service/settings.conf"] | hash("sha256") }}')]"
+          - "constellations[('{{ mock_file_contents.host4["/etc/app/config.ini"] | hash("sha256") }}-{{ mock_file_contents.host4["/etc/service/settings.conf"] | hash("sha256") }}')] | length == 1"
+        fail_msg: "Host4 should be in a unique constellation."
+
+    - name: Assert total number of constellations
+      ansible.builtin.assert:
+        that:
+          - "constellations | length == 3"
+        fail_msg: "Expected 3 unique constellations."
