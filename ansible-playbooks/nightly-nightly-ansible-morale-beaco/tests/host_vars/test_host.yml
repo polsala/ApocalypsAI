@@ -1,0 +1,21 @@
+# Mock rationale: These variables simulate the state of a target host
+# after the morale beacon playbook has successfully run.
+# They are used by the test playbook to assert expected outcomes
+# without actually executing the deployment tasks.
+
+# Simulate package installation
+apt_python_installed: true
+apt_pip_installed: true
+pip_flask_installed: true
+
+# Simulate file deployment
+app_py_deployed: true
+messages_file_deployed: true
+service_file_deployed: true
+
+# Simulate service status
+morale_beacon_service_status: "running"
+morale_beacon_service_enabled: true
+
+# Simulate system facts for conditional tasks (e.g., apt vs yum)
+ansible_os_family: "Debian"
