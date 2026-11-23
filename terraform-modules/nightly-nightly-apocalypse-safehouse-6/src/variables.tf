@@ -1,0 +1,1 @@
+variable "environment" {\n  description = "Deployment environment (e.g., dev, prod)."\n  type        = string\n}\n\nvariable "bucket_prefix" {\n  description = "Prefix for the bucket name."\n  type        = string\n  default     = "apocalypse-safehouse"\n}\n\nvariable "aws_region" {\n  description = "AWS region."\n  type        = string\n  default     = "us-east-1"\n}\n
