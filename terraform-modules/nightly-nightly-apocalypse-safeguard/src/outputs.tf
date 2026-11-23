@@ -1,0 +1,1 @@
+output "bucket_id" {\n  description = "ID of the created bucket"\n  value       = aws_s3_bucket.safehouse.id\n}\n\noutput "bucket_arn" {\n  description = "ARN of the created bucket"\n  value       = aws_s3_bucket.safehouse.arn\n}\n\noutput "radiation_level" {\n  description = "Random radiation level tag (0-100)"\n  value       = random_integer.radiation_level.result\n}\n
