@@ -1,0 +1,27 @@
+{
+  "name": "nightly-chronal-data-aligner",
+  "version": "1.0.0",
+  "description": "A TypeScript utility to type-safely align, validate, and merge temporal data fragments (chronal echoes) from disparate sources into a consistent structure.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "typescript",
+    "data-alignment",
+    "data-validation",
+    "temporal-data",
+    "apocalypsai"
+  ],
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
