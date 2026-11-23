@@ -1,0 +1,154 @@
+---
+- name: Test Digital Garden Pruner
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../src/vars/garden_config.yml # Reference the main config
+
+  tasks:
+    - name: Ensure test environment is clean
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ pruning_report_dir }}"
+        - "/tmp/app.log"
+        - "/tmp/sys.log"
+        - "/tmp/web_service_restarted.marker"
+        - "/tmp/db_service_restarted.marker"
+        - "/tmp/another.log"
+        - "/tmp/monitoring_agent_restarted.marker"
+      # Mock rationale: Cleans up previous test runs to ensure determinism.
+
+    - name: Create mock log files with content
+      ansible.builtin.copy:
+        content: "Old log content for {{ item.name }}\n"
+        dest: "{{ item.path }}"
+      loop: "{{ garden_config.log_files_to_clear | default([]) }}"
+      # Mock rationale: Simulates existing log files that need clearing.
+
+    - name: Create mock service marker files (pre-restart)
+      ansible.builtin.command: "touch {{ item.restart_marker_path }}"
+      loop: "{{ garden_config.services_to_restart | default([]) }}"
+      # Mock rationale: Simulates services that have run and will be "restarted" (marker updated).
+
+    - name: Get initial timestamp of service markers
+      ansible.builtin.stat:
+        path: "{{ item.restart_marker_path }}"
+      loop: "{{ garden_config.services_to_restart | default([]) }}"
+      register: initial_marker_stats
+      # Mock rationale: Captures initial state to verify modification after pruning.
+
+    - name: Run the main pruning playbook
+      ansible.builtin.include_tasks: ../src/prune_garden.yml
+      # Mock rationale: Executes the target playbook within the test context.
+
+    - name: Verify log files are cleared
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop: "{{ garden_config.log_files_to_clear | selectattr('clear_on_prune', '==', true) | list }}"
+      register: cleared_log_stats
+      # Mock rationale: Checks the state of log files after the playbook runs.
+
+    - name: Assert log files are empty
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size == 0
+        msg: "Log file {{ item.item.name }} ({{ item.item.path }}) was not cleared correctly."
+      loop: "{{ cleared_log_stats.results }}"
+      # Mock rationale: Verifies that the log files are indeed empty, simulating a clear operation.
+
+    - name: Verify log files NOT to be cleared are untouched
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop: "{{ garden_config.log_files_to_clear | selectattr('clear_on_prune', '==', false) | list }}"
+      register: untouched_log_stats
+      # Mock rationale: Checks the state of log files that should not have been cleared.
+
+    - name: Assert log files NOT to be cleared still have content
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        msg: "Log file {{ item.item.name }} ({{ item.item.path }}) was cleared unexpectedly."
+      loop: "{{ untouched_log_stats.results }}"
+      # Mock rationale: Verifies that logs marked not to be cleared retain their content.
+
+    - name: Verify service marker files are updated (restarted)
+      ansible.builtin.stat:
+        path: "{{ item.item.restart_marker_path }}"
+      loop: "{{ garden_config.services_to_restart | selectattr('restart_on_prune', '==', true) | list }}"
+      register: updated_marker_stats
+      # Mock rationale: Checks the state of service marker files after the playbook runs.
+
+    - name: Assert service marker files have newer timestamps
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mtime > initial_marker_stats.results[loop_index].stat.mtime
+        msg: "Service marker {{ item.item.name }} ({{ item.item.restart_marker_path }}) was not updated correctly."
+      loop: "{{ updated_marker_stats.results }}"
+      loop_control:
+        index_var: loop_index
+      # Mock rationale: Verifies that the marker files were touched, indicating a simulated restart.
+
+    - name: Verify service marker files NOT to be restarted are untouched
+      ansible.builtin.stat:
+        path: "{{ item.restart_marker_path }}"
+      loop: "{{ garden_config.services_to_restart | selectattr('restart_on_prune', '==', false) | list }}"
+      register: untouched_service_stats
+      # Mock rationale: Checks the state of service marker files that should not have been restarted.
+
+    - name: Assert service marker files NOT to be restarted have same timestamps
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mtime == initial_marker_stats.results[loop_index + (garden_config.services_to_restart | selectattr('restart_on_prune', '==', true) | list | length)].stat.mtime
+        msg: "Service marker {{ item.item.name }} ({{ item.item.restart_marker_path }}) was restarted unexpectedly."
+      loop: "{{ untouched_service_stats.results }}"
+      loop_control:
+        index_var: loop_index
+      # Mock rationale: Verifies that markers for services not to be restarted retain their original timestamp.
+
+    - name: Find the generated report file
+      ansible.builtin.find:
+        paths: "{{ pruning_report_dir }}"
+        patterns: "pruning_report_*.txt"
+        recurse: no
+      delegate_to: localhost
+      register: report_files
+      # Mock rationale: Locates the dynamically named report file.
+
+    - name: Assert a report file was generated
+      ansible.builtin.assert:
+        that:
+          - report_files.files | length == 1
+        msg: "Expected exactly one pruning report file to be generated."
+      # Mock rationale: Ensures the report generation task was successful.
+
+    - name: Read the content of the generated report
+      ansible.builtin.slurp:
+        src: "{{ report_files.files[0].path }}"
+      delegate_to: localhost
+      register: report_content_slurp
+      # Mock rationale: Reads the content of the generated report for verification.
+
+    - name: Decode report content
+      ansible.builtin.set_fact:
+        report_content: "{{ report_content_slurp.content | b64decode }}"
+      # Mock rationale: Decodes the base64 content from 'slurp' module.
+
+    - name: Assert report content includes expected summaries
+      ansible.builtin.assert:
+        that:
+          - "'Logs Cleared:' in report_content"
+          - "'- App Log' in report_content"
+          - "'- System Log' in report_content"
+          - "'No logs were cleared.' not in report_content"
+          - "'Services Restarted:' in report_content"
+          - "'- Web Service' in report_content"
+          - "'- DB Service' in report_content"
+          - "'No services were restarted.' not in report_content"
+        msg: "Pruning report content is not as expected."
+      # Mock rationale: Verifies the report contains the expected summary of actions.
