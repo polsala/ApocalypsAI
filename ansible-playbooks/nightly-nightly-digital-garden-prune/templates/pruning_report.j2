@@ -1,0 +1,24 @@
+--- Digital Garden Pruning Report ---
+
+Date: {{ ansible_date_time.iso8601_micro }}
+
+Host: {{ ansible_hostname }}
+
+Disk Usage Before:
+{% for line in disk_usage_before.stdout_lines %}
+  {{ line }}
+{% endfor %}
+
+Pruning Actions:
+- Packages updated and upgraded.
+- Removed {{ kernel_removal_result.results | selectattr('changed', 'equalto', true) | list | length }} old kernels.
+- Orphaned packages removed: {{ apt_autoremove_result.changed | ternary('Yes', 'No') }}
+- Cleaned {{ tmp_file_deletion_result.results | selectattr('changed', 'equalto', true) | list | length }} files from /tmp.
+- Cleaned {{ var_tmp_file_deletion_result.results | selectattr('changed', 'equalto', true) | list | length }} files from /var/tmp.
+
+Disk Usage After:
+{% for line in disk_usage_after.stdout_lines %}
+  {{ line }}
+{% endfor %}
+
+--- End Report ---
