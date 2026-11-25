@@ -1,0 +1,12 @@
+[package]
+name = "nightly-digital-dust-bunny-sweeper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+chrono = "0.4" # For date/time operations
+walkdir = "2.3" # For recursive directory traversal
+
+[dev-dependencies]
+tempfile = "3.8" # For creating temporary files/directories in tests
