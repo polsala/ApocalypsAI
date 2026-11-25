@@ -1,0 +1,25 @@
+---
+- name: Deploy Whimsical Morale-Boosting MOTD
+  hosts: all
+  become: true # Requires root to write to /etc/motd
+  vars:
+    # Default path for messages, can be overridden by extra-vars for testing
+    motd_messages_path: "{{ playbook_dir }}/../vars/motd_messages.yml"
+  vars_files:
+    - "{{ motd_messages_path }}"
+  tasks:
+    - name: Set selected message (random or overridden)
+      ansible.builtin.set_fact:
+        final_motd_message: "{{ motd_test_message | default(motd_messages | random) }}"
+      # Mock rationale: Allows tests to provide a specific message for deterministic idempotency checks,
+      # while the default behavior remains random for production use.
+
+    - name: Deploy the main MOTD file
+      ansible.builtin.template:
+        src: templates/motd.j2
+        dest: "{{ motd_dest_override | default('/etc/motd') }}" # Allow override for testing
+        owner: root
+        group: root
+        mode: '0644'
+      vars:
+        selected_message: "{{ final_motd_message }}"
