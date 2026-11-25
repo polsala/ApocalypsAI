@@ -1,0 +1,138 @@
+---
+- name: Test Nightly MOTD Morale Booster Playbook
+  hosts: localhost
+  connection: local
+  become: true
+  vars:
+    test_motd_path: "/tmp/apocalypsai_test_motd"
+    motd_template_file: "{{ playbook_dir }}/../src/templates/motd.j2"
+    main_playbook_file: "{{ playbook_dir }}/../src/deploy_motd.yml"
+    # Define a specific message for deterministic testing
+    test_specific_message: "This is a test message for idempotency."
+    # Temporary directory for test playbook and inventory
+    test_dir: "/tmp/ansible_test_motd_env"
+    test_inventory: "{{ test_dir }}/inventory.ini"
+    test_playbook_copy: "{{ test_dir }}/deploy_motd.yml"
+    test_vars_file: "{{ test_dir }}/motd_messages.yml"
+    test_template_dir: "{{ test_dir }}/templates"
+    test_template_copy: "{{ test_template_dir }}/motd.j2"
+
+  tasks:
+    - name: Ensure test directory exists
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Creates a dedicated temporary environment for the test, isolating it from the system.
+
+    - name: Copy main playbook to test directory
+      ansible.builtin.copy:
+        src: "{{ main_playbook_file }}"
+        dest: "{{ test_playbook_copy }}"
+        mode: '0644'
+      # Mock rationale: Copies the playbook to be tested into the isolated test environment.
+
+    - name: Create test inventory
+      ansible.builtin.copy:
+        content: |
+          [servers]
+          localhost ansible_connection=local
+        dest: "{{ test_inventory }}"
+        mode: '0644'
+      # Mock rationale: Provides a minimal inventory for the test playbook to run against localhost.
+
+    - name: Create test vars file with specific message
+      ansible.builtin.copy:
+        content: |
+          ---
+          motd_messages:
+            - "{{ test_specific_message }}"
+        dest: "{{ test_vars_file }}"
+        mode: '0644'
+      # Mock rationale: Overrides the random message selection with a fixed message for deterministic testing.
+
+    - name: Ensure test templates directory exists
+      ansible.builtin.file:
+        path: "{{ test_template_dir }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: Prepares the directory for the template file.
+
+    - name: Copy MOTD template to test directory
+      ansible.builtin.copy:
+        src: "{{ motd_template_file }}"
+        dest: "{{ test_template_copy }}"
+        mode: '0644'
+      # Mock rationale: Copies the template to be used by the test playbook.
+
+    - name: Clean up previous test MOTD file if it exists
+      ansible.builtin.file:
+        path: "{{ test_motd_path }}"
+        state: absent
+      # Mock rationale: Ensures a clean slate for the MOTD file itself before the playbook runs.
+
+    - name: Run the main playbook for the first time
+      ansible.builtin.command:
+        argv:
+          - ansible-playbook
+          - "{{ test_playbook_copy }}"
+          - -i
+          - "{{ test_inventory }}"
+          - --extra-vars
+          - "motd_dest_override={{ test_motd_path }} motd_messages_path={{ test_vars_file }} motd_test_message={{ test_specific_message }}"
+          - --become
+      register: first_run_output
+      # Mock rationale: Executes the full Ansible playbook command, simulating a user running it.
+      # We pass extra-vars to override the destination, the messages file, and force a specific message for testing.
+
+    - name: Assert first run reported changes
+      ansible.builtin.assert:
+        that:
+          - "'changed=1' in first_run_output.stdout"
+        fail_msg: "First run of playbook did not report changes when it should have. Output: {{ first_run_output.stdout }}"
+      # Mock rationale: Checks the command output for indicators of changes, confirming the playbook performed its action.
+
+    - name: Read content of the test MOTD file
+      ansible.builtin.command: cat "{{ test_motd_path }}"
+      register: motd_content
+      changed_when: false # This command doesn't change system state
+      # Mock rationale: Reads the content of the temporary file, simulating reading the MOTD from a remote server.
+
+    - name: Assert MOTD content contains the specific test message
+      ansible.builtin.assert:
+        that:
+          - "'{{ test_specific_message }}' in motd_content.stdout"
+        fail_msg: "MOTD content '{{ motd_content.stdout }}' does not contain the specific test message."
+      # Mock rationale: Verifies that the fixed message was successfully templated and written.
+
+    - name: Run the main playbook again for idempotency check (should report no changes)
+      ansible.builtin.command:
+        argv:
+          - ansible-playbook
+          - "{{ test_playbook_copy }}"
+          - -i
+          - "{{ test_inventory }}"
+          - --extra-vars
+          - "motd_dest_override={{ test_motd_path }} motd_messages_path={{ test_vars_file }} motd_test_message={{ test_specific_message }}"
+          - --become
+      register: idempotency_check_output
+      # Mock rationale: Executes the playbook again with the same parameters to check if it's idempotent.
+
+    - name: Assert no changes were made on idempotency check
+      ansible.builtin.assert:
+        that:
+          - "'changed=0' in idempotency_check_output.stdout"
+        fail_msg: "Playbook was not idempotent: changes detected on second run. Output: {{ idempotency_check_output.stdout }}"
+      # Mock rationale: Confirms that running the playbook again with the same fixed message results in no further changes.
+
+    - name: Clean up test directory
+      ansible.builtin.file:
+        path: "{{ test_dir }}"
+        state: absent
+      # Mock rationale: Removes the temporary test environment, ensuring a clean state after execution.
+
+    - name: Clean up test MOTD file
+      ansible.builtin.file:
+        path: "{{ test_motd_path }}"
+        state: absent
+      # Mock rationale: Removes the temporary MOTD file, ensuring a clean state after execution.
