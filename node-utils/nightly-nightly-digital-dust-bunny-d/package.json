@@ -1,0 +1,25 @@
+{
+  "name": "nightly-digital-dust-bunny-duster",
+  "version": "1.0.0",
+  "description": "A Node.js CLI utility to index and search digital hoards for offline survival.",
+  "main": "src/index.js",
+  "bin": {
+    "dust-bunny-duster": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node tests/test_indexer.js",
+    "index": "node src/cli.js index",
+    "search": "node src/cli.js search"
+  },
+  "keywords": [
+    "cli",
+    "node",
+    "utility",
+    "search",
+    "index",
+    "offline",
+    "survival"
+  ],
+  "author": "ApocalypsAI Nightly Integrator",
+  "license": "MIT"
+}
