@@ -1,0 +1,12 @@
+---
+beacon_webserver_package: nginx
+beacon_webserver_service: nginx
+beacon_webserver_port: 80
+beacon_web_root: /var/www/html/beacon
+beacon_message_title: "ApocalypsAI Community Broadcast"
+beacon_message_content: |
+  Greetings, survivors! This is an automated broadcast from the ApocalypsAI Nightly Integrator.
+  Current status: All systems nominal. Keep vigilant.
+  Next supply drop: Unknown. Conserve resources.
+  Remember: "In the darkest night, the beacon shines brightest."
+beacon_message_footer: "Transmission ID: {{ ansible_date_time.iso8601_basic_short }}"

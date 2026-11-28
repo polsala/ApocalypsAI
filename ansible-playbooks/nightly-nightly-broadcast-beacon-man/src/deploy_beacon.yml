@@ -1,0 +1,43 @@
+---
+- name: Deploy and manage Broadcast Beacon
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: Ensure web server package is installed (e.g., Nginx)
+      ansible.builtin.package:
+        name: "{{ beacon_webserver_package }}"
+        state: present
+      # Mock rationale: In a real run, this installs the package. For offline test, we assume it would succeed.
+
+    - name: Ensure web server service is running and enabled
+      ansible.builtin.service:
+        name: "{{ beacon_webserver_service }}"
+        state: started
+        enabled: yes
+      # Mock rationale: In a real run, this manages the service. For offline test, we assume it would succeed.
+
+    - name: Create web root directory
+      ansible.builtin.file:
+        path: "{{ beacon_web_root }}"
+        state: directory
+        mode: '0755'
+      # Mock rationale: In a real run, this creates the directory. For offline test, we assume it would succeed.
+
+    - name: Deploy beacon message HTML
+      ansible.builtin.template:
+        src: templates/beacon_message.html.j2
+        dest: "{{ beacon_web_root }}/index.html"
+        mode: '0644'
+      # Mock rationale: In a real run, this renders and deploys the template. For offline test, we verify template rendering.
+
+    - name: (Optional) Allow web server port through firewall (UFW)
+      community.general.ufw:
+        rule: allow
+        port: "{{ beacon_webserver_port }}"
+        proto: tcp
+        state: enabled
+      when: ansible_facts['os_family'] == 'Debian' or ansible_facts['os_family'] == 'RedHat' # UFW is common on Debian/Ubuntu
+      ignore_errors: yes # UFW might not be installed or configured
+      # Mock rationale: In a real run, this configures the firewall. For offline test, we assume it would succeed or be ignored.
