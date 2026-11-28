@@ -1,0 +1,78 @@
+---
+- name: Test Broadcast Beacon deployment playbook
+  hosts: localhost
+  connection: local
+  gather_facts: yes # Gather local facts to test dynamic footer content
+  vars_files:
+    - ../src/vars/main.yml # Load variables from the main playbook's vars
+  vars:
+    test_temp_dir: "{{ lookup('env', 'HOME') }}/.ansible_test_tmp_beacon"
+    test_output_file: "{{ test_temp_dir }}/test_beacon_message.html"
+  tasks:
+    - name: Ensure test temporary directory exists
+      ansible.builtin.file:
+        path: "{{ test_temp_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Render beacon message template locally for testing
+      ansible.builtin.template:
+        src: ../src/templates/beacon_message.html.j2
+        dest: "{{ test_output_file }}"
+        mode: '0644'
+      delegate_to: localhost
+      # Mock rationale: This task renders the template locally instead of remotely, allowing content verification offline.
+      # It simulates the 'template' module's behavior without needing a remote host.
+
+    - name: Verify rendered template file exists
+      ansible.builtin.stat:
+        path: "{{ test_output_file }}"
+      register: test_file_stat
+      delegate_to: localhost
+      # Mock rationale: Checks for local file existence, simulating a successful remote deployment for the file itself.
+
+    - name: Assert rendered template file exists
+      ansible.builtin.assert:
+        that:
+          - test_file_stat.stat.exists
+          - test_file_stat.stat.isreg
+        fail_msg: "Rendered beacon message file '{{ test_output_file }}' does not exist or is not a regular file."
+      delegate_to: localhost
+
+    - name: Read rendered template content
+      ansible.builtin.slurp:
+        src: "{{ test_output_file }}"
+      register: test_file_content
+      delegate_to: localhost
+      # Mock rationale: Reads the locally rendered file to verify its content.
+
+    - name: Assert rendered template content
+      ansible.builtin.assert:
+        that:
+          - (test_file_content.content | b64decode).find("{{ beacon_message_title }}") != -1
+          - (test_file_content.content | b64decode).find("{{ beacon_message_content }}") != -1
+          - (test_file_content.content | b64decode).find("Transmission ID: {{ ansible_date_time.iso8601_basic_short }}") != -1 # Check for dynamic footer part
+        fail_msg: "Rendered beacon message content does not match expected values."
+      delegate_to: localhost
+      # Mock rationale: Verifies that the template correctly incorporated variables, ensuring the template logic is sound.
+
+    - name: Clean up test temporary directory
+      ansible.builtin.file:
+        path: "{{ test_temp_dir }}"
+        state: absent
+      delegate_to: localhost
+      # Mock rationale: Cleans up local test artifacts.
+
+    - name: Assert required variables are defined
+      ansible.builtin.assert:
+        that:
+          - beacon_webserver_package is defined
+          - beacon_webserver_service is defined
+          - beacon_webserver_port is defined
+          - beacon_web_root is defined
+          - beacon_message_title is defined
+          - beacon_message_content is defined
+          - beacon_message_footer is defined
+        fail_msg: "One or more required variables are not defined."
+      delegate_to: localhost
